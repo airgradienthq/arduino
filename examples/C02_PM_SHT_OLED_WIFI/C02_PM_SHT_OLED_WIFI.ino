@@ -15,7 +15,7 @@ void setup(){
   Serial.begin(9600);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C); 
   ag.PMS_Init();
-  ag.C02_Init();
+  ag.CO2_Init();
   ag.TMP_RH_Init(0x44); //check for SHT sensor with address 0x44
   showTextRectangle("Init", String(ESP.getChipId(),HEX),"AirGradient");
   connectToWifi();
@@ -23,13 +23,13 @@ void setup(){
 }
 
 void loop(){
-  int PM2 = ag.getPM2();
-  int CO2 = ag.getC02();
+  int PM2 = ag.getPM2_Raw();
+  int CO2 = ag.getCO2_Raw();
   TMP_RH result = ag.periodicFetchData();
   showTextRectangle(String(result.t)+"c "+String(result.rh)+"%", "PM2: "+ String(PM2), "CO2: "+String(CO2)+"");
   
   // send payload
-  String payload = "{\"pm02\":" + String(PM2) +  ",\"wifi\":" + String(WiFi.RSSI()) +  ",\"rco2\":" + String(CO2) + ",\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh) + "}";
+  String payload = "{\"pm02\":" + String(ag.getPM2()) +  ",\"wifi\":" + String(WiFi.RSSI()) +  ",\"rco2\":" + String(ag.getCO2()) + ",\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh) + "}";
   Serial.println(payload);
   String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
   Serial.println(POSTURL);

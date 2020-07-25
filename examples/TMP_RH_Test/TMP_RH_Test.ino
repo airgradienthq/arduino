@@ -9,8 +9,8 @@ void setup(){
 void loop(){
   TMP_RH result = ag.periodicFetchData();
   Serial.print("Humidity: ");
-  Serial.print(result.rh);
+  Serial.print(result.rh_char);
   Serial.print(" Temperature: ");
-  Serial.println(result.t);
+  Serial.println(result.t_char);
   delay(5000);
 }

@@ -8,9 +8,9 @@ void setup(){
 
 void loop(){
     
-int PM2 = ag.getPM2();
+int PM2 = ag.getPM2_Raw();
 Serial.print("PM2: ");
-Serial.println(PM2);
+Serial.println(ag.getPM2());
 
 delay(5000);
 }

@@ -14,7 +14,7 @@ AirGradient	KEYWORD1
 #######################################
 
 setOutput	KEYWORD2
-beginC02	KEYWORD2
+beginCO2	KEYWORD2
 PMS_Init	KEYWORD2
 PMS		KEYWORD2
 sleep		KEYWORD2
@@ -41,9 +41,9 @@ periodicFetchData	KEYWORD2
 periodicStop		KEYWORD2
 
 
-C02_Init	KEYWORD2
-getC02		KEYWORD2
-get_C02_values	KEYWORD2
+CO2_Init	KEYWORD2
+getCO2		KEYWORD2
+get_CO2_values	KEYWORD2
 
 
 MHZ19_Init		KEYWORD2

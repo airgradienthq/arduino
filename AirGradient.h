@@ -134,16 +134,21 @@ typedef enum {
     struct TMP_RH {
       float t;
       int rh;
+      char t_char[10];
+      char rh_char[10];
+      TMP_RH_ErrorCode error;
+    };
+    struct TMP_RH_Char {
       TMP_RH_ErrorCode error;
     };
 // ENUMS AND STRUCTS FOR TMP_RH END
 
-//ENUMS STRUCTS FOR C02 START
+//ENUMS STRUCTS FOR CO2 START
     struct CO2_READ_RESULT {
     int co2 = -1;
     bool success = false;
 };
-//ENUMS STRUCTS FOR C02 END
+//ENUMS STRUCTS FOR CO2 END
 
 // library interface description
 class AirGradient
@@ -155,8 +160,8 @@ class AirGradient
 
     static void setOutput(Print& debugOut, bool verbose = true);
 
-    void beginC02(void);
-    void beginC02(int,int);
+    void beginCO2(void);
+    void beginCO2(int,int);
     void PMS_Init(void);
     void PMS_Init(int,int);
     void PMS_Init(int,int,int);
@@ -192,14 +197,13 @@ class AirGradient
     void requestRead();
     bool read_PMS(DATA& data);
     bool readUntil(DATA& data, uint16_t timeout = SINGLE_RESPONSE_TIME);
-    int getPM2();
+    const char* getPM2();
+    int getPM2_Raw();
 
     //PMS VARIABLES PUBLIC_END
 
     //TMP_RH VARIABLES PUBLIC START
     void ClosedCube_TMP_RH();
-    uint32_t getTemp();
-    int getRhum();
     TMP_RH_ErrorCode TMP_RH_Init(uint8_t address);
     TMP_RH_ErrorCode clearAll();
 
@@ -215,13 +219,13 @@ class AirGradient
 
     //TMP_RH VARIABLES PUBLIC END
 
-    //C02 VARIABLES PUBLIC START
-    void C02_Init();
-    void C02_Init(int,int);
-    void C02_Init(int,int,int);
-    int getC02(int retryLimit = 5);
-    int get_C02_values();
-    SoftwareSerial *_SoftSerial_C02;
+    //CO2 VARIABLES PUBLIC START
+    void CO2_Init();
+    void CO2_Init(int,int);
+    void CO2_Init(int,int,int);
+    const char* getCO2(int retryLimit = 5);
+    int getCO2_Raw();
+    SoftwareSerial *_SoftSerial_CO2;
 
     //CO2 VARIABLES PUBLIC END
 
@@ -260,6 +264,7 @@ class AirGradient
     uint16_t _calculatedChecksum;
     SoftwareSerial *_SoftSerial_PMS;
     void loop();
+    char Char_PM2[10];
     //PMS VARIABLES PRIVATE END
 
     //TMP_RH VARIABLES PRIVATE START
@@ -281,6 +286,10 @@ class AirGradient
     TMP_RH returnError(TMP_RH_ErrorCode command);
     //TMP_RH VARIABLES PRIVATE END
 
+    //CO2 VARABLES PUBLIC START
+    char Char_CO2[10];
+
+    //CO2 VARABLES PUBLIC END
     //MHZ19 VARABLES PUBLIC START
 
     int readInternal_MHZ19();
@@ -291,6 +300,7 @@ class AirGradient
     Stream * _serial_MHZ19;
     SoftwareSerial *_SoftSerial_MHZ19;
     uint8_t getCheckSum_MHZ19(unsigned char *packet);
+
     //MHZ19 VARABLES PUBLIC END
 
 };
