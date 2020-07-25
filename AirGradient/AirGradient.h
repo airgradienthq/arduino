@@ -286,11 +286,11 @@ class AirGradient
     int readInternal_MHZ19();
 
     uint8_t _type_MHZ19, temperature_MHZ19;
-    boolean debug_MHZ19 = false;
+    bool debug_MHZ19 = false;
 
     Stream * _serial_MHZ19;
     SoftwareSerial *_SoftSerial_MHZ19;
-    byte getCheckSum_MHZ19(byte *packet);
+    uint8_t getCheckSum_MHZ19(unsigned char *packet);
     //MHZ19 VARABLES PUBLIC END
 
 };

@@ -11,6 +11,7 @@
 #include <SoftwareSerial.h>
 #include "Arduino.h"
 #include <Wire.h>
+#include <Math.h>
 
 
 // Constructor /////////////////////////////////////////////////////////////////
@@ -55,7 +56,7 @@ void AirGradient::PMS_Init(){
   if (_debugMsg) {
     Serial.println("Initializing PMS...");
     }
-  PMS_Init(5,6);
+  PMS_Init(D5,D6);
 }
 void AirGradient::PMS_Init(int rx_pin,int tx_pin){
   PMS_Init(rx_pin,tx_pin,9600);
@@ -499,7 +500,8 @@ uint8_t AirGradient::checkCrc(uint8_t data[], uint8_t checksum)//
 
 float AirGradient::calculateTemperature(uint16_t rawValue)//
 {
-  return 175.0f * (float)rawValue / 65535.0f - 45.0f;
+  float value = 175.0f * (float)rawValue / 65535.0f - 45.0f;
+  return round(value*10)/10;
 }
 
 
@@ -541,7 +543,7 @@ TMP_RH AirGradient::returnError(TMP_RH_ErrorCode error) {
 
 //START C02 FUNCTIONS //
 void AirGradient::C02_Init(){
-  C02_Init(4,3);
+  C02_Init(D4,D3);
 }
 void AirGradient::C02_Init(int rx_pin,int tx_pin){
   C02_Init(rx_pin,tx_pin,9600);
@@ -566,7 +568,7 @@ void AirGradient::C02_Init(int rx_pin,int tx_pin,int baudRate){
 }
 int AirGradient::getC02(int retryLimit) {
   int ctr = 0;
-  int result_c02 = 0;
+  int result_c02 = get_C02_values();
   while(result_c02 == -1){
     result_c02 = get_C02_values();
     if(ctr == retryLimit){
@@ -814,7 +816,7 @@ int AirGradient::readInternal_MHZ19() {
 
 
 
-byte AirGradient::getCheckSum_MHZ19(byte* packet) {
+uint8_t AirGradient::getCheckSum_MHZ19(unsigned char* packet) {
   if (!SerialConfigured) {
     if (debug_MHZ19) Serial.println(F("-- serial is not configured"));
     return STATUS_serial_MHZ19_NOT_CONFIGURED;
