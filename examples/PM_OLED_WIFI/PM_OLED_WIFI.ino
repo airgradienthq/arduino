@@ -20,27 +20,17 @@ void setup(){
   showTextRectangle("Init", String(ESP.getChipId(),HEX),true);
 
   ag.PMS_Init();
-  ag.CO2_Init();
-  ag.TMP_RH_Init(0x44);
 
   connectToWifi();
   delay(2000);
 }
 
 void loop(){
-  int PM2 = ag.getPM2_Raw();
-  int CO2 = ag.getCO2_Raw();
-  TMP_RH result = ag.periodicFetchData();
-
-  showTextRectangle(String(result.t),String(result.rh)+"%",false);
-  delay(2000);
-  showTextRectangle("PM2",String(PM2),false);
-  delay(2000);
-  showTextRectangle("CO2",String(CO2),false);
-  delay(2000);
+  int PM = ag.getPM2_Raw();
+  showTextRectangle("PM2",String(PM),false);
 
   // send payload
-  String payload = "{\"pm02\":" + String(ag.getPM2()) +  ",\"wifi\":" + String(WiFi.RSSI()) +  ",\"rco2\":" + String(ag.getCO2()) + ",\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh) + "}";
+  String payload = "{\"pm02\":" + String(PM) +  ",\"wifi\":" + String(WiFi.RSSI()) +  "}";
   Serial.println(payload);
   String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
   Serial.println(POSTURL);
@@ -53,7 +43,7 @@ void loop(){
   Serial.println(response);
   http.end();
 
-  delay(2000);
+  delay(30000);
 }
 
 // DISPLAY
@@ -69,6 +59,8 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
   display.drawString(32, 36, ln2);
   display.display();
 }
+
+
 
 // Wifi Manager
 void connectToWifi(){

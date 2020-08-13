@@ -10,7 +10,7 @@ void setup(){
   Serial.begin(9600);
   display.init();
   display.flipScreenVertically();
-  showTextRectangle("Init", String(ESP.getChipId(),HEX));
+  showTextRectangle("Init", String(ESP.getChipId(),HEX),true);
 
   ag.PMS_Init();
   ag.CO2_Init();
@@ -23,19 +23,23 @@ void loop(){
   int PM2 = ag.getPM2_Raw();
   int CO2 = ag.getCO2_Raw();
   TMP_RH result = ag.periodicFetchData();
-  showTextRectangle(String(result.t),String(result.rh)+"%");
+  showTextRectangle(String(result.t),String(result.rh)+"%",false);
   delay(2000);
-  showTextRectangle("PM2",String(PM2));
+  showTextRectangle("PM2",String(PM2),false);
   delay(2000);
-  showTextRectangle("CO2",String(CO2));
+  showTextRectangle("CO2",String(CO2),false);
   delay(2000);
 }
 
 // DISPLAY
-void showTextRectangle(String ln1, String ln2) {
+void showTextRectangle(String ln1, String ln2, boolean small) {
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.setFont(ArialMT_Plain_24);
+  if (small) {
+    display.setFont(ArialMT_Plain_16);
+  } else {
+    display.setFont(ArialMT_Plain_24);
+  }
   display.drawString(32, 12, ln1);
   display.drawString(32, 36, ln2);
   display.display();
