@@ -1,18 +1,21 @@
 #include <AirGradient.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+#include "SSD1306Wire.h"
 
 AirGradient ag = AirGradient();
-#define OLED_RESET 0
-Adafruit_SSD1306 display(OLED_RESET);
+
+SSD1306Wire display(0x3c, SDA, SCL);
 
 void setup(){
   Serial.begin(9600);
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); 
+  display.init();
+  display.flipScreenVertically();
+  showTextRectangle("Init", String(ESP.getChipId(),HEX));
+
   ag.PMS_Init();
   ag.CO2_Init();
-  ag.TMP_RH_Init(0x44); //check for SHT sensor with address 0x44
-  showTextRectangle("Init", String(ESP.getChipId(),HEX),"AirGradient");
+  ag.TMP_RH_Init(0x44);
+
   delay(2000);
 }
 
@@ -20,22 +23,20 @@ void loop(){
   int PM2 = ag.getPM2_Raw();
   int CO2 = ag.getCO2_Raw();
   TMP_RH result = ag.periodicFetchData();
-  showTextRectangle(String(result.t)+"c "+String(result.rh)+"%", "PM2: "+ String(ag.getPM2()), "CO2: "+String(ag.getCO2())+"");
-  delay(5000);
+  showTextRectangle(String(result.t),String(result.rh)+"%");
+  delay(2000);
+  showTextRectangle("PM2",String(PM2));
+  delay(2000);
+  showTextRectangle("CO2",String(CO2));
+  delay(2000);
 }
 
 // DISPLAY
-void showTextRectangle(String ln1, String ln2, String ln3) {
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
-  display.setCursor(32,8);
-  display.println(ln1);
-  display.setTextSize(1);
-  display.setCursor(32,16);
-  display.println(ln2);
-  display.setTextSize(1);
-  display.setCursor(32,24);
-  display.println(ln3);
+void showTextRectangle(String ln1, String ln2) {
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_24);
+  display.drawString(32, 12, ln1);
+  display.drawString(32, 36, ln2);
   display.display();
 }
