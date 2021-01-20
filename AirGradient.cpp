@@ -296,7 +296,6 @@ TMP_RH AirGradient::periodicFetchData() //
   if (error == SHT3XD_NO_ERROR){
     result = readTemperatureAndHumidity();
     sprintf(result.t_char,"%d", result.t);
-    sprintf(result.tf_char,"%d", result.tf);
     sprintf(result.rh_char,"%f", result.rh);
 
     return result;
@@ -463,7 +462,6 @@ TMP_RH AirGradient::readTemperatureAndHumidity()//
   TMP_RH result;
 
   result.t = 0;
-  result.tf = 0;
   result.rh = 0;
 
   TMP_RH_ErrorCode error;
@@ -474,7 +472,6 @@ TMP_RH AirGradient::readTemperatureAndHumidity()//
 
   if (error == SHT3XD_NO_ERROR) {
     result.t = calculateTemperature(buf[0]);
-    result.tf = convertCelsiusToFahrenheit(result.t);
     result.rh = calculateHumidity(buf[1]);
   }
   result.error = error;
@@ -517,11 +514,6 @@ float AirGradient::calculateTemperature(uint16_t rawValue)//
   return round(value*10)/10;
 }
 
-float AirGradient::convertCelsiusToFahrenheit(float celsius)
-{
-  return (celsius * 9.0) / 5.0 + 32;
-}
-
 
 float AirGradient::calculateHumidity(uint16_t rawValue)//
 {
@@ -552,18 +544,12 @@ uint8_t AirGradient::calculateCrc(uint8_t data[])
 TMP_RH AirGradient::returnError(TMP_RH_ErrorCode error) {
   TMP_RH result;
   result.t = NULL;
-  result.tf = NULL;
   result.rh = NULL;
 
   result.t_char[0] = 'N';
   result.t_char[1] = 'U';
   result.t_char[2] = 'L';
   result.t_char[3] = 'L';
-
-  result.tf_char[0] = 'N';
-  result.tf_char[1] = 'U';
-  result.tf_char[2] = 'L';
-  result.tf_char[3] = 'L';
 
   result.rh_char[0] = 'N';
   result.rh_char[1] = 'U';

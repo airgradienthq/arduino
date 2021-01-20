@@ -133,10 +133,8 @@ typedef enum {
 
     struct TMP_RH {
       float t;
-      float tf;
       int rh;
       char t_char[10];
-      char tf_char[10];
       char rh_char[10];
       TMP_RH_ErrorCode error;
     };
@@ -281,7 +279,6 @@ class AirGradient
 
     float calculateHumidity(uint16_t rawValue);
     float calculateTemperature(uint16_t rawValue);
-    float convertCelsiusToFahrenheit(float celsius);
 
     TMP_RH readTemperatureAndHumidity();
     TMP_RH_ErrorCode read_TMP_RH(uint16_t* data, uint8_t numOfPair);

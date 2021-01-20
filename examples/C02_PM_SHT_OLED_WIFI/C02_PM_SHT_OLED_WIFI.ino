@@ -45,12 +45,6 @@ boolean hasSHT=true;
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
 boolean connectWIFI=false;
 
-// set to false if you want to display Fahrenheit, true to display Celsius
-boolean displayCelsius=true;
-
-// set to true to display board ID and WiFi strength after HTTP POST
-boolean displayNetInfo=false;
-
 // change if you want to send the data to another server
 String APIROOT = "http://hw.airgradient.com/";
 
@@ -59,7 +53,7 @@ void setup(){
 
   display.init();
   display.flipScreenVertically();
-  showTextRectangle("Starting...", "ID: "+String(ESP.getChipId(),HEX),true);
+  showTextRectangle("Init", String(ESP.getChipId(),HEX),true);
 
   if (hasPM) ag.PMS_Init();
   if (hasCO2) ag.CO2_Init();
@@ -78,7 +72,7 @@ void loop(){
   if (hasPM) {
     int PM2 = ag.getPM2_Raw();
     payload=payload+"\"pm02\":" + String(PM2);
-    showTextRectangle("PM2.5",String(PM2)+" µg/m3",false);
+    showTextRectangle("PM2",String(PM2),false);
     delay(3000);
   }
 
@@ -86,19 +80,15 @@ void loop(){
     if (hasPM) payload=payload+",";
     int CO2 = ag.getCO2_Raw();
     payload=payload+"\"rco2\":" + String(CO2);
-    showTextRectangle("CO2",String(CO2)+" ppm",false);
+    showTextRectangle("CO2",String(CO2),false);
     delay(3000);
   }
 
   if (hasSHT) {
     if (hasCO2 || hasPM) payload=payload+",";
     TMP_RH result = ag.periodicFetchData();
-    payload=payload+"\"atmp\":" + String(result.t) + ",\"rhum\":" + String(result.rh);
-    if(displayCelsius) {
-      showTextRectangle(String(result.t)+" C",String(result.rh)+"% hum.",false);
-    } else {
-      showTextRectangle(String(result.tf)+" F",String(result.rh)+"% hum.",false);
-    }
+    payload=payload+"\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh);
+    showTextRectangle(String(result.t),String(result.rh)+"%",false);
     delay(3000);
   }
 
@@ -106,21 +96,17 @@ void loop(){
 
   // send payload
   if (connectWIFI){
-    Serial.println(payload);
-    String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
-    Serial.println(POSTURL);
-    HTTPClient http;
-    http.begin(POSTURL);
-    http.addHeader("content-type", "application/json");
-    int httpCode = http.POST(payload);
-    String response = http.getString();
-    Serial.println(httpCode);
-    Serial.println(response);
-    http.end();
-    if(displayNetInfo){
-      showTextRectangle("ID: "+String(ESP.getChipId(),HEX), "WiFi: "+String(WiFi.RSSI()),true);
-      delay(3000);
-    }
+  Serial.println(payload);
+  String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
+  Serial.println(POSTURL);
+  HTTPClient http;
+  http.begin(POSTURL);
+  http.addHeader("content-type", "application/json");
+  int httpCode = http.POST(payload);
+  String response = http.getString();
+  Serial.println(httpCode);
+  Serial.println(response);
+  http.end();
   }
 }
 
@@ -129,9 +115,9 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   if (small) {
-    display.setFont(ArialMT_Plain_10);
-  } else {
     display.setFont(ArialMT_Plain_16);
+  } else {
+    display.setFont(ArialMT_Plain_24);
   }
   display.drawString(32, 16, ln1);
   display.drawString(32, 36, ln2);
