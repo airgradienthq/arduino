@@ -72,12 +72,10 @@ void AirGradient::PMS_Init(int rx_pin,int tx_pin,int baudRate){
     if (_debugMsg) {
     Serial.println("PMS Sensor Failed to Initialize ");
     }
-    else{
+  } else {
     Serial.println("PMS Successfully Initialized. Heating up for 10s");
     delay(10000);
   }
-  }
-  
 }
 
 
