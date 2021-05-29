@@ -37,6 +37,8 @@ AirGradient ag = AirGradient();
 
 SSD1306Wire display(0x3c, SDA, SCL);
 
+WiFiClient client;
+
 // set sensors that you do not use to false
 boolean hasPM=true;
 boolean hasCO2=true;
@@ -100,7 +102,7 @@ void loop(){
   String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
   Serial.println(POSTURL);
   HTTPClient http;
-  http.begin(POSTURL);
+  http.begin(client, POSTURL);
   http.addHeader("content-type", "application/json");
   int httpCode = http.POST(payload);
   String response = http.getString();
