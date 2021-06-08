@@ -10,11 +10,11 @@ Plantower PMS5003 (Fine Particle Sensor)
 SenseAir S8 (CO2 Sensor)
 SHT30/31 (Temperature/Humidity Sensor)
 
-Dependent Libraries:
+Please install ESP8266 board manager (tested with version 3.0.0)
+
 The codes needs the following libraries installed:
-ESP8266 board with standard libraries
-WifiManager by tzar, tablatronix tested with Version 2.0.3-alpha
-ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg tested with Version 4.1.0
+"WifiManager by tzapu, tablatronix" tested with Version 2.0.3-alpha
+"ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
 
 Configuration:
 Please set in the code below which sensor you are using and if you want to connect it to WiFi.
@@ -99,8 +99,9 @@ void loop(){
   Serial.println(payload);
   String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
   Serial.println(POSTURL);
+  WiFiClient client;
   HTTPClient http;
-  http.begin(POSTURL);
+  http.begin(client, POSTURL);
   http.addHeader("content-type", "application/json");
   int httpCode = http.POST(payload);
   String response = http.getString();

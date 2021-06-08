@@ -11,7 +11,7 @@
 #include <SoftwareSerial.h>
 #include "Arduino.h"
 #include <Wire.h>
-#include <Math.h>
+#include <math.h>
 
 
 // Constructor /////////////////////////////////////////////////////////////////
