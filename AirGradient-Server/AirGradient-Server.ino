@@ -1,8 +1,11 @@
 /*
 
-  Copyright (c) 2020 AirGradient
+  The MIT License (MIT)
 
-  MIT License
+  Portions Copyright (c) 2020-2021 AirGradient Co. Ltd. (https://www.airgradient.com/diy/)
+  Portions Copyright (c) 2021 Jordan Jones (https://github.com/kashalls/)
+
+  For more information, please see LICENSE.md
 
 */
 
