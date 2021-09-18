@@ -16,18 +16,32 @@ Verify that your ESP8266 is working by using curl to verify the response. It sho
 
 ```sh
 $ curl http://your-ip:9926/metrics
-# HELP pm02 Particulat Matter PM2.5 value
+# HELP pm02 PM2.5 Particulate Matter Concentration (ug/m^3)
 # TYPE pm02 gauge
-pm02{id="Airgradient"} 6
-# HELP rc02 CO2 value, in ppm
+pm02{id="AirGradient",mac="00:11:22:33:44:55"} 6
+
+# HELP rc02 CO2 Concentration (ppm)
 # TYPE rc02 gauge
-rco2{id="Airgradient"} 862
-# HELP atmp Temperature, in degrees Celsius
+rco2{id="AirGradient",mac="00:11:22:33:44:55"} 862
+
+# HELP atmp Ambient Temperature (*C)
 # TYPE atmp gauge
-atmp{id="Airgradient"} 31.6
-# HELP rhum Relative humidity, in percent
+atmp{id="AirGradient",mac="00:11:22:33:44:55"} 31.6
+
+# HELP rhum Relative Humidity (%)
 # TYPE rhum gauge
-rhum{id="Airgradient"} 38
+rhum{id="AirGradient",mac="00:11:22:33:44:55"} 38
+
+# HELP wifi WiFi Signal Strength (dBm)
+# TYPE wifi guage
+wifi{id="AirGradient",mac="00:11:22:33:44:55"} -69
+```
+
+If a sensor is disabled or non-functional, it's respone will look like the following:
+
+```sh
+# ERROR pm02 encountered an error, or the result was out of range `0`
+# ERROR rc02 encountered an error, or the result was out of range `(disabled)`
 ```
 
 ## License
@@ -37,4 +51,5 @@ See [LICENSE.md](LICENSE.md).
 ## Authors
 
 [AirGradientHQ](https://github.com/airgradienthq/),
-[Jordan Jones](https://github.com/kashalls)
+[Jordan Jones](https://github.com/kashalls),
+[Bradan J. Wolbeck](https://www.compaqdisc.com/)

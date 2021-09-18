@@ -2,6 +2,7 @@ The MIT License (MIT)
 
 Portions Copyright (c) 2020-2021 AirGradient Co. Ltd. (https://www.airgradient.com/diy/)
 Portions Copyright (c) 2021 Jordan Jones (https://github.com/kashalls/)
+Portions Copyright (c) 2021 Bradan J. Wolbeck (https://www.compaqdisc.com/)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
