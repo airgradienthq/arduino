@@ -1,114 +1,157 @@
 /*
-This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Microcontroller.
 
-It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
+  Copyright (c) 2020 AirGradient
 
-For build instructions please visit https://www.airgradient.com/diy/
+  MIT License
 
-Compatible with the following sensors:
-Plantower PMS5003 (Fine Particle Sensor)
-SenseAir S8 (CO2 Sensor)
-SHT30/31 (Temperature/Humidity Sensor)
-
-Please install ESP8266 board manager (tested with version 3.0.0)
-
-The codes needs the following libraries installed:
-"WifiManager by tzapu, tablatronix" tested with Version 2.0.3-alpha
-"ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
-
-Configuration:
-Please set in the code below which sensor you are using and if you want to connect it to WiFi.
-
-If you are a school or university contact us for a free trial on the AirGradient platform.
-https://www.airgradient.com/schools/
-
-MIT License
 */
 
 #include <AirGradient.h>
-#include <WiFiManager.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
+#include <WiFiClient.h>
 
 #include <Wire.h>
 #include "SSD1306Wire.h"
 
 AirGradient ag = AirGradient();
 
+//
+// Config Start
+
+const char* deviceId = "AirGradient";
+
+const bool hasPM = true;
+const bool hasCO2 = true;
+const bool hasSHT = true;
+
+const char* ssid = "PleaseChangeMe";
+const char* password = "PleaseChangeMe";
+
+const int port = 9926;
+
+long lastUpdate;
+//The frequency of measurement updates
+const int updateFrequency = 5000; 
+
+int counter = 0;
+
+// Config End
+//
 SSD1306Wire display(0x3c, SDA, SCL);
+ESP8266WebServer server(port);
+//
 
-// set sensors that you do not use to false
-boolean hasPM=true;
-boolean hasCO2=true;
-boolean hasSHT=true;
-
-// set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI=false;
-
-// change if you want to send the data to another server
-String APIROOT = "http://hw.airgradient.com/";
-
-void setup(){
+void setup() {
   Serial.begin(9600);
 
+  // Init Display.
   display.init();
   display.flipScreenVertically();
   showTextRectangle("Init", String(ESP.getChipId(),HEX),true);
 
+  // Enable enabled sensors.
   if (hasPM) ag.PMS_Init();
   if (hasCO2) ag.CO2_Init();
   if (hasSHT) ag.TMP_RH_Init(0x44);
 
-  if (connectWIFI) connectToWifi();
-  delay(2000);
+  // Setup and wait for wifi.
+  WiFi.begin(ssid, password);
+  Serial.println("");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    showTextRectangle("Trying,", "to connect...", true);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("MAC address: ");
+  Serial.println(WiFi.macAddress());
+
+  server.on("/", HandleRoot);
+  server.on("/metrics", HandleRoot);
+  server.onNotFound(HandleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started at ip " + WiFi.localIP().toString() + ":" + String(port));
+  showTextRectangle("Listening To", WiFi.localIP().toString() + ":" + String(port),true);
 }
 
-void loop(){
+void loop() {
+  long t = millis();
 
-  // create payload
+  server.handleClient();
+  updateScreen(t);
+}
 
-  String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
+String GenerateMetrics() {
+  String message = "";
+
+  String idString = "{id=\"" + String(deviceId) + "\"} ";
 
   if (hasPM) {
-    int PM2 = ag.getPM2_Raw();
-    payload=payload+"\"pm02\":" + String(PM2);
-    showTextRectangle("PM2",String(PM2),false);
-    delay(3000);
+    int stat = ag.getPM2_Raw();
+
+    message += "# HELP pm02 Particulat Matter PM2.5 value\n";
+    message += "# TYPE pm02 gauge\n";
+    message += "pm02";
+    message += idString;
+    message += String(stat);
+    message += "\n";
   }
 
   if (hasCO2) {
-    if (hasPM) payload=payload+",";
-    int CO2 = ag.getCO2_Raw();
-    payload=payload+"\"rco2\":" + String(CO2);
-    showTextRectangle("CO2",String(CO2),false);
-    delay(3000);
+    int stat = ag.getCO2_Raw();
+
+    message += "# HELP rc02 CO2 value, in ppm\n";
+    message += "# TYPE rc02 gauge\n";
+    message += "rc02";
+    message += idString;
+    message += String(stat);
+    message += "\n";
   }
 
   if (hasSHT) {
-    if (hasCO2 || hasPM) payload=payload+",";
-    TMP_RH result = ag.periodicFetchData();
-    payload=payload+"\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh);
-    showTextRectangle(String(result.t),String(result.rh)+"%",false);
-    delay(3000);
+    TMP_RH stat = ag.periodicFetchData();
+
+    message += "# HELP atmp Temperature, in degrees Celsius\n";
+    message += "# TYPE atmp gauge\n";
+    message += "atmp";
+    message += idString;
+    message += String(stat.t);
+    message += "\n";
+
+    message += "# HELP rhum Relative humidtily, in percent\n";
+    message += "# TYPE rhum gauge\n";
+    message += "rhum";
+    message += idString;
+    message += String(stat.rh);
+    message += "\n";
   }
 
-   payload=payload+"}";
+  return message;
+}
 
-  // send payload
-  if (connectWIFI){
-  Serial.println(payload);
-  String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
-  Serial.println(POSTURL);
-  WiFiClient client;
-  HTTPClient http;
-  http.begin(client, POSTURL);
-  http.addHeader("content-type", "application/json");
-  int httpCode = http.POST(payload);
-  String response = http.getString();
-  Serial.println(httpCode);
-  Serial.println(response);
-  http.end();
+void HandleRoot() {
+  server.send(200, "text/plain", GenerateMetrics() );
+}
+void HandleNotFound() {
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
+  server.send(404, "text/html", message);
 }
 
 // DISPLAY
@@ -125,17 +168,36 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
   display.display();
 }
 
-// Wifi Manager
-void connectToWifi(){
-  WiFiManager wifiManager;
-  //WiFi.disconnect(); //to delete previous saved hotspot
-  String HOTSPOT = "AIRGRADIENT-"+String(ESP.getChipId(),HEX);
-  wifiManager.setTimeout(120);
-  if(!wifiManager.autoConnect((const char*)HOTSPOT.c_str())) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      ESP.restart();
-      delay(5000);
+void updateScreen(long now) {
+  if ((now - lastUpdate) > updateFrequency) {
+    // Take a measurement at a fixed interval.
+    switch (counter) {
+      case 0:
+        if (hasPM) {
+          int stat = ag.getPM2_Raw();
+          showTextRectangle("PM2",String(stat),false);
+        }
+        break;
+      case 1:
+        if (hasCO2) {
+          int stat = ag.getCO2_Raw();
+          showTextRectangle("CO2", String(stat), false);
+        }
+        break;
+      case 2:
+        if (hasSHT) {
+          TMP_RH stat = ag.periodicFetchData();
+          showTextRectangle("ATMP", String(stat.t), false);
+        }
+        break;
+      case 3:
+        if (hasSHT) {
+          TMP_RH stat = ag.periodicFetchData();
+          showTextRectangle("RHUM", String(stat.rh) + "%", false);
+        }
+        break;
+    }
+    counter++;
+    if (counter > 3) counter = 0;
+    lastUpdate = millis();
   }
-
-}
