@@ -303,7 +303,7 @@ TMP_RH AirGradient::periodicFetchData() //
     return result;
   }
   else
-    returnError(error);
+    return returnError(error);
 }
 
 TMP_RH_ErrorCode AirGradient::periodicStop() {
