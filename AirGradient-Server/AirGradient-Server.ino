@@ -24,7 +24,7 @@
 // Config Start
 
 // Change to true if you would like to recieve sensor data regardless of the error state. (Not Reccomended)
-const bool ignore_metric_errors = false;
+const bool ignore_metric_errors = true;
 
 const char* deviceId = "AirGradient";
 
@@ -116,7 +116,7 @@ void setup() {
   Serial.println("Trying to connect to the network...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    showTextRectangle("Trying,", "to connect...", true);
+    showTextRectangle(ssid, "Connecting", true);
     Serial.print(".");
   }
 
@@ -132,9 +132,11 @@ void setup() {
   server.on("/metrics", HandleRoot);
   server.onNotFound(HandleNotFound);
 
+  showTextRectangle("Listening To", WiFi.localIP().toString() + ":" + String(port),true);
+  delay(2000);
+
   server.begin();
   Serial.println("HTTP server started at ip " + WiFi.localIP().toString() + ":" + String(port));
-  showTextRectangle("Listening To", WiFi.localIP().toString() + ":" + String(port),true);
 }
 
 void loop() {
@@ -147,9 +149,10 @@ void loop() {
 metric_resp_t get_pm2() {
   // Early return if the sensor isn't enabled.
   if (!hasPM) return { "(disabled)", true };
-
   int val = ag.getPM2_Raw();
   itoa(val, pm2_reading, 10);
+  Serial.print("PM2: ");
+  Serial.println(val);
   return { pm2_reading, val <= 0 };
 }
 
@@ -159,6 +162,8 @@ metric_resp_t get_co2() {
 
   int val = ag.getCO2_Raw();
   itoa(val, co2_reading, 10);
+  Serial.print("CO2: ");
+  Serial.println(val);
   return { co2_reading, val == -1 };
 }
 
@@ -168,6 +173,11 @@ metric_resp_t get_atmp() {
 
   TMP_RH stat = ag.periodicFetchData();
   dtostrf(stat.t, 4, 2, atmp_reading);
+  itoa(stat.rh, rh_reading, 10);
+  Serial.print("T: ");
+  Serial.println(stat.t);
+  Serial.print("RH: ");
+  Serial.print(stat.rh);
   return { atmp_reading, stat.error != 0 };
 }
 
@@ -175,9 +185,9 @@ metric_resp_t get_rhum() {
   // Early return if the sensor isn't enabled.
   if (!hasSHT) return { "(disabled)", true };
 
-  TMP_RH stat = ag.periodicFetchData();
-  itoa(stat.rh, rh_reading, 10);
-  return { rh_reading, stat.error != 0 };
+  //  TMP_RH stat = ag.periodicFetchData();
+  // itoa(stat.rh, rh_reading, 10);
+  return { rh_reading, true };
 }
 
 metric_resp_t get_wifi_dbm() {
@@ -284,25 +294,25 @@ void updateScreen(long now) {
       case 0:
         if (hasPM) {
           int stat = ag.getPM2_Raw();
-          showTextRectangle("PM2",String(stat),false);
+          showTextRectangle("PM2",String(stat), true);
         }
         break;
       case 1:
         if (hasCO2) {
           int stat = ag.getCO2_Raw();
-          showTextRectangle("CO2", String(stat), false);
+          showTextRectangle("CO2", String(stat), true);
         }
         break;
       case 2:
         if (hasSHT) {
           TMP_RH stat = ag.periodicFetchData();
-          showTextRectangle("ATMP", String(stat.t), false);
+          showTextRectangle("ATMP", String(stat.t), true);
         }
         break;
       case 3:
         if (hasSHT) {
           TMP_RH stat = ag.periodicFetchData();
-          showTextRectangle("RHUM", String(stat.rh) + "%", false);
+          showTextRectangle("RHUM", String(stat.rh) + "%", true);
         }
         break;
     }
