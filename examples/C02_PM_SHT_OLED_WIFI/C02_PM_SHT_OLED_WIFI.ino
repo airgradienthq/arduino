@@ -22,6 +22,8 @@ Please set in the code below which sensor you are using and if you want to conne
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/schools/
 
+Ready made kits with all required components are available at https://www.airgradient.com/diyshop/
+
 MIT License
 */
 
