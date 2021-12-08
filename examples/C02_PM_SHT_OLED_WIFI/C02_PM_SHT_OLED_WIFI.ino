@@ -39,6 +39,8 @@ AirGradient ag = AirGradient();
 
 SSD1306Wire display(0x3c, SDA, SCL);
 
+WiFiClient client;
+
 // set sensors that you do not use to false
 boolean hasPM=true;
 boolean hasCO2=true;
