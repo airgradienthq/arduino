@@ -109,9 +109,10 @@ void showText() {
       Serial.println(httpCode);
       Serial.println(response);
       http.end();
+      delay(20000);
     }
 
-    delay(6000);
+    delay(10000);
   }
 
   matrix.show();

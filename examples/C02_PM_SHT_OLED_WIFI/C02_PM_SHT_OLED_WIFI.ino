@@ -136,6 +136,7 @@ void loop() {
     Serial.println(httpCode);
     Serial.println(response);
     http.end();
+    delay(21000);
   }
 }
 
