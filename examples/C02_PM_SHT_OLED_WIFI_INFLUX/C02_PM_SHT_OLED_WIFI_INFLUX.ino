@@ -38,14 +38,16 @@ AirGradient ag = AirGradient();
 SSD1306Wire display(0x3c, SDA, SCL);
 
 #define DISPLAY_DELAY 3000
-#define INFLUX_SEND_PERIOD 5 * 60 * 1000
-static unsigned long lastSampleTime = 0 - INFLUX_SEND_PERIOD;  // initialize such that a reading is due the first time through loop()
+// Number of times to run full loop before resending to influx
+#define INFLUX_SEND_PERIOD 37
+static unsigned long current_loop = INFLUX_SEND_PERIOD;  // initialize such that a reading is due the first time through loop()
 
 
 // set sensors that you do not use to false
-boolean hasPM=true;
-boolean hasCO2=true;
-boolean hasSHT=true;
+const boolean hasPM=true;
+const boolean hasCO2=true;
+const boolean hasSHT=true;
+const float shtTempOffset=-2.4;
 
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
 boolean connectWIFI=true;
@@ -78,10 +80,15 @@ void setup(){
 }
 
 void loop(){
-  unsigned long now = millis();
-  const boolean shouldPushToInflux = now - lastSampleTime >= INFLUX_SEND_PERIOD;
-  if (now - lastSampleTime >= INFLUX_SEND_PERIOD)
-    lastSampleTime += INFLUX_SEND_PERIOD;
+  boolean shouldPushToInflux = false;
+  current_loop += 1;
+  Serial.print("Current loop: ");
+  Serial.println(current_loop);
+  if (current_loop >= INFLUX_SEND_PERIOD) {
+    current_loop = 0;
+    shouldPushToInflux = true;
+    Serial.println("Reset to 0");
+  }
 
   if (hasPM) {
     const int PM2 = ag.getPM2_Raw();
@@ -101,10 +108,10 @@ void loop(){
 
   if (hasSHT) {
     TMP_RH result = ag.periodicFetchData();
-    if (shouldPushToInflux) write_data_float_point("temperature", result.t);
+    if (shouldPushToInflux) write_data_float_point("temperature", result.t + shtTempOffset);
     if (shouldPushToInflux) write_data_float_point("humidity", result.rh);
 
-    showTextRectangle(String(result.t), String(result.rh)+"%", false);
+    showTextRectangle(String(result.t + shtTempOffset), String(result.rh)+"%", false);
     delay(DISPLAY_DELAY);
   }
 }
