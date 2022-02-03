@@ -9,7 +9,7 @@
 #define NTP_DEFAULT_LOCAL_PORT 1515
 
 
-namespace NTP {
+namespace AirGradient {
 #if !defined(__time_t_defined) // avoid conflict with newlib or other posix libc
     typedef unsigned long time_t;
 #endif
