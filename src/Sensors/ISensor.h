@@ -15,7 +15,7 @@ namespace AirGradient {
          * Type of measurement returned by the sensor
          * @return
          */
-        virtual SensorType getType() = 0;
+        virtual SensorType getType() const = 0;
 
         /**
          * To initialize the sensor
@@ -26,7 +26,7 @@ namespace AirGradient {
          * To update the data structure containing the data of all sensors
          * @param data
          */
-        virtual void updateData(SensorData &data) = 0;
+        virtual void updateData(SensorData &data) const = 0;
     };
 
 }
