@@ -6,8 +6,7 @@ AirGradient::SensorType AirGradient::BootTimeSensor::getType() const {
 }
 
 void AirGradient::BootTimeSensor::begin() {
-
-    auto ntpClient = new NTPClient(_ntpServer);
+    auto ntpClient = std::make_unique<NTPClient>(_ntpServer);
     _bootTime = ntpClient->getUtcUnixEpoch();
 }
 
