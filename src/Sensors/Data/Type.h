@@ -20,6 +20,10 @@ namespace AirGradient {
         /**
          * Provide humidity measurement
          */
-        Humidity = 1 << 3
+        Humidity = 1 << 3,
+        /**
+         * Provide the boot time
+         */
+        BootTime = 1 << 4,
     };
 }
