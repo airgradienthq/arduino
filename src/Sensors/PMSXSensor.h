@@ -34,6 +34,8 @@ namespace AirGradient {
 
         void updateData(SensorData &data) const override;
 
+        ~PMSXSensor() override = default;
+
     private:
         std::unique_ptr<SoftwareSerial> _softwareSerial;
         uint8_t _rxPin;
