@@ -30,8 +30,8 @@ time_t AirGradient::NTPClient::getUtcUnixEpoch() {
     _udp.flush();
 
     Serial.println("Transmit NTP Request");
-    WiFi.hostByName(_ntpServer.c_str(), ntpServerIP);
-    Serial.println(_ntpServer + ": " + ntpServerIP);
+    WiFi.hostByName(_ntpServer, ntpServerIP);
+    Serial.printf("%s: %s", _ntpServer, ntpServerIP.toString().c_str());
     sendNTPpacket(ntpServerIP);
     uint8_t timeout = 0;
     size_t cb = 0;
@@ -58,5 +58,3 @@ time_t AirGradient::NTPClient::getUtcUnixEpoch() {
     Serial.println("Epoch: " + String(epoch));
     return epoch;
 }
-
-AirGradient::NTPClient::NTPClient(String ntpServer) : _ntpServer(std::move(ntpServer)) {}

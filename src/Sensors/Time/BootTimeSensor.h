@@ -15,11 +15,10 @@ namespace AirGradient {
             return "NTP Client";
         }
 
-        BootTimeSensor(String ntpServer);
-
+        BootTimeSensor(const char *ntpServer) : _ntpServer(ntpServer) {}
 
     private:
-        String _ntpServer;
+        const char* _ntpServer;
         time_t _bootTime;
     };
 }

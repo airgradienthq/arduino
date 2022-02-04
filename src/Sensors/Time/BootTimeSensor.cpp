@@ -17,5 +17,3 @@ void AirGradient::BootTimeSensor::getData(AirGradient::SensorData &data) const {
         data.BOOT_TIME = _bootTime;
     }
 }
-
-AirGradient::BootTimeSensor::BootTimeSensor(String ntpServer) : _ntpServer(std::move(ntpServer)) {}
