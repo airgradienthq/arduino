@@ -32,7 +32,7 @@ namespace AirGradient {
          * To update the data structure containing the data of all sensors
          * @param data
          */
-        virtual void updateData(SensorData &data) const = 0;
+        virtual void getData(SensorData &data) const = 0;
     };
 
 }

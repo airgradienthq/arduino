@@ -34,6 +34,6 @@ void AirGradient::MetricGatherer::_gatherMetrics() {
         Serial.println("Gather not initialized properly.");
     }
     for (auto const &sensor: _sensors) {
-        sensor->updateData(_data);
+        sensor->getData(_data);
     }
 }

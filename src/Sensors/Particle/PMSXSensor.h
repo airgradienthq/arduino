@@ -39,7 +39,7 @@ namespace AirGradient {
             return "Plantower PMS5003";
         }
 
-        void updateData(SensorData &data) const override;
+        void getData(SensorData &data) const override;
 
         ~PMSXSensor() override = default;
 

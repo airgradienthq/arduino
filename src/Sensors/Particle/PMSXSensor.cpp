@@ -35,7 +35,7 @@ void AirGradient::PMSXSensor::_getPm2DataSleep() {
     }
 }
 
-void AirGradient::PMSXSensor::updateData(AirGradient::SensorData &data) const {
+void AirGradient::PMSXSensor::getData(AirGradient::SensorData &data) const {
     data.PARTICLE_DATA = _data;
 }
 

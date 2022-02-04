@@ -11,7 +11,7 @@ bool AirGradient::BootTimeSensor::begin() {
     return _bootTime > 0;
 }
 
-void AirGradient::BootTimeSensor::updateData(AirGradient::SensorData &data) const {
+void AirGradient::BootTimeSensor::getData(AirGradient::SensorData &data) const {
     //No need to update the bootime more than once
     if (data.BOOT_TIME == 0) {
         data.BOOT_TIME = _bootTime;

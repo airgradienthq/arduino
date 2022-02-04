@@ -21,7 +21,7 @@ bool AirGradient::SensairS8Sensor::begin() {
     return sensorData.abc_period > 0;
 }
 
-void AirGradient::SensairS8Sensor::updateData(AirGradient::SensorData &data) const {
+void AirGradient::SensairS8Sensor::getData(AirGradient::SensorData &data) const {
     auto previousReading = data.CO2;
     auto co2 = _sensor->get_co2();
 

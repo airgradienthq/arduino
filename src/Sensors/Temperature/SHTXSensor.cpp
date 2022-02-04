@@ -11,7 +11,7 @@ bool AirGradient::SHTXSensor::begin() {
     return _sensor->init();
 }
 
-void AirGradient::SHTXSensor::updateData(AirGradient::SensorData &data) const {
+void AirGradient::SHTXSensor::getData(AirGradient::SensorData &data) const {
     if (!_sensor->readSample()) {
         Serial.println("Can't read SHT sensor data");
 

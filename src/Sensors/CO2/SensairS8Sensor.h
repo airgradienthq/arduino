@@ -13,7 +13,7 @@ namespace AirGradient {
 
         bool begin() override;
 
-        void updateData(SensorData &data) const override;
+        void getData(SensorData &data) const override;
 
         inline const char *getName() const override {
             return "Sensair S8";

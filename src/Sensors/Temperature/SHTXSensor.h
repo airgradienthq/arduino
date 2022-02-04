@@ -19,7 +19,7 @@ namespace AirGradient {
 
         bool begin() override;
 
-        void updateData(SensorData &data) const override;
+        void getData(SensorData &data) const override;
 
         /**
          *
