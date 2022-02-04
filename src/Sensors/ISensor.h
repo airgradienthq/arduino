@@ -6,7 +6,7 @@
 namespace AirGradient {
     class ISensor {
     protected:
-        ISensor();
+        ISensor() = default;
 
     public:
         virtual ~ISensor() = default;
