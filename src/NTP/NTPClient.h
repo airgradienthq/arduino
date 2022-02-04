@@ -31,14 +31,15 @@ namespace AirGradient {
 
         virtual ~NTPClient() = default;
 
-        NTPClient(const char *ntpServer) : _ntpServer(ntpServer) {}
-
-    private:
-        NTPClient() {
-            _udp.begin(NTP_DEFAULT_LOCAL_PORT);
+        NTPClient(const char *ntpServer, uint8_t udpPort) : _ntpServer(ntpServer) {
+            _udp.begin(udpPort);
         }
 
-        const char* _ntpServer;
+        NTPClient(const char *ntpServer) : NTPClient(ntpServer, NTP_DEFAULT_LOCAL_PORT) {}
+
+    private:
+
+        const char *_ntpServer;
         WiFiUDP _udp;
         byte _packetBuffer[NTP_PACKET_SIZE]{};
 

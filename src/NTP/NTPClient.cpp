@@ -31,7 +31,7 @@ time_t AirGradient::NTPClient::getUtcUnixEpoch() {
 
     Serial.println("Transmit NTP Request");
     WiFi.hostByName(_ntpServer, ntpServerIP);
-    Serial.printf("%s: %s", _ntpServer, ntpServerIP.toString().c_str());
+    Serial.printf("%s: %s\n", _ntpServer, ntpServerIP.toString().c_str());
     sendNTPpacket(ntpServerIP);
     uint8_t timeout = 0;
     size_t cb = 0;
