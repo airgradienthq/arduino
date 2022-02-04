@@ -35,6 +35,10 @@ namespace AirGradient {
             return SensorType::Particle;
         }
 
+        inline const char *getName() const override {
+            return "Plantower PMS5003";
+        }
+
         void updateData(SensorData &data) const override;
 
         ~PMSXSensor() override = default;

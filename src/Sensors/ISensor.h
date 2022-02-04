@@ -12,6 +12,12 @@ namespace AirGradient {
         virtual ~ISensor() = default;
 
         /**
+         * Name of the sensor, useful for debugging message.
+         * @return
+         */
+        inline virtual const char* getName() const = 0;
+
+        /**
          * Type of measurement returned by the sensor
          * @return
          */

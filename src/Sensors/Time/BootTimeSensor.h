@@ -10,7 +10,13 @@ namespace AirGradient {
 
         void updateData(SensorData &data) const override;
 
+
+        inline const char *getName() const override {
+            return "NTP Client";
+        }
+
         BootTimeSensor(String ntpServer);
+
 
     private:
         String _ntpServer;

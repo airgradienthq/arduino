@@ -12,6 +12,11 @@ namespace AirGradient {
 
         SensorType getType() const override;
 
+
+        inline const char *getName() const override {
+            return "Sensirion SHT";
+        }
+
         bool begin() override;
 
         void updateData(SensorData &data) const override;

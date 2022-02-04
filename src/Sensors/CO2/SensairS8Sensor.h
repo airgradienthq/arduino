@@ -15,6 +15,10 @@ namespace AirGradient {
 
         void updateData(SensorData &data) const override;
 
+        inline const char *getName() const override {
+            return "Sensair S8";
+        }
+
         SensairS8Sensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate) : _rxPin(rxPin),
                                                                            _txPin(txPin),
                                                                            _baudRate(baudRate) {}
