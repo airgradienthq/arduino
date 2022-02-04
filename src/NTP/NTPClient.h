@@ -8,7 +8,7 @@
 
 #define NTP_PACKET_SIZE 48
 #define SEVENTIES 2208988800UL
-#define NTP_DEFAULT_LOCAL_PORT 1515
+#define NTP_DEFAULT_LOCAL_PORT 1515U
 
 
 namespace AirGradient {
