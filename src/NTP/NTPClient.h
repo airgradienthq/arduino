@@ -8,7 +8,7 @@
 
 #define NTP_PACKET_SIZE 48
 #define SEVENTIES 2208988800UL
-#define NTP_DEFAULT_LOCAL_PORT 1515U
+#define NTP_DEFAULT_LOCAL_PORT UINT16_C(1515)
 
 
 namespace AirGradient {
@@ -31,7 +31,7 @@ namespace AirGradient {
 
         virtual ~NTPClient() = default;
 
-        NTPClient(const char *ntpServer, uint8_t udpPort) : _ntpServer(ntpServer) {
+        NTPClient(const char *ntpServer, uint16_t udpPort) : _ntpServer(ntpServer) {
             _udp.begin(udpPort);
         }
 
