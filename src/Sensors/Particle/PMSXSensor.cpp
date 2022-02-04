@@ -12,14 +12,6 @@ void AirGradient::PMSXSensor::begin() {
 }
 
 
-AirGradient::PMSXSensor::PMSXSensor() : PMSXSensor(D5, D6, PMS_DEFAULT_BAUDRATE, PMS_DEFAULT_WAKE_SECS) {}
-
-AirGradient::PMSXSensor::PMSXSensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate, uint16_t wakupXSecs) :
-        _rxPin(rxPin),
-        _txPin(txPin),
-        _baudRate(baudRate),
-        _wakupXSecs(wakupXSecs) {}
-
 void AirGradient::PMSXSensor::_wakeUpPm2() {
     _sensor->wakeUp();
     _readSleepTicker.once_scheduled(PMS_DELAY_BEFORE_READING_SECS, [this] { _getPm2DataSleep(); });

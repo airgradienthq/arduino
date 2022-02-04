@@ -22,9 +22,12 @@ namespace AirGradient {
          * @param baudRate baudrate
          * @param wakupXSecs the sensor will only wakeup every X seconds to take a reading before going back to sleep to save on the lifespan.
          */
-        PMSXSensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate, uint16_t wakupXSecs);
+        PMSXSensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate, uint16_t wakupXSecs) : _rxPin(rxPin), _txPin(txPin),
+                                                                                           _baudRate(baudRate),
+                                                                                           _wakupXSecs(wakupXSecs) {}
 
-        PMSXSensor();
+        PMSXSensor() : PMSXSensor(D5, D6, PMS_DEFAULT_BAUDRATE, PMS_DEFAULT_WAKE_SECS) {};
+
 
         void begin() override;
 
