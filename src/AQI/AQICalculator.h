@@ -17,9 +17,9 @@ namespace AirGradient {
         float cLo;
     };
 
-    class Calculator {
+    class AQICalculator {
     public:
-        Calculator(std::shared_ptr<MetricGatherer> metrics);
+        AQICalculator(std::shared_ptr<MetricGatherer> metrics);
 
         /**
          * Check if we have enough reading to give a proper AQI.
@@ -34,7 +34,7 @@ namespace AirGradient {
          */
         float getAQI() const;
 
-        virtual ~Calculator();
+        virtual ~AQICalculator();
 
     private:
         std::shared_ptr<MetricGatherer> _metrics;

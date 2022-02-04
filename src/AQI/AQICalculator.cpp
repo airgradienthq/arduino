@@ -1,9 +1,9 @@
-#include "Calculator.h"
+#include "AQICalculator.h"
 
 #include <utility>
 
 namespace AirGradient {
-    Breakpoints Calculator::_getPM25Breakpoints(float pm25Avg) const {
+    Breakpoints AQICalculator::_getPM25Breakpoints(float pm25Avg) const {
         Breakpoints b{};
 
         if (pm25Avg <= 12) {
@@ -46,27 +46,27 @@ namespace AirGradient {
         return b;
     }
 
-    float Calculator::_getAQI(Breakpoints breakpoints, float pm25Avg) const{
+    float AQICalculator::_getAQI(Breakpoints breakpoints, float pm25Avg) const{
         return static_cast<float>((breakpoints.iHi - breakpoints.iLo))
                * (pm25Avg - breakpoints.cLo)
                / (breakpoints.cHi - breakpoints.cLo) + static_cast<float>(breakpoints.iLo);
     }
 
-    Calculator::Calculator(std::shared_ptr<MetricGatherer> metrics) : _metrics(std::move(metrics)) {
+    AQICalculator::AQICalculator(std::shared_ptr<MetricGatherer> metrics) : _metrics(std::move(metrics)) {
         _ticker.attach(GATHER_METRIC_EVERY_X_SECS, [this] { _recordMetric(); });
     }
 
-    float Calculator::getAQI() const {
+    float AQICalculator::getAQI() const {
         auto pm2Avg = _average.getAverage();
         auto breakpoint = _getPM25Breakpoints(pm2Avg);
         return _getAQI(breakpoint, pm2Avg);
     }
 
-    Calculator::~Calculator() {
+    AQICalculator::~AQICalculator() {
 
     }
 
-    void Calculator::_recordMetric() {
+    void AQICalculator::_recordMetric() {
         auto pm25 = _metrics->getData().PARTICLE_DATA.PM_2_5;
         _average.addSample(pm25);
         Serial.printf("Record PM2.5 (%d) for AVG: (%f)\n", pm25, _average.getAverage());
