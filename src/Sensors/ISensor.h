@@ -20,7 +20,7 @@ namespace AirGradient {
         /**
          * To initialize the sensor
          */
-        virtual void begin() = 0;
+        virtual bool begin() = 0;
 
         /**
          * To update the data structure containing the data of all sensors

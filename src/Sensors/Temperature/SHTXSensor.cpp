@@ -5,13 +5,10 @@ AirGradient::SensorType AirGradient::SHTXSensor::getType() const {
     return SensorType::Temperature | SensorType::Humidity;
 }
 
-void AirGradient::SHTXSensor::begin() {
+bool AirGradient::SHTXSensor::begin() {
     _sensor = std::make_unique<SHTSensor>();
     _sensor->setAccuracy(_accuracy);
-    if (!_sensor->init()) {
-        Serial.println("Can't init the SHT sensor");
-        return;
-    }
+    return _sensor->init();
 }
 
 void AirGradient::SHTXSensor::updateData(AirGradient::SensorData &data) const {

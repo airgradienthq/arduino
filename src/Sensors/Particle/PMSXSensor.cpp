@@ -1,6 +1,6 @@
 #include "PMSXSensor.h"
 
-void AirGradient::PMSXSensor::begin() {
+bool AirGradient::PMSXSensor::begin() {
 
     _softwareSerial = std::make_unique<SoftwareSerial>(_rxPin, _txPin);
     _softwareSerial->begin(_baudRate);
@@ -8,7 +8,7 @@ void AirGradient::PMSXSensor::begin() {
     _wakeUpPm2();
 
     _wakerTicker.attach_scheduled(_wakupXSecs, [this] { _wakeUpPm2(); });
-
+    return true;
 }
 
 

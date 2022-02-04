@@ -12,7 +12,7 @@ namespace AirGradient {
 
         SensorType getType() const override;
 
-        void begin() override;
+        bool begin() override;
 
         void updateData(SensorData &data) const override;
 

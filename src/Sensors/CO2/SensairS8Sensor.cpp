@@ -4,11 +4,10 @@ AirGradient::SensorType AirGradient::SensairS8Sensor::getType() const {
     return SensorType::CO2;
 }
 
-void AirGradient::SensairS8Sensor::begin() {
+bool AirGradient::SensairS8Sensor::begin() {
     _softwareSerial = std::make_unique<SoftwareSerial>(_rxPin, _txPin);
     _softwareSerial->begin(_baudRate);
     _sensor = std::make_unique<S8_UART>(*_softwareSerial);
-    // Check if S8 is available
     S8_sensor sensorData{};
     _sensor->get_firmware_version(sensorData.firm_version);
     Serial.println(">>> SenseAir S8 NDIR CO2 sensor <<<");
@@ -19,6 +18,7 @@ void AirGradient::SensairS8Sensor::begin() {
     Serial.println("");
     sensorData.abc_period = _sensor->get_ABC_period();
     Serial.printf("ABC period: %d\n", sensorData.abc_period);
+    return sensorData.abc_period > 0;
 }
 
 void AirGradient::SensairS8Sensor::updateData(AirGradient::SensorData &data) const {

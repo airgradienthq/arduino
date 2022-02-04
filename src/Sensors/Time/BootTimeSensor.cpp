@@ -2,12 +2,13 @@
 #include "NTP/NTPClient.h"
 
 AirGradient::SensorType AirGradient::BootTimeSensor::getType() const {
-    return BootTime;
+    return SensorType::BootTime;
 }
 
-void AirGradient::BootTimeSensor::begin() {
+bool AirGradient::BootTimeSensor::begin() {
     auto ntpClient = std::make_unique<NTPClient>(_ntpServer);
     _bootTime = ntpClient->getUtcUnixEpoch();
+    return _bootTime > 0;
 }
 
 void AirGradient::BootTimeSensor::updateData(AirGradient::SensorData &data) const {

@@ -29,7 +29,7 @@ namespace AirGradient {
         PMSXSensor() : PMSXSensor(D5, D6, PMS_DEFAULT_BAUDRATE, PMS_DEFAULT_WAKE_SECS) {};
 
 
-        void begin() override;
+        bool begin() override;
 
         SensorType getType() const override {
             return SensorType::Particle;
