@@ -12,11 +12,21 @@ namespace AirGradient {
 
     public:
 
-        PrometheusServer(int serverPort, const char *deviceId, std::shared_ptr<AirGradient::MetricGatherer> metrics,
-                         std::shared_ptr<AirGradient::AQICalculator> aqiCalculator) : _serverPort(serverPort),
-                                                                            _deviceId(deviceId),
-                                                                            _metrics(std::move(metrics)),
-                                                                            _aqiCalculator(std::move(aqiCalculator)) {
+        /**
+         *
+         * @param serverPort Port to listen to
+         * @param deviceId ID of the device for prometheus
+         * @param metrics metric gatherer
+         * @param aqiCalculator aqi calculator
+         */
+        PrometheusServer(int serverPort,
+                         const char *deviceId,
+                         std::shared_ptr<AirGradient::MetricGatherer> metrics,
+                         std::shared_ptr<AirGradient::AQICalculator> aqiCalculator
+        ) : _serverPort(serverPort),
+            _deviceId(deviceId),
+            _metrics(std::move(metrics)),
+            _aqiCalculator(std::move(aqiCalculator)) {
             _server = std::make_unique<ESP8266WebServer>(_serverPort);
         }
 
