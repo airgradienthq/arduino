@@ -9,6 +9,10 @@ namespace AirGradient {
      */
     enum class SensorType : uint8_t {
         /**
+         * Used to check flags, please don't assign it to your sensor.
+         */
+        None = 0,
+        /**
          * Provide particle measurement (PM 1.0, PM 2.5, etc ...)
          */
         Particle = 1 << 0,
@@ -29,6 +33,7 @@ namespace AirGradient {
          */
         BootTime = 1 << 4,
     };
+
 
     ENUM_FLAG_OPERATORS(SensorType);
 }

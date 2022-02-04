@@ -53,6 +53,9 @@ namespace AirGradient {
     }
 
     AQICalculator::AQICalculator(std::shared_ptr<MetricGatherer> metrics) : _metrics(std::move(metrics)) {
+        if(!(_metrics->getSensorTypes() & SensorType::Particle)) {
+
+        }
         _ticker.attach(GATHER_METRIC_EVERY_X_SECS, [this] { _recordMetric(); });
     }
 

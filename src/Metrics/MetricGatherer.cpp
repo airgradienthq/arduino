@@ -3,8 +3,8 @@
 
 AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor) {
     for (auto const &currentSensor: _sensors) {
-        auto type = currentSensor->getType() & sensor->getType();
-        if (type == sensor->getType() || type == currentSensor->getType()) {
+        //If there is already a sensor providing this data, we need to tell the developer
+        if (!(currentSensor->getType() & sensor->getType())) {
             Serial.printf("[Conflict %s & %s] Already have a sensor with the type: %hhu\n",
                           currentSensor->getName(), sensor->getName(), sensor->getType());
             return *this;
