@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Utils/Enum.h"
+
 namespace AirGradient {
+
     /**
      * Represent the type of data the sensor can provide. Can be multiple. Used as flag.
      */
-    enum SensorType : uint8_t {
+    enum class SensorType : uint8_t {
         /**
          * Provide particle measurement (PM 1.0, PM 2.5, etc ...)
          */
@@ -26,8 +29,6 @@ namespace AirGradient {
          */
         BootTime = 1 << 4,
     };
-    inline SensorType operator|(SensorType a, SensorType b)
-    {
-        return static_cast<SensorType>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-    }
+
+    ENUM_FLAG_OPERATORS(SensorType);
 }

@@ -1,7 +1,7 @@
 #include "SensairS8Sensor.h"
 
 AirGradient::SensorType AirGradient::SensairS8Sensor::getType() const {
-    return CO2;
+    return SensorType::CO2;
 }
 
 void AirGradient::SensairS8Sensor::begin() {

@@ -32,7 +32,7 @@ namespace AirGradient {
         void begin() override;
 
         SensorType getType() const override {
-            return Particle;
+            return SensorType::Particle;
         }
 
         void updateData(SensorData &data) const override;
