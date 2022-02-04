@@ -7,13 +7,13 @@
 #include "AQI/AQICalculator.h"
 
 namespace AirGradient {
-    class Server {
+    class PrometheusServer {
 
 
     public:
 
-        Server(int serverPort, const char *deviceId, std::shared_ptr<AirGradient::MetricGatherer> metrics,
-               std::shared_ptr<AirGradient::AQICalculator> aqiCalculator) : _serverPort(serverPort),
+        PrometheusServer(int serverPort, const char *deviceId, std::shared_ptr<AirGradient::MetricGatherer> metrics,
+                         std::shared_ptr<AirGradient::AQICalculator> aqiCalculator) : _serverPort(serverPort),
                                                                             _deviceId(deviceId),
                                                                             _metrics(std::move(metrics)),
                                                                             _aqiCalculator(std::move(aqiCalculator)) {
@@ -30,7 +30,7 @@ namespace AirGradient {
          */
         void begin();
 
-        virtual ~Server();
+        virtual ~PrometheusServer();
 
     private:
         int _serverPort;

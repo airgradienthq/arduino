@@ -1,15 +1,15 @@
-#include "Server.h"
+#include "PrometheusServer.h"
 
-AirGradient::Server::~Server() {
+AirGradient::PrometheusServer::~PrometheusServer() {
     _server->stop();
     _server->close();
 }
 
-void AirGradient::Server::handleRequests() {
+void AirGradient::PrometheusServer::handleRequests() {
     _server->handleClient();
 }
 
-void AirGradient::Server::begin() {
+void AirGradient::PrometheusServer::begin() {
     _server->on("/", [this] { _handleRoot(); });
     _server->on("/metrics", [this] { _handleRoot(); });
     _server->onNotFound([this] { _handleNotFound(); });
@@ -18,7 +18,7 @@ void AirGradient::Server::begin() {
     Serial.println("HTTP server started at ip " + WiFi.localIP().toString() + ":" + String(_serverPort));
 }
 
-String AirGradient::Server::_generateMetrics() {
+String AirGradient::PrometheusServer::_generateMetrics() {
     String message = "";
     String idString = _getIdString();
 
@@ -94,7 +94,7 @@ String AirGradient::Server::_generateMetrics() {
     return message;
 }
 
-String AirGradient::Server::_getIdString(const char *labelType, const char *labelValue) const {
+String AirGradient::PrometheusServer::_getIdString(const char *labelType, const char *labelValue) const {
     if (labelType == nullptr || labelValue == nullptr) {
 
         return "{id=\"" + String(_deviceId) + "\",mac=\"" + WiFi.macAddress().c_str() + "\"}";
@@ -103,11 +103,11 @@ String AirGradient::Server::_getIdString(const char *labelType, const char *labe
            labelValue + "\"}";
 }
 
-void AirGradient::Server::_handleRoot() {
+void AirGradient::PrometheusServer::_handleRoot() {
     _server->send(200, "text/plain", _generateMetrics());
 }
 
-void AirGradient::Server::_handleNotFound() {
+void AirGradient::PrometheusServer::_handleNotFound() {
     String message = "File Not Found\n\n";
     message += "URI: ";
     message += _server->uri();
