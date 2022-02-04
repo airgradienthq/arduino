@@ -34,6 +34,11 @@ namespace AirGradient {
          */
         float getAQI() const;
 
+        /**
+         * Initialize the AQI calculator
+         */
+        void begin();
+
         virtual ~AQICalculator();
 
     private:

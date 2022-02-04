@@ -53,10 +53,7 @@ namespace AirGradient {
     }
 
     AQICalculator::AQICalculator(std::shared_ptr<MetricGatherer> metrics) : _metrics(std::move(metrics)) {
-        if(!(_metrics->getSensorTypes() & SensorType::Particle)) {
 
-        }
-        _ticker.attach(GATHER_METRIC_EVERY_X_SECS, [this] { _recordMetric(); });
     }
 
     float AQICalculator::getAQI() const {
@@ -73,5 +70,14 @@ namespace AirGradient {
         auto pm25 = _metrics->getData().PARTICLE_DATA.PM_2_5;
         _average.addSample(pm25);
         Serial.printf("Record PM2.5 (%d) for AVG: (%f)\n", pm25, _average.getAverage());
+    }
+
+    void AQICalculator::begin() {
+        //Don't have a particle sensor
+        if(!!(_metrics->getSensorTypes() & SensorType::Particle)) {
+            Serial.println("No particle sensor to use to calculate PM2.5 AQI");
+            return;
+        }
+        _ticker.attach(GATHER_METRIC_EVERY_X_SECS, [this] { _recordMetric(); });
     }
 }
