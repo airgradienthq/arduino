@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "ISensor.h"
+#include "Sensors/ISensor.h"
 
 namespace AirGradient {
     class BootTimeSensor : public ISensor {

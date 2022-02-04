@@ -2,7 +2,7 @@
 
 #include <SoftwareSerial.h>
 #include <Ticker.h>
-#include "ISensor.h"
+#include "Sensors/ISensor.h"
 #include "PMS.h"
 
 #define PMS_DEFAULT_BAUDRATE 9600
