@@ -1,7 +1,3 @@
-//
-// Created by Antoine on 2022-02-04.
-//
-
 #include "MHZ19Sensor.h"
 
 bool AirGradient::MHZ19Sensor::begin() {
