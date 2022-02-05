@@ -30,21 +30,24 @@ Kits with all required components are available at https://www.airgradient.com/d
 MIT License
 */
 
-#include <AirGradient.h>
-
+#include "Metrics/MetricGatherer.h"
+#include "Sensors/Particle/PMSXSensor.h"
+#include "Sensors/Temperature/SHTXSensor.h"
+#include "Sensors/CO2/SensairS8Sensor.h"
 #include <WiFiManager.h>
-
 #include <ESP8266WiFi.h>
-
 #include <ESP8266HTTPClient.h>
-
 #include <Wire.h>
-
 #include "SSD1306Wire.h"
+#include "AQI/AQICalculator.h"
 
-AirGradient ag = AirGradient();
+using namespace AirGradient;
+
 
 SSD1306Wire display(0x3c, SDA, SCL);
+
+//screen refresh
+const uint16_t screenUpdateFrequencyMs = 5000;
 
 // set sensors that you do not use to false
 boolean hasPM = true;
@@ -63,67 +66,67 @@ boolean connectWIFI = false;
 // change if you want to send the data to another server
 String APIROOT = "http://hw.airgradient.com/";
 
+uint8_t counter = 0;
+
+auto metrics = std::make_shared<MetricGatherer>();
+auto aqiCalculator = std::make_unique<AQICalculator>(metrics);
+Ticker updateScreenTicker;
+Ticker sendPayloadTicker;
+
 void setup() {
-  Serial.begin(9600);
+    Serial.begin(9600);
 
-  display.init();
-  display.flipScreenVertically();
-  showTextRectangle("Init", String(ESP.getChipId(), HEX), true);
+    display.init();
+    display.flipScreenVertically();
+    showTextRectangle("Init", String(ESP.getChipId(), HEX), true);
 
-  if (hasPM) ag.PMS_Init();
-  if (hasCO2) ag.CO2_Init();
-  if (hasSHT) ag.TMP_RH_Init(0x44);
+    if (hasPM) metrics->addSensor(std::make_unique<PMSXSensor>());
+    if (hasCO2) metrics->addSensor(std::make_unique<SensairS8Sensor>());
+    if (hasSHT) metrics->addSensor(std::make_unique<SHTXSensor>());
 
-  if (connectWIFI) connectToWifi();
-  delay(2000);
+    if (connectWIFI) connectToWifi();
+
+    metrics->begin();
+    aqiCalculator->begin();
+    updateScreenTicker.attach_ms_scheduled(screenUpdateFrequencyMs, updateScreen);
+
+    if (connectWIFI) {
+        sendPayloadTicker.attach_scheduled(20, sendPayload);
+    }
+
 }
 
 void loop() {
 
-  // create payload
 
-  String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
+}
 
-  if (hasPM) {
-    int PM2 = ag.getPM2_Raw();
-    payload = payload + "\"pm02\":" + String(PM2);
+void sendPayload() {
+    auto data = metrics->getData();
+    auto sensorType = metrics->getSensorTypes();
 
-    if (inUSaqi) {
-      showTextRectangle("AQI", String(PM_TO_AQI_US(PM2)), false);
-    } else {
-      showTextRectangle("PM2", String(PM2), false);
+    // create payload
+    String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
+
+    //Check for particle sensor
+    if (!(sensorType & SensorType::Particle)) {
+        auto PM2 = data.PARTICLE_DATA.PM_2_5;
+        payload = payload + "\"pm02\":" + String(PM2);
     }
 
-    delay(3000);
-
-  }
-
-  if (hasCO2) {
-    if (hasPM) payload = payload + ",";
-    int CO2 = ag.getCO2_Raw();
-    payload = payload + "\"rco2\":" + String(CO2);
-    showTextRectangle("CO2", String(CO2), false);
-    delay(3000);
-  }
-
-  if (hasSHT) {
-    if (hasCO2 || hasPM) payload = payload + ",";
-    TMP_RH result = ag.periodicFetchData();
-    payload = payload + "\"atmp\":" + String(result.t) + ",\"rhum\":" + String(result.rh);
-
-    if (inF) {
-      showTextRectangle(String((result.t * 9 / 5) + 32), String(result.rh) + "%", false);
-    } else {
-      showTextRectangle(String(result.t), String(result.rh) + "%", false);
+    //Check for CO2 sensor
+    if (!(sensorType & SensorType::CO2)) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        auto CO2 = data.CO2;
+        payload = payload + "\"rco2\":" + String(CO2);
     }
 
-    delay(3000);
-  }
+    if (hasSHT) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        payload = payload + "\"atmp\":" + String(data.TMP) + ",\"rhum\":" + String(data.HUM);
+    }
 
-  payload = payload + "}";
-
-  // send payload
-  if (connectWIFI) {
+    payload = payload + "}";
     Serial.println(payload);
     String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
     Serial.println(POSTURL);
@@ -136,47 +139,77 @@ void loop() {
     Serial.println(httpCode);
     Serial.println(response);
     http.end();
-    delay(21000);
-  }
 }
 
 // DISPLAY
-void showTextRectangle(String ln1, String ln2, boolean small) {
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (small) {
-    display.setFont(ArialMT_Plain_16);
-  } else {
-    display.setFont(ArialMT_Plain_24);
-  }
-  display.drawString(32, 16, ln1);
-  display.drawString(32, 36, ln2);
-  display.display();
+void showTextRectangle(const String &ln1, const String &ln2, boolean small) {
+    display.clear();
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    if (small) {
+        display.setFont(ArialMT_Plain_16);
+    } else {
+        display.setFont(ArialMT_Plain_24);
+    }
+    display.drawString(32, 16, ln1);
+    display.drawString(32, 36, ln2);
+    display.display();
+}
+
+void updateScreen() {
+    auto data = metrics->getData();
+    auto sensorType = metrics->getSensorTypes();
+    // Take a measurement at a fixed interval.
+    switch (counter) {
+
+        case 0:
+            if (!(sensorType & SensorType::Particle)) {
+                showTextRectangle("PM2", String(data.PARTICLE_DATA.PM_2_5), false);
+                break;
+            }
+        case 1:
+            if (!(sensorType & SensorType::CO2)) {
+                showTextRectangle("CO2", String(data.CO2), false);
+                break;
+            }
+
+        case 2:
+            if (!(sensorType & SensorType::Temperature)) {
+                if (inF) {
+                    showTextRectangle("TMP", String((data.TMP * 1.8) + 32, 1) + "F", false);
+                    break;
+                }
+                showTextRectangle("TMP", String(data.TMP, 1) + "C", false);
+                break;
+            }
+
+        case 3:
+            if (!(sensorType & SensorType::Humidity)) {
+                showTextRectangle("HUM", String(data.HUM, 1) + "%", false);
+                break;
+            }
+
+        case 4:
+            if (!(sensorType & SensorType::Particle)) {
+                auto aqi = aqiCalculator->isAQIAvailable() ? String(aqiCalculator->getAQI(), 1) : "N/A";
+                showTextRectangle("AQI", aqi, false);
+                break;
+            }
+    }
+
+    counter = ++counter % 5;
 }
 
 // Wifi Manager
 void connectToWifi() {
-  WiFiManager wifiManager;
-  //WiFi.disconnect(); //to delete previous saved hotspot
-  String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
-  wifiManager.setTimeout(120);
-  if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
-    Serial.println("failed to connect and hit timeout");
-    delay(3000);
-    ESP.restart();
-    delay(5000);
-  }
+    WiFiManager wifiManager;
+    //WiFi.disconnect(); //to delete previous saved hotspot
+    String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
+    wifiManager.setTimeout(120);
+    if (!wifiManager.autoConnect((const char *) HOTSPOT.c_str())) {
+        Serial.println("failed to connect and hit timeout");
+        delay(3000);
+        ESP.restart();
+        delay(5000);
+    }
 
 }
-
-// Calculate PM2.5 US AQI
-int PM_TO_AQI_US(int pm02) {
-  if (pm02 <= 12.0) return ((50 - 0) / (12.0 - .0) * (pm02 - .0) + 0);
-  else if (pm02 <= 35.4) return ((100 - 50) / (35.4 - 12.0) * (pm02 - 12.0) + 50);
-  else if (pm02 <= 55.4) return ((150 - 100) / (55.4 - 35.4) * (pm02 - 35.4) + 100);
-  else if (pm02 <= 150.4) return ((200 - 150) / (150.4 - 55.4) * (pm02 - 55.4) + 150);
-  else if (pm02 <= 250.4) return ((300 - 200) / (250.4 - 150.4) * (pm02 - 150.4) + 200);
-  else if (pm02 <= 350.4) return ((400 - 300) / (350.4 - 250.4) * (pm02 - 250.4) + 300);
-  else if (pm02 <= 500.4) return ((500 - 400) / (500.4 - 350.4) * (pm02 - 350.4) + 400);
-  else return 500;
-};
