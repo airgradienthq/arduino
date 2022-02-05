@@ -14,7 +14,7 @@ namespace AirGradient {
          * @param sensor
          * @return the same instance of the MetricGatherer to easily add new sensor
          */
-        MetricGatherer &addSensor(std::unique_ptr<ISensor> sensor);
+        AirGradient::MetricGatherer &addSensor(std::unique_ptr<ISensor> sensor, Measurement excludedMeasurement = Measurement::None);
 
         /**
          * To setup all the different sensor and the gathering of data.<br />

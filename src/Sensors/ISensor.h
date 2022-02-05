@@ -42,7 +42,6 @@ namespace AirGradient {
             _excludedMeasurement = excludedMeasurement;
         }
 
-    protected:
         /**
          * Get measurement to that is currently required from the sensor
          * @return

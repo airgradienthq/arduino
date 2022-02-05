@@ -1,16 +1,18 @@
 #include <HardwareSerial.h>
 #include "MetricGatherer.h"
 
-AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor) {
+AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor,
+                                                                    Measurement excludedMeasurement) {
+    sensor->setExcludedMeasurement(excludedMeasurement);
     for (auto const &currentSensor: _sensors) {
         //If there is already a sensor providing this data, we need to tell the developer
-        if (!(currentSensor->getAvailableMeasurement() & sensor->getAvailableMeasurement())) {
+        if (!(currentSensor->getAvailableMeasurement() & sensor->getCurrentMeasurement())) {
             Serial.printf("[Conflict %s & %s] Already have a sensor with the type: %d\n",
-                          currentSensor->getName(), sensor->getName(), enumAsInt(sensor->getAvailableMeasurement()));
+                          currentSensor->getName(), sensor->getName(), enumAsInt(sensor->getCurrentMeasurement()));
             return *this;
         }
     }
-    _sensorTypes |= sensor->getAvailableMeasurement();
+    _sensorTypes |= sensor->getCurrentMeasurement();
     _sensors.push_back(std::move(sensor));
     return *this;
 }
