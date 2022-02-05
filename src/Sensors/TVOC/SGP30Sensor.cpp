@@ -35,25 +35,27 @@ void AirGradient::SGP30Sensor::getData(AirGradient::SensorData &data) const {
         _sensor->setHumidity(sensHumidity);
     }
 
+    auto measurement = getCurrentMeasurement();
+
     _sensor->measureAirQuality();
     //Check if sensor is supposed to provide the CO2 reading
-    if (!(getCurrentMeasurement() & Measurement::CO2)) {
+    if (!(measurement & Measurement::CO2)) {
         data.GAS_DATA.CO2 = _sensor->CO2;
     }
 
     //Check if sensor is supposed to provide the TVOC reading
-    if (!(getCurrentMeasurement() & Measurement::TVOC)) {
+    if (!(measurement & Measurement::TVOC)) {
         data.GAS_DATA.TVOC = _sensor->TVOC;
     }
 
     _sensor->measureRawSignals();
     //Check if sensor is supposed to provide the H2 reading
-    if (!(getCurrentMeasurement() & Measurement::H2)) {
+    if (!(measurement & Measurement::H2)) {
         data.GAS_DATA.H2 = _sensor->H2;
     }
 
     //Check if sensor is supposed to provide the H2 reading
-    if (!(getCurrentMeasurement() & Measurement::ETHANOL)) {
+    if (!(measurement & Measurement::ETHANOL)) {
         data.GAS_DATA.ETHANOL = _sensor->ethanol;
     }
 }
