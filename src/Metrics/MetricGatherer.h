@@ -15,8 +15,10 @@ namespace AirGradient {
          * @param excludedMeasurement measurement that shouldn't be recorded by the sensor. Default: None
          * @return the same instance of the MetricGatherer to easily add new sensor
          */
-        AirGradient::MetricGatherer &
-        addSensor(std::unique_ptr<ISensor> sensor, Measurement excludedMeasurement = Measurement::None);
+        AirGradient::MetricGatherer &addSensor(
+                std::unique_ptr<ISensor> sensor,
+                Measurement excludedMeasurement = Measurement::None
+        );
 
         /**
          * To setup all the different sensor and the gathering of data.<br />
