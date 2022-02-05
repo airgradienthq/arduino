@@ -136,7 +136,7 @@ void sendPayload() {
 
     if (!(sensorType & SensorType::TVOC) {
         if (!payload.endsWith(",")) payload = payload + ",";
-        payload = payload + "\"TVOC\":" + String(data.HUM);
+        payload = payload + "\"TVOC\":" + String(data.GAS_DATA.TVOC);
     }
 
     payload = payload + "}";
