@@ -10,7 +10,7 @@ namespace AirGradient {
     public:
         ~SHTXSensor() override = default;
 
-        SensorType getType() const override;
+        Measurement getAvailableMeasurement() const override;
 
 
         inline const char *getName() const override {

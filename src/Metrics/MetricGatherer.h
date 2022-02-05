@@ -32,7 +32,7 @@ namespace AirGradient {
          * What type of sensor are we gathering metric for.
          * @return
          */
-        inline SensorType getSensorTypes() const { return _sensorTypes; }
+        inline Measurement getSensorTypes() const { return _sensorTypes; }
 
         MetricGatherer(uint8_t gatherMetricEverySecs) : _gatherMetricEverySecs(gatherMetricEverySecs) {}
 
@@ -40,7 +40,7 @@ namespace AirGradient {
 
     private:
         std::vector<std::unique_ptr<ISensor>> _sensors;
-        SensorType _sensorTypes;
+        Measurement _sensorTypes;
         SensorData _data;
         bool _initialized{false};
         uint8_t _gatherMetricEverySecs;

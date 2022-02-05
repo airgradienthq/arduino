@@ -9,7 +9,7 @@ namespace AirGradient {
     public:
         ~SensairS8Sensor() override = default;
 
-        SensorType getType() const override;
+        Measurement getAvailableMeasurement() const override;
 
         bool begin() override;
 

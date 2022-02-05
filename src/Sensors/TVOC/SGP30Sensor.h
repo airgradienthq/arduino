@@ -12,8 +12,8 @@ namespace AirGradient {
             return "Sensirion SGP30";
         }
 
-        SensorType getType() const override {
-            return SensorType::TVOC | SensorType::CO2 | SensorType::ETHANOL | SensorType::H2;
+        Measurement getAvailableMeasurement() const override {
+            return Measurement::TVOC | Measurement::CO2 | Measurement::ETHANOL | Measurement::H2;
         }
 
         bool begin() override;

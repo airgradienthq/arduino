@@ -25,7 +25,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
     auto metrics = _metrics->getData();
     auto sensorType = _metrics->getSensorTypes();
 
-    if (!(sensorType & SensorType::Particle)) {
+    if (!(sensorType & Measurement::Particle)) {
         message += "# HELP particle_count Count of Particulate Matter in µg/m3\n";
         message += "# TYPE particle_count gauge\n";
         message += "particle_count";
@@ -57,7 +57,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
         }
     }
 
-    if (!(sensorType & SensorType::CO2)) {
+    if (!(sensorType & Measurement::CO2)) {
         message += "# HELP rco2 CO2 value, in ppm\n";
         message += "# TYPE rco2 gauge\n";
         message += "rco2";
@@ -67,7 +67,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
 
     }
 
-    if (!(sensorType & SensorType::Temperature)) {
+    if (!(sensorType & Measurement::Temperature)) {
         message += "# HELP atmp Temperature, in degrees Celsius\n";
         message += "# TYPE atmp gauge\n";
         message += "atmp";
@@ -76,7 +76,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
         message += "\n";
     }
 
-    if (!(sensorType & SensorType::Humidity)) {
+    if (!(sensorType & Measurement::Humidity)) {
         message += "# HELP rhum Relative humidity, in percent\n";
         message += "# TYPE rhum gauge\n";
         message += "rhum";
@@ -85,7 +85,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
         message += "\n";
     }
 
-    if (!(sensorType & SensorType::BootTime)) {
+    if (!(sensorType & Measurement::BootTime)) {
         message += "# HELP sensors_boot_time AirGradient boot time, in unixtime.\n";
         message += "# TYPE sensors_boot_time gauge\n";
         message += "sensors_boot_time" + idString + String(metrics.BOOT_TIME) + "\n";

@@ -1,8 +1,8 @@
 #include "BootTimeSensor.h"
 #include "NTP/NTPClient.h"
 
-AirGradient::SensorType AirGradient::BootTimeSensor::getType() const {
-    return SensorType::BootTime;
+AirGradient::Measurement AirGradient::BootTimeSensor::getAvailableMeasurement() const {
+    return Measurement::BootTime;
 }
 
 bool AirGradient::BootTimeSensor::begin() {

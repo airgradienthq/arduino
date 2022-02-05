@@ -4,7 +4,7 @@
 namespace AirGradient {
     class BootTimeSensor : public ISensor {
     public:
-        SensorType getType() const override;
+        Measurement getAvailableMeasurement() const override;
 
         bool begin() override;
 

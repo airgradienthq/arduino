@@ -31,8 +31,8 @@ namespace AirGradient {
 
         bool begin() override;
 
-        SensorType getType() const override {
-            return SensorType::Particle;
+        Measurement getAvailableMeasurement() const override {
+            return Measurement::Particle;
         }
 
         inline const char *getName() const override {

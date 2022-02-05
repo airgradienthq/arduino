@@ -14,8 +14,8 @@ namespace AirGradient {
             return "Winsen MH-Z19";
         }
 
-        SensorType getType() const override {
-            return SensorType::CO2;
+        Measurement getAvailableMeasurement() const override {
+            return Measurement::CO2;
         }
 
         MHZ19Sensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate) : _rxPin(rxPin),

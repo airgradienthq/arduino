@@ -1,8 +1,8 @@
 #include <HardwareSerial.h>
 #include "SHTXSensor.h"
 
-AirGradient::SensorType AirGradient::SHTXSensor::getType() const {
-    return SensorType::Temperature | SensorType::Humidity;
+AirGradient::Measurement AirGradient::SHTXSensor::getAvailableMeasurement() const {
+    return Measurement::Temperature | Measurement::Humidity;
 }
 
 bool AirGradient::SHTXSensor::begin() {

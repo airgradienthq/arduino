@@ -7,7 +7,7 @@ namespace AirGradient {
     /**
      * Represent the type of data the sensor can provide. Can be multiple. Used as flag.
      */
-    enum class SensorType : uint8_t {
+    enum class Measurement : uint8_t {
         /**
          * Used to check flags, please don't assign it to your sensor.
          */
@@ -49,5 +49,5 @@ namespace AirGradient {
     };
 
 
-    ENUM_FLAG_OPERATORS(SensorType);
+    ENUM_FLAG_OPERATORS(Measurement);
 }
