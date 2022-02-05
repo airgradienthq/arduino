@@ -36,11 +36,11 @@ namespace AirGradient {
          */
         inline Measurement getMeasurements() const { return _sensorTypes; }
 
-        MetricGatherer(uint8_t gatherMetricEverySecs, int8_t temperatureOffset) :
+        MetricGatherer(uint8_t gatherMetricEverySecs, float temperatureOffset) :
                 _gatherMetricEverySecs(gatherMetricEverySecs),
                 _temperatureOffset(temperatureOffset) {}
 
-        MetricGatherer(int8_t temperatureOffset) : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS, temperatureOffset) {}
+        MetricGatherer(float temperatureOffset) : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS, temperatureOffset) {}
 
         MetricGatherer() : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS, 0) {}
 
@@ -51,7 +51,7 @@ namespace AirGradient {
         bool _initialized{false};
         uint8_t _gatherMetricEverySecs;
         Ticker _getMetricsTicker;
-        int8_t _temperatureOffset{0};
+        float _temperatureOffset{0};
 
         void _gatherMetrics();
     };
