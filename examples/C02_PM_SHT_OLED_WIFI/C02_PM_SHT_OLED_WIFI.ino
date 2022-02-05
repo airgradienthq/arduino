@@ -121,9 +121,14 @@ void sendPayload() {
         payload = payload + "\"rco2\":" + String(CO2);
     }
 
-    if (hasSHT) {
+    if (!(sensorType & SensorType::Temperature) {
         if (!payload.endsWith(",")) payload = payload + ",";
-        payload = payload + "\"atmp\":" + String(data.TMP) + ",\"rhum\":" + String(data.HUM);
+        payload = payload + "\"atmp\":" + String(data.TMP);
+    }
+
+    if (!(sensorType & SensorType::Humidity) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        payload = payload + "\"rhum\":" + String(data.HUM);
     }
 
     payload = payload + "}";

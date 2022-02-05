@@ -5,154 +5,229 @@ It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a sm
 
 For build instructions please visit https://www.airgradient.com/diy/
 
-Instructions on using the TVOC sensor (SGP30) instead of the Temperature / Humidity sensor (SHT3x).
+Compatible with the following sensors:
+Plantower PMS5003 (Fine Particle Sensor)
+SenseAir S8 (CO2 Sensor)
+SHT30/31 (Temperature/Humidity Sensor)
 
-https://www.airgradient.com/resources/tvoc-on-airgradient-diy-sensor/
+Please install ESP8266 board manager (tested with version 3.0.0)
 
 The codes needs the following libraries installed:
 "WifiManager by tzapu, tablatronix" tested with Version 2.0.3-alpha
 "ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
-"SGP30" by Rob Tillaart tested with Version 0.1.4
+
+If you have any questions please visit our forum at https://forum.airgradient.com/
 
 Configuration:
 Please set in the code below which sensor you are using and if you want to connect it to WiFi.
-
-If you have any questions please visit our forum at https://forum.airgradient.com/
+You can also switch PM2.5 from ug/m3 to US AQI and Celcius to Fahrenheit
 
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/schools/
 
+Kits with all required components are available at https://www.airgradient.com/diyshop/
+
 MIT License
 */
 
-#include "SGP30.h"
-SGP30 SGP;
-
-#include <AirGradient.h>
+#include "Metrics/MetricGatherer.h"
+#include "Sensors/Particle/PMSXSensor.h"
+#include "Sensors/Temperature/SHTXSensor.h"
+#include "Sensors/CO2/SensairS8Sensor.h"
+#include "Sensors/CO2/SGP30Sensor.h"
 #include <WiFiManager.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-
 #include <Wire.h>
 #include "SSD1306Wire.h"
+#include "AQI/AQICalculator.h"
 
-AirGradient ag = AirGradient();
+using namespace AirGradient;
+
 
 SSD1306Wire display(0x3c, SDA, SCL);
 
-WiFiClient client;
+//screen refresh
+const uint16_t screenUpdateFrequencyMs = 5000;
 
 // set sensors that you do not use to false
-boolean hasPM=true;
-boolean hasCO2=true;
-boolean hasSHT=false;
-boolean hasTVOC=true;
+boolean hasPM = true;
+boolean hasCO2 = true;
+boolean hasSHT = true;
+boolean hasTVOC = true;
+
+// set to true to switch PM2.5 from ug/m3 to US AQI
+boolean inUSaqi = false;
+
+// set to true to switch from Celcius to Fahrenheit
+boolean inF = false;
 
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI=true;
+boolean connectWIFI = false;
 
 // change if you want to send the data to another server
 String APIROOT = "http://hw.airgradient.com/";
 
-void setup(){
-  Serial.begin(9600);
+uint8_t counter = 0;
 
-  display.init();
-  display.flipScreenVertically();
-  showTextRectangle("Init", String(ESP.getChipId(),HEX),true);
+auto metrics = std::make_shared<MetricGatherer>();
+auto aqiCalculator = std::make_unique<AQICalculator>(metrics);
+Ticker updateScreenTicker;
+Ticker sendPayloadTicker;
 
-  if (hasTVOC) SGP.begin();
-  if (hasPM) ag.PMS_Init();
-  if (hasCO2) ag.CO2_Init();
-  if (hasSHT) ag.TMP_RH_Init(0x44);
+void setup() {
+    Serial.begin(9600);
 
-  if (connectWIFI) connectToWifi();
-  delay(2000);
+    display.init();
+    display.flipScreenVertically();
+    showTextRectangle("Init", String(ESP.getChipId(), HEX), true);
+
+    if (hasPM) metrics->addSensor(std::make_unique<PMSXSensor>());
+    if (hasCO2) metrics->addSensor(std::make_unique<SensairS8Sensor>());
+    if (hasSHT) metrics->addSensor(std::make_unique<SHTXSensor>());
+    if(hasTVOC) metrics->addSensor(std::make_unique<SGP30Sensor>());
+
+    if (connectWIFI) connectToWifi();
+
+    metrics->begin();
+    aqiCalculator->begin();
+    updateScreenTicker.attach_ms_scheduled(screenUpdateFrequencyMs, updateScreen);
+
+    if (connectWIFI) {
+        sendPayloadTicker.attach_scheduled(20, sendPayload);
+    }
+
 }
 
-void loop(){
+void loop() {
 
-  if (hasTVOC) SGP.measure(false);
+
+}
+
+void sendPayload() {
+    auto data = metrics->getData();
+    auto sensorType = metrics->getSensorTypes();
 
     // create payload
+    String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
 
-  String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
+    //Check for particle sensor
+    if (!(sensorType & SensorType::Particle)) {
+        auto PM2 = data.PARTICLE_DATA.PM_2_5;
+        payload = payload + "\"pm02\":" + String(PM2);
+    }
 
-  if (hasPM) {
-    int PM2 = ag.getPM2_Raw();
-    payload=payload+"\"pm02\":" + String(PM2);
-    showTextRectangle("PM2",String(PM2),false);
-    delay(3000);
-  }
+    //Check for CO2 sensor
+    if (!(sensorType & SensorType::CO2)) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        auto CO2 = data.GAS_DATA.CO2;
+        payload = payload + "\"rco2\":" + String(CO2);
+    }
 
-    if (hasTVOC) {
-    if (hasPM) payload=payload+",";
-    int TVOC = SGP.getTVOC();
-    payload=payload+"\"tvoc\":" + String(TVOC);
-    showTextRectangle("TVOC",String(TVOC),false);
-    delay(3000);
-  }
+    if (!(sensorType & SensorType::Temperature) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        payload = payload + "\"atmp\":" + String(data.TMP);
+    }
 
-  if (hasCO2) {
-    if (hasTVOC) payload=payload+",";
-    int CO2 = ag.getCO2_Raw();
-    payload=payload+"\"rco2\":" + String(CO2);
-    showTextRectangle("CO2",String(CO2),false);
-    delay(3000);
-  }
+    if (!(sensorType & SensorType::Humidity) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        payload = payload + "\"rhum\":" + String(data.HUM);
+    }
 
-  if (hasSHT) {
-    if (hasCO2 || hasPM) payload=payload+",";
-    TMP_RH result = ag.periodicFetchData();
-    payload=payload+"\"atmp\":" + String(result.t) +   ",\"rhum\":" + String(result.rh);
-    showTextRectangle(String(result.t),String(result.rh)+"%",false);
-    delay(3000);
-  }
+    if (!(sensorType & SensorType::TVOC) {
+        if (!payload.endsWith(",")) payload = payload + ",";
+        payload = payload + "\"TVOC\":" + String(data.HUM);
+    }
 
-   payload=payload+"}";
-
-  // send payload
-  if (connectWIFI){
-  Serial.println(payload);
-  String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(),HEX) + "/measures";
-  Serial.println(POSTURL);
-  WiFiClient client;
-  HTTPClient http;
-  http.begin(client, POSTURL);
-  http.addHeader("content-type", "application/json");
-  int httpCode = http.POST(payload);
-  String response = http.getString();
-  Serial.println(httpCode);
-  Serial.println(response);
-  http.end();
-  }
+    payload = payload + "}";
+    Serial.println(payload);
+    String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
+    Serial.println(POSTURL);
+    WiFiClient client;
+    HTTPClient http;
+    http.begin(client, POSTURL);
+    http.addHeader("content-type", "application/json");
+    int httpCode = http.POST(payload);
+    String response = http.getString();
+    Serial.println(httpCode);
+    Serial.println(response);
+    http.end();
 }
 
 // DISPLAY
-void showTextRectangle(String ln1, String ln2, boolean small) {
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (small) {
-    display.setFont(ArialMT_Plain_16);
-  } else {
-    display.setFont(ArialMT_Plain_24);
-  }
-  display.drawString(32, 16, ln1);
-  display.drawString(32, 36, ln2);
-  display.display();
+void showTextRectangle(const String &ln1, const String &ln2, boolean small) {
+    display.clear();
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    if (small) {
+        display.setFont(ArialMT_Plain_16);
+    } else {
+        display.setFont(ArialMT_Plain_24);
+    }
+    display.drawString(32, 16, ln1);
+    display.drawString(32, 36, ln2);
+    display.display();
+}
+
+void updateScreen() {
+    auto data = metrics->getData();
+    auto sensorType = metrics->getSensorTypes();
+    // Take a measurement at a fixed interval.
+    switch (counter) {
+
+        case 0:
+            if (!(sensorType & SensorType::Particle)) {
+                showTextRectangle("PM2", String(data.PARTICLE_DATA.PM_2_5), false);
+                break;
+            }
+        case 1:
+            if (!(sensorType & SensorType::CO2)) {
+                showTextRectangle("CO2", String(data.GAS_DATA.CO2), false);
+                break;
+            }
+
+        case 2:
+            if (!(sensorType & SensorType::Temperature)) {
+                if (inF) {
+                    showTextRectangle("TMP", String((data.TMP * 1.8) + 32, 1) + "F", false);
+                    break;
+                }
+                showTextRectangle("TMP", String(data.TMP, 1) + "C", false);
+                break;
+            }
+
+        case 3:
+            if (!(sensorType & SensorType::Humidity)) {
+                showTextRectangle("HUM", String(data.HUM, 1) + "%", false);
+                break;
+            }
+
+        case 4:
+            if (!(sensorType & SensorType::Particle)) {
+                auto aqi = aqiCalculator->isAQIAvailable() ? String(aqiCalculator->getAQI(), 1) : "N/A";
+                showTextRectangle("AQI", aqi, false);
+                break;
+            }
+        case 5:
+            if (!(sensorType & SensorType::TVOC)) {
+                showTextRectangle("TVOC", data.GAS_DATA.TVOC, false);
+                break;
+            }
+    }
+
+    counter = ++counter % 6;
 }
 
 // Wifi Manager
-void connectToWifi(){
-  WiFiManager wifiManager;
-  //WiFi.disconnect(); //to delete previous saved hotspot
-  String HOTSPOT = "AIRGRADIENT-"+String(ESP.getChipId(),HEX);
-  wifiManager.setTimeout(120);
-  if(!wifiManager.autoConnect((const char*)HOTSPOT.c_str())) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      ESP.restart();
-      delay(5000);
-  }
+void connectToWifi() {
+    WiFiManager wifiManager;
+    //WiFi.disconnect(); //to delete previous saved hotspot
+    String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
+    wifiManager.setTimeout(120);
+    if (!wifiManager.autoConnect((const char *) HOTSPOT.c_str())) {
+        Serial.println("failed to connect and hit timeout");
+        delay(3000);
+        ESP.restart();
+        delay(5000);
+    }
 
 }
