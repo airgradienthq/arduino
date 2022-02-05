@@ -5,9 +5,9 @@ AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_
                                                                     Measurement excludedMeasurement) {
     sensor->setExcludedMeasurement(excludedMeasurement);
     auto measurement = sensor->getCurrentMeasurement();
-    //If because of the exclusion, the sensor won't provide any measurement, don't add it.
+    //If because of the exclusion, the sensor won't provide any _measurements, don't add it.
     if (measurement == Measurement::None) {
-        Serial.printf("%s will not provide any measurement. Not adding sensor.\n", sensor->getName());
+        Serial.printf("%s will not provide any _measurements. Not adding sensor.\n", sensor->getName());
         return *this;
     }
 
@@ -19,7 +19,7 @@ AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_
             return *this;
         }
     }
-    _sensorTypes |= measurement;
+    _measurements |= measurement;
     _sensors.push_back(std::move(sensor));
     return *this;
 }
@@ -45,5 +45,9 @@ void AirGradient::MetricGatherer::_gatherMetrics() {
     for (auto const &sensor: _sensors) {
         sensor->getData(_data);
     }
-    _data.TMP = _data.TMP + _temperatureOffset;
+
+    // Only apply the offset if there is a temperature _measurements configured
+    if (!(_measurements & Measurement::Temperature)) {
+        _data.TMP = _data.TMP + _temperatureOffset;
+    }
 }
