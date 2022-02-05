@@ -117,7 +117,7 @@ void sendPayload() {
     //Check for CO2 sensor
     if (!(sensorType & SensorType::CO2)) {
         if (!payload.endsWith(",")) payload = payload + ",";
-        auto CO2 = data.CO2;
+        auto CO2 = data.GAS_DATA.CO2;
         payload = payload + "\"rco2\":" + String(CO2);
     }
 
@@ -168,7 +168,7 @@ void updateScreen() {
             }
         case 1:
             if (!(sensorType & SensorType::CO2)) {
-                showTextRectangle("CO2", String(data.CO2), false);
+                showTextRectangle("CO2", String(data.GAS_DATA.CO2), false);
                 break;
             }
 

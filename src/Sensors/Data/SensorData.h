@@ -4,6 +4,13 @@
 #include <ctime>
 
 namespace AirGradient {
+
+    struct GasData {
+        uint16_t CO2 = 0;
+        uint16_t TVOC = 0;
+        uint16_t H2 = 0;
+        uint16_t ETHANOL = 0;
+    };
     struct ParticleData {
         // Atmospheric environment
         uint16_t PM_1_0;
@@ -11,8 +18,7 @@ namespace AirGradient {
         uint16_t PM_10_0;
     };
     struct SensorData {
-        uint16_t CO2 = 0;
-        uint16_t TVOC = 0;
+        GasData GAS_DATA{};
         ParticleData PARTICLE_DATA{};
         float TMP = 0;
         float HUM = 0;

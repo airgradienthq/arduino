@@ -22,7 +22,7 @@ bool AirGradient::SensairS8Sensor::begin() {
 }
 
 void AirGradient::SensairS8Sensor::getData(AirGradient::SensorData &data) const {
-    auto previousReading = data.CO2;
+    auto previousReading = data.GAS_DATA.CO2;
     auto co2 = _sensor->get_co2();
 
     uint8_t timeout = 0;
@@ -36,5 +36,5 @@ void AirGradient::SensairS8Sensor::getData(AirGradient::SensorData &data) const 
         }
     }
 
-    data.CO2 = co2;
+    data.GAS_DATA.CO2 = co2;
 }

@@ -141,7 +141,7 @@ void updateScreen() {
 
         case 1:
             if (!(sensorType & SensorType::CO2)) {
-                showTextRectangle("CO2", String(data.CO2), false);
+                showTextRectangle("CO2", String(data.GAS_DATA.CO2), false);
                 break;
             }
 

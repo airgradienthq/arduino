@@ -62,7 +62,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
         message += "# TYPE rco2 gauge\n";
         message += "rco2";
         message += idString;
-        message += String(metrics.CO2);
+        message += String(metrics.GAS_DATA.CO2);
         message += "\n";
 
     }
