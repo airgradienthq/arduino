@@ -34,7 +34,7 @@ MIT License
 #include "Sensors/Particle/PMSXSensor.h"
 #include "Sensors/Temperature/SHTXSensor.h"
 #include "Sensors/CO2/SensairS8Sensor.h"
-#include "Sensors/CO2/SGP30Sensor.h"
+#include "Sensors/TVOC/SGP30Sensor.h"
 #include <WiFiManager.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
