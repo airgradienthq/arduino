@@ -12,6 +12,7 @@ namespace AirGradient {
     };
     struct SensorData {
         uint16_t CO2 = 0;
+        uint16_t TVOC = 0;
         ParticleData PARTICLE_DATA{};
         float TMP = 0;
         float HUM = 0;

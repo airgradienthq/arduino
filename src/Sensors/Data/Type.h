@@ -32,6 +32,10 @@ namespace AirGradient {
          * Provide the boot time
          */
         BootTime = 1 << 4,
+        /**
+         * Total Volatile Organic Compounds sensor
+         */
+        TVOC = 1 << 5
     };
 
 
