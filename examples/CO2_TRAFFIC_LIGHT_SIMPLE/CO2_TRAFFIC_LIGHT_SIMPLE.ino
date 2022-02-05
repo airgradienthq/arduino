@@ -27,7 +27,6 @@ MIT License
 // Adafruit_NeoMatrix example for single NeoPixel Shield.
 // Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
 
-#include <AirGradient.h>
 #include <WiFiManager.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
@@ -35,17 +34,20 @@ MIT License
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
+#include "Metrics/MetricGatherer.h"
+#include "Sensors/CO2/SensairS8Sensor.h"
+using namespace AirGradient;
+
 #ifndef PSTR
- #define PSTR // Make Arduino Due happy
+#define PSTR // Make Arduino Due happy
 #endif
 
-AirGradient ag = AirGradient();
+
 #define PIN D8
 
-int co2 = 0;
 String text = "AirGradient CO2";
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI=true;
+boolean connectWIFI = true;
 int greenToOrange = 800;
 int orangeToRed = 1200;
 
@@ -53,82 +55,87 @@ int orangeToRed = 1200;
 String APIROOT = "http://hw.airgradient.com/";
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(8, 8, PIN,
-  NEO_MATRIX_TOP     + NEO_MATRIX_RIGHT +
-  NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
-  NEO_GRB            + NEO_KHZ800);
+                                               NEO_MATRIX_TOP + NEO_MATRIX_RIGHT +
+                                               NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
+                                               NEO_GRB + NEO_KHZ800);
+auto metrics = std::make_shared<MetricGatherer>();
 
 void setup() {
-  Serial.begin(9600);
-  ag.CO2_Init();
-  matrix.begin();
-  matrix.setRotation(1); // change rotation
-  matrix.setTextWrap(false);
-  matrix.setBrightness(40);
-  matrix.setTextColor(matrix.Color(70,130,180));
+    Serial.begin(9600);
 
-  Serial.println("Chip ID: "+String(ESP.getChipId(),HEX));
-  if (connectWIFI) connectToWifi();
-  delay(2000);
+    metrics->addSensor(std::make_unique<SensairS8Sensor>());
+    metrics->begin();
+
+    matrix.begin();
+    matrix.setRotation(1); // change rotation
+    matrix.setTextWrap(false);
+    matrix.setBrightness(40);
+    matrix.setTextColor(matrix.Color(70, 130, 180));
+
+    Serial.println("Chip ID: " + String(ESP.getChipId(), HEX));
+    if (connectWIFI) connectToWifi();
+    delay(2000);
 }
 
 void loop() {
-  showText();
+    showText();
 }
 
-int x    = matrix.width();
+int x = matrix.width();
 
 void showText() {
-  Serial.println("in loop");
-  matrix.fillScreen(0);
-  matrix.setCursor(x, 0);
-  matrix.print(String(text));
-  if(--x < -100) {
-    x = matrix.width();
-    Serial.println("end text");
-    co2 = ag.getCO2_Raw();
-    text = String(co2)+"ppm";
-      if (co2>350) matrix.setTextColor(matrix.Color(0, 255, 0));
-      if (co2>greenToOrange) matrix.setTextColor(matrix.Color(255, 90, 0));
-      if (co2>orangeToRed) matrix.setTextColor(matrix.Color(255,0, 0));
+    auto data = metrics->getData();
+    auto co2 = data.GAS_DATA.CO2;
+    Serial.println("in loop");
+    matrix.fillScreen(0);
+    matrix.setCursor(x, 0);
+    matrix.print(String(text));
+    if (--x < -100) {
+        x = matrix.width();
+        Serial.println("end text");
+        text = String(co2) + "ppm";
+        if (co2 > 350) matrix.setTextColor(matrix.Color(0, 255, 0));
+        if (co2 > greenToOrange) matrix.setTextColor(matrix.Color(255, 90, 0));
+        if (co2 > orangeToRed) matrix.setTextColor(matrix.Color(255, 0, 0));
 
-    // send payload
-    String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
-    payload = payload + "\"rco2\":" + String(co2);
-    payload = payload + "}";
+        // send payload
+        String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
+        payload = payload + "\"rco2\":" + String(co2);
+        payload = payload + "}";
 
-    if (connectWIFI) {
-      Serial.println(payload);
-      String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
-      Serial.println(POSTURL);
-      WiFiClient client;
-      HTTPClient http;
-      http.begin(client, POSTURL);
-      http.addHeader("content-type", "application/json");
-      int httpCode = http.POST(payload);
-      String response = http.getString();
-      Serial.println(httpCode);
-      Serial.println(response);
-      http.end();
-      delay(20000);
+        if (connectWIFI) {
+            Serial.println(payload);
+            String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
+            Serial.println(POSTURL);
+            WiFiClient client;
+            HTTPClient http;
+            http.begin(client, POSTURL);
+            http.addHeader("content-type", "application/json");
+            int httpCode = http.POST(payload);
+            String response = http.getString();
+            Serial.println(httpCode);
+            Serial.println(response);
+            http.end();
+            delay(20000);
+        }
+
+        delay(10000);
     }
 
-    delay(10000);
-  }
-
-  matrix.show();
-  delay(100);
+    matrix.show();
+    delay(100);
 }
 
 // Wifi Manager
-void connectToWifi(){
-  WiFiManager wifiManager;
-  //WiFi.disconnect(); //to delete previous saved hotspot
-  String HOTSPOT = "AIRGRADIENT-"+String(ESP.getChipId(),HEX);
-  wifiManager.setTimeout(120);
-  if(!wifiManager.autoConnect((const char*)HOTSPOT.c_str())) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      ESP.restart();
-      delay(5000);
-  }
-  }
+void connectToWifi() {
+    WiFiManager wifiManager;
+    //WiFi.disconnect(); //to delete previous saved hotspot
+    String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
+    wifiManager.setTimeout(120);
+    if (!wifiManager.autoConnect((const char *) HOTSPOT.c_str())) {
+        Serial.println("failed to connect and hit timeout");
+        delay(3000);
+        ESP.restart();
+        delay(5000);
+    }
+}
