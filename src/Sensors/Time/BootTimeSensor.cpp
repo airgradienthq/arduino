@@ -6,6 +6,11 @@ AirGradient::Measurement AirGradient::BootTimeSensor::getAvailableMeasurement() 
 }
 
 bool AirGradient::BootTimeSensor::begin() {
+    //Check if sensor is supposed to provide the Boot reading, if not, return directly
+    if (!!(getCurrentMeasurement() & Measurement::BootTime)) {
+        Serial.printf("%s can only provide BootTime reading and it's disabled.", getName());
+        return false;
+    }
     auto ntpClient = std::make_unique<NTPClient>(_ntpServer);
     _bootTime = ntpClient->getUtcUnixEpoch();
     return _bootTime > 0;

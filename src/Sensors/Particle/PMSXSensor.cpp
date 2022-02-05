@@ -1,7 +1,11 @@
 #include "PMSXSensor.h"
 
 bool AirGradient::PMSXSensor::begin() {
-
+    //Check if sensor is supposed to provide the particle reading, if not, return directly
+    if (!!(getCurrentMeasurement() & Measurement::Particle)) {
+        Serial.printf("%s can only provide Particle reading and it's disabled.", getName());
+        return false;
+    }
     _softwareSerial = std::make_unique<SoftwareSerial>(_rxPin, _txPin);
     _softwareSerial->begin(_baudRate);
     _sensor = std::make_unique<PMS>(*_softwareSerial);
@@ -18,6 +22,7 @@ void AirGradient::PMSXSensor::_wakeUpPm2() {
 }
 
 void AirGradient::PMSXSensor::_getPm2DataSleep() {
+
     auto previousReading = _data.PM_2_5;
     PMS::DATA data{};
     if (!_sensor->readUntil(data, 2000)) {
@@ -36,6 +41,10 @@ void AirGradient::PMSXSensor::_getPm2DataSleep() {
 }
 
 void AirGradient::PMSXSensor::getData(AirGradient::SensorData &data) const {
+    //Check if sensor is supposed to provide the Particle reading, if not, return directly
+    if (!!(getCurrentMeasurement() & Measurement::Particle)) {
+        return;
+    }
     data.PARTICLE_DATA = _data;
 }
 

@@ -14,9 +14,18 @@ bool AirGradient::SHTXSensor::begin() {
 void AirGradient::SHTXSensor::getData(AirGradient::SensorData &data) const {
     if (!_sensor->readSample()) {
         Serial.println("Can't read SHT sensor data");
+        return;
+    }
+    auto currentMeasurement = getCurrentMeasurement();
 
-    } else {
+    //Check if sensor is supposed to provide the Temperature reading
+    if (!(currentMeasurement & Measurement::Temperature)) {
         data.TMP = _sensor->getTemperature() + _tempOffset;
+    }
+
+    //Check if sensor is supposed to provide the humidity reading
+    if (!(currentMeasurement & Measurement::Humidity)) {
         data.HUM = _sensor->getHumidity();
     }
+
 }

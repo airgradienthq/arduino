@@ -5,6 +5,11 @@ AirGradient::Measurement AirGradient::SensairS8Sensor::getAvailableMeasurement()
 }
 
 bool AirGradient::SensairS8Sensor::begin() {
+    //Check if sensor is supposed to provide the CO2 reading, if not, return directly
+    if (!!(getCurrentMeasurement() & Measurement::CO2)) {
+        Serial.printf("%s can only provide CO2 reading and it's disabled.", getName());
+        return false;
+    }
     _softwareSerial = std::make_unique<SoftwareSerial>(_rxPin, _txPin);
     _softwareSerial->begin(_baudRate);
     _sensor = std::make_unique<S8_UART>(*_softwareSerial);
@@ -22,6 +27,7 @@ bool AirGradient::SensairS8Sensor::begin() {
 }
 
 void AirGradient::SensairS8Sensor::getData(AirGradient::SensorData &data) const {
+
     auto previousReading = data.GAS_DATA.CO2;
     auto co2 = _sensor->get_co2();
 
