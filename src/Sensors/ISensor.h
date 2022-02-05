@@ -17,11 +17,6 @@ namespace AirGradient {
          */
         inline virtual const char *getName() const = 0;
 
-        /**
-         * Type of measurement returned by the sensor
-         * @return
-         */
-        virtual Measurement getAvailableMeasurement() const = 0;
 
         /**
          * To initialize the sensor
@@ -49,6 +44,13 @@ namespace AirGradient {
         inline Measurement getCurrentMeasurement() const {
             return getAvailableMeasurement() & ~_excludedMeasurement;
         }
+
+    protected:
+         /**
+          * Type of measurement returned by the sensor
+          * @return
+          */
+        virtual Measurement getAvailableMeasurement() const = 0;
 
     private:
         Measurement _excludedMeasurement{Measurement::None};

@@ -4,7 +4,7 @@
 namespace AirGradient {
     class BootTimeSensor : public ISensor {
     public:
-        Measurement getAvailableMeasurement() const override;
+
 
         bool begin() override;
 
@@ -16,6 +16,9 @@ namespace AirGradient {
         }
 
         BootTimeSensor(const char *ntpServer) : _ntpServer(ntpServer) {}
+
+    protected:
+        Measurement getAvailableMeasurement() const override;
 
     private:
         const char* _ntpServer;

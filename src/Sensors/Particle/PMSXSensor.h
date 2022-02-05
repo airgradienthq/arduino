@@ -31,9 +31,6 @@ namespace AirGradient {
 
         bool begin() override;
 
-        Measurement getAvailableMeasurement() const override {
-            return Measurement::Particle;
-        }
 
         inline const char *getName() const override {
             return "Plantower PMS5003";
@@ -42,6 +39,11 @@ namespace AirGradient {
         void getData(SensorData &data) const override;
 
         ~PMSXSensor() override = default;
+
+    protected:
+        Measurement getAvailableMeasurement() const override {
+            return Measurement::Particle;
+        }
 
     private:
         std::unique_ptr<SoftwareSerial> _softwareSerial;

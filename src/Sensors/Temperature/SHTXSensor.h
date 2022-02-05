@@ -10,8 +10,6 @@ namespace AirGradient {
     public:
         ~SHTXSensor() override = default;
 
-        Measurement getAvailableMeasurement() const override;
-
 
         inline const char *getName() const override {
             return "Sensirion SHT";
@@ -24,16 +22,16 @@ namespace AirGradient {
         /**
          *
          * @param accuracy Accuracy of the sensor (also define how fast does it take to do a reading)
-         * @param tempOffset Offset that will be added to the temperature reading. Useful when the sensor is next to a source of heat.
          */
-        SHTXSensor(SHTSensor::SHTAccuracy accuracy, int8_t tempOffset) : _accuracy(accuracy), _tempOffset(tempOffset) {}
+        SHTXSensor(SHTSensor::SHTAccuracy accuracy) : _accuracy(accuracy) {}
 
-        SHTXSensor() : SHTXSensor(SHTSensor::SHTAccuracy::SHT_ACCURACY_HIGH, SHT_TMP_OFFSET_DEFAULT) {}
+        SHTXSensor() : SHTXSensor(SHTSensor::SHTAccuracy::SHT_ACCURACY_HIGH) {}
+
+    protected:
+        Measurement getAvailableMeasurement() const override;
 
     private:
         SHTSensor::SHTAccuracy _accuracy;
-        int8_t _tempOffset;
-
         std::unique_ptr<SHTSensor> _sensor;
     };
 }

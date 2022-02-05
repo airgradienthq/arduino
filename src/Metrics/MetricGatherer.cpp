@@ -4,15 +4,16 @@
 AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor,
                                                                     Measurement excludedMeasurement) {
     sensor->setExcludedMeasurement(excludedMeasurement);
+    auto measurement = sensor->getCurrentMeasurement();
     for (auto const &currentSensor: _sensors) {
         //If there is already a sensor providing this data, we need to tell the developer
-        if (!(currentSensor->getAvailableMeasurement() & sensor->getCurrentMeasurement())) {
+        if (!(currentSensor->getCurrentMeasurement() & measurement)) {
             Serial.printf("[Conflict %s & %s] Already have a sensor with the type: %d\n",
-                          currentSensor->getName(), sensor->getName(), enumAsInt(sensor->getCurrentMeasurement()));
+                          currentSensor->getName(), sensor->getName(), enumAsInt(measurement));
             return *this;
         }
     }
-    _sensorTypes |= sensor->getCurrentMeasurement();
+    _sensorTypes |= measurement;
     _sensors.push_back(std::move(sensor));
     return *this;
 }

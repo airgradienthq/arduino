@@ -9,7 +9,6 @@ namespace AirGradient {
     public:
         ~SensairS8Sensor() override = default;
 
-        Measurement getAvailableMeasurement() const override;
 
         bool begin() override;
 
@@ -24,6 +23,9 @@ namespace AirGradient {
                                                                            _baudRate(baudRate) {}
 
         SensairS8Sensor() : SensairS8Sensor(D4, D3, SENSAIR_S8_DEFAULT_BAUDRATE) {}
+
+    protected:
+        Measurement getAvailableMeasurement() const override;
 
     private:
         std::unique_ptr<SoftwareSerial> _softwareSerial;

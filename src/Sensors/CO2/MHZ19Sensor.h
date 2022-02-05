@@ -14,10 +14,6 @@ namespace AirGradient {
             return "Winsen MH-Z19";
         }
 
-        Measurement getAvailableMeasurement() const override {
-            return Measurement::CO2;
-        }
-
         MHZ19Sensor(uint8_t rxPin, uint8_t txPin, uint16_t baudRate) : _rxPin(rxPin),
                                                                        _txPin(txPin),
                                                                        _baudRate(baudRate) {}
@@ -27,6 +23,11 @@ namespace AirGradient {
         bool begin() override;
 
         void getData(SensorData &data) const override;
+
+    protected:
+        Measurement getAvailableMeasurement() const override {
+            return Measurement::CO2;
+        }
 
     private:
         std::unique_ptr<SoftwareSerial> _softwareSerial;

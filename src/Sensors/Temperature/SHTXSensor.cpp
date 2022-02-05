@@ -20,7 +20,7 @@ void AirGradient::SHTXSensor::getData(AirGradient::SensorData &data) const {
 
     //Check if sensor is supposed to provide the Temperature reading
     if (!(currentMeasurement & Measurement::Temperature)) {
-        data.TMP = _sensor->getTemperature() + _tempOffset;
+        data.TMP = _sensor->getTemperature();
     }
 
     //Check if sensor is supposed to provide the humidity reading
