@@ -45,4 +45,5 @@ void AirGradient::MetricGatherer::_gatherMetrics() {
     for (auto const &sensor: _sensors) {
         sensor->getData(_data);
     }
+    _data.TMP = _data.TMP + _temperatureOffset;
 }

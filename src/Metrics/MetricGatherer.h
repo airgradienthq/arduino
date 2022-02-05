@@ -15,7 +15,8 @@ namespace AirGradient {
          * @param excludedMeasurement measurement that shouldn't be recorded by the sensor. Default: None
          * @return the same instance of the MetricGatherer to easily add new sensor
          */
-        AirGradient::MetricGatherer &addSensor(std::unique_ptr<ISensor> sensor, Measurement excludedMeasurement = Measurement::None);
+        AirGradient::MetricGatherer &
+        addSensor(std::unique_ptr<ISensor> sensor, Measurement excludedMeasurement = Measurement::None);
 
         /**
          * To setup all the different sensor and the gathering of data.<br />
@@ -35,9 +36,13 @@ namespace AirGradient {
          */
         inline Measurement getMeasurements() const { return _sensorTypes; }
 
-        MetricGatherer(uint8_t gatherMetricEverySecs) : _gatherMetricEverySecs(gatherMetricEverySecs) {}
+        MetricGatherer(uint8_t gatherMetricEverySecs, int8_t temperatureOffset) :
+                _gatherMetricEverySecs(gatherMetricEverySecs),
+                _temperatureOffset(temperatureOffset) {}
 
-        MetricGatherer() : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS) {}
+        MetricGatherer(int8_t temperatureOffset) : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS, temperatureOffset) {}
+
+        MetricGatherer() : MetricGatherer(METRIC_GATHERING_EVERY_X_SECS, 0) {}
 
     private:
         std::vector<std::unique_ptr<ISensor>> _sensors;
@@ -46,6 +51,7 @@ namespace AirGradient {
         bool _initialized{false};
         uint8_t _gatherMetricEverySecs;
         Ticker _getMetricsTicker;
+        int8_t _temperatureOffset{0};
 
         void _gatherMetrics();
     };
