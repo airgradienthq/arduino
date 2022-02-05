@@ -103,30 +103,30 @@ void loop() {
 
 void sendPayload() {
     auto data = metrics->getData();
-    auto sensorType = metrics->getSensorTypes();
+    auto sensorType = metrics->getMeasurements();
 
     // create payload
     String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
 
     //Check for particle sensor
-    if (!(sensorType & SensorType::Particle)) {
+    if (!(sensorType & Measurement::Particle)) {
         auto PM2 = data.PARTICLE_DATA.PM_2_5;
         payload = payload + "\"pm02\":" + String(PM2);
     }
 
     //Check for CO2 sensor
-    if (!(sensorType & SensorType::CO2)) {
+    if (!(sensorType & Measurement::CO2)) {
         if (!payload.endsWith(",")) payload = payload + ",";
         auto CO2 = data.GAS_DATA.CO2;
         payload = payload + "\"rco2\":" + String(CO2);
     }
 
-    if (!(sensorType & SensorType::Temperature) {
+    if (!(sensorType & Measurement::Temperature) {
         if (!payload.endsWith(",")) payload = payload + ",";
         payload = payload + "\"atmp\":" + String(data.TMP);
     }
 
-    if (!(sensorType & SensorType::Humidity) {
+    if (!(sensorType & Measurement::Humidity) {
         if (!payload.endsWith(",")) payload = payload + ",";
         payload = payload + "\"rhum\":" + String(data.HUM);
     }
@@ -162,23 +162,23 @@ void showTextRectangle(const String &ln1, const String &ln2, boolean small) {
 
 void updateScreen() {
     auto data = metrics->getData();
-    auto sensorType = metrics->getSensorTypes();
+    auto sensorType = metrics->getMeasurements();
     // Take a measurement at a fixed interval.
     switch (counter) {
 
         case 0:
-            if (!(sensorType & SensorType::Particle)) {
+            if (!(sensorType & Measurement::Particle)) {
                 showTextRectangle("PM2", String(data.PARTICLE_DATA.PM_2_5), false);
                 break;
             }
         case 1:
-            if (!(sensorType & SensorType::CO2)) {
+            if (!(sensorType & Measurement::CO2)) {
                 showTextRectangle("CO2", String(data.GAS_DATA.CO2), false);
                 break;
             }
 
         case 2:
-            if (!(sensorType & SensorType::Temperature)) {
+            if (!(sensorType & Measurement::Temperature)) {
                 if (inF) {
                     showTextRectangle("TMP", String((data.TMP * 1.8) + 32, 1) + "F", false);
                     break;
@@ -188,13 +188,13 @@ void updateScreen() {
             }
 
         case 3:
-            if (!(sensorType & SensorType::Humidity)) {
+            if (!(sensorType & Measurement::Humidity)) {
                 showTextRectangle("HUM", String(data.HUM, 1) + "%", false);
                 break;
             }
 
         case 4:
-            if (!(sensorType & SensorType::Particle)) {
+            if (!(sensorType & Measurement::Particle)) {
                 auto aqi = aqiCalculator->isAQIAvailable() ? String(aqiCalculator->getAQI(), 1) : "N/A";
                 showTextRectangle("AQI", aqi, false);
                 break;

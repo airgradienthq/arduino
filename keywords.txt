@@ -14,7 +14,7 @@ MetricGatherer	KEYWORD1
 addSensor	KEYWORD2
 begin	KEYWORD2
 getData	KEYWORD2
-getSensorTypes	KEYWORD2
+getMeasurements	KEYWORD2
 NTPClient	KEYWORD1
 getUtcUnixEpoch	KEYWORD2
 PrometheusServer	KEYWORD1

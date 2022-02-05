@@ -74,7 +74,7 @@ namespace AirGradient {
 
     void AQICalculator::begin() {
         //Don't have a particle sensor
-        if(!!(_metrics->getSensorTypes() & Measurement::Particle)) {
+        if(!!(_metrics->getMeasurements() & Measurement::Particle)) {
             Serial.println("No particle sensor to use to calculate PM2.5 AQI");
             return;
         }

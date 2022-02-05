@@ -23,7 +23,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
     String idString = _getIdString();
 
     auto metrics = _metrics->getData();
-    auto sensorType = _metrics->getSensorTypes();
+    auto sensorType = _metrics->getMeasurements();
 
     if (!(sensorType & Measurement::Particle)) {
         message += "# HELP particle_count Count of Particulate Matter in µg/m3\n";

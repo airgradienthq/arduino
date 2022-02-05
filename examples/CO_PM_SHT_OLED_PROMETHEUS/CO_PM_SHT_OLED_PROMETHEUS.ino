@@ -129,36 +129,36 @@ void showTextRectangle(const String &ln1, const String &ln2, boolean small) {
 
 void updateScreen() {
     auto data = metrics->getData();
-    auto sensorType = metrics->getSensorTypes();
+    auto sensorType = metrics->getMeasurements();
     // Take a measurement at a fixed interval.
     switch (counter) {
 
         case 0:
-            if (!(sensorType & SensorType::Particle)) {
+            if (!(sensorType & Measurement::Particle)) {
                 showTextRectangle("PM2", String(data.PARTICLE_DATA.PM_2_5), false);
                 break;
             }
 
         case 1:
-            if (!(sensorType & SensorType::CO2)) {
+            if (!(sensorType & Measurement::CO2)) {
                 showTextRectangle("CO2", String(data.GAS_DATA.CO2), false);
                 break;
             }
 
         case 2:
-            if (!(sensorType & SensorType::Temperature)) {
+            if (!(sensorType & Measurement::Temperature)) {
                 showTextRectangle("TMP", String(data.TMP, 1) + "C", false);
                 break;
             }
 
         case 3:
-            if (!(sensorType & SensorType::Humidity)) {
+            if (!(sensorType & Measurement::Humidity)) {
                 showTextRectangle("HUM", String(data.HUM, 1) + "%", false);
                 break;
             }
 
         case 4:
-            if (!(sensorType & SensorType::Particle)) {
+            if (!(sensorType & Measurement::Particle)) {
                 auto aqi = aqiCalculator->isAQIAvailable() ? String(aqiCalculator->getAQI(), 1) : "N/A";
                 showTextRectangle("AQI", aqi, false);
                 break;

@@ -32,7 +32,7 @@ namespace AirGradient {
          * What type of sensor are we gathering metric for.
          * @return
          */
-        inline Measurement getSensorTypes() const { return _sensorTypes; }
+        inline Measurement getMeasurements() const { return _sensorTypes; }
 
         MetricGatherer(uint8_t gatherMetricEverySecs) : _gatherMetricEverySecs(gatherMetricEverySecs) {}
 
