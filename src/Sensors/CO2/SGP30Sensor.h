@@ -13,7 +13,7 @@ namespace AirGradient {
         }
 
         SensorType getType() const override {
-            return SensorType::TVOC | SensorType::CO2;
+            return SensorType::TVOC | SensorType::CO2 | SensorType::ETHANOL | SensorType::H2;
         }
 
         bool begin() override;

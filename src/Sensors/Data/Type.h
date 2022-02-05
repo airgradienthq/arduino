@@ -35,7 +35,17 @@ namespace AirGradient {
         /**
          * Total Volatile Organic Compounds sensor
          */
-        TVOC = 1 << 5
+        TVOC = 1 << 5,
+
+        /**
+         * H2 Gas
+         */
+        H2 = 1 << 6,
+
+        /***
+         * Ethanol gas
+         */
+        ETHANOL = 1 << 7
     };
 
 
