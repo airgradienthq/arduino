@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Data/SensorData.h"
-#include "Sensors/Data/Type.h"
+#include "Sensors/Data/Measurement.h"
 
 namespace AirGradient {
     class ISensor {

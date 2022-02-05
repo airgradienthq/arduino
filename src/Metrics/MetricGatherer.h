@@ -4,6 +4,7 @@
 #include <vector>
 #include <Ticker.h>
 #include "Sensors/ISensor.h"
+#include "Sensors/Data/Measurement.h"
 
 #define METRIC_GATHERING_EVERY_X_SECS 3
 namespace AirGradient {
