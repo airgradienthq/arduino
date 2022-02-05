@@ -42,6 +42,9 @@ namespace AirGradient {
          * @return
          */
         inline Measurement getCurrentMeasurement() const {
+            if(_excludedMeasurement == Measurement::None) {
+                return getAvailableMeasurement();
+            }
             return getAvailableMeasurement() & ~_excludedMeasurement;
         }
 

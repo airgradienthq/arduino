@@ -5,6 +5,12 @@ AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_
                                                                     Measurement excludedMeasurement) {
     sensor->setExcludedMeasurement(excludedMeasurement);
     auto measurement = sensor->getCurrentMeasurement();
+    //If because of the exclusion, the sensor won't provide any measurement, don't add it.
+    if (measurement == Measurement::None) {
+        Serial.printf("%s will not provide any measurement. Not adding sensor.\n", sensor->getName());
+        return *this;
+    }
+
     for (auto const &currentSensor: _sensors) {
         //If there is already a sensor providing this data, we need to tell the developer
         if (!(currentSensor->getCurrentMeasurement() & measurement)) {
