@@ -47,7 +47,7 @@ void AirGradient::MetricGatherer::_gatherMetrics() {
     }
 
     // Only apply the offset if there is a temperature _measurements configured
-    if (!(_measurements & Measurement::Temperature)) {
+    if (_temperatureOffset != 0 && !(_measurements & Measurement::Temperature)) {
         _data.TMP = _data.TMP + _temperatureOffset;
     }
 }
