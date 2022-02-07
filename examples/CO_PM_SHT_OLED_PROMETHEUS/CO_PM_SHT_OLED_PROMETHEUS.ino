@@ -102,6 +102,7 @@ void setup() {
     Serial.println(WiFi.hostname());
 
     metrics->begin();
+    aqiCalculator->begin();
 
     server->begin();
 
