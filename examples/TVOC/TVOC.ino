@@ -30,17 +30,13 @@ Kits with all required components are available at https://www.airgradient.com/d
 MIT License
 */
 
-#include "Metrics/MetricGatherer.h"
-#include "Sensors/Particle/PMSXSensor.h"
-#include "Sensors/Temperature/SHTXSensor.h"
-#include "Sensors/CO2/SensairS8Sensor.h"
-#include "Sensors/TVOC/SGP30Sensor.h"
+#include <AirGradient.h>
+
 #include <WiFiManager.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <Wire.h>
 #include "SSD1306Wire.h"
-#include "AQI/AQICalculator.h"
 
 using namespace AirGradient;
 

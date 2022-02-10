@@ -20,11 +20,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 MIT License
 */
 
-
-#include "Metrics/MetricGatherer.h"
-#include "Sensors/Temperature/SHTXSensor.h"
-
-using namespace AirGradient;
+#include <AirGradient.h>
 
 auto metrics = std::make_shared<MetricGatherer>();
 

@@ -20,10 +20,7 @@ Kits with all required components are available at https://www.airgradient.com/d
 MIT License
 */
 
-#include "Metrics/MetricGatherer.h"
-#include "Sensors/CO2/SensairS8Sensor.h"
-
-using namespace AirGradient;
+#include <AirGradient.h>
 
 auto metrics = std::make_shared<MetricGatherer>();
 

@@ -9,15 +9,8 @@
 
 #include <Wire.h>
 #include "SSD1306Wire.h"
-#include "Metrics/MetricGatherer.h"
-#include "Sensors/Particle/PMSXSensor.h"
-#include "Sensors/Temperature/SHTXSensor.h"
-#include "Sensors/CO2/SensairS8Sensor.h"
-#include "Sensors/Time/BootTimeSensor.h"
-#include "AQI/AQICalculator.h"
-#include "Prometheus/PrometheusServer.h"
 
-using namespace AirGradient;
+#include <AirGradient.h>
 
 // Config ----------------------------------------------------------------------
 

@@ -34,9 +34,8 @@ MIT License
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
-#include "Metrics/MetricGatherer.h"
-#include "Sensors/CO2/SensairS8Sensor.h"
-using namespace AirGradient;
+
+#include <AirGradient.h>
 
 #ifndef PSTR
 #define PSTR // Make Arduino Due happy
