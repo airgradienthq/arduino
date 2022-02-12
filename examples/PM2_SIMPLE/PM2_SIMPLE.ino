@@ -26,7 +26,7 @@ auto metrics = std::make_shared<MetricGatherer>();
 
 void setup() {
     Serial.begin(9600);
-    metrics->addSensor(std::make_unique<PMSXSensor>())
+    metrics->addSensor(std::make_unique<PMSXSensor>());
     metrics->begin();
 }
 
