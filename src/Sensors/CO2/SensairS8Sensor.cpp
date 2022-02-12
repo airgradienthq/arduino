@@ -1,10 +1,10 @@
 #include "SensairS8Sensor.h"
 
-AirGradient::Measurement AirGradient::SensairS8Sensor::getAvailableMeasurement() const {
+AirGradient_Internal::Measurement AirGradient_Internal::SensairS8Sensor::getAvailableMeasurement() const {
     return Measurement::CO2;
 }
 
-bool AirGradient::SensairS8Sensor::begin() {
+bool AirGradient_Internal::SensairS8Sensor::begin() {
     //Check if sensor is supposed to provide the CO2 reading, if not, return directly
     if (!!(getCurrentMeasurement() & Measurement::CO2)) {
         Serial.printf("%s can only provide CO2 reading and it's disabled.", getName());
@@ -26,7 +26,7 @@ bool AirGradient::SensairS8Sensor::begin() {
     return sensorData.abc_period > 0;
 }
 
-void AirGradient::SensairS8Sensor::getData(AirGradient::SensorData &data) const {
+void AirGradient_Internal::SensairS8Sensor::getData(AirGradient_Internal::SensorData &data) const {
 
     auto previousReading = data.GAS_DATA.CO2;
     auto co2 = _sensor->get_co2();

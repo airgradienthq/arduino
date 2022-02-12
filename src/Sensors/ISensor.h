@@ -3,7 +3,7 @@
 #include "Data/SensorData.h"
 #include "Sensors/Data/Measurement.h"
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class ISensor {
     protected:
         ISensor() = default;

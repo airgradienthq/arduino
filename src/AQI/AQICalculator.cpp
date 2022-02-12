@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     Breakpoints AQICalculator::_getPM25Breakpoints(float pm25Avg) const {
         Breakpoints b{};
 

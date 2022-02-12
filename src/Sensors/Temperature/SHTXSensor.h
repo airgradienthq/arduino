@@ -5,7 +5,7 @@
 #include "SHTSensor.h"
 
 #define SHT_TMP_OFFSET_DEFAULT -2
-namespace AirGradient {
+namespace AirGradient_Internal {
     class SHTXSensor : public ISensor {
     public:
         ~SHTXSensor() override = default;

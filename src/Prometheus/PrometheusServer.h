@@ -6,7 +6,7 @@
 #include "Metrics/MetricGatherer.h"
 #include "AQI/AQICalculator.h"
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class PrometheusServer {
 
 
@@ -21,8 +21,8 @@ namespace AirGradient {
          */
         PrometheusServer(int serverPort,
                          const char *deviceId,
-                         std::shared_ptr<AirGradient::MetricGatherer> metrics,
-                         std::shared_ptr<AirGradient::AQICalculator> aqiCalculator
+                         std::shared_ptr<AirGradient_Internal::MetricGatherer> metrics,
+                         std::shared_ptr<AirGradient_Internal::AQICalculator> aqiCalculator
         ) : _serverPort(serverPort),
             _deviceId(deviceId),
             _metrics(std::move(metrics)),
@@ -47,8 +47,8 @@ namespace AirGradient {
         const char *_deviceId;
 
         std::unique_ptr<ESP8266WebServer> _server;
-        std::shared_ptr<AirGradient::MetricGatherer> _metrics;
-        std::shared_ptr<AirGradient::AQICalculator> _aqiCalculator;
+        std::shared_ptr<AirGradient_Internal::MetricGatherer> _metrics;
+        std::shared_ptr<AirGradient_Internal::AQICalculator> _aqiCalculator;
 
 
         void _handleRoot();

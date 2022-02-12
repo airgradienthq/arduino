@@ -7,7 +7,7 @@
 #define WINSEN_MH_Z19_DEFAULT_BAUDRATE 9600
 
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class MHZ19Sensor : public ISensor {
     public:
         const char *getName() const override {

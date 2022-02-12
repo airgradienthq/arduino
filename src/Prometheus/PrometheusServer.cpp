@@ -1,15 +1,15 @@
 #include "PrometheusServer.h"
 
-AirGradient::PrometheusServer::~PrometheusServer() {
+AirGradient_Internal::PrometheusServer::~PrometheusServer() {
     _server->stop();
     _server->close();
 }
 
-void AirGradient::PrometheusServer::handleRequests() {
+void AirGradient_Internal::PrometheusServer::handleRequests() {
     _server->handleClient();
 }
 
-void AirGradient::PrometheusServer::begin() {
+void AirGradient_Internal::PrometheusServer::begin() {
     _server->on("/", [this] { _handleRoot(); });
     _server->on("/metrics", [this] { _handleRoot(); });
     _server->onNotFound([this] { _handleNotFound(); });
@@ -18,7 +18,7 @@ void AirGradient::PrometheusServer::begin() {
     Serial.println("HTTP server started at ip " + WiFi.localIP().toString() + ":" + String(_serverPort));
 }
 
-String AirGradient::PrometheusServer::_generateMetrics() {
+String AirGradient_Internal::PrometheusServer::_generateMetrics() {
     String message = "";
     String idString = _getIdString();
 
@@ -86,7 +86,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
     }
 
     if (!(sensorType & Measurement::BootTime)) {
-        message += "# HELP sensors_boot_time AirGradient boot time, in unixtime.\n";
+        message += "# HELP sensors_boot_time AirGradient_Internal boot time, in unixtime.\n";
         message += "# TYPE sensors_boot_time gauge\n";
         message += "sensors_boot_time" + idString + String(metrics.BOOT_TIME) + "\n";
     }
@@ -94,7 +94,7 @@ String AirGradient::PrometheusServer::_generateMetrics() {
     return message;
 }
 
-String AirGradient::PrometheusServer::_getIdString(const char *labelType, const char *labelValue) const {
+String AirGradient_Internal::PrometheusServer::_getIdString(const char *labelType, const char *labelValue) const {
     if (labelType == nullptr || labelValue == nullptr) {
 
         return "{id=\"" + String(_deviceId) + "\",mac=\"" + WiFi.macAddress().c_str() + "\"}";
@@ -103,11 +103,11 @@ String AirGradient::PrometheusServer::_getIdString(const char *labelType, const 
            labelValue + "\"}";
 }
 
-void AirGradient::PrometheusServer::_handleRoot() {
+void AirGradient_Internal::PrometheusServer::_handleRoot() {
     _server->send(200, "text/plain", _generateMetrics());
 }
 
-void AirGradient::PrometheusServer::_handleNotFound() {
+void AirGradient_Internal::PrometheusServer::_handleNotFound() {
     String message = "File Not Found\n\n";
     message += "URI: ";
     message += _server->uri();

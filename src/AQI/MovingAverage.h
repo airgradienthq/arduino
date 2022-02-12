@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     template<typename T, typename Total, size_t N>
     class MovingAverage {
     public:

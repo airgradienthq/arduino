@@ -1,6 +1,6 @@
 #include "PMSXSensor.h"
 
-bool AirGradient::PMSXSensor::begin() {
+bool AirGradient_Internal::PMSXSensor::begin() {
     //Check if sensor is supposed to provide the particle reading, if not, return directly
     if (!!(getCurrentMeasurement() & Measurement::Particle)) {
         Serial.printf("%s can only provide Particle reading and it's disabled.", getName());
@@ -16,12 +16,12 @@ bool AirGradient::PMSXSensor::begin() {
 }
 
 
-void AirGradient::PMSXSensor::_wakeUpPm2() {
+void AirGradient_Internal::PMSXSensor::_wakeUpPm2() {
     _sensor->wakeUp();
     _readSleepTicker.once_scheduled(PMS_DELAY_BEFORE_READING_SECS, [this] { _getPm2DataSleep(); });
 }
 
-void AirGradient::PMSXSensor::_getPm2DataSleep() {
+void AirGradient_Internal::PMSXSensor::_getPm2DataSleep() {
 
     auto previousReading = _data.PM_2_5;
     PMS::DATA data{};
@@ -40,7 +40,7 @@ void AirGradient::PMSXSensor::_getPm2DataSleep() {
     }
 }
 
-void AirGradient::PMSXSensor::getData(AirGradient::SensorData &data) const {
+void AirGradient_Internal::PMSXSensor::getData(AirGradient_Internal::SensorData &data) const {
     //Check if sensor is supposed to provide the Particle reading, if not, return directly
     if (!!(getCurrentMeasurement() & Measurement::Particle)) {
         return;

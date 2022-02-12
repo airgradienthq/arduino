@@ -18,7 +18,7 @@ uint16_t doubleToFixedPoint(double number) {
     return value;
 }
 
-bool AirGradient::SGP30Sensor::begin() {
+bool AirGradient_Internal::SGP30Sensor::begin() {
     _sensor = std::make_unique<SGP30>();
     auto result = _sensor->begin(_wirePort);
     if (result) {
@@ -27,7 +27,7 @@ bool AirGradient::SGP30Sensor::begin() {
     return result;
 }
 
-void AirGradient::SGP30Sensor::getData(AirGradient::SensorData &data) const {
+void AirGradient_Internal::SGP30Sensor::getData(AirGradient_Internal::SensorData &data) const {
     //Set humidity for the sensor
     if (data.TMP > 0 && data.HUM > 0) {
         auto absHumidity = RHtoAbsolute(data.HUM, data.TMP);

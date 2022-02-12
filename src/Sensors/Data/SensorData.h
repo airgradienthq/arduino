@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <ctime>
 
-namespace AirGradient {
+namespace AirGradient_Internal {
 
     struct GasData {
         uint16_t CO2 = 0;

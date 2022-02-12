@@ -2,7 +2,7 @@
 
 #include "Utils/Enum.h"
 
-namespace AirGradient {
+namespace AirGradient_Internal {
 
     /**
      * Represent the type of data the sensor can provide. Can be multiple. Used as flag.

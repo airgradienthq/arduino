@@ -9,7 +9,7 @@
 #define PMS_DEFAULT_WAKE_SECS 120
 #define PMS_DELAY_BEFORE_READING_SECS 30
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class PMSXSensor : public ISensor {
 
 

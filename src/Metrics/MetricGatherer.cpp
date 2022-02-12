@@ -1,8 +1,8 @@
 #include <HardwareSerial.h>
 #include "MetricGatherer.h"
 
-AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor,
-                                                                    Measurement excludedMeasurement) {
+AirGradient_Internal::MetricGatherer &AirGradient_Internal::MetricGatherer::addSensor(std::unique_ptr<ISensor> sensor,
+                                                                                      Measurement excludedMeasurement) {
     sensor->setExcludedMeasurement(excludedMeasurement);
     auto measurement = sensor->getCurrentMeasurement();
     //If because of the exclusion, the sensor won't provide any _measurements, don't add it.
@@ -24,7 +24,7 @@ AirGradient::MetricGatherer &AirGradient::MetricGatherer::addSensor(std::unique_
     return *this;
 }
 
-void AirGradient::MetricGatherer::begin() {
+void AirGradient_Internal::MetricGatherer::begin() {
     for (auto const &sensor: _sensors) {
         if (!sensor->begin()) {
             Serial.printf("Can't init sensor: %s\nStopping initialization.", sensor->getName());
@@ -38,7 +38,7 @@ void AirGradient::MetricGatherer::begin() {
 
 }
 
-void AirGradient::MetricGatherer::_gatherMetrics() {
+void AirGradient_Internal::MetricGatherer::_gatherMetrics() {
     if (!_initialized) {
         Serial.println("Gather not initialized properly.");
         return;

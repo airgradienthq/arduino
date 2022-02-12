@@ -5,7 +5,7 @@
 #include "Sensors/ISensor.h"
 #include "SparkFun_SGP30_Arduino_Library.h"
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class SGP30Sensor : public ISensor {
     public:
         const char *getName() const override {

@@ -9,7 +9,7 @@
 #define NUM_OF_METRICS GATHER_PERIOD_SECS/GATHER_METRIC_EVERY_X_SECS
 
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     struct Breakpoints {
         uint16_t iHi;
         uint16_t iLo;

@@ -2,7 +2,7 @@
 
 #include <utility>
 
-void AirGradient::NTPClient::sendNTPpacket(IPAddress &address) {
+void AirGradient_Internal::NTPClient::sendNTPpacket(IPAddress &address) {
     // set all bytes in the buffer to 0
     memset(_packetBuffer, 0, NTP_PACKET_SIZE);
     // Initialize values needed to form NTP request
@@ -23,7 +23,7 @@ void AirGradient::NTPClient::sendNTPpacket(IPAddress &address) {
     _udp.endPacket();
 }
 
-time_t AirGradient::NTPClient::getUtcUnixEpoch() {
+time_t AirGradient_Internal::NTPClient::getUtcUnixEpoch() {
     IPAddress ntpServerIP; // NTP server's ip address
 
     while (_udp.parsePacket() > 0); // discard any previously received packets

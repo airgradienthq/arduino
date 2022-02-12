@@ -3,7 +3,7 @@
 
 #define SENSAIR_S8_DEFAULT_BAUDRATE 9600
 
-namespace AirGradient {
+namespace AirGradient_Internal {
     class SensairS8Sensor : public ISensor {
 
     public:

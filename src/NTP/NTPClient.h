@@ -11,7 +11,7 @@
 #define NTP_DEFAULT_LOCAL_PORT UINT16_C(1515)
 
 
-namespace AirGradient {
+namespace AirGradient_Internal {
 #if !defined(__time_t_defined) // avoid conflict with newlib or other posix libc
     typedef unsigned long time_t;
 #endif
