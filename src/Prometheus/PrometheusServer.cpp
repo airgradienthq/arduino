@@ -91,6 +91,25 @@ String AirGradient_Internal::PrometheusServer::_generateMetrics() {
         message += "sensors_boot_time" + idString + String(metrics.BOOT_TIME) + "\n";
     }
 
+    if (!(sensorType & Measurement::TVOC)) {
+        message += "# HELP total_volatile_organic_compounds total of armful gaz detected.\n";
+        message += "# TYPE total_volatile_organic_compounds gauge\n";
+        message += "total_volatile_organic_compounds" + idString + String(metrics.GAS_DATA.TVOC) + "\n";
+    }
+
+    if (!(sensorType & Measurement::ETHANOL)) {
+        message += "# HELP ethanol ethanol level.\n";
+        message += "# TYPE ethanol gauge\n";
+        message += "ethanol" + idString + String(metrics.GAS_DATA.ETHANOL) + "\n";
+    }
+
+    if (!(sensorType & Measurement::H2)) {
+        message += "# HELP hydrogen hydrogen level.\n";
+        message += "# TYPE hydrogen gauge\n";
+        message += "hydrogen" + idString + String(metrics.GAS_DATA.H2) + "\n";
+    }
+
+
     return message;
 }
 
