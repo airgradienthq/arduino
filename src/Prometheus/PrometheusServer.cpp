@@ -92,7 +92,7 @@ String AirGradient_Internal::PrometheusServer::_generateMetrics() {
     }
 
     if (!(sensorType & Measurement::TVOC)) {
-        message += "# HELP total_volatile_organic_compounds total of armful gaz detected.\n";
+        message += "# HELP total_volatile_organic_compounds total of harmful gas detected.\n";
         message += "# TYPE total_volatile_organic_compounds gauge\n";
         message += "total_volatile_organic_compounds" + idString + String(metrics.GAS_DATA.TVOC) + "\n";
     }
