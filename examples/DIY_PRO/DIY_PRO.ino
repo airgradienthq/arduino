@@ -1,13 +1,11 @@
 /*
-This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Microcontroller.
+This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-For build instructions please visit https://www.airgradient.com/diy/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro/
 
-Instructions on using the TVOC sensor (SGP30) instead of the Temperature / Humidity sensor (SHT3x).
-
-https://www.airgradient.com/resources/tvoc-on-airgradient-diy-sensor/
+Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
@@ -15,7 +13,7 @@ The codes needs the following libraries installed:
 “SGP30” by Rob Tilaart tested with Version 0.1.5
 
 Configuration:
-Please set in the code below which sensor you are using and if you want to connect it to WiFi.
+Please set in the code below the configuration parameters.
 
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
@@ -38,7 +36,27 @@ MIT License
 
 AirGradient ag = AirGradient();
 SGP30 SGP;
+
+// Display bottom right
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+
+// Replace above if you have display on top left
+//U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R3, /* reset=*/ U8X8_PIN_NONE);
+
+
+// CONFIGURATION START
+
+//set to the endpoint you would like to use
+String APIROOT = "http://hw.airgradient.com/";
+
+// set to true to switch from Celcius to Fahrenheit
+boolean inF = false;
+
+// set to true if you want to connect to wifi. You have 60 seconds to connect. Then it will go into an offline mode.
+boolean connectWIFI=true;
+
+// CONFIGURATION END
+
 
 unsigned long currentMillis = 0;
 
@@ -64,18 +82,6 @@ const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
-
-String APIROOT = "http://hw.airgradient.com/";
-
-// set to true to switch PM2.5 from ug/m3 to US AQI
-boolean inUSaqi = true;
-
-// set to true to switch from Celcius to Fahrenheit
-boolean inF = true;
-
-// set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI=true;
-
 
 void setup()
 {
@@ -152,28 +158,23 @@ void updateTempHum()
 void updateOLED() {
    if (currentMillis - previousOled >= oledInterval) {
      previousOled += oledInterval;
-     String ln1;
-     String ln2;
-      if (inUSaqi) {
-        ln1 = "CO2:" + String(Co2) + " AQI:" + String(PM_TO_AQI_US(pm25));
-        } else {
-        ln1 = "CO2:" + String(Co2) + " PM:" + String(pm25);
-       }
+
+    String ln3;
+    String ln1 = "PM:" + String(pm25) +  " CO2:" + String(Co2);
+    String ln2 = "AQI:" + String(PM_TO_AQI_US(pm25)) + " TVOC:" + String(TVOC);
 
       if (inF) {
-        ln2 = "F:" + String((temp* 9 / 5) + 32) + " H:" + String(hum)+"%";
+        ln3 = "F:" + String((temp* 9 / 5) + 32) + " H:" + String(hum)+"%";
         } else {
-        ln2 = "C:" + String(temp) + " H:" + String(hum)+"%";
+        ln3 = "C:" + String(temp) + " H:" + String(hum)+"%";
        }
-
-     String ln3 = "TVOC:" + String(TVOC) ;
      updateOLED2(ln1, ln2, ln3);
    }
 }
 
 void updateOLED2(String ln1, String ln2, String ln3) {
       char buf[9];
-        u8g2.firstPage();
+          u8g2.firstPage();
           u8g2.firstPage();
           do {
           u8g2.setFont(u8g2_font_t0_16_tf);
@@ -219,13 +220,12 @@ void sendToServer() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
    String HOTSPOT = "AG-" + String(ESP.getChipId(), HEX);
-   updateOLED2("To setup connect", "to Wifi Hotspot", HOTSPOT);
-   wifiManager.setTimeout(120);
+   updateOLED2("60s to connect", "to Wifi Hotspot", HOTSPOT);
+   wifiManager.setTimeout(60);
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
+     updateOLED2("booting into", "offline mode", "");
      Serial.println("failed to connect and hit timeout");
-     delay(3000);
-     ESP.restart();
-     delay(5000);
+     delay(6000);
    }
 }
 

@@ -1,16 +1,18 @@
 /*
-This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Microcontroller.
+This is the code for the AirGradient DIY BASIC Air Quality Sensor with an ESP8266 Microcontroller.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-For build instructions please visit https://www.airgradient.com/diy/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy/
+
+Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
-"ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
+“U8g2” by oliver tested with version 2.32.15
 
 Configuration:
-Please set in the code below which sensor you are using and if you want to connect it to WiFi.
+Please set in the code below the configuration parameters.
 
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
@@ -33,6 +35,19 @@ MIT License
 AirGradient ag = AirGradient();
 
 SSD1306Wire display(0x3c, SDA, SCL);
+
+// CONFIGURATION START
+
+// set to true to switch PM2.5 from ug/m3 to US AQI
+boolean inUSaqi = true;
+
+// set to true to switch from Celcius to Fahrenheit
+boolean inF = false;
+
+// set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
+boolean connectWIFI=true;
+
+// CONFIGURATION END
 
 unsigned long currentMillis = 0;
 
@@ -58,14 +73,6 @@ int displaypage = 0;
 
 String APIROOT = "http://hw.airgradient.com/";
 
-// set to true to switch PM2.5 from ug/m3 to US AQI
-boolean inUSaqi = true;
-
-// set to true to switch from Celcius to Fahrenheit
-boolean inF = true;
-
-// set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI=true;
 
 
 void setup()
@@ -207,12 +214,11 @@ void sendToServer() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
    String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
-   wifiManager.setTimeout(120);
+   wifiManager.setTimeout(60);
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
+     showTextRectangle("offline", "mode", true);
      Serial.println("failed to connect and hit timeout");
-     delay(3000);
-     ESP.restart();
-     delay(5000);
+     delay(6000);
    }
 }
 

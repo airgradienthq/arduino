@@ -1,7 +1,11 @@
 /*
 This is the code for the AirGradient DIY CO2 Traffic light with an ESP8266 Microcontroller.
 
-For build instructions please visit https://www.airgradient.com/diy-co2-traffic-light/
+For build instructions please visit:
+https://www.airgradient.com/open-airgradient/instructions/diy-co2-traffic-light/
+
+Kits (including a pre-soldered version) are available:
+https://www.airgradient.com/open-airgradient/kits/
 
 Compatible with the following sensors:
 SenseAir S8 (CO2 Sensor)
@@ -12,8 +16,6 @@ Please install the following libraries:
 "Adafruit NeoMatrix" Library  (tested with 1.2.0)
 "WifiManager by tzapu, tablatronix" tested with Version 2.0.3-alpha
 
-Kits with all required components are available at https://www.airgradient.com/diyshop/
-
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
 If you are a school or university contact us for a free trial on the AirGradient platform.
@@ -21,11 +23,6 @@ https://www.airgradient.com/schools/
 
 MIT License
 */
-
-// Adafruit_NeoMatrix example for single NeoPixel Shield.
-// Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
-// Adafruit_NeoMatrix example for single NeoPixel Shield.
-// Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
 
 #include <AirGradient.h>
 #include <WiFiManager.h>
