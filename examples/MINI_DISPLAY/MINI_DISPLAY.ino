@@ -4,8 +4,7 @@ It can be configures to show the outside air quality as well as one indoor locat
 
 For build instructions please visit
 
-https://www.airgradient.com/resources/airgradient-diy-display/
-
+https://www.airgradient.com/open-airgradient/blog/airgradient-diy-display/
 
 The codes needs the following libraries installed:
 "WifiManager by tzapu, tablatronix" tested with Version 2.0.5-alpha
@@ -20,7 +19,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 
 
 If you are a school or university contact us for a free trial on the AirGradient platform.
-https://www.airgradient.com/schools/
+https://www.airgradient.com/
 
 MIT License
 */

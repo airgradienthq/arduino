@@ -17,7 +17,7 @@ Please set in the code below the configuration parameters.
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
 If you are a school or university contact us for a free trial on the AirGradient platform.
-https://www.airgradient.com/schools/
+https://www.airgradient.com/
 
 MIT License
 

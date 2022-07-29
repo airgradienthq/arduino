@@ -3,11 +3,11 @@ This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Micr
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-For build instructions please visit https://www.airgradient.com/diy/
+For build instructions please visit https://www.airgradient.com/open-airgradient/instructions/
 
 Instructions on using the TVOC sensor (SGP30) instead of the Temperature / Humidity sensor (SHT3x).
 
-https://www.airgradient.com/resources/tvoc-on-airgradient-diy-sensor/
+https://www.airgradient.com/open-airgradient/instructions/tvoc-on-airgradient-diy-sensor/
 
 The codes needs the following libraries installed:
 "WifiManager by tzapu, tablatronix" tested with Version 2.0.3-alpha
@@ -15,12 +15,12 @@ The codes needs the following libraries installed:
 "SGP30" by Rob Tillaart tested with Version 0.1.4
 
 Configuration:
-Please set in the code below which sensor you are using and if you want to connect it to WiFi.
+Set in the code below which sensor you are using and if you want to connect it to WiFi.
 
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
 If you are a school or university contact us for a free trial on the AirGradient platform.
-https://www.airgradient.com/schools/
+https://www.airgradient.com/
 
 MIT License
 */
