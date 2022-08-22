@@ -1,9 +1,9 @@
-AirGradient Arduino Library for ESP8266 (Wemos D1 MINI)
-=====================================================================================================
 ***WORK IN PROGRESS***
 
 This is improved fork of official [airgradienthq/arduino](https://github.com/airgradienthq/arduino) repo which enables PMS5003 sensor capabilities to report PM1 and PM10 measurments which are not used by AirGradient project before.
 
+AirGradient Arduino Library for ESP8266 (Wemos D1 MINI)
+=====================================================================================================
 
 Build your own low cost air quality sensor with optional display measuring PM2.5, CO2, Temperature and Humidity. 
 
