@@ -3,6 +3,10 @@
   Copyright (c) 2006 John Doe.  All right reserved.
 */
 
+/*
+  PM1 and PM10 reporting for Plantower PMS5003 PM2.5 sensor enabled. Some minor code changes done.
+*/
+
 // ensure this library description is only included once
 #ifndef AirGradient_h
 #define AirGradient_h
@@ -197,8 +201,13 @@ class AirGradient
     void requestRead();
     bool read_PMS(DATA& data);
     bool readUntil(DATA& data, uint16_t timeout = SINGLE_RESPONSE_TIME);
-    const char* getPM2();
-    int getPM2_Raw();
+    const char* getPM1();
+	const char* getPM2();
+	const char* getPM10();
+	DATA getPM_Raw();
+    int getPM1_Raw();
+	int getPM2_Raw();
+	int getPM10_Raw();
 
     //PMS VARIABLES PUBLIC_END
 
@@ -264,7 +273,9 @@ class AirGradient
     uint16_t _calculatedChecksum;
     SoftwareSerial *_SoftSerial_PMS;
     void loop();
-    char Char_PM2[10];
+    char Char_PM1[10];
+	char Char_PM2[10];
+	char Char_PM10[10];
     //PMS VARIABLES PRIVATE END
 
     //TMP_RH VARIABLES PRIVATE START
@@ -307,4 +318,3 @@ class AirGradient
 
 
 #endif
-

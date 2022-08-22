@@ -3,6 +3,10 @@
   Copyright (c) 2006 John Doe.  All right reserved.
 */
 
+/*
+  PM1 and PM10 reporting for Plantower PMS5003 PM2.5 sensor enabled. Some minor code changes done.
+*/
+
 
 // include this library's description file
 #include "AirGradient.h"
@@ -80,7 +84,48 @@ void AirGradient::PMS_Init(int rx_pin,int tx_pin,int baudRate){
   
 }
 
+AirGradient::DATA AirGradient::getPM_Raw(){
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    return data;
+  } else {
+    data.PM_SP_UG_1_0 = 0;
+    data.PM_SP_UG_2_5 = 0;
+    data.PM_SP_UG_10_0 = 0;
+    data.PM_AE_UG_1_0 = 0;
+    data.PM_AE_UG_2_5 = 0;
+    data.PM_AE_UG_10_0 = 0;
+    return data;
+  }
+}
 
+const char* AirGradient::getPM1(){
+  if (getPM1_Raw()) {
+    int result_raw = getPM1_Raw();
+    sprintf(Char_PM1,"%d", result_raw);
+    return Char_PM1;
+  } else {
+    //Serial.println("no PMS data");
+    Char_PM1[0] = 'N';
+    Char_PM1[1] = 'U';
+    Char_PM1[2] = 'L';
+    Char_PM1[3] = 'L';
+    return Char_PM1;
+  }
+}
+
+int AirGradient::getPM1_Raw(){
+  int pm01;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    pm01 = data.PM_AE_UG_1_0;
+    return pm01;
+  } else {
+    return 0;
+  }
+}
 
 const char* AirGradient::getPM2(){
   if (getPM2_Raw()) {
@@ -109,6 +154,32 @@ int AirGradient::getPM2_Raw(){
   }
 }
 
+const char* AirGradient::getPM10(){
+  if (getPM10_Raw()) {
+    int result_raw = getPM10_Raw();
+    sprintf(Char_PM10,"%d", result_raw);
+    return Char_PM10;
+  } else {
+    //Serial.println("no PMS data");
+    Char_PM10[0] = 'N';
+    Char_PM10[1] = 'U';
+    Char_PM10[2] = 'L';
+    Char_PM10[3] = 'L';
+    return Char_PM10;
+  }
+}
+
+int AirGradient::getPM10_Raw(){
+  int pm10;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    pm10 = data.PM_AE_UG_10_0;
+    return pm10;
+  } else {
+    return 0;
+  }
+}
 
 // Private Methods /////////////////////////////////////////////////////////////
 // Functions only available to other functions in this library
@@ -609,25 +680,21 @@ const char* AirGradient::getCO2(int retryLimit) {
 int AirGradient::getCO2_Raw(){
   const byte CO2Command[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
   byte CO2Response[] = {0,0,0,0,0,0,0};
-
-  _SoftSerial_CO2->write(CO2Command, 7);
-  delay(100);  //give the sensor a bit of time to respond
-
-  if (_SoftSerial_CO2->available()){
-    for (int i=0; i < 7; i++) {
-      int byte = _SoftSerial_CO2->read();
-      CO2Response[i] = byte;
-      if (CO2Response[0] != 254) {
-        return -1;  //error code for debugging
+  int datapos = -1;
+  while (datapos == -1) {
+    _SoftSerial_CO2->write(CO2Command, 7);
+    delay(100);
+    int bytesinbuffer = _SoftSerial_CO2->available();
+    for (int i=0; i < bytesinbuffer; i++) {
+      delay(25);
+      CO2Response[i] = _SoftSerial_CO2->read();
+      if ((CO2Response[i] == 0xFE) && (datapos == -1)){
+        datapos = i;
       }
     }
-    unsigned long val = CO2Response[3]*256 + CO2Response[4];
-    return val;
   }
-  else
-  {
-  return -2; //error code for debugging
-  }
+  unsigned long val = CO2Response[datapos + 3] * 256 + CO2Response[datapos + 4];  
+  return val;
 }
 
 //END CO2 FUNCTIONS //

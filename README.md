@@ -1,6 +1,11 @@
-***WORK IN PROGRESS***
+Improved version of AirGradient Arduino Library for ESP8266 (Wemos D1 MINI)
+=====================================================================================================
 
-This is improved fork of official [airgradienthq/arduino](https://github.com/airgradienthq/arduino) repo which enables PMS5003 sensor capabilities to report PM1 and PM10 measurments which are not used by AirGradient project before.
+This is improved fork of official [airgradienthq/arduino](https://github.com/airgradienthq/arduino) repo this version enables Plantower PMS5003 sensor capabilities to report PM1 and PM10 measurments which are not used by AirGradient project by default.
+
+You have to replace included AirGradient.cpp and AirGradient.h libraries in your Arduino.app Libraries directory.
+
+Then flash included C02_PM1_PM2_PM10_SHT_OLED_WIFI.ino as new AirGradient board firmware.
 
 AirGradient Arduino Library for ESP8266 (Wemos D1 MINI)
 =====================================================================================================
