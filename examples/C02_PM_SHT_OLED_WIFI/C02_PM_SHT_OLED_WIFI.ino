@@ -79,9 +79,7 @@ void setup() {
 }
 
 void loop() {
-
   // create payload
-
   String payload = "{\"wifi\":" + String(WiFi.RSSI()) + ",";
 
   if (hasPM) {
@@ -93,9 +91,7 @@ void loop() {
     } else {
       showTextRectangle("PM2", String(PM2), false);
     }
-
     delay(3000);
-
   }
 
   if (hasCO2) {
@@ -116,7 +112,6 @@ void loop() {
     } else {
       showTextRectangle(String(result.t), String(result.rh) + "%", false);
     }
-
     delay(3000);
   }
 
@@ -166,7 +161,6 @@ void connectToWifi() {
     ESP.restart();
     delay(5000);
   }
-
 }
 
 // Calculate PM2.5 US AQI
