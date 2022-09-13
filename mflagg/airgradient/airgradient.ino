@@ -51,7 +51,7 @@ boolean connectWIFI = true;
 
 unsigned long currentMillis = 0;
 
-const int oledInterval = 2000;
+const int oledInterval = 1000;
 unsigned long previousOled = 0;
 
 const int sendToServerInterval = 10000;
@@ -142,7 +142,7 @@ void updateTempHum()
 
 void updateOLED() {
   if (currentMillis - previousOled >= oledInterval) {
-    previousOled += oledInterval;
+    previousOled = currentMillis;
 
     switch (displaypage) {
       case 0:
@@ -237,10 +237,11 @@ void connectToWifi() {
   WiFiManager wifiManager;
   //WiFi.disconnect(); //to delete previous saved hotspot
   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
-  wifiManager.setTimeout(60);
+  wifiManager.setConnectTimeout(10);
+  wifiManager.setConfigPortalTimeout(60);
   showTextRectangle("WiFi", "Conn.", true, false);
   if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
-    showTextRectangle("offline", "mode", true, false);
+    showTextRectangle("Offline", "mode", true, false);
     Serial.println("failed to connect and hit timeout");
     delay(6000);
   }
