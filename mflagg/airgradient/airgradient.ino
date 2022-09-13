@@ -41,14 +41,11 @@ SSD1306Wire display(0x3c, SDA, SCL);
 
 // CONFIGURATION START
 
-// set to true to switch PM2.5 from ug/m3 to US AQI
-boolean inUSaqi = true;
-
 // set to true to switch from Celcius to Fahrenheit
 boolean inF = true;
 
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
-boolean connectWIFI = false;
+boolean connectWIFI = true;
 
 // CONFIGURATION END
 
@@ -73,9 +70,9 @@ int pm10 = 0;
 const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
 float temp = 0;
-float temp_offset_c = -3;
+float temp_offset_c = -2.6;
 int hum = 0;
-int hum_offset = 13;
+int hum_offset = 12;
 int displaypage = 0;
 
 String APIROOT = "http://hw.airgradient.com/";
@@ -170,7 +167,7 @@ void updateOLED() {
         break;
       case 5:
         if (inF) {
-          showTextRectangle("°F", String((temp * 9 / 5) + 32), false, false);
+          showTextRectangle("°F", String((temp * 9 / 5) + 32, 1), false, false);
         } else {
           showTextRectangle("°C", String(temp), false, false);
         }
