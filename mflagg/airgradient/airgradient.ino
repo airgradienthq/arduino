@@ -33,7 +33,7 @@
 #include <SSD1306Wire.h>
 
 #include "src/AirGradient/AirGradient.h"
-//#include "src/font/font.h"
+#include "src/font/font.h"
 
 AirGradient ag = AirGradient();
 
@@ -51,8 +51,12 @@ boolean connectWIFI = true;
 
 unsigned long currentMillis = 0;
 
-const int oledInterval = 1000;
+const int oledInterval = 3000;
 unsigned long previousOled = 0;
+
+const int invertInterval = 3600000;
+unsigned long previousInvert = 0;
+bool inverted = false;
 
 const int sendToServerInterval = 10000;
 unsigned long previoussendToServer = 0;
@@ -70,9 +74,9 @@ int pm10 = 0;
 const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
 float temp = 0;
-float temp_offset_c = -2.4;
+float temp_offset_c = -3.2;
 int hum = 0;
-int hum_offset = 12;
+int hum_offset = 14;
 int displaypage = 0;
 
 String APIROOT = "http://hw.airgradient.com/";
@@ -88,7 +92,7 @@ void setup()
     connectToWifi();
   }
 
-  showTextRectangle("Init", String(ESP.getChipId(), HEX), true, false);
+  showTextRectangle("Init", String(ESP.getChipId(), HEX), true);
 
   ag.CO2_Init();
   ag.PMS_Init();
@@ -141,65 +145,93 @@ void updateTempHum()
 }
 
 void updateOLED() {
+  if (currentMillis - previousInvert >= invertInterval) {
+    previousInvert = currentMillis;
+    if (inverted) {
+      display.normalDisplay();
+      inverted = false;
+    } else {
+      display.invertDisplay();
+      inverted = true;
+    }
+  }
+
   if (currentMillis - previousOled >= oledInterval) {
     previousOled = currentMillis;
 
     switch (displaypage) {
       case 0:
-        showTextRectangle("AQI", String(PM_TO_AQI_US(pm2_5)), false, false);
+        showFancyText( "CO2", String(Co2), "PM\n2.5", String(PM_TO_AQI_US(pm2_5)));
         displaypage = 1;
         break;
       case 1:
-        showTextRectangle("PM2.5", String(pm2_5), false, true);
-        displaypage = 2;
-        break;
-      case 2:
-        showTextRectangle("PM1", String(pm1), false, false);
-        displaypage = 3;
-        break;
-      case 3:
-        showTextRectangle("PM10", String(pm10), false, false);
-        displaypage = 4;
-        break;
-      case 4:
-        showTextRectangle("CO2", String(Co2), false, false);
-        displaypage = 5;
-        break;
-      case 5:
+        String tempLabel = "°C";
+        float tempToPrint = temp;
         if (inF) {
-          showTextRectangle("°F", String((temp * 9 / 5) + 32, 1), false, false);
-        } else {
-          showTextRectangle("°C", String(temp), false, false);
+          tempLabel = "°F";
+          tempToPrint = (temp * 9 / 5) + 32;
         }
-        displaypage = 6;
-        break;
-      case 6:
-        showTextRectangle("Hum", String(hum) + "%", false, false);
+      
+        showFancyText( tempLabel, String(tempToPrint, 1), "Hum", String(hum) + "%");
         displaypage = 0;
         break;
     }
   }
 }
 
-void showTextRectangle(String ln1, String ln2, boolean small, boolean slightly_smaller_header) {
+void showTextRectangle(String ln1, String ln2, boolean small) {
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (slightly_smaller_header) {
+
+  if (small) {
     display.setFont(ArialMT_Plain_16);
-    display.drawString(32, 16, ln1);
-    display.setFont(ArialMT_Plain_24);
-    display.drawString(32, 38, ln2);
-    display.display();
   } else {
-    if (small) {
-      display.setFont(ArialMT_Plain_16);
-    } else {
-      display.setFont(ArialMT_Plain_24);
-    }
-    display.drawString(32, 16, ln1);
-    display.drawString(32, 38, ln2);
-    display.display();
+    display.setFont(ArialMT_Plain_24);
   }
+
+  display.drawString(32, 16, ln1);
+  display.drawString(32, 38, ln2);
+  display.display();
+}
+
+void printFancyLabel(String text, bool top) {
+  // display.getStringWidth() appears broken
+  if (text.indexOf("%") == -1 &&
+       (text.length() <= 3 ||
+       (text.length() <= 4 && text.indexOf(".") != -1))) {
+    display.setFont(ArialMT_Plain_24);
+
+    if(top) {
+      display.drawString(97, 11, text);
+    } else {
+      display.drawString(97, 37, text);
+    }
+  } else {
+    display.setFont(ArialMT_Plain_16);
+
+    if(top) {
+      display.drawString(97, 13, text);
+    } else {
+      display.drawString(97, 39, text);
+    }
+  }
+
+}
+
+void showFancyText(String label1, String data1, String label2, String data2) {
+  display.clear();
+
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(32, 13, label1);
+  display.drawString(32, 40, label2);
+
+  display.setTextAlignment(TEXT_ALIGN_RIGHT); 
+
+  printFancyLabel(data1, true);
+  printFancyLabel(data2, false);  
+
+  display.display();
 }
 
 void sendToServer() {
@@ -239,9 +271,9 @@ void connectToWifi() {
   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
   wifiManager.setConnectTimeout(10);
   wifiManager.setConfigPortalTimeout(60);
-  showTextRectangle("WiFi", "Conn.", true, false);
+  showTextRectangle("WiFi", "Conn.", true);
   if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
-    showTextRectangle("Offline", "mode", true, false);
+    showTextRectangle("Offline", "mode", true);
     Serial.println("failed to connect and hit timeout");
     delay(6000);
   }
