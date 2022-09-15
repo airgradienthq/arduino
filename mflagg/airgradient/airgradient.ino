@@ -58,6 +58,9 @@ const int invertInterval = 3600000;
 unsigned long previousInvert = 0;
 bool inverted = false;
 
+const int sendToHubitatInterval = 30000;
+unsigned long previoussendToHubitat = 0;
+
 const int sendToServerInterval = 10000;
 unsigned long previoussendToServer = 0;
 
@@ -110,6 +113,7 @@ void loop()
   updateCo2();
   updatePm25();
   updateTempHum();
+  sendToHubitat();
   sendToServer();
 }
 
@@ -202,15 +206,15 @@ void printFancyLabel(String text, bool top) {
     display.setFont(ArialMT_Plain_24);
 
     if(top) {
-      display.drawString(97, 11, text);
+      display.drawString(96, 12, text);
     } else {
-      display.drawString(97, 37, text);
+      display.drawString(96, 37, text);
     }
   } else {
     display.setFont(ArialMT_Plain_16);
 
     if(top) {
-      display.drawString(97, 13, text);
+      display.drawString(97, 14, text);
     } else {
       display.drawString(97, 39, text);
     }
@@ -223,7 +227,7 @@ void showFancyText(String label1, String data1, String label2, String data2) {
 
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
-  display.drawString(32, 13, label1);
+  display.drawString(32, 14, label1);
   display.drawString(32, 40, label2);
 
   display.setTextAlignment(TEXT_ALIGN_RIGHT); 
@@ -232,6 +236,45 @@ void showFancyText(String label1, String data1, String label2, String data2) {
   printFancyLabel(data2, false);  
 
   display.display();
+}
+
+void getURL(String URL) {
+  //Serial.println(URL);
+  WiFiClient client;
+  HTTPClient http;
+  http.begin(client, URL);
+  http.addHeader("content-type", "application/json");
+  int httpCode = http.GET();
+  String response = http.getString();
+  //Serial.println("Hubitat: " + httpCode);
+  //Serial.println("Hubitat: " + response);
+  http.end();
+}
+
+void sendToHubitat() {
+  if (currentMillis - previoussendToHubitat >= sendToHubitatInterval) {
+    previoussendToHubitat += sendToHubitatInterval;
+
+    const String urlBase = "http://10.0.40.10/apps/api/727/devices/";
+    const String device = "821/";
+    // Yeah, it's public on github. Good luck doing anything with it.
+    const String token = "?access_token=24c92325-da8b-4017-ba30-4bb678b9dd8b";
+
+    if (WiFi.status() == WL_CONNECTED) {
+      // TODO POST would be nice
+      getURL(urlBase + device + "setCarbonDioxide/" + String(Co2) + token);
+      getURL(urlBase + device + "setPM1/" + String(pm1) + token);
+      getURL(urlBase + device + "setPM2_5/" + String(pm2_5) + token);
+      getURL(urlBase + device + "setPM10/" + String(pm10) + token);
+      getURL(urlBase + device + "setAQI_PM2_5/" + String(PM_TO_AQI_US(pm2_5)) + token);
+      getURL(urlBase + device + "setTemperature/" + String((temp * 9 / 5) + 32) + token);
+      getURL(urlBase + device + "setRelativeHumidity/" + String(hum) + token);
+      Serial.println("Sent to Hubitat");
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+  }
 }
 
 void sendToServer() {
@@ -245,18 +288,19 @@ void sendToServer() {
                      + "}";
 
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.println(payload);
+      //Serial.println(payload);
       String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
-      Serial.println(POSTURL);
+      //Serial.println(POSTURL);
       WiFiClient client;
       HTTPClient http;
       http.begin(client, POSTURL);
       http.addHeader("content-type", "application/json");
       int httpCode = http.POST(payload);
       String response = http.getString();
-      Serial.println(httpCode);
-      Serial.println(response);
+      //Serial.println("AirGradient API: " + httpCode);
+      //Serial.println("AirGradient API: " + response);
       http.end();
+      Serial.println("Sent to AirGradient API");
     }
     else {
       Serial.println("WiFi Disconnected");
@@ -270,8 +314,8 @@ void connectToWifi() {
   //WiFi.disconnect(); //to delete previous saved hotspot
   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
   wifiManager.setConnectTimeout(10);
-  wifiManager.setConfigPortalTimeout(60);
-  showTextRectangle("WiFi", "Conn.", true);
+  wifiManager.setConfigPortalTimeout(30);
+  showTextRectangle("WiFi", String(ESP.getChipId(), HEX), true);
   if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
     showTextRectangle("Offline", "mode", true);
     Serial.println("failed to connect and hit timeout");
