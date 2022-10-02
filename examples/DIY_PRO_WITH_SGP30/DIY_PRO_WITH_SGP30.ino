@@ -1,11 +1,11 @@
 /*
-This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Microcontroller.
+This is the code for the AirGradient DIY Air Quality Sensor with an ESP8266 Microcontroller with Sensirion SGP30. Due to instabilities on the I2C line this is no longer the recommended TVOC module and this code will be retired soon. We recommend to switch to / use the Sensirion SGP40.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
 For build instructions please visit https://www.airgradient.com/open-airgradient/instructions/
 
-Instructions on using the TVOC sensor (SGP30) instead of the Temperature / Humidity sensor (SHT3x).
+Instructions on using the TVOC sensor (SGP30) instead of the Temperature / Humidity sensor (SHT3x). Please note that if you use it with the SHT3x you need to manually remove pull-up resistors as per below instructions.
 
 https://www.airgradient.com/open-airgradient/instructions/tvoc-on-airgradient-diy-sensor/
 
