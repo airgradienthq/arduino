@@ -121,7 +121,13 @@ void updateCo2()
 {
   if (currentMillis - previousCo2 >= co2Interval) {
     previousCo2 += co2Interval;
-    Co2 = ag.getCO2_Raw();
+    int reading = ag.getCO2_Raw();
+    if (reading > 0) {
+      Co2 = reading;
+    } else {
+      Serial.println("Invalid CO2: " + String(reading));
+    }
+
     Serial.println("CO2: " + String(Co2));
   }
 }
@@ -142,8 +148,14 @@ void updateTempHum()
   if (currentMillis - previousTempHum >= tempHumInterval) {
     previousTempHum += tempHumInterval;
     TMP_RH result = ag.periodicFetchData();
-    temp = result.t + temp_offset_c;
-    hum = result.rh + hum_offset;
+
+    if (((result.t >= 0.01) || (result.t <= -0.01)) && result.rh > 0) {
+      temp = result.t + temp_offset_c;
+      hum = result.rh + hum_offset;
+    } else {
+      Serial.println("Invalid temp or humidity: " + String(result.t) + " " + result.rh);
+    }
+
     Serial.println("Temp: " + String(temp) + " Humidity: " + hum);
   }
 }
@@ -175,7 +187,7 @@ void updateOLED() {
           tempLabel = "°F";
           tempToPrint = (temp * 9 / 5) + 32;
         }
-      
+
         showFancyText( tempLabel, String(tempToPrint, 1), "Hum", String(hum) + "%");
         displaypage = 0;
         break;
@@ -201,11 +213,11 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
 void printFancyLabel(String text, bool top) {
   // display.getStringWidth() appears broken
   if (text.indexOf("%") == -1 &&
-       (text.length() <= 3 ||
+      (text.length() <= 3 ||
        (text.length() <= 4 && text.indexOf(".") != -1))) {
     display.setFont(ArialMT_Plain_24);
 
-    if(top) {
+    if (top) {
       display.drawString(96, 12, text);
     } else {
       display.drawString(96, 37, text);
@@ -213,7 +225,7 @@ void printFancyLabel(String text, bool top) {
   } else {
     display.setFont(ArialMT_Plain_16);
 
-    if(top) {
+    if (top) {
       display.drawString(97, 14, text);
     } else {
       display.drawString(97, 39, text);
@@ -230,10 +242,10 @@ void showFancyText(String label1, String data1, String label2, String data2) {
   display.drawString(32, 14, label1);
   display.drawString(32, 40, label2);
 
-  display.setTextAlignment(TEXT_ALIGN_RIGHT); 
+  display.setTextAlignment(TEXT_ALIGN_RIGHT);
 
   printFancyLabel(data1, true);
-  printFancyLabel(data2, false);  
+  printFancyLabel(data2, false);
 
   display.display();
 }
