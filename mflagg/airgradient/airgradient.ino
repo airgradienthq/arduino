@@ -122,7 +122,7 @@ void updateCo2()
   if (currentMillis - previousCo2 >= co2Interval) {
     previousCo2 += co2Interval;
     int reading = ag.getCO2_Raw();
-    if (reading > 0) {
+    if (reading > 0 && reading < 3000 ) {
       Co2 = reading;
     } else {
       Serial.println("Invalid CO2: " + String(reading));
