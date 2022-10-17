@@ -61,20 +61,22 @@ bool inverted = false;
 const int sendToHubitatInterval = 30000;
 unsigned long previoussendToHubitat = 0;
 
-const int sendToServerInterval = 10000;
+const int sendToServerInterval = 30000;
 unsigned long previoussendToServer = 0;
 
-const int co2Interval = 5000;
+const int co2Interval = 25000;
 unsigned long previousCo2 = 0;
 int Co2 = 0;
 
-const int pm2_5Interval = 5000;
+unsigned int badReadingCount = 0;
+
+const int pm2_5Interval = 20000;
 unsigned long previousPm2_5 = 0;
 int pm1 = 0;
 int pm2_5 = 0;
 int pm10 = 0;
 
-const int tempHumInterval = 2500;
+const int tempHumInterval = 15000;
 unsigned long previousTempHum = 0;
 float temp = 0;
 float temp_offset_c = -3.2;
@@ -126,6 +128,11 @@ void updateCo2()
       Co2 = reading;
     } else {
       Serial.println("Invalid CO2: " + String(reading));
+
+      if ( ++badReadingCount >= 10 ) {
+        Serial.println("Reset due to 10 invalid readings");
+        ESP.restart();
+      }
     }
 
     Serial.println("CO2: " + String(Co2));
@@ -154,6 +161,11 @@ void updateTempHum()
       hum = result.rh + hum_offset;
     } else {
       Serial.println("Invalid temp or humidity: " + String(result.t) + " " + result.rh);
+
+      if ( ++badReadingCount >= 10 ) {
+        Serial.println("Reset due to 10 invalid readings");
+        ESP.restart();
+      }
     }
 
     Serial.println("Temp: " + String(temp) + " Humidity: " + hum);
