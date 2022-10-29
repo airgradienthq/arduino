@@ -24,7 +24,7 @@ MIT License
 AirGradient ag = AirGradient();
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.CO2_Init();
 }
 

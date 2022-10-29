@@ -24,7 +24,7 @@ MIT License
 AirGradient ag = AirGradient();
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.TMP_RH_Init(0x44); //check for SHT sensor with address 0x44
 }
 

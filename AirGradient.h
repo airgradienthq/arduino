@@ -223,7 +223,7 @@ class AirGradient
     void CO2_Init();
     void CO2_Init(int,int);
     void CO2_Init(int,int,int);
-    const char* getCO2(int retryLimit = 5);
+    int getCO2(int numberOfSamplesToTake = 5);
     int getCO2_Raw();
     SoftwareSerial *_SoftSerial_CO2;
 

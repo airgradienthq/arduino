@@ -36,7 +36,7 @@ MIT License
 #include <U8g2lib.h>
 
 AirGradient ag = AirGradient();
-DFRobot_SGP40    mySgp40;
+DFRobot_SGP40    sgp40;
 
 // Display bottom right
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -96,12 +96,7 @@ void setup()
   }
 
   updateOLED2("Warming up the", "sensors.", "");
-
-  while(mySgp40.begin(/*duration = */10000) !=true){
-    Serial.println("failed to init chip, please check if the chip connection is fine");
-    delay(1000);
-  }
-
+  sgp40.begin();
   ag.CO2_Init();
   ag.PMS_Init();
   ag.TMP_RH_Init(0x44);
@@ -123,7 +118,7 @@ void updateTVOC()
 {
     if (currentMillis - previousTVOC >= tvocInterval) {
       previousTVOC += tvocInterval;
-      TVOC = mySgp40.getVoclndex();
+      TVOC = sgp40.getVoclndex();
       Serial.println(String(TVOC));
     }
 }
@@ -148,7 +143,6 @@ void updatePm25()
 
 void updateTempHum()
 {
-
     if (currentMillis - previousTempHum >= tempHumInterval) {
       previousTempHum += tempHumInterval;
       TMP_RH result = ag.periodicFetchData();
@@ -230,8 +224,8 @@ void sendToServer() {
    WiFiManagerParameter custom_text("<p>This is just a text paragraph</p>");
    wifiManager.addParameter(&custom_text);
 
-    WiFiManagerParameter parameter("parameterId", "Parameter Label", "default value", 40);
-    wifiManager.addParameter(&parameter);
+   WiFiManagerParameter parameter("parameterId", "Parameter Label", "default value", 40);
+   wifiManager.addParameter(&parameter);
 
 
    Serial.println("Parameter 1:");

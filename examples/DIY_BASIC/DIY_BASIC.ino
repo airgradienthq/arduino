@@ -9,7 +9,7 @@ Kits (including a pre-soldered version) are available: https://www.airgradient.c
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
-“U8g2” by oliver tested with version 2.32.15
+"ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
 
 Configuration:
 Please set in the code below the configuration parameters.

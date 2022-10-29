@@ -53,7 +53,7 @@ boolean connectWIFI=true;
 String APIROOT = "http://hw.airgradient.com/";
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   display.init();
   display.flipScreenVertically();

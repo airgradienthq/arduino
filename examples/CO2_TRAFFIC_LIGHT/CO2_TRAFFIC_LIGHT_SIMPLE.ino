@@ -55,7 +55,7 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(8, 8, PIN,
   NEO_GRB            + NEO_KHZ800);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.CO2_Init();
   matrix.begin();
   matrix.setRotation(1); // change rotation
