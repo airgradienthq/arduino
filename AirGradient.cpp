@@ -667,6 +667,10 @@ int AirGradient::getCO2_Raw() {
   const byte CO2Command[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
   byte CO2Response[] = {0,0,0,0,0,0,0};
 
+  // tt
+  int datapos = -1;
+  //
+
   const int commandSize = 7;
 
   int numberOfBytesWritten = _SoftSerial_CO2->write(CO2Command, commandSize);
@@ -690,8 +694,20 @@ int AirGradient::getCO2_Raw() {
   // we have 7 bytes ready to be read
   for (int i=0; i < commandSize; i++) {
     CO2Response[i] = _SoftSerial_CO2->read();
+
+    // tt
+            if ((CO2Response[i] == 0xFE) && (datapos == -1)){
+				datapos = i;
+			}
+            Serial.print (CO2Response[i],HEX);
+			Serial.print (":");
+    //
   }
-  return CO2Response[3]*256 + CO2Response[4];
+ // return CO2Response[3]*256 + CO2Response[4];
+// tt
+ return CO2Response[datapos + 3]*256 + CO2Response[datapos + 4];
+ //
+
 }
 
 //END CO2 FUNCTIONS //
