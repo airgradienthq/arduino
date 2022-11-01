@@ -182,12 +182,14 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
      previoussendToServer += sendToServerInterval;
+
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
-      + ", \"rco2\":" + String(Co2)
-      + ", \"pm02\":" + String(pm25)
+      + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
+      + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))
       + ", \"atmp\":" + String(temp)
-      + ", \"rhum\":" + String(hum)
+      + (hum < 0 ? "" : ", \"rhum\":" + String(hum))
       + "}";
+
 
       if(WiFi.status()== WL_CONNECTED){
         Serial.println(payload);

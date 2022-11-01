@@ -10,7 +10,6 @@ Kits (including a pre-soldered version) are available: https://www.airgradient.c
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
 “U8g2” by oliver tested with version 2.32.15
-“SGP30” by Rob Tilaart tested with Version 0.1.5
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -30,12 +29,9 @@ MIT License
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
-
-#include "SGP30.h"
 #include <U8g2lib.h>
 
 AirGradient ag = AirGradient();
-SGP30 SGP;
 
 // Display bottom right
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -66,10 +62,6 @@ unsigned long previousOled = 0;
 const int sendToServerInterval = 10000;
 unsigned long previoussendToServer = 0;
 
-const int tvocInterval = 1000;
-unsigned long previousTVOC = 0;
-int TVOC = 0;
-
 const int co2Interval = 5000;
 unsigned long previousCo2 = 0;
 int Co2 = 0;
@@ -96,9 +88,6 @@ void setup()
 
   updateOLED2("Warming up the", "sensors.", "");
 
-  Serial.println(SGP.begin());
-  SGP.GenericReset();
-
   ag.CO2_Init();
   ag.PMS_Init();
   ag.TMP_RH_Init(0x44);
@@ -108,22 +97,11 @@ void setup()
 void loop()
 {
   currentMillis = millis();
-  updateTVOC();
   updateOLED();
   updateCo2();
   updatePm25();
   updateTempHum();
   sendToServer();
-}
-
-void updateTVOC()
-{
-    if (currentMillis - previousTVOC >= tvocInterval) {
-      previousTVOC += tvocInterval;
-      SGP.measure(true);
-      TVOC = SGP.getTVOC();
-      Serial.println(String(TVOC));
-    }
 }
 
 void updateCo2()
@@ -160,8 +138,8 @@ void updateOLED() {
      previousOled += oledInterval;
 
     String ln3;
-    String ln1 = "PM:" + String(pm25) +  " CO2:" + String(Co2);
-    String ln2 = "AQI:" + String(PM_TO_AQI_US(pm25)) + " TVOC:" + String(TVOC);
+    String ln1 = "PM:" + String(pm25) +  " AQI:" + String(PM_TO_AQI_US(pm25)) ;
+    String ln2 = "CO2:" + String(Co2);
 
       if (inF) {
         ln3 = "F:" + String((temp* 9 / 5) + 32) + " H:" + String(hum)+"%";
@@ -187,12 +165,12 @@ void updateOLED2(String ln1, String ln2, String ln3) {
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
      previoussendToServer += sendToServerInterval;
+
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
-      + ", \"rco2\":" + String(Co2)
-      + ", \"pm02\":" + String(pm25)
-      + ", \"tvoc\":" + String(TVOC)
+      + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
+      + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))
       + ", \"atmp\":" + String(temp)
-      + ", \"rhum\":" + String(hum)
+      + (hum < 0 ? "" : ", \"rhum\":" + String(hum))
       + "}";
 
       if(WiFi.status()== WL_CONNECTED){
