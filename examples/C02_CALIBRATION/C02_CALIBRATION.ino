@@ -1,9 +1,4 @@
-/******************************
-
- ******************************/
-
-
- /*
+/*
  This is the code for forced calibration of the SenseAir S8 sensor. The sensor also has a one-week automatic baseline calibration that should calibrate the sensor latest after one week.0
  However if you need a faster calibration please proceed as following:
 
@@ -44,7 +39,6 @@ U8G2_SSD1306_64X48_ER_1_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE); //for D
 
 /* END CONFIGURATION */
 
-
 #ifdef USE_SOFTWARE_SERIAL
   SoftwareSerial S8_serial(S8_RX_PIN, S8_TX_PIN);
 #else
@@ -63,10 +57,7 @@ S8_sensor sensor;
 
 void setup() {
   Serial.begin(DEBUG_BAUDRATE);
-
   u8g2.begin();
-
-
   int i = 0;
   while (!Serial && i < 50) {
     delay(10);
@@ -85,7 +76,6 @@ void setup() {
   printf("Firmware version: %s\n", sensor.firm_version);
   sensor.sensor_id = sensor_S8->get_sensor_ID();
   Serial.print("Sensor ID: 0x"); printIntToHex(sensor.sensor_id, 4); Serial.println("");
-
   Serial.println("Now, you put the sensor outside and wait.");
   Serial.println("Countdown begins...");
   unsigned int seconds = COUNTDOWN;
@@ -96,7 +86,6 @@ void setup() {
     seconds--;
   }
   Serial.println("Time reamining: 0 minutes 0 seconds");
-
   // Start manual calibration
   Serial.println("Starting manual calibration...");
   updateOLED2("Starting", "Manual", "Calibration");
@@ -107,7 +96,6 @@ void setup() {
     while (1) { delay(10); }
   }
 }
-
 
 void loop() {
   static unsigned int elapsed = 0;
@@ -125,7 +113,6 @@ void loop() {
     updateOLED2("Doing", "manual", "calibration");
   }
 }
-
 
 void updateOLED2(String ln1, String ln2, String ln3) {
       char buf[9];
