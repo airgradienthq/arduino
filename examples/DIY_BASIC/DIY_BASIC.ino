@@ -47,6 +47,9 @@ boolean inF = false;
 // set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
 boolean connectWIFI=true;
 
+// set to true to flip the display vertically
+boolean flipDisplay = true;
+
 // CONFIGURATION END
 
 unsigned long currentMillis = 0;
@@ -80,9 +83,12 @@ void setup()
   Serial.begin(115200);
 
   display.init();
-  display.flipScreenVertically();
 
-    if (connectWIFI) {
+  if (flipDisplay) {
+    display.flipScreenVertically();
+  }
+
+  if (connectWIFI) {
     connectToWifi();
   }
 
@@ -174,8 +180,9 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
   } else {
     display.setFont(ArialMT_Plain_24);
   }
-  display.drawString(32, 16, ln1);
-  display.drawString(32, 38, ln2);
+  int topY = flipDisplay ? 16 : 0;
+  display.drawString(32, topY, ln1);
+  display.drawString(32, topY + 22, ln2);
   display.display();
 }
 
