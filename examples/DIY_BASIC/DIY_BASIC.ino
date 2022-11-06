@@ -9,7 +9,7 @@ Kits (including a pre-soldered version) are available: https://www.airgradient.c
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
-"ESP8266 and ESP32 OLED driver for SSD1306 displays by ThingPulse, Fabrice Weinberg" tested with Version 4.1.0
+“U8g2” by oliver tested with version 2.32.15
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -29,25 +29,29 @@ MIT License
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
-#include <Wire.h>
-#include "SSD1306Wire.h"
+#include <U8g2lib.h>
 
 AirGradient ag = AirGradient();
 
-SSD1306Wire display(0x3c, SDA, SCL);
+U8G2_SSD1306_64X48_ER_1_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE); //for DIY BASIC
+
 
 // CONFIGURATION START
 
-// set to true to switch PM2.5 from ug/m3 to US AQI
-boolean inUSaqi = true;
+//set to the endpoint you would like to use
+String APIROOT = "http://hw.airgradient.com/";
 
 // set to true to switch from Celcius to Fahrenheit
 boolean inF = false;
 
-// set to true if you want to connect to wifi. The display will show values only when the sensor has wifi connection
+// PM2.5 in US AQI (default ug/m3)
+boolean inUSAQI = false;
+
+// set to true if you want to connect to wifi. You have 60 seconds to connect. Then it will go into an offline mode.
 boolean connectWIFI=true;
 
 // CONFIGURATION END
+
 
 unsigned long currentMillis = 0;
 
@@ -69,24 +73,20 @@ const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
-int displaypage = 0;
-
-String APIROOT = "http://hw.airgradient.com/";
-
-
+long val;
 
 void setup()
 {
   Serial.begin(115200);
 
-  display.init();
-  display.flipScreenVertically();
+  u8g2.begin();
+  updateOLED();
 
     if (connectWIFI) {
     connectToWifi();
   }
 
-  showTextRectangle("Init", String(ESP.getChipId(), HEX), true);
+  updateOLED2("Warming", "up the", "sensors");
 
   ag.CO2_Init();
   ag.PMS_Init();
@@ -137,46 +137,38 @@ void updateOLED() {
    if (currentMillis - previousOled >= oledInterval) {
      previousOled += oledInterval;
 
-switch (displaypage) {
-  case 0:
-          if (inUSaqi) {
-          showTextRectangle("AQI", String(PM_TO_AQI_US(pm25)), false);
-          } else {
-          showTextRectangle("PM2", String(pm25), false);
-          }
-       displaypage = 1;
-       break;
-  case 1:
-       showTextRectangle("CO2", String(Co2), false);
-       displaypage = 2;
-       break;
-  case 2:
-        if (inF) {
-          showTextRectangle("F", String((temp * 9 / 5) + 32), false);
-      } else {
-        showTextRectangle("C", String(temp), false);
-      }
-       displaypage = 3;
-       break;
-  case 3:
-       showTextRectangle("Hum", String(hum)+"%", false);
-       displaypage = 0;
-       break;
+    String ln1;
+    String ln2;
+    String ln3;
+
+
+    if (inUSAQI){
+       ln1 = "AQI:" + String(PM_TO_AQI_US(pm25)) ;
+    } else {
+       ln1 = "PM: " + String(pm25) +"ug" ;
     }
+
+    ln2 = "CO2:" + String(Co2);
+
+      if (inF) {
+        ln3 = String((temp* 9 / 5) + 32).substring(0,4) + " " + String(hum)+"%";
+        } else {
+        ln3 = String(temp).substring(0,4) + " " + String(hum)+"%";
+       }
+     updateOLED2(ln1, ln2, ln3);
    }
 }
 
-void showTextRectangle(String ln1, String ln2, boolean small) {
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (small) {
-    display.setFont(ArialMT_Plain_16);
-  } else {
-    display.setFont(ArialMT_Plain_24);
-  }
-  display.drawString(32, 16, ln1);
-  display.drawString(32, 38, ln2);
-  display.display();
+void updateOLED2(String ln1, String ln2, String ln3) {
+      char buf[9];
+          u8g2.firstPage();
+          u8g2.firstPage();
+          do {
+          u8g2.setFont(u8g2_font_t0_16_tf);
+          u8g2.drawStr(1, 10, String(ln1).c_str());
+          u8g2.drawStr(1, 28, String(ln2).c_str());
+          u8g2.drawStr(1, 46, String(ln3).c_str());
+            } while ( u8g2.nextPage() );
 }
 
 void sendToServer() {
@@ -189,7 +181,6 @@ void sendToServer() {
       + ", \"atmp\":" + String(temp)
       + (hum < 0 ? "" : ", \"rhum\":" + String(hum))
       + "}";
-
 
       if(WiFi.status()== WL_CONNECTED){
         Serial.println(payload);
@@ -215,10 +206,12 @@ void sendToServer() {
  void connectToWifi() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
-   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
+   String HOTSPOT = "AG-" + String(ESP.getChipId(), HEX);
+   updateOLED2("Connect", "Wifi", HOTSPOT);
+   delay(2000);
    wifiManager.setTimeout(60);
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
-     showTextRectangle("offline", "mode", true);
+     updateOLED2("Booting", "offline", "mode");
      Serial.println("failed to connect and hit timeout");
      delay(6000);
    }
