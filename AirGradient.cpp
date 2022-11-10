@@ -109,6 +109,103 @@ int AirGradient::getPM2_Raw(){
   }
 }
 
+int AirGradient::getPM0_3Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_0_3;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM10_0Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_10_0;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM5_0Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_5_0;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM2_5Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_2_5;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM1_0Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_1_0;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM0_5Count(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.PM_RAW_0_5;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+
+int AirGradient::getAMB_TMP(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.AMB_TMP;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getAMB_HUM(){
+  int count;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    count = data.AMB_HUM;
+    return count;
+  } else {
+    return -1;
+  }
+}
+
 
 // Private Methods /////////////////////////////////////////////////////////////
 // Functions only available to other functions in this library
@@ -248,6 +345,21 @@ void AirGradient::loop()
           _data->PM_AE_UG_1_0 = makeWord(_payload[6], _payload[7]);
           _data->PM_AE_UG_2_5 = makeWord(_payload[8], _payload[9]);
           _data->PM_AE_UG_10_0 = makeWord(_payload[10], _payload[11]);
+
+          // Total particles count per 100ml air
+            _data->PM_RAW_0_3 = makeWord(_payload[12], _payload[13]);
+            _data->PM_RAW_0_5 = makeWord(_payload[14], _payload[15]);
+            _data->PM_RAW_1_0 = makeWord(_payload[16], _payload[17]);
+            _data->PM_RAW_2_5 = makeWord(_payload[18], _payload[19]);
+            _data->PM_RAW_5_0 = makeWord(_payload[20], _payload[21]);
+            _data->PM_RAW_10_0 = makeWord(_payload[22], _payload[23]);
+
+            // Formaldehyde concentration (PMSxxxxST units only)
+            _data->AMB_HCHO = makeWord(_payload[24], _payload[25]) / 1000;
+
+            // Temperature & humidity (PMSxxxxST units only)
+            _data->AMB_TMP = makeWord(_payload[26], _payload[27]) / 10;
+            _data->AMB_HUM = makeWord(_payload[28], _payload[29]) / 10;
         }
 
         _index = 0;
