@@ -1,4 +1,6 @@
 /*
+Important: This code is only for the DIY PRO PCB Version 3.7 that has a push button mounted.
+
 This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller with the SGP40 TVOC module from AirGradient.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
@@ -32,6 +34,8 @@ MIT License
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
+#include <EEPROM.h>
+
 //#include "SGP30.h"
 #include <SensirionI2CSgp41.h>
 #include <NOxGasIndexAlgorithm.h>
@@ -47,11 +51,15 @@ NOxGasIndexAlgorithm nox_algorithm;
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
+// for peristent saving and loading
+int addr = 0;
+byte value;
+
 // Display bottom right
-U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+//U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 // Replace above if you have display on top left
-//U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/ U8X8_PIN_NONE);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/ U8X8_PIN_NONE);
 
 
 // CONFIGURATION START
@@ -61,6 +69,9 @@ String APIROOT = "http://hw.airgradient.com/";
 
 // set to true to switch from Celcius to Fahrenheit
 boolean inF = false;
+
+// PM2.5 in US AQI (default ug/m3)
+boolean inUSAQI = false;
 
 // set to true if you want to connect to wifi. You have 60 seconds to connect. Then it will go into an offline mode.
 boolean connectWIFI=true;
@@ -94,15 +105,36 @@ unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
 
-void setup()
-{
+int buttonConfig=0;
+int lastState = LOW;
+int currentState;
+unsigned long pressedTime  = 0;
+unsigned long releasedTime = 0;
+
+void setup() {
   Serial.begin(115200);
-
   u8g2.begin();
-  updateOLED();
+  EEPROM.begin(512);
+  delay(500);
 
-    if (connectWIFI) {
-    connectToWifi();
+  buttonConfig = String(EEPROM.read(addr)).toInt();
+  setConfig();
+
+   updateOLED2("Press Button", "Now for", "Config Menu");
+    delay(2000);
+
+  currentState = digitalRead(D7);
+  if (currentState == HIGH)
+  {
+    updateOLED2("Entering", "Config Menu", "");
+    delay(3000);
+    lastState = LOW;
+    inConf();
+  }
+
+  if (connectWIFI)
+  {
+     connectToWifi();
   }
 
   updateOLED2("Warming up the", "sensors.", "");
@@ -112,9 +144,7 @@ void setup()
   ag.TMP_RH_Init(0x44);
 }
 
-
-void loop()
-{
+void loop() {
   currentMillis = millis();
   updateTVOC();
   updateOLED();
@@ -122,6 +152,79 @@ void loop()
   updatePm25();
   updateTempHum();
   sendToServer();
+}
+
+void inConf(){
+  setConfig();
+  currentState = digitalRead(D7);
+
+  if(lastState == LOW && currentState == HIGH) {
+    pressedTime = millis();
+  }
+
+  else if(lastState == HIGH && currentState == LOW) {
+    releasedTime = millis();
+    long pressDuration = releasedTime - pressedTime;
+    if( pressDuration < 1000 ) {
+      buttonConfig=buttonConfig+1;
+      if (buttonConfig>3) buttonConfig=0;
+    }
+  }
+
+  if (lastState == HIGH && currentState == HIGH){
+     long passedDuration = millis() - pressedTime;
+      if( passedDuration > 4000 ) {
+        // to do
+//        if (buttonConfig==4) {
+//          updateOLED2("Saved", "Release", "Button Now");
+//          delay(1000);
+//          updateOLED2("Starting", "CO2", "Calibration");
+//          delay(1000);
+//          Co2Calibration();
+//       } else {
+          updateOLED2("Saved", "Release", "Button Now");
+          delay(1000);
+          updateOLED2("Rebooting", "in", "5 seconds");
+          delay(5000);
+          EEPROM.write(addr, char(buttonConfig));
+          EEPROM.commit();
+          delay(1000);
+          ESP.restart();
+ //       }
+    }
+
+  }
+  lastState = currentState;
+  delay(100);
+  inConf();
+}
+
+
+void setConfig() {
+  if (buttonConfig == 0) {
+    updateOLED2("Temp. in C", "PM in ug/m3", "");
+      inF = false;
+      inUSAQI = false;
+  }
+    if (buttonConfig == 1) {
+    updateOLED2("Temp. in C", "PM in US AQI", "");
+      inF = false;
+      inUSAQI = true;
+  }
+   if (buttonConfig == 2) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "");
+      inF = true;
+      inUSAQI = false;
+  }
+   if (buttonConfig == 3) {
+    updateOLED2("Temp. in F", "PM in US AQI", "");
+       inF = true;
+      inUSAQI = true;
+  }
+  // to do
+  // if (buttonConfig == 4) {
+  //  updateOLED2("CO2", "Manual", "Calibration");
+  // }
 }
 
 void updateTVOC()
@@ -139,39 +242,21 @@ void updateTVOC()
 
     delay(1000);
 
-        compensationT = static_cast<uint16_t>((temp + 45) * 65535 / 175);
-        compensationRh = static_cast<uint16_t>(hum * 65535 / 100);
-
-    // 3. Measure SGP4x signals
+    compensationT = static_cast<uint16_t>((temp + 45) * 65535 / 175);
+    compensationRh = static_cast<uint16_t>(hum * 65535 / 100);
 
     if (conditioning_s > 0) {
-        // During NOx conditioning (10s) SRAW NOx will remain 0
         error = sgp41.executeConditioning(compensationRh, compensationT, srawVoc);
         conditioning_s--;
     } else {
-        // Read Measurement
         error = sgp41.measureRawSignals(compensationRh, compensationT, srawVoc,
                                         srawNox);
     }
-
-    if (error) {
-        Serial.print("Error trying to execute measureRawSignals(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-    } else {
-        Serial.print("SRAW_VOC:");
-        Serial.print(srawVoc);
-        Serial.print("\t");
-        Serial.print("SRAW_NOx:");
-        Serial.println(srawNox);
-    }
-
 
     if (currentMillis - previousTVOC >= tvocInterval) {
       previousTVOC += tvocInterval;
       TVOC = voc_algorithm.process(srawVoc);
       NOX = nox_algorithm.process(srawNox);
-     // TVOC = sgp40.getVoclndex();
       Serial.println(String(TVOC));
     }
 }
@@ -210,8 +295,14 @@ void updateOLED() {
      previousOled += oledInterval;
 
     String ln3;
-    String ln1 = "PM:" + String(pm25) +  " CO2:" + String(Co2);
-  //  String ln2 = "AQI:" + String(PM_TO_AQI_US(pm25)) + " TVOC:" + String(TVOC);
+    String ln1;
+
+    if (inUSAQI) {
+      ln1 = "AQI:" + String(PM_TO_AQI_US(pm25)) +  " CO2:" + String(Co2);
+    } else {
+      ln1 = "PM:" + String(pm25) +  " CO2:" + String(Co2);
+    }
+
      String ln2 = "TVOC:" + String(TVOC) + " NOX:" + String(NOX);
 
       if (inF) {
@@ -224,15 +315,15 @@ void updateOLED() {
 }
 
 void updateOLED2(String ln1, String ln2, String ln3) {
-      char buf[9];
-          u8g2.firstPage();
-          u8g2.firstPage();
-          do {
-          u8g2.setFont(u8g2_font_t0_16_tf);
-          u8g2.drawStr(1, 10, String(ln1).c_str());
-          u8g2.drawStr(1, 30, String(ln2).c_str());
-          u8g2.drawStr(1, 50, String(ln3).c_str());
-            } while ( u8g2.nextPage() );
+  char buf[9];
+  u8g2.firstPage();
+  u8g2.firstPage();
+  do {
+  u8g2.setFont(u8g2_font_t0_16_tf);
+  u8g2.drawStr(1, 10, String(ln1).c_str());
+  u8g2.drawStr(1, 30, String(ln2).c_str());
+  u8g2.drawStr(1, 50, String(ln3).c_str());
+    } while ( u8g2.nextPage() );
 }
 
 void sendToServer() {
