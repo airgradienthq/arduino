@@ -187,7 +187,7 @@ int AirGradient::getAMB_TMP(){
   DATA data;
   requestRead();
   if (readUntil(data)) {
-    count = data.AMB_TMP;
+    count = data.PM_TMP;
     return count;
   } else {
     return -1;
@@ -199,7 +199,7 @@ int AirGradient::getAMB_HUM(){
   DATA data;
   requestRead();
   if (readUntil(data)) {
-    count = data.AMB_HUM;
+    count = data.PM_HUM;
     return count;
   } else {
     return -1;
@@ -358,8 +358,8 @@ void AirGradient::loop()
             _data->AMB_HCHO = makeWord(_payload[24], _payload[25]) / 1000;
 
             // Temperature & humidity (PMSxxxxST units only)
-            _data->AMB_TMP = makeWord(_payload[26], _payload[27]) / 10;
-            _data->AMB_HUM = makeWord(_payload[28], _payload[29]) / 10;
+            _data->PM_TMP = makeWord(_payload[20], _payload[21]) / 10;
+            _data->PM_HUM = makeWord(_payload[22], _payload[23]) / 10;
         }
 
         _index = 0;

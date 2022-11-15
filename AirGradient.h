@@ -199,8 +199,8 @@ class AirGradient
       uint16_t AMB_HCHO;
 
       // Temperature & humidity - PMSxxxxST units only
-      int16_t AMB_TMP;
-      uint16_t AMB_HUM;
+      int16_t PM_TMP;
+      uint16_t PM_HUM;
     };
 
     void PMS(Stream&);
@@ -278,7 +278,7 @@ class AirGradient
     enum STATUS { STATUS_WAITING, STATUS_OK };
     enum MODE { MODE_ACTIVE, MODE_PASSIVE };
 
-    uint8_t _payload[30];
+    uint8_t _payload[32];
     Stream* _stream;
     DATA* _data;
     STATUS _PMSstatus;
@@ -290,7 +290,9 @@ class AirGradient
     uint16_t _calculatedChecksum;
     SoftwareSerial *_SoftSerial_PMS;
     void loop();
-    char Char_PM2[10];
+    char Char_PM1[10];
+    	char Char_PM2[10];
+    	char Char_PM10[10];
     //PMS VARIABLES PRIVATE END
 
     //TMP_RH VARIABLES PRIVATE START
