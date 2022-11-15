@@ -109,6 +109,30 @@ int AirGradient::getPM2_Raw(){
   }
 }
 
+int AirGradient::getPM1_Raw(){
+  int pm02;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    pm02 = data.PM_AE_UG_1_0;
+    return pm02;
+  } else {
+    return -1;
+  }
+}
+
+int AirGradient::getPM10_Raw(){
+  int pm02;
+  DATA data;
+  requestRead();
+  if (readUntil(data)) {
+    pm02 = data.PM_AE_UG_10_0;
+    return pm02;
+  } else {
+    return -1;
+  }
+}
+
 int AirGradient::getPM0_3Count(){
   int count;
   DATA data;

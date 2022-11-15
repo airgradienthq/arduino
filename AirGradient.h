@@ -216,6 +216,9 @@ class AirGradient
 
     const char* getPM2();
     int getPM2_Raw();
+    int getPM1_Raw();
+    int getPM10_Raw();
+
     int getPM0_3Count();
     int getPM0_5Count();
     int getPM1_0Count();
