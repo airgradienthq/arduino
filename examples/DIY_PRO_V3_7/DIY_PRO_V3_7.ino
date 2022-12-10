@@ -73,6 +73,9 @@ boolean inF = false;
 // PM2.5 in US AQI (default ug/m3)
 boolean inUSAQI = false;
 
+// Display Position
+boolean displayTop = true;
+
 // set to true if you want to connect to wifi. You have 60 seconds to connect. Then it will go into an offline mode.
 boolean connectWIFI=true;
 
@@ -113,7 +116,10 @@ unsigned long releasedTime = 0;
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Hello");
   u8g2.begin();
+  //u8g2.setDisplayRotation(U8G2_R0);
+
   EEPROM.begin(512);
   delay(500);
 
@@ -167,7 +173,7 @@ void inConf(){
     long pressDuration = releasedTime - pressedTime;
     if( pressDuration < 1000 ) {
       buttonConfig=buttonConfig+1;
-      if (buttonConfig>3) buttonConfig=0;
+      if (buttonConfig>7) buttonConfig=0;
     }
   }
 
@@ -202,27 +208,58 @@ void inConf(){
 
 void setConfig() {
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "");
+    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = false;
       inUSAQI = false;
   }
     if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "");
+    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = false;
       inUSAQI = true;
   }
    if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "");
+    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = true;
       inUSAQI = false;
   }
    if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "");
+    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
        inF = true;
       inUSAQI = true;
   }
+    if (buttonConfig == 4) {
+    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R0);
+      inF = false;
+      inUSAQI = false;
+  }
+    if (buttonConfig == 5) {
+    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R0);
+      inF = false;
+      inUSAQI = true;
+  }
+   if (buttonConfig == 6) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
+    u8g2.setDisplayRotation(U8G2_R0);
+      inF = true;
+      inUSAQI = false;
+  }
+   if (buttonConfig == 7) {
+    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R0);
+       inF = true;
+      inUSAQI = true;
+  }
+
+
+
   // to do
-  // if (buttonConfig == 4) {
+  // if (buttonConfig == 8) {
   //  updateOLED2("CO2", "Manual", "Calibration");
   // }
 }
