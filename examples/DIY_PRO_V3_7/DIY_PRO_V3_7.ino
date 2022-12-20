@@ -23,7 +23,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-MIT License
+License: CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
 
 */
 
@@ -51,7 +51,7 @@ NOxGasIndexAlgorithm nox_algorithm;
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
-// for peristent saving and loading
+// for persistent saving and loading
 int addr = 0;
 byte value;
 
@@ -232,32 +232,29 @@ void setConfig() {
       inUSAQI = true;
   }
     if (buttonConfig == 4) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
+    updateOLED2("Temp. in C", "PM in ug/m3", "Display Bottom");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = false;
   }
     if (buttonConfig == 5) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
+    updateOLED2("Temp. in C", "PM in US AQI", "Display Bottom");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = true;
   }
    if (buttonConfig == 6) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
+    updateOLED2("Temp. in F", "PM in ug/m3", "Display Bottom");
     u8g2.setDisplayRotation(U8G2_R0);
       inF = true;
       inUSAQI = false;
   }
    if (buttonConfig == 7) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
+    updateOLED2("Temp. in F", "PM in US AQI", "Display Bottom");
       u8g2.setDisplayRotation(U8G2_R0);
        inF = true;
       inUSAQI = true;
   }
-
-
-
   // to do
   // if (buttonConfig == 8) {
   //  updateOLED2("CO2", "Manual", "Calibration");
