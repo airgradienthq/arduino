@@ -17,7 +17,6 @@ https://www.airgradient.com/
 License: CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
 */
 
-
 #include "PMS.h"
 #include "SoftwareSerial.h"
 #include <Wire.h>
@@ -61,6 +60,7 @@ String APIROOT = "http://hw.airgradient.com/";
 void setup()
 {
   Serial.begin(115200);
+  Serial.println("Chip ID: "+String(ESP.getChipId()));
   softSerial.begin(9600);
   soft2.begin(9600);
   Wire.begin();
@@ -150,7 +150,7 @@ void sendToServerPM1(float pm1Value) {
         digitalWrite(D7, HIGH);
         delay(300);
         Serial.println(payload);
-        String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "-1/measures";
+        String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId()) + "-1/measures";
         Serial.println(POSTURL);
         WiFiClient client;
         HTTPClient http;
@@ -180,7 +180,7 @@ void sendToServerPM2(float pm2Value) {
         digitalWrite(D7, HIGH);
         delay(300);
         Serial.println(payload);
-        String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "-2/measures";
+        String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId()) + "-2/measures";
         Serial.println(POSTURL);
         WiFiClient client;
         HTTPClient http;
@@ -203,7 +203,7 @@ void sendToServerPM2(float pm2Value) {
  void connectToWifi() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
-   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId(), HEX);
+   String HOTSPOT = "AIRGRADIENT-" + String(ESP.getChipId());
    wifiManager.setTimeout(60);
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
      Serial.println("failed to connect and hit timeout");
