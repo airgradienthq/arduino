@@ -1,11 +1,10 @@
 #pragma once
 
-#include <ESP8266WebServer.h>
+#include <ESPAsyncWebServer.h>
 
 #include <utility>
 #include "Metrics/MetricGatherer.h"
 #include "AQI/AQICalculator.h"
-#include "ESPAsyncWebServer.h"
 
 namespace AirGradient_Internal {
     class PrometheusServer {
