@@ -5,6 +5,7 @@
 #include <utility>
 #include "Metrics/MetricGatherer.h"
 #include "AQI/AQICalculator.h"
+#include "ESPAsyncWebServer.h"
 
 namespace AirGradient_Internal {
     class PrometheusServer {
@@ -27,13 +28,8 @@ namespace AirGradient_Internal {
             _deviceId(deviceId),
             _metrics(std::move(metrics)),
             _aqiCalculator(std::move(aqiCalculator)) {
-            _server = std::make_unique<ESP8266WebServer>(_serverPort);
+            _server = std::make_unique<AsyncWebServer>(_serverPort);
         }
-
-        /**
-         * Handle requests made to the underlying webserver to get the metrics
-         */
-        void handleRequests();
 
         /**
          * Prepare the webserver
@@ -46,19 +42,17 @@ namespace AirGradient_Internal {
         int _serverPort;
         const char *_deviceId;
 
-        std::unique_ptr<ESP8266WebServer> _server;
+        std::unique_ptr<AsyncWebServer> _server;
         std::shared_ptr<AirGradient_Internal::MetricGatherer> _metrics;
         std::shared_ptr<AirGradient_Internal::AQICalculator> _aqiCalculator;
-
-
-        void _handleRoot();
-
-        void _handleNotFound();
 
         String _generateMetrics();
 
         String _getIdString(const char *labelType = nullptr, const char *labelValue = nullptr) const;
 
+        void _handleRoot(AsyncWebServerRequest *request);
+
+        void _handleNotFound(AsyncWebServerRequest *request);
     };
 
 }

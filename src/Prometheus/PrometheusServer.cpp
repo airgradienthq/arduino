@@ -1,18 +1,12 @@
 #include "PrometheusServer.h"
 
 AirGradient_Internal::PrometheusServer::~PrometheusServer() {
-    _server->stop();
-    _server->close();
-}
-
-void AirGradient_Internal::PrometheusServer::handleRequests() {
-    _server->handleClient();
 }
 
 void AirGradient_Internal::PrometheusServer::begin() {
-    _server->on("/", [this] { _handleRoot(); });
-    _server->on("/metrics", [this] { _handleRoot(); });
-    _server->onNotFound([this] { _handleNotFound(); });
+    _server->on("/", [this] (AsyncWebServerRequest *request){ _handleRoot(request); });
+    _server->on("/metrics", [this] (AsyncWebServerRequest *request){ _handleRoot(request); });
+    _server->onNotFound([this] (AsyncWebServerRequest *request) { _handleNotFound(request); });
 
     _server->begin();
     Serial.println("HTTP server started at ip " + WiFi.localIP().toString() + ":" + String(_serverPort));
@@ -122,21 +116,21 @@ String AirGradient_Internal::PrometheusServer::_getIdString(const char *labelTyp
            labelValue + "\"}";
 }
 
-void AirGradient_Internal::PrometheusServer::_handleRoot() {
-    _server->send(200, "text/plain", _generateMetrics());
+void AirGradient_Internal::PrometheusServer::_handleRoot(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", _generateMetrics());
 }
 
-void AirGradient_Internal::PrometheusServer::_handleNotFound() {
+void AirGradient_Internal::PrometheusServer::_handleNotFound(AsyncWebServerRequest *request) {
     String message = "File Not Found\n\n";
     message += "URI: ";
-    message += _server->uri();
+    message += request->url();
     message += "\nMethod: ";
-    message += (_server->method() == HTTP_GET) ? "GET" : "POST";
+    message += (request->method() == HTTP_GET) ? "GET" : "POST";
     message += "\nArguments: ";
-    message += _server->args();
+    message += request->args();
     message += "\n";
-    for (int i = 0; i < _server->args(); i++) {
-        message += " " + _server->argName(i) + ": " + _server->arg(i) + "\n";
+    for (int i = 0; i < request->args(); i++) {
+        message += " " + request->argName(i) + ": " + request->arg(i) + "\n";
     }
-    _server->send(404, "text/html", message);
+    request->send(404, "text/html", message);
 }
