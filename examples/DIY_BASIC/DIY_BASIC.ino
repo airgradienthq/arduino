@@ -78,7 +78,7 @@ long val;
 void setup()
 {
   Serial.begin(115200);
-
+  u8g2.setBusClock(100000);
   u8g2.begin();
   updateOLED();
 

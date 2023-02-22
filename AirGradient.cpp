@@ -725,48 +725,6 @@ void AirGradient::CO2_Init(int rx_pin,int tx_pin,int baudRate){
     delay(10000);
   }
 }
-//const char* AirGradient::getCO2(int retryLimit) {
-//  int ctr = 0;
-//  int result_CO2 = getCO2_Raw();
-//  while(result_CO2 == -1){
-//    result_CO2 = getCO2_Raw();
-//    if((ctr == retryLimit) || (result_CO2 == -1)){
-//      Char_CO2[0] = 'N';
-//      Char_CO2[1] = 'U';
-//      Char_CO2[2] = 'L';
-//      Char_CO2[3] = 'L';
-//      return Char_CO2;
-//    }
-//    ctr++;
-//  }
-//  sprintf(Char_CO2,"%d", result_CO2);
-//  return Char_CO2;
-//}
-
-
-//int AirGradient::getCO2_Raw(){
-//  const byte CO2Command[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
-//  byte CO2Response[] = {0,0,0,0,0,0,0};
-//
-//  _SoftSerial_CO2->write(CO2Command, 7);
-//  delay(100);  //give the sensor a bit of time to respond
-//
-//  if (_SoftSerial_CO2->available()){
-//    for (int i=0; i < 7; i++) {
-//      int byte = _SoftSerial_CO2->read();
-//      CO2Response[i] = byte;
-//      if (CO2Response[0] != 254) {
-//        return -1;  //error code for debugging
-//      }
-//    }
-//    unsigned long val = CO2Response[3]*256 + CO2Response[4];
-//    return val;
-//  }
-//  else
-//  {
-//  return -2; //error code for debugging
-//  }
-//}
 
 int AirGradient::getCO2(int numberOfSamplesToTake) {
   int successfulSamplesCounter = 0;
@@ -800,14 +758,12 @@ int AirGradient::getCO2_Raw() {
   while(_SoftSerial_CO2->available())  // flush whatever we might have
       _SoftSerial_CO2->read();
 
-  const byte CO2Command[] = {0xFE, 0X44, 0X00, 0X08, 0X02, 0X9F, 0X25};
+  const byte CO2Command[] = {0XFE, 0X04, 0X00, 0X03, 0X00, 0X01, 0XD5, 0XC5};
   byte CO2Response[] = {0,0,0,0,0,0,0};
-
-  // tt
   int datapos = -1;
-  //
 
-  const int commandSize = 7;
+  const int commandSize = 8;
+  const int responseSize = 7;
 
   int numberOfBytesWritten = _SoftSerial_CO2->write(CO2Command, commandSize);
 
@@ -818,7 +774,7 @@ int AirGradient::getCO2_Raw() {
 
   // attempt to read response
   int timeoutCounter = 0;
-  while (_SoftSerial_CO2->available() < commandSize) {
+  while (_SoftSerial_CO2->available() < responseSize) {
       timeoutCounter++;
       if (timeoutCounter > 10) {
         // timeout when reading response
@@ -828,22 +784,15 @@ int AirGradient::getCO2_Raw() {
   }
 
   // we have 7 bytes ready to be read
-  for (int i=0; i < commandSize; i++) {
+  for (int i=0; i < responseSize; i++) {
     CO2Response[i] = _SoftSerial_CO2->read();
-
-    // tt
             if ((CO2Response[i] == 0xFE) && (datapos == -1)){
 				datapos = i;
 			}
             Serial.print (CO2Response[i],HEX);
 			Serial.print (":");
-    //
   }
- // return CO2Response[3]*256 + CO2Response[4];
-// tt
  return CO2Response[datapos + 3]*256 + CO2Response[datapos + 4];
- //
-
 }
 
 //END CO2 FUNCTIONS //
