@@ -98,6 +98,7 @@ void setup()
 {
   Serial.begin(115200);
 
+  u8g2.setBusClock(100000); //set i2c clock rate to standard mode (100kHz)
   u8g2.begin();
   updateOLED();
 
