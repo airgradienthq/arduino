@@ -117,6 +117,8 @@ unsigned long releasedTime = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
+  
+  u8g2.setBusClock(100000); //set i2c clock rate to standard mode (100kHz)
   u8g2.begin();
   //u8g2.setDisplayRotation(U8G2_R0);
 
