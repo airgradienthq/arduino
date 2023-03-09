@@ -17,7 +17,7 @@ Kits with all required components are available at https://www.airgradient.com/o
 
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
-MIT License
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <AirGradient.h>

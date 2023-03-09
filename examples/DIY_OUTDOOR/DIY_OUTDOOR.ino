@@ -14,7 +14,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-License: CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include "PMS.h"
