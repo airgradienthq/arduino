@@ -1,11 +1,11 @@
 /*
-Important: This code is only for the DIY PRO PCB Version 3.7 that has a push button mounted.
+Important: This code is only for the DIY PRO PCB Version 4.2 that needs different code due to different wiring of the push button.
 
 This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller with the SGP40 TVOC module from AirGradient.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v37/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v42/
 
 Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 
@@ -23,7 +23,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
+License: CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
 
 */
 
@@ -51,15 +51,15 @@ NOxGasIndexAlgorithm nox_algorithm;
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
-// for peristent saving and loading
+// for persistent saving and loading
 int addr = 0;
 byte value;
 
 // Display bottom right
-//U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 // Replace above if you have display on top left
-U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/ U8X8_PIN_NONE);
+//U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, /* reset=*/ U8X8_PIN_NONE);
 
 
 // CONFIGURATION START
@@ -109,7 +109,7 @@ float temp = 0;
 int hum = 0;
 
 int buttonConfig=0;
-int lastState = LOW;
+int lastState = HIGH;
 int currentState;
 unsigned long pressedTime  = 0;
 unsigned long releasedTime = 0;
@@ -117,6 +117,7 @@ unsigned long releasedTime = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
+  u8g2.setBusClock(100000);
   u8g2.begin();
   //u8g2.setDisplayRotation(U8G2_R0);
 
@@ -129,12 +130,14 @@ void setup() {
    updateOLED2("Press Button", "Now for", "Config Menu");
     delay(2000);
 
+    pinMode(D7, INPUT_PULLUP);
+
   currentState = digitalRead(D7);
-  if (currentState == HIGH)
+  if (currentState == LOW)
   {
     updateOLED2("Entering", "Config Menu", "");
     delay(3000);
-    lastState = LOW;
+    lastState = HIGH;
     inConf();
   }
 
@@ -151,6 +154,9 @@ void setup() {
 }
 
 void loop() {
+
+  currentState = digitalRead(D7);
+
   currentMillis = millis();
   updateTVOC();
   updateOLED();
@@ -164,20 +170,27 @@ void inConf(){
   setConfig();
   currentState = digitalRead(D7);
 
-  if(lastState == LOW && currentState == HIGH) {
+  if (currentState){
+    Serial.println("currentState: high");
+  } else {
+    Serial.println("currentState: low");
+  }
+
+
+  if(lastState == HIGH && currentState == LOW) {
     pressedTime = millis();
   }
 
-  else if(lastState == HIGH && currentState == LOW) {
+  else if(lastState == LOW && currentState == HIGH) {
     releasedTime = millis();
     long pressDuration = releasedTime - pressedTime;
     if( pressDuration < 1000 ) {
       buttonConfig=buttonConfig+1;
-      if (buttonConfig>7) buttonConfig=0;
+      if (buttonConfig>3) buttonConfig=0;
     }
   }
 
-  if (lastState == HIGH && currentState == HIGH){
+  if (lastState == LOW && currentState == LOW){
      long passedDuration = millis() - pressedTime;
       if( passedDuration > 4000 ) {
         // to do
@@ -208,58 +221,30 @@ void inConf(){
 
 void setConfig() {
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = false;
-  }
-    if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = true;
-  }
-   if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = true;
-      inUSAQI = false;
-  }
-   if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-       inF = true;
-      inUSAQI = true;
-  }
-    if (buttonConfig == 4) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
+    updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = false;
-  }
-    if (buttonConfig == 5) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
+  } else if (buttonConfig == 1) {
+    updateOLED2("Temp. in C", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = true;
-  }
-   if (buttonConfig == 6) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
-    u8g2.setDisplayRotation(U8G2_R0);
+  } else if (buttonConfig == 2) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "Long Press Saves");
+      u8g2.setDisplayRotation(U8G2_R0);
       inF = true;
       inUSAQI = false;
-  }
-   if (buttonConfig == 7) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
+  } else if (buttonConfig == 3) {
+    updateOLED2("Temp. in F", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
        inF = true;
       inUSAQI = true;
+  } else {
+    updateOLED2("Short Press", "Button for", "Options");
   }
-
-
-
   // to do
-  // if (buttonConfig == 8) {
+  // if (buttonConfig == 4) {
   //  updateOLED2("CO2", "Manual", "Calibration");
   // }
 }
@@ -400,28 +385,14 @@ void sendToServer() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
    String HOTSPOT = "AG-" + String(ESP.getChipId(), HEX);
-   updateOLED2("60s to connect", "to Wifi Hotspot", HOTSPOT);
-   wifiManager.setTimeout(60);
-
-
-   WiFiManagerParameter custom_text("<p>This is just a text paragraph</p>");
-   wifiManager.addParameter(&custom_text);
-
-   WiFiManagerParameter parameter("parameterId", "Parameter Label", "default value", 40);
-   wifiManager.addParameter(&parameter);
-
-
-   Serial.println("Parameter 1:");
-   Serial.println(parameter.getValue());
+   updateOLED2("90s to connect", "to Wifi Hotspot", HOTSPOT);
+   wifiManager.setTimeout(90);
 
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
      updateOLED2("booting into", "offline mode", "");
      Serial.println("failed to connect and hit timeout");
      delay(6000);
    }
-
-   Serial.println("Parameter 2:");
-   Serial.println(parameter.getValue());
 
 }
 
