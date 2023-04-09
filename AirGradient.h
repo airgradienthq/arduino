@@ -7,6 +7,9 @@
 #ifndef AirGradient_h
 #define AirGradient_h
 
+#ifdef AIRGRADIENT_MODBUS
+#include <ModbusRTU.h>
+#endif
 #include <SoftwareSerial.h>
 #include <Print.h>
 #include "Stream.h"
@@ -254,6 +257,10 @@ class AirGradient
     void CO2_Init(int,int,int);
     int getCO2(int numberOfSamplesToTake = 5);
     int getCO2_Raw();
+
+#ifdef AIRGRADIENT_MODBUS
+    ModbusRTU *_modbus;
+#endif
     SoftwareSerial *_SoftSerial_CO2;
 
     //CO2 VARIABLES PUBLIC END
@@ -319,6 +326,11 @@ class AirGradient
 
     //CO2 VARABLES PUBLIC START
     char Char_CO2[10];
+
+#ifdef AIRGRADIENT_MODBUS
+    Modbus::ResultCode modbus_result;
+    bool modbus_cb(Modbus::ResultCode event, uint16_t transactionId, void* data);
+#endif
 
     //CO2 VARABLES PUBLIC END
     //MHZ19 VARABLES PUBLIC START
