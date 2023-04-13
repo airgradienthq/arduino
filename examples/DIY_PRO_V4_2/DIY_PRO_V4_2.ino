@@ -1,11 +1,11 @@
 /*
-Important: This code is only for the DIY PRO PCB Version 4.2 that needs different code due to different wiring of the push button.
+Important: This code is only for the DIY PRO PCB Version 3.7 that has a push button mounted.
 
 This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller with the SGP40 TVOC module from AirGradient.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v42/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v37/
 
 Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 
@@ -23,7 +23,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-License: CC BY-NC 4.0 Attribution-NonCommercial 4.0 International
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
@@ -51,8 +51,8 @@ NOxGasIndexAlgorithm nox_algorithm;
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
-// for persistent saving and loading
-int addr = 0;
+// for peristent saving and loading
+int addr = 4;
 byte value;
 
 // Display bottom right
@@ -108,8 +108,8 @@ unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
 
-int buttonConfig=0;
-int lastState = HIGH;
+int buttonConfig=4;
+int lastState = LOW;
 int currentState;
 unsigned long pressedTime  = 0;
 unsigned long releasedTime = 0;
@@ -117,7 +117,6 @@ unsigned long releasedTime = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
-  u8g2.setBusClock(100000);
   u8g2.begin();
   //u8g2.setDisplayRotation(U8G2_R0);
 
@@ -130,14 +129,12 @@ void setup() {
    updateOLED2("Press Button", "Now for", "Config Menu");
     delay(2000);
 
-    pinMode(D7, INPUT_PULLUP);
-
   currentState = digitalRead(D7);
-  if (currentState == LOW)
+  if (currentState == HIGH)
   {
     updateOLED2("Entering", "Config Menu", "");
     delay(3000);
-    lastState = HIGH;
+    lastState = LOW;
     inConf();
   }
 
@@ -146,7 +143,7 @@ void setup() {
      connectToWifi();
   }
 
-  updateOLED2("Warming up the", "sensors.", "");
+  updateOLED2("Warming Up", "Serial Number:", String(ESP.getChipId(), HEX));
   sgp41.begin(Wire);
   ag.CO2_Init();
   ag.PMS_Init();
@@ -154,9 +151,6 @@ void setup() {
 }
 
 void loop() {
-
-  currentState = digitalRead(D7);
-
   currentMillis = millis();
   updateTVOC();
   updateOLED();
@@ -170,27 +164,20 @@ void inConf(){
   setConfig();
   currentState = digitalRead(D7);
 
-  if (currentState){
-    Serial.println("currentState: high");
-  } else {
-    Serial.println("currentState: low");
-  }
-
-
-  if(lastState == HIGH && currentState == LOW) {
+  if(lastState == LOW && currentState == HIGH) {
     pressedTime = millis();
   }
 
-  else if(lastState == LOW && currentState == HIGH) {
+  else if(lastState == HIGH && currentState == LOW) {
     releasedTime = millis();
     long pressDuration = releasedTime - pressedTime;
     if( pressDuration < 1000 ) {
       buttonConfig=buttonConfig+1;
-      if (buttonConfig>3) buttonConfig=0;
+      if (buttonConfig>7) buttonConfig=0;
     }
   }
 
-  if (lastState == LOW && currentState == LOW){
+  if (lastState == HIGH && currentState == HIGH){
      long passedDuration = millis() - pressedTime;
       if( passedDuration > 4000 ) {
         // to do
@@ -221,30 +208,52 @@ void inConf(){
 
 void setConfig() {
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
-      u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = false;
       inUSAQI = false;
   } else if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Long Press Saves");
-      u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = false;
       inUSAQI = true;
   } else if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Long Press Saves");
-      u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
       inF = true;
       inUSAQI = false;
   } else if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Long Press Saves");
+    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
+      u8g2.setDisplayRotation(U8G2_R2);
+       inF = true;
+      inUSAQI = true;
+  } else if (buttonConfig == 4) {
+    updateOLED2("Temp. in C", "PM in ug/m3", "Display Bottom");
+      u8g2.setDisplayRotation(U8G2_R0);
+      inF = false;
+      inUSAQI = false;
+  }
+    if (buttonConfig == 5) {
+    updateOLED2("Temp. in C", "PM in US AQI", "Display Bottom");
+      u8g2.setDisplayRotation(U8G2_R0);
+      inF = false;
+      inUSAQI = true;
+  } else if (buttonConfig == 6) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "Display Bottom");
+    u8g2.setDisplayRotation(U8G2_R0);
+      inF = true;
+      inUSAQI = false;
+  } else  if (buttonConfig == 7) {
+    updateOLED2("Temp. in F", "PM in US AQI", "Display Bottom");
       u8g2.setDisplayRotation(U8G2_R0);
        inF = true;
       inUSAQI = true;
-  } else {
-    updateOLED2("Short Press", "Button for", "Options");
   }
+
+
+
   // to do
-  // if (buttonConfig == 4) {
+  // if (buttonConfig == 8) {
   //  updateOLED2("CO2", "Manual", "Calibration");
   // }
 }

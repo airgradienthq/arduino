@@ -85,9 +85,7 @@ void setup()
     if (connectWIFI) {
     connectToWifi();
   }
-
-  updateOLED2("Warming", "up the", "sensors");
-
+  updateOLED2("Warm Up", "Serial#", String(ESP.getChipId(), HEX));
   ag.CO2_Init();
   ag.PMS_Init();
   ag.TMP_RH_Init(0x44);
@@ -207,9 +205,9 @@ void sendToServer() {
    WiFiManager wifiManager;
    //WiFi.disconnect(); //to delete previous saved hotspot
    String HOTSPOT = "AG-" + String(ESP.getChipId(), HEX);
-   updateOLED2("Connect", "Wifi", HOTSPOT);
+   updateOLED2("Connect", "Wifi AG-", String(ESP.getChipId(), HEX));
    delay(2000);
-   wifiManager.setTimeout(60);
+   wifiManager.setTimeout(90);
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
      updateOLED2("Booting", "offline", "mode");
      Serial.println("failed to connect and hit timeout");
