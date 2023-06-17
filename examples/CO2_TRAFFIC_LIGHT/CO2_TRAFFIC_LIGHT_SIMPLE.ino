@@ -21,7 +21,8 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-MIT License
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
+
 */
 
 #include <AirGradient.h>
@@ -55,7 +56,7 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(8, 8, PIN,
   NEO_GRB            + NEO_KHZ800);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.CO2_Init();
   matrix.begin();
   matrix.setRotation(1); // change rotation

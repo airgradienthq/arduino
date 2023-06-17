@@ -1,5 +1,5 @@
 /*
-This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller.
+This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller with the SGP40 TVOC module from AirGradient.
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
@@ -10,6 +10,7 @@ Kits (including a pre-soldered version) are available: https://www.airgradient.c
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
 “U8g2” by oliver tested with version 2.32.15
+“DFRobot_SGP40” by DFRobot tested with Version 1.0.3
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -29,9 +30,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
+
+//#include "SGP30.h"
+#include <DFRobot_SGP40.h>
 #include <U8g2lib.h>
 
 AirGradient ag = AirGradient();
+DFRobot_SGP40    sgp40;
 
 // Display bottom right
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -62,6 +67,10 @@ unsigned long previousOled = 0;
 const int sendToServerInterval = 10000;
 unsigned long previoussendToServer = 0;
 
+const int tvocInterval = 1000;
+unsigned long previousTVOC = 0;
+int TVOC = 0;
+
 const int co2Interval = 5000;
 unsigned long previousCo2 = 0;
 int Co2 = 0;
@@ -87,7 +96,7 @@ void setup()
   }
 
   updateOLED2("Warming up the", "sensors.", "");
-
+  sgp40.begin();
   ag.CO2_Init();
   ag.PMS_Init();
   ag.TMP_RH_Init(0x44);
@@ -97,11 +106,21 @@ void setup()
 void loop()
 {
   currentMillis = millis();
+  updateTVOC();
   updateOLED();
   updateCo2();
   updatePm25();
   updateTempHum();
   sendToServer();
+}
+
+void updateTVOC()
+{
+    if (currentMillis - previousTVOC >= tvocInterval) {
+      previousTVOC += tvocInterval;
+      TVOC = sgp40.getVoclndex();
+      Serial.println(String(TVOC));
+    }
 }
 
 void updateCo2()
@@ -138,8 +157,8 @@ void updateOLED() {
      previousOled += oledInterval;
 
     String ln3;
-    String ln1 = "PM:" + String(pm25) +  " AQI:" + String(PM_TO_AQI_US(pm25)) ;
-    String ln2 = "CO2:" + String(Co2);
+    String ln1 = "PM:" + String(pm25) +  " CO2:" + String(Co2);
+    String ln2 = "AQI:" + String(PM_TO_AQI_US(pm25)) + " TVOC:" + String(TVOC);
 
       if (inF) {
         ln3 = "F:" + String((temp* 9 / 5) + 32) + " H:" + String(hum)+"%";
@@ -165,10 +184,10 @@ void updateOLED2(String ln1, String ln2, String ln3) {
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
      previoussendToServer += sendToServerInterval;
-
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
       + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
       + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))
+      + (TVOC < 0 ? "" : ", \"tvoc_index\":" + String(TVOC))
       + ", \"atmp\":" + String(temp)
       + (hum < 0 ? "" : ", \"rhum\":" + String(hum))
       + "}";
@@ -200,11 +219,27 @@ void sendToServer() {
    String HOTSPOT = "AG-" + String(ESP.getChipId(), HEX);
    updateOLED2("60s to connect", "to Wifi Hotspot", HOTSPOT);
    wifiManager.setTimeout(60);
+
+
+   WiFiManagerParameter custom_text("<p>This is just a text paragraph</p>");
+   wifiManager.addParameter(&custom_text);
+
+   WiFiManagerParameter parameter("parameterId", "Parameter Label", "default value", 40);
+   wifiManager.addParameter(&parameter);
+
+
+   Serial.println("Parameter 1:");
+   Serial.println(parameter.getValue());
+
    if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
      updateOLED2("booting into", "offline mode", "");
      Serial.println("failed to connect and hit timeout");
      delay(6000);
    }
+
+   Serial.println("Parameter 2:");
+   Serial.println(parameter.getValue());
+
 }
 
 // Calculate PM2.5 US AQI

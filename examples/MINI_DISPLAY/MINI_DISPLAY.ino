@@ -10,7 +10,7 @@ The codes needs the following libraries installed:
 "WifiManager by tzapu, tablatronix" tested with Version 2.0.5-alpha
 "Adafruit_ILI9341" tested with Version 1.5.10
 "Adafruit GFX library" tested with Version 1.10.12 (often automatically installed with above ILI9341 library)
-"ArduinoJSON" by Benoit Blanchon tested with Version 6.18.5
+"ArduinoJSON" by Benoit Blanchon tested with Version 5.13.5
 
 Configuration:
 Please set in the code below (line 90-) if you want to display the PM2.5 values in US AQI and temperature in F.
@@ -21,7 +21,7 @@ If you have any questions please visit our forum at https://forum.airgradient.co
 If you are a school or university contact us for a free trial on the AirGradient platform.
 https://www.airgradient.com/
 
-MIT License
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <WiFiManager.h>

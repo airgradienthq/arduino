@@ -17,7 +17,7 @@ https://www.airgradient.com/
 
 Kits with all required components are available at https://www.airgradient.com/open-airgradient/shop/
 
-MIT License
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <AirGradient.h>
@@ -25,7 +25,7 @@ MIT License
 AirGradient ag = AirGradient();
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.PMS_Init();
 }
 

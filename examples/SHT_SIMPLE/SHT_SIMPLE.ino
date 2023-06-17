@@ -17,14 +17,14 @@ Kits with all required components are available at https://www.airgradient.com/o
 
 If you have any questions please visit our forum at https://forum.airgradient.com/
 
-MIT License
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <AirGradient.h>
 AirGradient ag = AirGradient();
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
   ag.TMP_RH_Init(0x44); //check for SHT sensor with address 0x44
 }
 

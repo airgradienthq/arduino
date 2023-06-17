@@ -186,6 +186,21 @@ class AirGradient
       uint16_t PM_AE_UG_1_0;
       uint16_t PM_AE_UG_2_5;
       uint16_t PM_AE_UG_10_0;
+
+      // Raw particles count (number of particles in 0.1l of air
+      uint16_t PM_RAW_0_3;
+      uint16_t PM_RAW_0_5;
+      uint16_t PM_RAW_1_0;
+      uint16_t PM_RAW_2_5;
+      uint16_t PM_RAW_5_0;
+      uint16_t PM_RAW_10_0;
+
+      // Formaldehyde (HCHO) concentration in mg/m^3 - PMSxxxxST units only
+      uint16_t AMB_HCHO;
+
+      // Temperature & humidity - PMSxxxxST units only
+      int16_t PM_TMP;
+      uint16_t PM_HUM;
     };
 
     void PMS(Stream&);
@@ -197,8 +212,22 @@ class AirGradient
     void requestRead();
     bool read_PMS(DATA& data);
     bool readUntil(DATA& data, uint16_t timeout = SINGLE_RESPONSE_TIME);
+
+
     const char* getPM2();
     int getPM2_Raw();
+    int getPM1_Raw();
+    int getPM10_Raw();
+
+    int getPM0_3Count();
+    int getPM0_5Count();
+    int getPM1_0Count();
+    int getPM2_5Count();
+    int getPM5_0Count();
+    int getPM10_0Count();
+
+    int getAMB_TMP();
+    int getAMB_HUM();
 
     //PMS VARIABLES PUBLIC_END
 
@@ -223,7 +252,7 @@ class AirGradient
     void CO2_Init();
     void CO2_Init(int,int);
     void CO2_Init(int,int,int);
-    const char* getCO2(int retryLimit = 5);
+    int getCO2(int numberOfSamplesToTake = 5);
     int getCO2_Raw();
     SoftwareSerial *_SoftSerial_CO2;
 
@@ -252,7 +281,7 @@ class AirGradient
     enum STATUS { STATUS_WAITING, STATUS_OK };
     enum MODE { MODE_ACTIVE, MODE_PASSIVE };
 
-    uint8_t _payload[12];
+    uint8_t _payload[32];
     Stream* _stream;
     DATA* _data;
     STATUS _PMSstatus;
@@ -264,7 +293,9 @@ class AirGradient
     uint16_t _calculatedChecksum;
     SoftwareSerial *_SoftSerial_PMS;
     void loop();
-    char Char_PM2[10];
+    char Char_PM1[10];
+    	char Char_PM2[10];
+    	char Char_PM10[10];
     //PMS VARIABLES PRIVATE END
 
     //TMP_RH VARIABLES PRIVATE START
