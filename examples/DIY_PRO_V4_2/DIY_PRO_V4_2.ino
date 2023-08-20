@@ -108,7 +108,7 @@ unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
 
-int buttonConfig=4;
+int buttonConfig=0;
 int lastState = LOW;
 int currentState;
 unsigned long pressedTime  = 0;
@@ -124,17 +124,20 @@ void setup() {
   delay(500);
 
   buttonConfig = String(EEPROM.read(addr)).toInt();
+  if (buttonConfig>3) buttonConfig=0;
+  delay(400);
   setConfig();
-
+  Serial.println("buttonConfig: "+String(buttonConfig));
    updateOLED2("Press Button", "Now for", "Config Menu");
     delay(2000);
-
+  pinMode(D7, INPUT_PULLUP);
   currentState = digitalRead(D7);
-  if (currentState == HIGH)
+  if (currentState == LOW)
   {
     updateOLED2("Entering", "Config Menu", "");
     delay(3000);
-    lastState = LOW;
+    lastState = HIGH;
+    setConfig();
     inConf();
   }
 
@@ -164,20 +167,26 @@ void inConf(){
   setConfig();
   currentState = digitalRead(D7);
 
-  if(lastState == LOW && currentState == HIGH) {
+  if (currentState){
+    Serial.println("currentState: high");
+  } else {
+    Serial.println("currentState: low");
+  }
+
+  if(lastState == HIGH && currentState == LOW) {
     pressedTime = millis();
   }
 
-  else if(lastState == HIGH && currentState == LOW) {
+  else if(lastState == LOW && currentState == HIGH) {
     releasedTime = millis();
     long pressDuration = releasedTime - pressedTime;
     if( pressDuration < 1000 ) {
       buttonConfig=buttonConfig+1;
-      if (buttonConfig>7) buttonConfig=0;
+      if (buttonConfig>3) buttonConfig=0;
     }
   }
 
-  if (lastState == HIGH && currentState == HIGH){
+  if (lastState == LOW && currentState == LOW){
      long passedDuration = millis() - pressedTime;
       if( passedDuration > 4000 ) {
         // to do
@@ -208,43 +217,23 @@ void inConf(){
 
 void setConfig() {
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = false;
-  } else if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = true;
-  } else if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = true;
-      inUSAQI = false;
-  } else if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-       inF = true;
-      inUSAQI = true;
-  } else if (buttonConfig == 4) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Bottom");
+    updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = false;
   }
-    if (buttonConfig == 5) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Bottom");
+    if (buttonConfig == 1) {
+    updateOLED2("Temp. in C", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = true;
-  } else if (buttonConfig == 6) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Bottom");
+  } else if (buttonConfig == 2) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
       inF = true;
       inUSAQI = false;
-  } else  if (buttonConfig == 7) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Bottom");
+  } else  if (buttonConfig == 3) {
+    updateOLED2("Temp. in F", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
        inF = true;
       inUSAQI = true;
