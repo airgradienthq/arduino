@@ -14,6 +14,7 @@ The codes needs the following libraries installed:
 “U8g2” by oliver tested with version 2.32.15
 "Sensirion I2C SGP41" by Sensation Version 0.1.0
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
+"Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -35,6 +36,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <WiFiClient.h>
 
 #include <EEPROM.h>
+#include "SHTSensor.h"
 
 //#include "SGP30.h"
 #include <SensirionI2CSgp41.h>
@@ -48,6 +50,8 @@ AirGradient ag = AirGradient();
 SensirionI2CSgp41 sgp41;
 VOCGasIndexAlgorithm voc_algorithm;
 NOxGasIndexAlgorithm nox_algorithm;
+SHTSensor sht;
+
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
@@ -118,6 +122,8 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
   u8g2.begin();
+  sht.init();
+  sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
   //u8g2.setDisplayRotation(U8G2_R0);
 
   EEPROM.begin(512);
@@ -303,9 +309,20 @@ void updateTempHum()
 {
     if (currentMillis - previousTempHum >= tempHumInterval) {
       previousTempHum += tempHumInterval;
-      TMP_RH result = ag.periodicFetchData();
-      temp = result.t;
-      hum = result.rh;
+
+      if (sht.readSample()) {
+      Serial.print("SHT:\n");
+      Serial.print("  RH: ");
+      Serial.print(sht.getHumidity(), 2);
+      Serial.print("\n");
+      Serial.print("  T:  ");
+      Serial.print(sht.getTemperature(), 2);
+      Serial.print("\n");
+      temp = sht.getTemperature();
+      hum = sht.getHumidity();
+  } else {
+      Serial.print("Error in readSample()\n");
+  }
       Serial.println(String(temp));
     }
 }
