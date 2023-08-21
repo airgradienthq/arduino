@@ -10,6 +10,7 @@ Kits (including a pre-soldered version) are available: https://www.airgradient.c
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
 “U8g2” by oliver tested with version 2.32.15
+"Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -30,8 +31,10 @@ MIT License
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <U8g2lib.h>
+#include "SHTSensor.h"
 
 AirGradient ag = AirGradient();
+SHTSensor sht;
 
 U8G2_SSD1306_64X48_ER_1_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE); //for DIY BASIC
 
@@ -78,6 +81,8 @@ long val;
 void setup()
 {
   Serial.begin(115200);
+  sht.init();
+  sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
   u8g2.setBusClock(100000);
   u8g2.begin();
   updateOLED();
@@ -88,7 +93,7 @@ void setup()
   updateOLED2("Warm Up", "Serial#", String(ESP.getChipId(), HEX));
   ag.CO2_Init();
   ag.PMS_Init();
-  ag.TMP_RH_Init(0x44);
+  //ag.TMP_RH_Init(0x44);
 }
 
 
@@ -124,9 +129,19 @@ void updateTempHum()
 {
     if (currentMillis - previousTempHum >= tempHumInterval) {
       previousTempHum += tempHumInterval;
-      TMP_RH result = ag.periodicFetchData();
-      temp = result.t;
-      hum = result.rh;
+    if (sht.readSample()) {
+      Serial.print("SHT:\n");
+      Serial.print("  RH: ");
+      Serial.print(sht.getHumidity(), 2);
+      Serial.print("\n");
+      Serial.print("  T:  ");
+      Serial.print(sht.getTemperature(), 2);
+      Serial.print("\n");
+      temp = sht.getTemperature();
+      hum = sht.getHumidity();
+        } else {
+      Serial.print("Error in readSample()\n");
+      }
       Serial.println(String(temp));
     }
 }
