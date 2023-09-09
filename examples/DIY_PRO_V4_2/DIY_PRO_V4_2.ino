@@ -103,9 +103,12 @@ const int co2Interval = 5000;
 unsigned long previousCo2 = 0;
 int Co2 = 0;
 
-const int pm25Interval = 5000;
-unsigned long previousPm25 = 0;
+const int pmInterval = 5000;
+unsigned long previousPm = 0;
 int pm25 = 0;
+int pm01 = 0;
+int pm10 = 0;
+int pm03PCount = 0;
 
 const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
@@ -164,7 +167,7 @@ void loop() {
   updateTVOC();
   updateOLED();
   updateCo2();
-  updatePm25();
+  updatePm();
   updateTempHum();
   sendToServer();
 }
@@ -296,11 +299,14 @@ void updateCo2()
     }
 }
 
-void updatePm25()
+void updatePm()
 {
-    if (currentMillis - previousPm25 >= pm25Interval) {
-      previousPm25 += pm25Interval;
+    if (currentMillis - previousPm >= pmInterval) {
+      previousPm += pmInterval;
+      pm01 = ag.getPM1_Raw();
       pm25 = ag.getPM2_Raw();
+      pm10 = ag.getPM10_Raw();
+      pm03PCount = ag.getPM0_3Count();
       Serial.println(String(pm25));
     }
 }
@@ -368,7 +374,10 @@ void sendToServer() {
      previoussendToServer += sendToServerInterval;
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
       + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
+      + (pm01 < 0 ? "" : ", \"pm01\":" + String(pm01))
       + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))
+      + (pm10 < 0 ? "" : ", \"pm10\":" + String(pm10))
+      + (pm03PCount < 0 ? "" : ", \"pm003_count\":" + String(pm03PCount))
       + (TVOC < 0 ? "" : ", \"tvoc_index\":" + String(TVOC))
       + (NOX < 0 ? "" : ", \"nox_index\":" + String(NOX))
       + ", \"atmp\":" + String(temp)
