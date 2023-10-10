@@ -5,7 +5,7 @@ This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v37/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v42/
 
 Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 

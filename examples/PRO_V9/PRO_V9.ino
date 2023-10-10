@@ -1,27 +1,44 @@
+/*
+Important: This code is only for the DIY PRO / AirGradient ONE PCB Version 9 with the ESP-C3 MCU.
+
+It is a high quality sensor showing PM2.5, CO2, TVOC, NOx, Temperature and Humidity on a small display and LEDbar and can send data over Wifi.
+
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/
+
+Kits (including a pre-soldered version) are available: https://www.airgradient.com/indoor/
+
+The codes needs the following libraries installed:
+“WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
+“U8g2” by oliver tested with version 2.32.15
+"Sensirion I2C SGP41" by Sensation Version 0.1.0
+"Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
+"Arduino-SHT" by Johannes Winkelmann Version 1.2.2
+"Adafruit NeoPixel" by Adafruit Version 1.11.0
+
+Configuration:
+Please set in the code below the configuration parameters.
+
+If you have any questions please visit our forum at https://forum.airgradient.com/
+
+If you are a school or university contact us for a free trial on the AirGradient platform.
+https://www.airgradient.com/
+
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
+
+*/
+
 #include "PMS.h"
-
 #include <HardwareSerial.h>
-
 #include <Wire.h>
-
 #include "s8_uart.h"
-
 #include <HTTPClient.h>
-
 #include <WiFiManager.h>
-
 #include <Adafruit_NeoPixel.h>
-
 #include <EEPROM.h>
-
 #include "SHTSensor.h"
-
 #include <SensirionI2CSgp41.h>
-
 #include <NOxGasIndexAlgorithm.h>
-
 #include <VOCGasIndexAlgorithm.h>
-
 #include <U8g2lib.h>
 
 #define DEBUG true
@@ -214,7 +231,6 @@ void updateCo2() {
     previousCo2 += co2Interval;
     Co2 = sensor_S8 -> get_co2();
     Serial.println(String(Co2));
-    setRGBledCO2color(Co2);
   }
 }
 
@@ -264,6 +280,7 @@ void updateOLED() {
       ln3 = "C:" + String(temp) + " H:" + String(hum) + "%";
     }
     updateOLED2(ln1, ln2, ln3);
+    setRGBledCO2color(Co2);
   }
 }
 
@@ -329,14 +346,6 @@ void setConfig() {
     u8g2.setDisplayRotation(U8G2_R0);
     inF = true;
     inUSAQI = true;
-  }
-}
-
-void switchLED(boolean ledON) {
-  if (ledON) {
-    digitalWrite(10, HIGH);
-  } else {
-    digitalWrite(10, LOW);
   }
 }
 
@@ -415,12 +424,10 @@ void resetWatchdog() {
 // Wifi Manager
 void connectToWifi() {
   WiFiManager wifiManager;
-  switchLED(true);
   //WiFi.disconnect(); //to delete previous saved hotspot
   String HOTSPOT = "AG-" + String(getNormalizedMac());
   wifiManager.setTimeout(180);
   if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
-    switchLED(false);
     Serial.println("failed to connect and hit timeout");
     delay(6000);
   }
