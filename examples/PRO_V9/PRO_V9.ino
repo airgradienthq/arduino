@@ -279,7 +279,8 @@ void updateOLED() {
     } else {
       ln3 = "C:" + String(temp) + " H:" + String(hum) + "%";
     }
-    updateOLED2(ln1, ln2, ln3);
+    //updateOLED2(ln1, ln2, ln3);
+    updateOLED3();
     setRGBledCO2color(Co2);
   }
 }
@@ -325,6 +326,7 @@ void inConf() {
 }
 
 void setConfig() {
+  Serial.println("in setConfig");
   if (buttonConfig == 0) {
     updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
@@ -365,6 +367,103 @@ void updateOLED2(String ln1, String ln2, String ln3) {
     u8g2.drawStr(1, 30, String(ln2).c_str());
     u8g2.drawStr(1, 50, String(ln3).c_str());
   } while (u8g2.nextPage());
+}
+
+
+void updateOLED3() {
+  char buf[9];
+  u8g2.firstPage();
+  u8g2.firstPage();
+  do {
+
+        u8g2.setFont(u8g2_font_t0_16_tf);
+
+if (inF) {
+   if (temp > -10001) {
+    float tempF = (temp * 9 / 5) + 32;
+                sprintf (buf, "%.1f°F", tempF);
+            } else {
+                sprintf (buf, "-°F");
+            }
+            u8g2.drawUTF8(1, 10, buf);
+    } else {
+      if (temp > -10001) {
+                sprintf (buf, "%.1f°C", temp);
+            } else {
+                sprintf (buf, "-°C");
+            }
+            u8g2.drawUTF8(1, 10, buf);
+    }
+
+            if (hum >= 0) {
+                sprintf(buf, "%d%%", hum);
+            } else {
+                sprintf(buf, " -%%");
+            }
+            if (hum > 99) {
+                u8g2.drawStr(97, 10, buf);
+            } else {
+                u8g2.drawStr(105, 10, buf);
+                // there might also be single digits, not considered, sprintf might actually support a leading space
+            }
+
+
+        u8g2.drawLine(1, 13, 128, 13);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawUTF8(1, 27, "CO2");
+        u8g2.setFont(u8g2_font_t0_22b_tf);
+        if (Co2 > 0) {
+            sprintf(buf, "%d", Co2);
+        } else {
+            sprintf(buf, "%s", "-");
+        }
+        u8g2.drawStr(1, 48, buf);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawStr(1, 63, "ppm");
+        u8g2.drawLine(45, 15, 45, 64);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawStr(48, 27, "PM2.5");
+        u8g2.setFont(u8g2_font_t0_22b_tf);
+
+
+if (inUSAQI) {
+              if (pm25 >= 0) {
+            sprintf(buf, "%d", PM_TO_AQI_US(pm25));
+        } else {
+            sprintf(buf, "%s", "-");
+        }
+        u8g2.drawStr(48, 48, buf);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawUTF8(48, 63, "AQI");
+    } else {
+              if (pm25 >= 0) {
+            sprintf(buf, "%d", pm25);
+        } else {
+            sprintf(buf, "%s", "-");
+        }
+        u8g2.drawStr(48, 48, buf);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawUTF8(48, 63, "ug/m³");
+    }
+
+        u8g2.drawLine(82, 15, 82, 64);
+        u8g2.setFont(u8g2_font_t0_12_tf);
+        u8g2.drawStr(85, 27, "TVOC:");
+                if (TVOC >= 0) {
+                sprintf(buf, "%d", TVOC);
+        } else {
+            sprintf(buf, "%s", "-");
+        }
+        u8g2.drawStr(85, 39, buf);
+         u8g2.drawStr(85, 53, "NOx:");
+                         if (NOX >= 0) {
+                sprintf(buf, "%d", NOX);
+        } else {
+            sprintf(buf, "%s", "-");
+        }
+        u8g2.drawStr(85, 63, buf);
+
+    } while (u8g2.nextPage());
 }
 
 void sendToServer() {
