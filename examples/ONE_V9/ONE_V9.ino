@@ -419,7 +419,7 @@ if (inF) {
         }
         u8g2.drawStr(1, 48, buf);
         u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawStr(1, 63, "ppm");
+        u8g2.drawStr(1, 61, "ppm");
         u8g2.drawLine(45, 15, 45, 64);
         u8g2.setFont(u8g2_font_t0_12_tf);
         u8g2.drawStr(48, 27, "PM2.5");
@@ -434,7 +434,7 @@ if (inUSAQI) {
         }
         u8g2.drawStr(48, 48, buf);
         u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawUTF8(48, 63, "AQI");
+        u8g2.drawUTF8(48, 61, "AQI");
     } else {
               if (pm25 >= 0) {
             sprintf(buf, "%d", pm25);
@@ -443,7 +443,7 @@ if (inUSAQI) {
         }
         u8g2.drawStr(48, 48, buf);
         u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawUTF8(48, 63, "ug/m³");
+        u8g2.drawUTF8(48, 61, "ug/m³");
     }
 
         u8g2.drawLine(82, 15, 82, 64);
