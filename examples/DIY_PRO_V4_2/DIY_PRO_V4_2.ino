@@ -5,7 +5,7 @@ This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 
 
 It is a high quality sensor showing PM2.5, CO2, Temperature and Humidity on a small display and can send data over Wifi.
 
-Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v37/
+Build Instructions: https://www.airgradient.com/open-airgradient/instructions/diy-pro-v42/
 
 Kits (including a pre-soldered version) are available: https://www.airgradient.com/open-airgradient/kits/
 
@@ -14,6 +14,7 @@ The codes needs the following libraries installed:
 “U8g2” by oliver tested with version 2.32.15
 "Sensirion I2C SGP41" by Sensation Version 0.1.0
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
+"Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 
 Configuration:
 Please set in the code below the configuration parameters.
@@ -35,6 +36,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <WiFiClient.h>
 
 #include <EEPROM.h>
+#include "SHTSensor.h"
 
 //#include "SGP30.h"
 #include <SensirionI2CSgp41.h>
@@ -48,6 +50,8 @@ AirGradient ag = AirGradient();
 SensirionI2CSgp41 sgp41;
 VOCGasIndexAlgorithm voc_algorithm;
 NOxGasIndexAlgorithm nox_algorithm;
+SHTSensor sht;
+
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
@@ -99,16 +103,19 @@ const int co2Interval = 5000;
 unsigned long previousCo2 = 0;
 int Co2 = 0;
 
-const int pm25Interval = 5000;
-unsigned long previousPm25 = 0;
+const int pmInterval = 5000;
+unsigned long previousPm = 0;
 int pm25 = 0;
+int pm01 = 0;
+int pm10 = 0;
+int pm03PCount = 0;
 
 const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
 float temp = 0;
 int hum = 0;
 
-int buttonConfig=4;
+int buttonConfig=0;
 int lastState = LOW;
 int currentState;
 unsigned long pressedTime  = 0;
@@ -118,23 +125,28 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
   u8g2.begin();
+  sht.init();
+  sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
   //u8g2.setDisplayRotation(U8G2_R0);
 
   EEPROM.begin(512);
   delay(500);
 
   buttonConfig = String(EEPROM.read(addr)).toInt();
+  if (buttonConfig>3) buttonConfig=0;
+  delay(400);
   setConfig();
-
+  Serial.println("buttonConfig: "+String(buttonConfig));
    updateOLED2("Press Button", "Now for", "Config Menu");
     delay(2000);
-
+  pinMode(D7, INPUT_PULLUP);
   currentState = digitalRead(D7);
-  if (currentState == HIGH)
+  if (currentState == LOW)
   {
     updateOLED2("Entering", "Config Menu", "");
     delay(3000);
-    lastState = LOW;
+    lastState = HIGH;
+    setConfig();
     inConf();
   }
 
@@ -155,7 +167,7 @@ void loop() {
   updateTVOC();
   updateOLED();
   updateCo2();
-  updatePm25();
+  updatePm();
   updateTempHum();
   sendToServer();
 }
@@ -164,20 +176,26 @@ void inConf(){
   setConfig();
   currentState = digitalRead(D7);
 
-  if(lastState == LOW && currentState == HIGH) {
+  if (currentState){
+    Serial.println("currentState: high");
+  } else {
+    Serial.println("currentState: low");
+  }
+
+  if(lastState == HIGH && currentState == LOW) {
     pressedTime = millis();
   }
 
-  else if(lastState == HIGH && currentState == LOW) {
+  else if(lastState == LOW && currentState == HIGH) {
     releasedTime = millis();
     long pressDuration = releasedTime - pressedTime;
     if( pressDuration < 1000 ) {
       buttonConfig=buttonConfig+1;
-      if (buttonConfig>7) buttonConfig=0;
+      if (buttonConfig>3) buttonConfig=0;
     }
   }
 
-  if (lastState == HIGH && currentState == HIGH){
+  if (lastState == LOW && currentState == LOW){
      long passedDuration = millis() - pressedTime;
       if( passedDuration > 4000 ) {
         // to do
@@ -208,43 +226,23 @@ void inConf(){
 
 void setConfig() {
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = false;
-  } else if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = false;
-      inUSAQI = true;
-  } else if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-      inF = true;
-      inUSAQI = false;
-  } else if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Top");
-      u8g2.setDisplayRotation(U8G2_R2);
-       inF = true;
-      inUSAQI = true;
-  } else if (buttonConfig == 4) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Display Bottom");
+    updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = false;
   }
-    if (buttonConfig == 5) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Display Bottom");
+    if (buttonConfig == 1) {
+    updateOLED2("Temp. in C", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
       inF = false;
       inUSAQI = true;
-  } else if (buttonConfig == 6) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Display Bottom");
+  } else if (buttonConfig == 2) {
+    updateOLED2("Temp. in F", "PM in ug/m3", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
       inF = true;
       inUSAQI = false;
-  } else  if (buttonConfig == 7) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Display Bottom");
+  } else  if (buttonConfig == 3) {
+    updateOLED2("Temp. in F", "PM in US AQI", "Long Press Saves");
       u8g2.setDisplayRotation(U8G2_R0);
        inF = true;
       inUSAQI = true;
@@ -301,11 +299,14 @@ void updateCo2()
     }
 }
 
-void updatePm25()
+void updatePm()
 {
-    if (currentMillis - previousPm25 >= pm25Interval) {
-      previousPm25 += pm25Interval;
+    if (currentMillis - previousPm >= pmInterval) {
+      previousPm += pmInterval;
+      pm01 = ag.getPM1_Raw();
       pm25 = ag.getPM2_Raw();
+      pm10 = ag.getPM10_Raw();
+      pm03PCount = ag.getPM0_3Count();
       Serial.println(String(pm25));
     }
 }
@@ -314,9 +315,20 @@ void updateTempHum()
 {
     if (currentMillis - previousTempHum >= tempHumInterval) {
       previousTempHum += tempHumInterval;
-      TMP_RH result = ag.periodicFetchData();
-      temp = result.t;
-      hum = result.rh;
+
+      if (sht.readSample()) {
+      Serial.print("SHT:\n");
+      Serial.print("  RH: ");
+      Serial.print(sht.getHumidity(), 2);
+      Serial.print("\n");
+      Serial.print("  T:  ");
+      Serial.print(sht.getTemperature(), 2);
+      Serial.print("\n");
+      temp = sht.getTemperature();
+      hum = sht.getHumidity();
+  } else {
+      Serial.print("Error in readSample()\n");
+  }
       Serial.println(String(temp));
     }
 }
@@ -362,7 +374,10 @@ void sendToServer() {
      previoussendToServer += sendToServerInterval;
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
       + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
+      + (pm01 < 0 ? "" : ", \"pm01\":" + String(pm01))
       + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))
+      + (pm10 < 0 ? "" : ", \"pm10\":" + String(pm10))
+      + (pm03PCount < 0 ? "" : ", \"pm003_count\":" + String(pm03PCount))
       + (TVOC < 0 ? "" : ", \"tvoc_index\":" + String(TVOC))
       + (NOX < 0 ? "" : ", \"nox_index\":" + String(NOX))
       + ", \"atmp\":" + String(temp)
