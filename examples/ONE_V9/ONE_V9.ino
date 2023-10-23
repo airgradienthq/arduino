@@ -525,6 +525,7 @@ void connectToWifi() {
   WiFiManager wifiManager;
   //WiFi.disconnect(); //to delete previous saved hotspot
   String HOTSPOT = "AG-" + String(getNormalizedMac());
+  updateOLED2("180s to connect", "to Wifi Hotspot", HOTSPOT);
   wifiManager.setTimeout(180);
   if (!wifiManager.autoConnect((const char * ) HOTSPOT.c_str())) {
     Serial.println("failed to connect and hit timeout");
