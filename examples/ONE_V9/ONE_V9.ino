@@ -100,8 +100,8 @@ unsigned long previoussendToServer = 0;
 
 const int tvocInterval = 1000;
 unsigned long previousTVOC = 0;
-int TVOC = 0;
-int NOX = 0;
+int TVOC = -1;
+int NOX = -1;
 
 const int co2Interval = 5000;
 unsigned long previousCo2 = 0;
@@ -109,15 +109,15 @@ int Co2 = 0;
 
 const int pmInterval = 5000;
 unsigned long previousPm = 0;
-int pm25 = 0;
-int pm01 = 0;
-int pm10 = 0;
-int pm03PCount = 0;
+int pm25 = -1;
+int pm01 = -1;
+int pm10 = -1;
+int pm03PCount = -1;
 
 const int tempHumInterval = 2500;
 unsigned long previousTempHum = 0;
-float temp = 0;
-int hum = 0;
+float temp;
+int hum;
 
 int buttonConfig = 0;
 int lastState = LOW;
@@ -177,9 +177,27 @@ void setup() {
   countdown(3);
 
   if (connectWIFI) {
-    connectToWifi();
+    WiFi.begin("airgradient", "cleanair");
+    int retries = 0;
+      while ((WiFi.status() != WL_CONNECTED) && (retries < 15)) {
+        retries++;
+        delay(500);
+        Serial.print(".");
+      }
+if (retries > 14) {
+    Serial.println(F("WiFi connection FAILED"));
+}
+if (WiFi.status() == WL_CONNECTED) {
+    sendPing();
+    Serial.println(F("WiFi connected!"));
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+}
+
+
+
   }
-  sendPing();
+
   updateOLED2("Warming Up", "Serial Number:", String(getNormalizedMac()));
 }
 
@@ -219,10 +237,19 @@ void updateTVOC() {
   }
 
   if (currentMillis - previousTVOC >= tvocInterval) {
-    previousTVOC += tvocInterval;
-    TVOC = voc_algorithm.process(srawVoc);
+previousTVOC += tvocInterval;
+if (error) {
+   TVOC = -1;
+    NOX = -1;
+    Serial.println(String(TVOC));
+} else {
+   TVOC = voc_algorithm.process(srawVoc);
     NOX = nox_algorithm.process(srawNox);
     Serial.println(String(TVOC));
+}
+
+
+
   }
 }
 
@@ -242,6 +269,11 @@ void updatePm() {
       pm25 = data1.PM_AE_UG_2_5;
       pm10 = data1.PM_AE_UG_10_0;
       pm03PCount = data1.PM_RAW_0_3;
+    } else {
+      pm01 = -1;
+      pm25 = -1;
+      pm10 = -1;
+      pm03PCount = -1;
     }
   }
 }
@@ -255,6 +287,8 @@ void updateTempHum() {
       hum = sht.getHumidity();
     } else {
       Serial.print("Error in readSample()\n");
+      temp = -10001;
+      hum = -10001;
     }
   }
 }
