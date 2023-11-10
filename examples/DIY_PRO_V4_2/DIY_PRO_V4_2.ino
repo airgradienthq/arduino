@@ -1,5 +1,5 @@
 /*
-Important: This code is only for the DIY PRO PCB Version 3.7 that has a push button mounted.
+Important: This code is only for the DIY PRO PCB Version 4.2 that has a push button mounted.
 
 This is the code for the AirGradient DIY PRO Air Quality Sensor with an ESP8266 Microcontroller with the SGP40 TVOC module from AirGradient.
 
