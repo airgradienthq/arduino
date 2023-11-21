@@ -28,17 +28,29 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include "PMS.h"
+
 #include <HardwareSerial.h>
+
 #include <Wire.h>
+
 #include "s8_uart.h"
+
 #include <HTTPClient.h>
+
 #include <WiFiManager.h>
+
 #include <Adafruit_NeoPixel.h>
+
 #include <EEPROM.h>
+
 #include "SHTSensor.h"
+
 #include <SensirionI2CSgp41.h>
+
 #include <NOxGasIndexAlgorithm.h>
+
 #include <VOCGasIndexAlgorithm.h>
+
 #include <U8g2lib.h>
 
 #define DEBUG true
@@ -114,7 +126,7 @@ int pm01 = -1;
 int pm10 = -1;
 int pm03PCount = -1;
 
-const int tempHumInterval = 2500;
+const int tempHumInterval = 5000;
 unsigned long previousTempHum = 0;
 float temp;
 int hum;
@@ -142,9 +154,11 @@ void setup() {
 
   updateOLED2("Warming Up", "Serial Number:", String(getNormalizedMac()));
   sgp41.begin(Wire);
+  delay(300);
 
   sht.init(Wire);
-  sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
+  //sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
+  delay(300);
 
   //init Watchdog
   pinMode(2, OUTPUT);
@@ -163,6 +177,14 @@ void setup() {
   delay(400);
   setConfig();
   Serial.println("buttonConfig: " + String(buttonConfig));
+
+  updateOLED2("Press Button", "Now for", "LED Test");
+  delay(2000);
+  currentState = digitalRead(9);
+  if (currentState == LOW) {
+    ledTest();
+  }
+
   updateOLED2("Press Button", "Now for", "Config Menu");
   delay(2000);
   currentState = digitalRead(9);
@@ -174,30 +196,28 @@ void setup() {
     inConf();
   }
 
-  countdown(3);
-
   if (connectWIFI) {
     WiFi.begin("airgradient", "cleanair");
     int retries = 0;
-      while ((WiFi.status() != WL_CONNECTED) && (retries < 15)) {
-        retries++;
-        delay(500);
-        Serial.print(".");
+    while ((WiFi.status() != WL_CONNECTED) && (retries < 15)) {
+      retries++;
+      delay(500);
+      Serial.print(".");
+    }
+    if (retries > 14) {
+      Serial.println(F("WiFi connection to SSID airgradient failed"));
+      if (connectWIFI) connectToWifi();
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      if (WiFi.SSID() == "airgradient") {
+        ledTest();
       }
-if (retries > 14) {
-    Serial.println(F("WiFi connection FAILED"));
-}
-if (WiFi.status() == WL_CONNECTED) {
-    sendPing();
-    Serial.println(F("WiFi connected!"));
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-}
-
-
-
+      sendPing();
+      Serial.println(F("WiFi connected!"));
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+    }
   }
-
   updateOLED2("Warming Up", "Serial Number:", String(getNormalizedMac()));
 }
 
@@ -209,6 +229,21 @@ void loop() {
   updatePm();
   updateTempHum();
   sendToServer();
+}
+
+void ledTest() {
+  updateOLED2("LED Test", "running", ".....");
+  setRGBledColor('r');
+  delay(1000);
+  setRGBledColor('g');
+  delay(1000);
+  setRGBledColor('b');
+  delay(1000);
+  setRGBledColor('w');
+  delay(1000);
+  setRGBledColor('n');
+  delay(1000);
+  //LED Test
 }
 
 void updateTVOC() {
@@ -237,18 +272,16 @@ void updateTVOC() {
   }
 
   if (currentMillis - previousTVOC >= tvocInterval) {
-previousTVOC += tvocInterval;
-if (error) {
-   TVOC = -1;
-    NOX = -1;
-    Serial.println(String(TVOC));
-} else {
-   TVOC = voc_algorithm.process(srawVoc);
-    NOX = nox_algorithm.process(srawNox);
-    Serial.println(String(TVOC));
-}
-
-
+    previousTVOC += tvocInterval;
+    if (error) {
+      TVOC = -1;
+      NOX = -1;
+      Serial.println(String(TVOC));
+    } else {
+      TVOC = voc_algorithm.process(srawVoc);
+      NOX = nox_algorithm.process(srawNox);
+      Serial.println(String(TVOC));
+    }
 
   }
 }
@@ -403,101 +436,98 @@ void updateOLED2(String ln1, String ln2, String ln3) {
   } while (u8g2.nextPage());
 }
 
-
 void updateOLED3() {
   char buf[9];
   u8g2.firstPage();
   u8g2.firstPage();
   do {
 
-        u8g2.setFont(u8g2_font_t0_16_tf);
+    u8g2.setFont(u8g2_font_t0_16_tf);
 
-if (inF) {
-   if (temp > -10001) {
-    float tempF = (temp * 9 / 5) + 32;
-                sprintf (buf, "%.1f°F", tempF);
-            } else {
-                sprintf (buf, "-°F");
-            }
-            u8g2.drawUTF8(1, 10, buf);
+    if (inF) {
+      if (temp > -10001) {
+        float tempF = (temp * 9 / 5) + 32;
+        sprintf(buf, "%.1f°F", tempF);
+      } else {
+        sprintf(buf, "-°F");
+      }
+      u8g2.drawUTF8(1, 10, buf);
     } else {
       if (temp > -10001) {
-                sprintf (buf, "%.1f°C", temp);
-            } else {
-                sprintf (buf, "-°C");
-            }
-            u8g2.drawUTF8(1, 10, buf);
+        sprintf(buf, "%.1f°C", temp);
+      } else {
+        sprintf(buf, "-°C");
+      }
+      u8g2.drawUTF8(1, 10, buf);
     }
 
-            if (hum >= 0) {
-                sprintf(buf, "%d%%", hum);
-            } else {
-                sprintf(buf, " -%%");
-            }
-            if (hum > 99) {
-                u8g2.drawStr(97, 10, buf);
-            } else {
-                u8g2.drawStr(105, 10, buf);
-                // there might also be single digits, not considered, sprintf might actually support a leading space
-            }
-
-
-        u8g2.drawLine(1, 13, 128, 13);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawUTF8(1, 27, "CO2");
-        u8g2.setFont(u8g2_font_t0_22b_tf);
-        if (Co2 > 0) {
-            sprintf(buf, "%d", Co2);
-        } else {
-            sprintf(buf, "%s", "-");
-        }
-        u8g2.drawStr(1, 48, buf);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawStr(1, 61, "ppm");
-        u8g2.drawLine(45, 15, 45, 64);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawStr(48, 27, "PM2.5");
-        u8g2.setFont(u8g2_font_t0_22b_tf);
-
-
-if (inUSAQI) {
-              if (pm25 >= 0) {
-            sprintf(buf, "%d", PM_TO_AQI_US(pm25));
-        } else {
-            sprintf(buf, "%s", "-");
-        }
-        u8g2.drawStr(48, 48, buf);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawUTF8(48, 61, "AQI");
+    if (hum >= 0) {
+      sprintf(buf, "%d%%", hum);
     } else {
-              if (pm25 >= 0) {
-            sprintf(buf, "%d", pm25);
-        } else {
-            sprintf(buf, "%s", "-");
-        }
-        u8g2.drawStr(48, 48, buf);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawUTF8(48, 61, "ug/m³");
+      sprintf(buf, " -%%");
+    }
+    if (hum > 99) {
+      u8g2.drawStr(97, 10, buf);
+    } else {
+      u8g2.drawStr(105, 10, buf);
+      // there might also be single digits, not considered, sprintf might actually support a leading space
     }
 
-        u8g2.drawLine(82, 15, 82, 64);
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        u8g2.drawStr(85, 27, "TVOC:");
-                if (TVOC >= 0) {
-                sprintf(buf, "%d", TVOC);
-        } else {
-            sprintf(buf, "%s", "-");
-        }
-        u8g2.drawStr(85, 39, buf);
-         u8g2.drawStr(85, 53, "NOx:");
-                         if (NOX >= 0) {
-                sprintf(buf, "%d", NOX);
-        } else {
-            sprintf(buf, "%s", "-");
-        }
-        u8g2.drawStr(85, 63, buf);
+    u8g2.drawLine(1, 13, 128, 13);
+    u8g2.setFont(u8g2_font_t0_12_tf);
+    u8g2.drawUTF8(1, 27, "CO2");
+    u8g2.setFont(u8g2_font_t0_22b_tf);
+    if (Co2 > 0) {
+      sprintf(buf, "%d", Co2);
+    } else {
+      sprintf(buf, "%s", "-");
+    }
+    u8g2.drawStr(1, 48, buf);
+    u8g2.setFont(u8g2_font_t0_12_tf);
+    u8g2.drawStr(1, 61, "ppm");
+    u8g2.drawLine(45, 15, 45, 64);
+    u8g2.setFont(u8g2_font_t0_12_tf);
+    u8g2.drawStr(48, 27, "PM2.5");
+    u8g2.setFont(u8g2_font_t0_22b_tf);
 
-    } while (u8g2.nextPage());
+    if (inUSAQI) {
+      if (pm25 >= 0) {
+        sprintf(buf, "%d", PM_TO_AQI_US(pm25));
+      } else {
+        sprintf(buf, "%s", "-");
+      }
+      u8g2.drawStr(48, 48, buf);
+      u8g2.setFont(u8g2_font_t0_12_tf);
+      u8g2.drawUTF8(48, 61, "AQI");
+    } else {
+      if (pm25 >= 0) {
+        sprintf(buf, "%d", pm25);
+      } else {
+        sprintf(buf, "%s", "-");
+      }
+      u8g2.drawStr(48, 48, buf);
+      u8g2.setFont(u8g2_font_t0_12_tf);
+      u8g2.drawUTF8(48, 61, "ug/m³");
+    }
+
+    u8g2.drawLine(82, 15, 82, 64);
+    u8g2.setFont(u8g2_font_t0_12_tf);
+    u8g2.drawStr(85, 27, "TVOC:");
+    if (TVOC >= 0) {
+      sprintf(buf, "%d", TVOC);
+    } else {
+      sprintf(buf, "%s", "-");
+    }
+    u8g2.drawStr(85, 39, buf);
+    u8g2.drawStr(85, 53, "NOx:");
+    if (NOX >= 0) {
+      sprintf(buf, "%d", NOX);
+    } else {
+      sprintf(buf, "%s", "-");
+    }
+    u8g2.drawStr(85, 63, buf);
+
+  } while (u8g2.nextPage());
 }
 
 void sendToServer() {
@@ -596,12 +626,12 @@ String getNormalizedMac() {
 }
 
 void setRGBledCO2color(int co2Value) {
-  if (co2Value < 800) setRGBledColor('g');
+  if (co2Value >= 300 && co2Value < 800) setRGBledColor('g');
   if (co2Value >= 800 && co2Value < 1000) setRGBledColor('y');
   if (co2Value >= 1000 && co2Value < 1500) setRGBledColor('o');
   if (co2Value >= 1500 && co2Value < 2000) setRGBledColor('r');
   if (co2Value >= 2000 && co2Value < 3000) setRGBledColor('p');
-  if (co2Value >= 3000 && co2Value < 10000) setRGBledColor('b');
+  if (co2Value >= 3000 && co2Value < 10000) setRGBledColor('z');
 }
 
 void setRGBledColor(char color) {
@@ -636,6 +666,20 @@ void setRGBledColor(char color) {
         pixels.show();
       }
       break;
+    case 'b':
+      for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 0, 255));
+        delay(100);
+        pixels.show();
+      }
+      break;
+    case 'w':
+      for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(255, 255, 255));
+        delay(100);
+        pixels.show();
+      }
+      break;
     case 'p':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(153, 0, 153));
@@ -643,9 +687,16 @@ void setRGBledColor(char color) {
         pixels.show();
       }
       break;
-    case 'b':
+    case 'z':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(102, 0, 0));
+        delay(100);
+        pixels.show();
+      }
+      break;
+    case 'n':
+      for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 0, 0));
         delay(100);
         pixels.show();
       }
