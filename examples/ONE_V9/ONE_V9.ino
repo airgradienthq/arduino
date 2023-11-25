@@ -178,11 +178,12 @@ void setup() {
   setConfig();
   Serial.println("buttonConfig: " + String(buttonConfig));
 
-  updateOLED2("Press Button", "Now for", "LED Test");
+  updateOLED2("Press Button", "for LED test &", "offline mode");
   delay(2000);
   currentState = digitalRead(9);
   if (currentState == LOW) {
     ledTest();
+    return;
   }
 
   updateOLED2("Press Button", "Now for", "Config Menu");
@@ -196,28 +197,13 @@ void setup() {
     inConf();
   }
 
-  if (connectWIFI) {
-    WiFi.begin("airgradient", "cleanair");
-    int retries = 0;
-    while ((WiFi.status() != WL_CONNECTED) && (retries < 15)) {
-      retries++;
-      delay(500);
-      Serial.print(".");
-    }
-    if (retries > 14) {
-      Serial.println(F("WiFi connection to SSID airgradient failed"));
-      if (connectWIFI) connectToWifi();
-    }
+   if (connectWIFI) connectToWifi();
     if (WiFi.status() == WL_CONNECTED) {
-      if (WiFi.SSID() == "airgradient") {
-        ledTest();
-      }
       sendPing();
       Serial.println(F("WiFi connected!"));
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
     }
-  }
   updateOLED2("Warming Up", "Serial Number:", String(getNormalizedMac()));
 }
 
