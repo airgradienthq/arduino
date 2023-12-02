@@ -14,6 +14,8 @@ The codes needs the following libraries installed:
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
 "Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 "Adafruit NeoPixel" by Adafruit Version 1.11.0
+"S8_UART" by Josep Comas Version 1.0.1
+"PMS Library" by Mariusz Kacki patched by Achim Haug: https://www.airgradient.com/blog/patching-pms-library-for-plantower-pms5003t/
 
 Configuration:
 Please set in the code below the configuration parameters.
