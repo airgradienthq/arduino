@@ -291,7 +291,7 @@ void updateTVOC()
     }
 
     if (currentMillis - previousTVOC >= tvocInterval) {
-      previousTVOC += tvocInterval;
+      previousTVOC = currentMillis;
       TVOC = voc_algorithm.process(srawVoc);
       NOX = nox_algorithm.process(srawNox);
       Serial.println(String(TVOC));
@@ -301,7 +301,7 @@ void updateTVOC()
 void updateCo2()
 {
     if (currentMillis - previousCo2 >= co2Interval) {
-      previousCo2 += co2Interval;
+      previousCo2 = currentMillis;
       Co2 = ag.getCO2_Raw();
       Serial.println(String(Co2));
     }
@@ -310,7 +310,7 @@ void updateCo2()
 void updatePm25()
 {
     if (currentMillis - previousPm25 >= pm25Interval) {
-      previousPm25 += pm25Interval;
+      previousPm25 = currentMillis;
       pm25 = ag.getPM2_Raw();
       Serial.println(String(pm25));
     }
@@ -319,7 +319,7 @@ void updatePm25()
 void updateTempHum()
 {
     if (currentMillis - previousTempHum >= tempHumInterval) {
-      previousTempHum += tempHumInterval;
+      previousTempHum = currentMillis;
       TMP_RH result = ag.periodicFetchData();
       temp = result.t;
       hum = result.rh;
@@ -329,7 +329,7 @@ void updateTempHum()
 
 void updateOLED() {
    if (currentMillis - previousOled >= oledInterval) {
-     previousOled += oledInterval;
+     previousOled = currentMillis;
 
     String ln3;
     String ln1;
@@ -365,7 +365,7 @@ void updateOLED2(String ln1, String ln2, String ln3) {
 
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
-     previoussendToServer += sendToServerInterval;
+     previoussendToServer = currentMillis;
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
       + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))
       + (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25))

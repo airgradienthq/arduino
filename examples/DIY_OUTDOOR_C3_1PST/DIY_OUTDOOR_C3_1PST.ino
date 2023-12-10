@@ -189,7 +189,7 @@ void updateTVOC() {
   }
 
   if (currentMillis - previousTVOC >= tvocInterval) {
-previousTVOC += tvocInterval;
+previousTVOC = currentMillis;
 if (error) {
    TVOC = -1;
     NOX = -1;
@@ -204,7 +204,7 @@ if (error) {
 
 void updateCo2() {
   if (currentMillis - previousCo2 >= co2Interval) {
-    previousCo2 += co2Interval;
+    previousCo2 = currentMillis;
     Co2 = sensor_S8 -> get_co2();
     //Serial.println(String(Co2));
   }
@@ -212,7 +212,7 @@ void updateCo2() {
 
 void updatePm() {
   if (currentMillis - previousPm >= pmInterval) {
-    previousPm += pmInterval;
+    previousPm = currentMillis;
     if (pms1.readUntil(data1, 2000)) {
       pm01 = data1.PM_AE_UG_1_0;
       pm25 = data1.PM_AE_UG_2_5;
@@ -241,7 +241,7 @@ void sendPing() {
 
 void sendToServer() {
   if (currentMillis - previoussendToServer >= sendToServerInterval) {
-    previoussendToServer += sendToServerInterval;
+    previoussendToServer = currentMillis;
     String payload = "{\"wifi\":" + String(WiFi.RSSI()) +
       (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2)) +
       (pm01 < 0 ? "" : ", \"pm01\":" + String(pm01)) +

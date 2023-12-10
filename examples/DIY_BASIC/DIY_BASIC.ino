@@ -110,7 +110,7 @@ void loop()
 void updateCo2()
 {
     if (currentMillis - previousCo2 >= co2Interval) {
-      previousCo2 += co2Interval;
+      previousCo2 = currentMillis;
       Co2 = ag.getCO2_Raw();
       Serial.println(String(Co2));
     }
@@ -119,7 +119,7 @@ void updateCo2()
 void updatePm25()
 {
     if (currentMillis - previousPm25 >= pm25Interval) {
-      previousPm25 += pm25Interval;
+      previousPm25 = currentMillis;
       pm25 = ag.getPM2_Raw();
       Serial.println(String(pm25));
     }
@@ -128,7 +128,7 @@ void updatePm25()
 void updateTempHum()
 {
     if (currentMillis - previousTempHum >= tempHumInterval) {
-      previousTempHum += tempHumInterval;
+      previousTempHum = currentMillis;
     if (sht.readSample()) {
       Serial.print("SHT:\n");
       Serial.print("  RH: ");
@@ -148,7 +148,7 @@ void updateTempHum()
 
 void updateOLED() {
    if (currentMillis - previousOled >= oledInterval) {
-     previousOled += oledInterval;
+     previousOled = currentMillis;
 
     String ln1;
     String ln2;
@@ -186,7 +186,7 @@ void updateOLED2(String ln1, String ln2, String ln3) {
 
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
-     previoussendToServer += sendToServerInterval;
+     previoussendToServer = currentMillis;
 
       String payload = "{\"wifi\":" + String(WiFi.RSSI())
       + (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2))

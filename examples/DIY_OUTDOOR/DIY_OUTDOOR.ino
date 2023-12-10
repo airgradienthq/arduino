@@ -84,7 +84,7 @@ void updatePm1()
       delay(400);
       digitalWrite(D7, LOW);
       Serial.println("updatePm1: "+String(pm1Position));
-      previousPm1 += pm1Interval;
+      previousPm1 = currentMillis;
         pms.requestRead();
         if (pms.readUntil(data)){
           Serial.println("success read");
@@ -114,7 +114,7 @@ void updatePm2()
 {
     if (currentMillis - previousPm2 >= pm2Interval) {
       Serial.println("updatePm2: "+String(pm2Position));
-      previousPm2 += pm2Interval;
+      previousPm2 = currentMillis;
       pms2.requestRead();
           if (pms2.readUntil(data2)){
             int pm2 = data2.PM_AE_UG_2_5;
