@@ -173,7 +173,7 @@ void setup() {
   pinMode(9, INPUT_PULLUP);
 
   buttonConfig = String(EEPROM.read(addr)).toInt();
-  if (buttonConfig > 3) buttonConfig = 0;
+  if (buttonConfig > 7) buttonConfig = 0;
   delay(400);
   setConfig();
   Serial.println("buttonConfig: " + String(buttonConfig));
@@ -215,21 +215,6 @@ void loop() {
   updatePm();
   updateTempHum();
   sendToServer();
-}
-
-void ledTest() {
-  updateOLED2("LED Test", "running", ".....");
-  setRGBledColor('r');
-  delay(1000);
-  setRGBledColor('g');
-  delay(1000);
-  setRGBledColor('b');
-  delay(1000);
-  setRGBledColor('w');
-  delay(1000);
-  setRGBledColor('n');
-  delay(1000);
-  //LED Test
 }
 
 void updateTVOC() {
@@ -355,7 +340,7 @@ void inConf() {
     long pressDuration = releasedTime - pressedTime;
     if (pressDuration < 1000) {
       buttonConfig = buttonConfig + 1;
-      if (buttonConfig > 3) buttonConfig = 0;
+      if (buttonConfig > 7) buttonConfig = 0;
     }
   }
 
@@ -381,26 +366,52 @@ void inConf() {
 void setConfig() {
   Serial.println("in setConfig");
   if (buttonConfig == 0) {
-    updateOLED2("Temp. in C", "PM in ug/m3", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:C, PM:ug/m3", "LED Bar: on", "Long Press Saves");
     inF = false;
     inUSAQI = false;
-  }
-  if (buttonConfig == 1) {
-    updateOLED2("Temp. in C", "PM in US AQI", "Long Press Saves");
+    useRGBledBar = true;
+  } else if (buttonConfig == 1) {
     u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:C, PM:US AQI", "LED Bar: on", "Long Press Saves");
     inF = false;
     inUSAQI = true;
+    useRGBledBar = true;
   } else if (buttonConfig == 2) {
-    updateOLED2("Temp. in F", "PM in ug/m3", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:F PM:ug/m3", "LED Bar: on", "Long Press Saves");
     inF = true;
     inUSAQI = false;
+    useRGBledBar = true;
   } else if (buttonConfig == 3) {
-    updateOLED2("Temp. in F", "PM in US AQI", "Long Press Saves");
     u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:F PM:US AQI", "LED Bar: on", "Long Press Saves");
     inF = true;
     inUSAQI = true;
+    useRGBledBar = true;
+  } else  if (buttonConfig == 4) {
+    updateOLED2("T:C, PM:ug/m3", "LED Bar: off", "Long Press Saves");
+    inF = false;
+    inUSAQI = false;
+    useRGBledBar = false;
+  } else if (buttonConfig == 5) {
+    u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:C, PM:US AQI", "LED Bar: off", "Long Press Saves");
+    inF = false;
+    inUSAQI = true;
+    useRGBledBar = false;
+  } else if (buttonConfig == 6) {
+    u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:F PM:ug/m3", "LED Bar: off", "Long Press Saves");
+    inF = true;
+    inUSAQI = false;
+    useRGBledBar = false;
+  } else if (buttonConfig == 7) {
+    u8g2.setDisplayRotation(U8G2_R0);
+    updateOLED2("T:F PM:US AQI", "LED Bar: off", "Long Press Saves");
+    inF = true;
+    inUSAQI = true;
+    useRGBledBar = false;
   }
 }
 
@@ -627,63 +638,63 @@ void setRGBledColor(char color) {
     case 'g':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(0, 255, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'y':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(255, 255, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'o':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(255, 128, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'r':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(255, 0, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'b':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(0, 0, 255));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'w':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(255, 255, 255));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'p':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(153, 0, 153));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'z':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(102, 0, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
     case 'n':
       for (int i = 0; i < 11; i++) {
         pixels.setPixelColor(i, pixels.Color(0, 0, 0));
-        delay(100);
+        delay(30);
         pixels.show();
       }
       break;
@@ -693,6 +704,40 @@ void setRGBledColor(char color) {
       break;
     }
   }
+}
+
+void ledTest() {
+  updateOLED2("LED Test", "running", ".....");
+  for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(255, 0, 0));
+        delay(30);
+        pixels.show();
+      }
+  delay(500);
+  for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+        delay(30);
+        pixels.show();
+      }
+  delay(500);
+  for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 0, 255));
+        delay(30);
+        pixels.show();
+      }
+  delay(500);
+  for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(255, 255, 255));
+        delay(30);
+        pixels.show();
+      }
+  delay(500);
+  for (int i = 0; i < 11; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 0, 0));
+        delay(30);
+        pixels.show();
+      }
+  delay(500);
 }
 
 // Calculate PM2.5 US AQI
