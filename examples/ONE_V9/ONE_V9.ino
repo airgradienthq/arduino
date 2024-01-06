@@ -13,6 +13,7 @@ The codes needs the following libraries installed:
 "Sensirion I2C SGP41" by Sensation Version 0.1.0
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
 “pms” by Markusz Kakl version 1.1.0
+"S8_UART" by Josep Comas Version 1.0.1
 "Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 "Adafruit NeoPixel" by Adafruit Version 1.11.0
 

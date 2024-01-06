@@ -11,7 +11,7 @@ The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.11-beta
 "Sensirion I2C SGP41" by Sensation Version 0.1.0
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
-"Arduino-SHT" by Johannes Winkelmann Version 1.2.2
+"S8_UART" by Josep Comas Version 1.0.1
 “pms” by Markusz Kakl version 1.1.0 (needs to be patched for 5003T model)
 
 For built instructions and how to patch the PMS library: https://www.airgradient.com/open-airgradient/instructions/diy-open-air-presoldered-v11/
