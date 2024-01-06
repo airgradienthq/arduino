@@ -103,13 +103,13 @@ void loop() {
         pm1Value01=pm1Value01+data1.PM_AE_UG_1_0;
         pm1Value25=pm1Value25+data1.PM_AE_UG_2_5;
         pm1Value10=pm1Value10+data1.PM_AE_UG_10_0;
-        pm1PCount=pm1PCount+data1.PM_RAW_0_3;
+//      pm1PCount=pm1PCount+data1.PM_RAW_0_3;
         pm1temp=pm1temp+data1.AMB_TMP;
         pm1hum=pm1hum+data1.AMB_HUM;
         pm2Value01=pm2Value01+data2.PM_AE_UG_1_0;
         pm2Value25=pm2Value25+data2.PM_AE_UG_2_5;
         pm2Value10=pm2Value10+data2.PM_AE_UG_10_0;
-        pm2PCount=pm2PCount+data2.PM_RAW_0_3;
+//      pm2PCount=pm2PCount+data2.PM_RAW_0_3;
         pm2temp=pm2temp+data2.AMB_TMP;
         pm2hum=pm2hum+data2.AMB_HUM;
         countPosition++;
@@ -117,13 +117,13 @@ void loop() {
           pm1Value01 = pm1Value01 / targetCount;
           pm1Value25 = pm1Value25 / targetCount;
           pm1Value10 = pm1Value10 / targetCount;
-          pm1PCount = pm1PCount / targetCount;
+          //pm1PCount = pm1PCount / targetCount;
           pm1temp = pm1temp / targetCount;
           pm1hum = pm1hum / targetCount;
           pm2Value01 = pm2Value01 / targetCount;
           pm2Value25 = pm2Value25 / targetCount;
           pm2Value10 = pm2Value10 / targetCount;
-          pm2PCount = pm2PCount / targetCount;
+//        pm2PCount = pm2PCount / targetCount;
           pm2temp = pm2temp / targetCount;
           pm2hum = pm2hum / targetCount;
           postToServer(pm1Value01, pm1Value25,pm1Value10,pm1PCount, pm1temp,pm1hum,pm2Value01, pm2Value25,pm2Value10,pm2PCount, pm2temp,pm2hum);
@@ -132,13 +132,13 @@ void loop() {
           pm1Value01=0;
           pm1Value25=0;
           pm1Value10=0;
-          pm1PCount=0;
+//        pm1PCount=0;
           pm1temp=0;
           pm1hum=0;
           pm2Value01=0;
           pm2Value25=0;
           pm2Value10=0;
-          pm2PCount=0;
+//        pm2PCount=0;
           pm2temp=0;
           pm2hum=0;
         }
@@ -189,7 +189,7 @@ void postToServer(int pm1Value01, int pm1Value25, int pm1Value10, int pm1PCount,
     + ", \"pm01\":" + String((pm1Value01+pm2Value01)/2)
     + ", \"pm02\":" + String((pm1Value25+pm2Value25)/2)
     + ", \"pm10\":" + String((pm1Value10+pm2Value10)/2)
-    + ", \"pm003_count\":" + String((pm1PCount+pm2PCount)/2)
+//     + ", \"pm003_count\":" + String((pm1PCount+pm2PCount)/2)
     + ", \"atmp\":" + String((pm1temp+pm2temp)/20)
     + ", \"rhum\":" + String((pm1hum+pm2hum)/20)
     + ", \"boot\":" + loopCount
@@ -198,7 +198,7 @@ void postToServer(int pm1Value01, int pm1Value25, int pm1Value10, int pm1PCount,
         + "\"pm01\":" + String(pm1Value01)
          + ", \"pm02\":" + String(pm1Value25)
          + ", \"pm10\":" + String(pm1Value10)
-         + ", \"pm003_count\":" + String(pm1PCount)
+//          + ", \"pm003_count\":" + String(pm1PCount)
          + ", \"atmp\":" + String(pm1temp/10)
          + ", \"rhum\":" + String(pm1hum/10)
          + "}"
@@ -206,7 +206,7 @@ void postToServer(int pm1Value01, int pm1Value25, int pm1Value10, int pm1PCount,
          + " \"pm01\":" + String(pm1Value01)
          + ", \"pm02\":" + String(pm2Value25)
          + ", \"pm10\":" + String(pm2Value10)
-         + ", \"pm003_count\":" + String(pm2PCount)
+//          + ", \"pm003_count\":" + String(pm2PCount)
          + ", \"atmp\":" + String(pm2temp/10)
          + ", \"rhum\":" + String(pm2hum/10)
          + "}"
