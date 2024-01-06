@@ -12,6 +12,7 @@ The codes needs the following libraries installed:
 “U8g2” by oliver tested with version 2.32.15
 "Sensirion I2C SGP41" by Sensation Version 0.1.0
 "Sensirion Gas Index Algorithm" by Sensation Version 3.2.1
+“pms” by Markusz Kakl version 1.1.0
 "Arduino-SHT" by Johannes Winkelmann Version 1.2.2
 "Adafruit NeoPixel" by Adafruit Version 1.11.0
 
