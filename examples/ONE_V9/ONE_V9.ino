@@ -55,6 +55,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 #include <U8g2lib.h>
 
+#include "time.h"
+
 #define DEBUG true
 
 #define I2C_SDA 7
@@ -81,6 +83,19 @@ uint16_t conditioning_s = 10;
 // for peristent saving and loading
 int addr = 4;
 byte value;
+
+// time syncing
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 3600;
+const int brightnessAdjInterval = 18000;
+unsigned long previousbrightnessAdj = 0;
+const int brightnessMIN = 5;
+const int brightnessMAX = 255;
+const int dimAfter = 20; // 8pm (24 hour format)
+const int dimUntil = 8; // 8am
+String TZ_STRING = "EST5EDT,M3.2.0,M11.1.0"; // POSIX TZ Set for New York EST. ( format details see https://developer.ibm.com/articles/au-aix-posix/ )
+                                             // for others in TZ format string see  https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 
 // Display bottom right
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
@@ -131,13 +146,16 @@ int pm10 = -1;
 const int tempHumInterval = 5000;
 unsigned long previousTempHum = 0;
 float temp;
-int hum;
+float hum;
 
 int buttonConfig = 0;
 int lastState = LOW;
 int currentState;
 unsigned long pressedTime = 0;
 unsigned long releasedTime = 0;
+
+int ledBrightness = brightnessMAX;
+int oledBrightness = brightnessMAX;
 
 void setup() {
   if (DEBUG) {
@@ -205,8 +223,49 @@ void setup() {
       Serial.println(F("WiFi connected!"));
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
+      // Init and get the time
+      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+      setTimeTZ(TZ_STRING);
     }
   updateOLED2("Warming Up", "Serial Number:", String(getNormalizedMac()));
+}
+
+void setTimeTZ(String timezone) {
+  // Original inspiration from Hardy Maxa and others
+  struct tm timeinfo;
+
+  Serial.println("Setting up time");
+  configTime(0, 0, ntpServer); // init at UTC
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println("Got the time from NTP");
+  // Now we can set the real timezone
+  Serial.printf("Setting Timezone to %s\n", timezone.c_str());
+  setenv("TZ", timezone.c_str(), 1);
+  tzset();
+  Serial.println(&timeinfo, "TIME: %A, %B %d %Y %H:%M:%S");
+}
+
+void adjustBrightness() {
+  if (currentMillis - previousbrightnessAdj >= brightnessAdjInterval) {
+    previousbrightnessAdj += brightnessAdjInterval;
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      Serial.println("Failed to obtain time");
+      return;
+    }
+    char timeHour[3];
+    strftime(timeHour, 3, "%H", &timeinfo);
+    String stringValue(timeHour);
+    int hour = stringValue.toInt();
+
+    oledBrightness = (hour > dimAfter || hour < dimUntil) ? brightnessMIN : brightnessMAX;
+    ledBrightness = (hour > dimAfter || hour < dimUntil) ? brightnessMIN : brightnessMAX;
+    Serial.println("Brightness for Hour: " + String(hour) + " oled: " + String(oledBrightness) + " strip: " + String(ledBrightness));
+
+  }
 }
 
 void loop() {
@@ -217,6 +276,7 @@ void loop() {
   updatePm();
   updateTempHum();
   sendToServer();
+  adjustBrightness();
 }
 
 void updateTVOC() {
@@ -325,6 +385,7 @@ void updateOLED() {
   }
 }
 
+
 void inConf() {
   setConfig();
   currentState = digitalRead(9);
@@ -425,6 +486,7 @@ void sendPing() {
 
 void updateOLED2(String ln1, String ln2, String ln3) {
   char buf[9];
+  u8g2.setContrast(oledBrightness);
   u8g2.firstPage();
   u8g2.firstPage();
   do {
@@ -437,23 +499,24 @@ void updateOLED2(String ln1, String ln2, String ln3) {
 
 void updateOLED3() {
   char buf[9];
+  u8g2.setContrast(oledBrightness);
   u8g2.firstPage();
   u8g2.firstPage();
   do {
 
-    u8g2.setFont(u8g2_font_t0_16_tf);
+    u8g2.setFont(u8g2_font_t0_14_tf);
 
     if (inF) {
       if (temp > -10001) {
         float tempF = (temp * 9 / 5) + 32;
-        sprintf(buf, "%.1f°F", tempF);
+        sprintf(buf, "T:%.1f°F", tempF);
       } else {
         sprintf(buf, "-°F");
       }
       u8g2.drawUTF8(1, 10, buf);
     } else {
       if (temp > -10001) {
-        sprintf(buf, "%.1f°C", temp);
+        sprintf(buf, "T:%.1f°C", temp);
       } else {
         sprintf(buf, "-°C");
       }
@@ -461,18 +524,19 @@ void updateOLED3() {
     }
 
     if (hum >= 0) {
-      sprintf(buf, "%d%%", hum);
+      sprintf(buf, "H:%.1f%%", hum);
     } else {
       sprintf(buf, " -%%");
     }
     if (hum > 99) {
-      u8g2.drawStr(97, 10, buf);
+      u8g2.drawStr(65, 10, buf);
     } else {
-      u8g2.drawStr(105, 10, buf);
+      u8g2.drawStr(74, 10, buf);
       // there might also be single digits, not considered, sprintf might actually support a leading space
     }
 
-    u8g2.drawLine(1, 13, 128, 13);
+    u8g2.drawLine(64, 0, 64, 15);
+    u8g2.drawLine(1, 15, 128, 15);
     u8g2.setFont(u8g2_font_t0_12_tf);
     u8g2.drawUTF8(1, 27, "CO2");
     u8g2.setFont(u8g2_font_t0_22b_tf);
@@ -636,18 +700,21 @@ void setRGBledCO2color(int co2Value) {
 void setRGBledColor(char color) {
   if (useRGBledBar) {
     //pixels.clear();
+    //    pixels.setBrightness(0);
+//    pixels.setBrightness((color != 'g') ? ledBrightness : 0);
     switch (color) {
     case 'g':
-      for (int i = 0; i < 11; i++) {
-        pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+      for (int i = 11; i < 0; i--) {
+        pixels.setPixelColor(i, pixels.Color(0, 255, 128));
         delay(30);
         pixels.show();
       }
       break;
     case 'y':
       for (int i = 0; i < 11; i++) {
+        pixels.setBrightness((i > 3) ? 0 : ledBrightness);
         pixels.setPixelColor(i, pixels.Color(255, 255, 0));
-        delay(30);
+        delay(60);
         pixels.show();
       }
       break;
