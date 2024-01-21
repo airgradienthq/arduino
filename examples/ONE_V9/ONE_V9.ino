@@ -93,9 +93,6 @@ boolean inF = false;
 // PM2.5 in US AQI (default ug/m3)
 boolean inUSAQI = false;
 
-// Display Position
-boolean displayTop = true;
-
 // use RGB LED Bar
 boolean useRGBledBar = true;
 
