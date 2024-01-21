@@ -256,10 +256,7 @@ void adjustBrightness() {
       Serial.println("Failed to obtain time");
       return;
     }
-    char timeHour[3];
-    strftime(timeHour, 3, "%H", &timeinfo);
-    String stringValue(timeHour);
-    int hour = stringValue.toInt();
+    int hour = timeinfo.tm_hour;
 
     oledBrightness = (hour > dimAfter || hour < dimUntil) ? brightnessMIN : brightnessMAX;
     ledBrightness = (hour > dimAfter || hour < dimUntil) ? brightnessMIN : brightnessMAX;
