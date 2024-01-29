@@ -714,8 +714,13 @@ void AirGradient::CO2_Init(int rx_pin,int tx_pin,int baudRate){
     }
   _SoftSerial_CO2 = new SoftwareSerial(rx_pin,tx_pin);
   _SoftSerial_CO2->begin(baudRate);
+#ifdef AIRGRADIENT_MODBUS
+  _modbus = new ModbusRTU;
+  _modbus->begin(_SoftSerial_CO2);
+  _modbus->master();
+#endif
 
-  if(getCO2_Raw() == -1){
+  if(getCO2_Raw() < 0){
     if (_debugMsg) {
     Serial.println("CO2 Sensor Failed to Initialize ");
     }
@@ -752,7 +757,89 @@ int AirGradient::getCO2(int numberOfSamplesToTake) {
   return co2AsPpmSum / successfulSamplesCounter;
 }
 
+#ifdef AIRGRADIENT_MODBUS
+bool AirGradient::modbus_cb(Modbus::ResultCode event, uint16_t transactionId, void* data) {
+  this->modbus_result = event;
+
+  return true;
+}
+
+
 // <<>>
+int AirGradient::getCO2_Raw() {
+  // Read the CO2 sensor via MODBUS, and return the reading.
+  //
+  // This will either return a positive value (the CO2 reading), or a negative
+  // value for an error
+  //
+  // -1: Bus is busy
+  // -2: Failed to write request
+  // -3: Timeout reading response (no sensor present?)
+  // -4: Sensor reported an internal error
+  //
+  // Return values < -255 represent mapped error codes from the Modbus library,
+  // shifted by 8 bits and negated. For example, Modbus library error 4 would be
+  // returned as -1024 ( -(4 << 8))
+
+  uint16_t CO2Response[4];
+
+
+  if (_modbus->slave()) {
+    // Bus busy? Move state machine forward
+    _modbus->task();
+    return -1;
+  }
+
+  // Read the first four registers, although we're only
+  // interested in the first (Status) and the fourth (CO2 measurement),
+  // but this is faster than reading them individually
+  auto res = _modbus->readIreg(
+    0xFE,        // Address
+    0,           // Start register 0
+    CO2Response, // Destination
+    4,           // Four entries
+    std::bind(&AirGradient::modbus_cb, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3) // Callback handler
+  );
+
+  if (!res) {
+    // failed to write request
+    return -2;
+  }
+
+  // This will timeout after MODBUSRTU_TIMEOUT ms
+  // (defined in the modbus library, usually 1000)
+  while(_modbus->slave() ) {
+    _modbus->task();
+    delay(10);
+  }
+
+  if (_debugMsg) {
+    Serial.print(F("CO2 sensor modbus call finished with code "));
+    Serial.println(modbus_result);
+  }
+
+  if (modbus_result == Modbus::EX_SUCCESS) {
+    if (_debugMsg) {
+      Serial.print(F("CO2 sensor read"));
+      for (const auto val : CO2Response) {
+        Serial.print(F(" 0x"));
+        Serial.print(val, HEX);
+      }
+      Serial.println();
+    }
+    if (CO2Response[0] != 0) {
+      // Sensor reports an error
+      return -4;
+    }
+    // Return CO2 reading
+    return CO2Response[3];
+  } else if (modbus_result == Modbus::EX_TIMEOUT) {
+    return -3;
+  } else {
+    return -(modbus_result << 8);
+  }
+}
+#else
 int AirGradient::getCO2_Raw() {
 
   while(_SoftSerial_CO2->available())  // flush whatever we might have
@@ -794,6 +881,7 @@ int AirGradient::getCO2_Raw() {
   }
  return CO2Response[datapos + 3]*256 + CO2Response[datapos + 4];
 }
+#endif
 
 //END CO2 FUNCTIONS //
 
