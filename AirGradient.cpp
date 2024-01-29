@@ -681,8 +681,8 @@ uint8_t AirGradient::calculateCrc(uint8_t data[])
 
 TMP_RH AirGradient::returnError(TMP_RH_ErrorCode error) {
   TMP_RH result;
-  result.t = NULL;
-  result.rh = NULL;
+  result.t = -128;
+  result.rh = -128;
 
   result.t_char[0] = 'N';
   result.t_char[1] = 'U';
