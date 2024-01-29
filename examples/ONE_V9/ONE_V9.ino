@@ -78,7 +78,7 @@ S8_sensor sensor;
 // time in seconds needed for NOx conditioning
 uint16_t conditioning_s = 10;
 
-// for peristent saving and loading
+// for persistent saving and loading
 int addr = 4;
 byte value;
 
