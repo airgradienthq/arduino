@@ -1,0 +1,46 @@
+#######################################
+# Syntax Coloring Map
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SensirionI2CSht4x	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+measureHighPrecision	KEYWORD2
+measureMediumPrecision	KEYWORD2
+measureLowestPrecision	KEYWORD2
+activateHighestHeaterPowerLong	KEYWORD2
+activateHighestHeaterPowerShort	KEYWORD2
+activateMediumHeaterPowerLong	KEYWORD2
+activateMediumHeaterPowerShort	KEYWORD2
+activateLowestHeaterPowerLong	KEYWORD2
+activateLowestHeaterPowerShort	KEYWORD2
+measureHighPrecisionTicks	KEYWORD2
+measureMediumPrecisionTicks	KEYWORD2
+measureLowestPrecisionTicks	KEYWORD2
+activateHighestHeaterPowerLongTicks	KEYWORD2
+activateHighestHeaterPowerShortTicks	KEYWORD2
+activateMediumHeaterPowerLongTicks	KEYWORD2
+activateMediumHeaterPowerShortTicks	KEYWORD2
+activateLowestHeaterPowerLongTicks	KEYWORD2
+activateLowestHeaterPowerShortTicks	KEYWORD2
+serialNumber	KEYWORD2
+softReset	KEYWORD2
+signalTemperature	KEYWORD2
+signalHumidity	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+sensor	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################

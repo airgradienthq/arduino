@@ -1,0 +1,44 @@
+stages:
+  - validate
+  - test
+
+compile_test:
+    stage: test
+    image:
+        name: registry.gitlab.sensirion.lokal/sensirion/docker/docker-arduino:0.4.0
+    tags: [docker, linux]
+    before_script:
+        - rm -rf ../sensirion-core-arduino-library
+    script:
+        - git clone --depth 1 --branch 0.5.2 https://github.com/Sensirion/arduino-core.git ../sensirion-core-arduino-library
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:samd:mkrzero examples/exampleUsage
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:mega examples/exampleUsage
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:nano examples/exampleUsage
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:uno examples/exampleUsage
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp32:esp32:esp32 examples/exampleUsage
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp8266:esp8266:generic examples/exampleUsage
+
+syntax_check:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.1.0
+  tags: [linux, docker]
+  script:
+    - find . -type f -iregex ".*\.\(c\|h\|cpp\|ino\)" -exec clang-format-6.0 -i -style=file {} \; && git diff --exit-code
+
+
+cppcheck:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.1.0
+  tags: [linux, docker]
+  script:
+    - cppcheck --std=c++11 --language=c++ --error-exitcode=1 --enable=warning,style,performance,portability src/*
+
+TODO_check:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.1.0
+  tags: [linux, docker]
+  script:
+    - '! grep -rnw --exclude=.gitlab-ci.yml --exclude-dir=.git . -e "TODO: DRIVER_GENERATOR"'
