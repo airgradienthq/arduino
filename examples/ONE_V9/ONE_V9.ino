@@ -128,7 +128,7 @@ int pm10 = -1;
 const int tempHumInterval = 5000;
 unsigned long previousTempHum = 0;
 float temp;
-int hum;
+float hum;
 
 int buttonConfig = 0;
 int lastState = LOW;
@@ -291,7 +291,7 @@ void updateTempHum() {
     } else {
       Serial.print("Error in readSample()\n");
       temp = -10001;
-      hum = -10001;
+      hum = -10001.0;
     }
   }
 }
@@ -457,12 +457,12 @@ void updateOLED3() {
       u8g2.drawUTF8(1, 10, buf);
     }
 
-    if (hum >= 0) {
-      sprintf(buf, "%d%%", hum);
+    if (hum >= 0.0) {
+      sprintf(buf, "%.0f%%", hum);
     } else {
       sprintf(buf, " -%%");
     }
-    if (hum > 99) {
+    if (hum > 99.0) {
       u8g2.drawStr(97, 10, buf);
     } else {
       u8g2.drawStr(105, 10, buf);
