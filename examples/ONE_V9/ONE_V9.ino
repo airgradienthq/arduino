@@ -231,7 +231,7 @@ void updateTVOC() {
   delay(1000);
 
   compensationT = static_cast < uint16_t > ((temp + 45) * 65535 / 175);
-  compensationRh = static_cast < uint16_t > (hum * 65535 / 100);
+  compensationRh = static_cast < uint16_t > (hum * 65535.0 / 100.0);
 
   if (conditioning_s > 0) {
     error = sgp41.executeConditioning(compensationRh, compensationT, srawVoc);
@@ -538,7 +538,7 @@ void sendToServer() {
       (TVOC < 0 ? "" : ", \"tvoc_index\":" + String(TVOC)) +
       (NOX < 0 ? "" : ", \"nox_index\":" + String(NOX)) +
       ", \"atmp\":" + String(temp) +
-      (hum < 0 ? "" : ", \"rhum\":" + String(hum)) +
+      (hum < 0.0 ? "" : ", \"rhum\":" + String(hum)) +
       ", \"boot\":" + loopCount +
       "}";
 
