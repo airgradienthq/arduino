@@ -43,7 +43,7 @@ PMS5003T::PMS5003T(BoardType def) : _boardDef(def) {}
  * @return false Failure
  */
 bool PMS5003T::begin(void) {
-  if (this->_isInit) {
+  if (this->_isBegin) {
     return true;
   }
 
@@ -60,15 +60,15 @@ bool PMS5003T::begin(void) {
     return false;
   }
 
-  if (bsp->PMS5003.supported == false) {
+  if (bsp->Pms5003.supported == false) {
     AgLog("Board [%d] PMS5003 not supported", this->_boardDef);
     return false;
   }
 
 #if defined(ESP8266)
-  bsp->PMS5003.uart_tx_pin;
+  bsp->Pms5003.uart_tx_pin;
   SoftwareSerial *uart =
-      new SoftwareSerial(bsp->PMS5003.uart_tx_pin, bsp->PMS5003.uart_rx_pin);
+      new SoftwareSerial(bsp->Pms5003.uart_tx_pin, bsp->Pms5003.uart_rx_pin);
   uart->begin(9600);
   if (pms.begin(uart) == false) {
     AgLog("PMS failed");
@@ -82,8 +82,8 @@ bool PMS5003T::begin(void) {
   if (this->_serial == &Serial) {
 #endif
     AgLog("Init Serial");
-    this->_serial->begin(9600, SERIAL_8N1, bsp->PMS5003.uart_rx_pin,
-                         bsp->PMS5003.uart_tx_pin);
+    this->_serial->begin(9600, SERIAL_8N1, bsp->Pms5003.uart_rx_pin,
+                         bsp->Pms5003.uart_tx_pin);
   } else {
     if (bsp->SenseAirS8.supported == false) {
       AgLog("Board [%d] PMS5003T_2 not supported", this->_boardDef);
@@ -101,7 +101,7 @@ bool PMS5003T::begin(void) {
   }
 #endif
 
-  this->_isInit = true;
+  this->_isBegin = true;
   return true;
 }
 
@@ -138,7 +138,7 @@ int PMS5003T::pm25ToAQI(int pm02) {
  * @return false Failure
  */
 bool PMS5003T::readData(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -207,9 +207,9 @@ float PMS5003T::getRelativeHumidity(void) {
  * @return true Initialized
  * @return false No-initialized
  */
-bool PMS5003T::checkInit(void) {
-  if (this->_isInit == false) {
-    AgLog("No initialized");
+bool PMS5003T::isBegin(void) {
+  if (this->_isBegin == false) {
+    AgLog("Not-initialized");
     return false;
   }
   return true;
@@ -220,4 +220,17 @@ float PMS5003T::correctionTemperature(float inTemp) {
     return inTemp * 1.327f - 6.738f;
   }
   return inTemp * 1.181f - 5.113f;
+}
+
+void PMS5003T::end(void) {
+  if (_isBegin == false) {
+    return;
+  }
+  _isBegin = false;
+#if defined(ESP8266)
+  _debugStream = NULL;
+#else
+  delete _serial;
+#endif
+  AgLog("De-initialize");
 }

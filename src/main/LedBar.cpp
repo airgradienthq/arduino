@@ -18,7 +18,7 @@ LedBar::LedBar(BoardType type) : _boardType(type) {}
  *
  */
 void LedBar::begin(void) {
-  if (this->_isInit) {
+  if (this->_isBegin) {
     return;
   }
 
@@ -36,9 +36,9 @@ void LedBar::begin(void) {
   pixel()->begin();
   pixel()->clear();
 
-  this->_isInit = true;
+  this->_isBegin = true;
 
-  AgLog("Init");
+  AgLog("Initialize");
 }
 
 /**
@@ -64,7 +64,7 @@ void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue, int ledNum) {
  * @param brightness Brightness (0 - 255)
  */
 void LedBar::setBrighness(uint8_t brightness) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return;
   }
   pixel()->setBrightness(brightness);
@@ -76,15 +76,15 @@ void LedBar::setBrighness(uint8_t brightness) {
  * @return int Number of LED
  */
 int LedBar::getNumberOfLed(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return 0;
   }
 
   return this->_bsp->LED.rgbNum;
 }
 
-bool LedBar::checkInit(void) {
-  if (this->_isInit) {
+bool LedBar::isBegin(void) {
+  if (this->_isBegin) {
     return true;
   }
   AgLog("LED is not initialized");
@@ -92,7 +92,7 @@ bool LedBar::checkInit(void) {
 }
 
 bool LedBar::ledNumInvalid(int ledNum) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return true;
   }
 

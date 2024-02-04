@@ -15,6 +15,10 @@ void StatusLed::begin(Stream &debugStream) {
  *
  */
 void StatusLed::begin(void) {
+  if (this->_isBegin) {
+    AgLog("Initialized, call end() then try again");
+    return;
+  }
   bsp = getBoardDef(this->boardType);
   if ((bsp == nullptr) || (bsp->LED.supported == false)) {
     AgLog("Board not support StatusLed");
@@ -25,9 +29,9 @@ void StatusLed::begin(void) {
   digitalWrite(bsp->LED.pin, !bsp->LED.onState);
 
   this->state = LED_OFF;
-  this->isInit = true;
+  this->_isBegin = true;
 
-  AgLog("Init");
+  AgLog("Initialize");
 }
 
 /**
@@ -35,7 +39,7 @@ void StatusLed::begin(void) {
  *
  */
 void StatusLed::setOn(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return;
   }
   digitalWrite(bsp->LED.pin, bsp->LED.onState);
@@ -48,7 +52,7 @@ void StatusLed::setOn(void) {
  *
  */
 void StatusLed::setOff(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return;
   }
   digitalWrite(bsp->LED.pin, !bsp->LED.onState);
@@ -88,11 +92,24 @@ String StatusLed::toString(StatusLed::State state) {
   return "Off";
 }
 
-bool StatusLed::checkInit(void) {
-  if (this->isInit == false) {
-    AgLog("No-Initialized");
+bool StatusLed::isBegin(void) {
+  if (this->_isBegin == false) {
+    AgLog("Not-Initialized");
     return false;
   }
 
   return true;
+}
+
+void StatusLed::end(void) {
+  if (_isBegin == false) {
+    return;
+  }
+
+#if defined(ESP8266)
+  _debugStream = nullptr;
+#endif
+  setOff();
+  _isBegin = false;
+  AgLog("De-initialize");
 }

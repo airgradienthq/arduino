@@ -5,6 +5,10 @@
 
 #include "BoardDef.h"
 
+/**
+ * @brief The class define how to handle the RGB LED bar
+ *
+ */
 class LedBar {
 public:
 #if defined(ESP8266)
@@ -22,7 +26,7 @@ public:
 
 private:
   const BoardDef *_bsp;
-  bool _isInit = false;
+  bool _isBegin = false;
   uint8_t _ledState = 0;
   BoardType _boardType;
   void *pixels = nullptr;
@@ -31,7 +35,7 @@ private:
   const char *TAG = "LED";
 #else
 #endif
-  bool checkInit(void);
+  bool isBegin(void);
   bool ledNumInvalid(int ledNum);
 };
 

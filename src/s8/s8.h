@@ -1,9 +1,12 @@
 #ifndef _S8_H_
 #define _S8_H_
 
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 #include "Arduino.h"
 
+/**
+ * @brief The class define how to handle the senseair S8 sensor (CO2 sensor)
+ */
 class S8 {
 public:
   const int S8_BAUDRATE =
@@ -86,7 +89,7 @@ private:
 #if defined(ESP32)
   HardwareSerial *_serial;
 #endif
-  bool _isInit = false;
+  bool _isBegin = false;
   uint32_t _lastInitTime;
   bool isCalib = false;
 
@@ -95,7 +98,7 @@ private:
   bool init(const BoardDef *bsp);
   bool init(int txPin, int rxPin);
   bool init(int txPin, int rxPin, uint32_t baud);
-  bool isInit(void);
+  bool isBegin(void);
 
   void uartWriteBytes(uint8_t size); // Send bytes to sensor
   uint8_t

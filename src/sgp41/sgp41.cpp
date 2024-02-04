@@ -7,6 +7,11 @@
 #define vocAlgorithm() ((VOCGasIndexAlgorithm *)(this->_vocAlgorithm))
 #define noxAlgorithm() ((NOxGasIndexAlgorithm *)(this->_noxAlgorithm))
 
+/**
+ * @brief Construct a new Sgp 4 1:: Sgp 4 1 object
+ *
+ * @param type Board type @ref BoardType
+ */
 Sgp41::Sgp41(BoardType type) : _boardType(type) {}
 
 /**
@@ -18,9 +23,13 @@ Sgp41::Sgp41(BoardType type) : _boardType(type) {}
  * @return false Failure
  */
 bool Sgp41::begin(TwoWire &wire) {
-  if (this->_isInit) {
+  /** Ignore next step if initialized */
+  if (this->_isBegin) {
+    AgLog("Initialized, call end() then try again");
     return true;
   }
+
+  /** Check that board has supported this sensor */
   if (this->boardSupported() == false) {
     return false;
   }
@@ -55,8 +64,8 @@ bool Sgp41::begin(TwoWire &wire) {
   conditioningCount = 0;
 #endif
 
-  this->_isInit = true;
-  AgLog("Init");
+  this->_isBegin = true;
+  AgLog("Initialize");
   return true;
 }
 
@@ -88,7 +97,11 @@ void Sgp41::handle(void) {
   }
 }
 
-#else 
+#else
+/**
+ * @brief Handle the sensor conditioning and run time udpate value, This method
+ * must not call, it's called on private task
+ */
 void Sgp41::_handle(void) {
   /** NOx conditionning */
   uint16_t err;
@@ -115,18 +128,26 @@ void Sgp41::_handle(void) {
 }
 #endif
 
+/**
+ * @brief De-Initialize sensor
+ */
 void Sgp41::end(void) {
-  if (this->_isInit == false) {
+  if (this->_isBegin == false) {
     return;
   }
 
 #ifdef ESP32
   vTaskDelete(pollTask);
+#else
+  _debugStream = nullptr;
 #endif
-  this->_isInit = false;
+  bsp = NULL;
+  this->_isBegin = false;
   delete sgpSensor();
+  delete vocAlgorithm();
+  delete noxAlgorithm();
 
-  AgLog("De-Init");
+  AgLog("De-initialize");
 }
 
 /**
@@ -153,6 +174,12 @@ int Sgp41::getNoxIndex(void) {
   return nox;
 }
 
+/**
+ * @brief Check that board has supported sensor
+ *
+ * @return true Supported
+ * @return false Not-supported
+ */
 bool Sgp41::boardSupported(void) {
   if (this->bsp == nullptr) {
     this->bsp = getBoardDef(this->_boardType);
@@ -165,25 +192,19 @@ bool Sgp41::boardSupported(void) {
   return true;
 }
 
-int Sgp41::sdaPin(void) {
-  if (this->bsp) {
-    return this->bsp->I2C.sda_pin;
-  }
-  AgLog("sdaPin(): board not supported I2C");
-  return -1;
-}
-
-int Sgp41::sclPin(void) {
-  if (this->bsp) {
-    return this->bsp->I2C.scl_pin;
-  }
-  AgLog("sdlPin(): board not supported I2C");
-  return -1;
-}
-
+/**
+ * @brief Get raw signal
+ *
+ * @param raw_voc Raw VOC output
+ * @param row_nox Raw NOx output
+ * @param defaultRh
+ * @param defaultT
+ * @return true Success
+ * @return false Failure
+ */
 bool Sgp41::getRawSignal(uint16_t &raw_voc, uint16_t &row_nox,
                          uint16_t defaultRh, uint16_t defaultT) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -195,43 +216,25 @@ bool Sgp41::getRawSignal(uint16_t &raw_voc, uint16_t &row_nox,
 }
 
 /**
- * @brief This command turns the hotplate off and stops the measurement.
- *        Subsequently, the sensor enters the idle mode.
+ * @brief Check that sensor is initialized
+ *
+ * @return true Initialized
+ * @return false Not-initialized
+ */
+bool Sgp41::isBegin(void) {
+  if (this->_isBegin) {
+    return true;
+  }
+  AgLog("Sensor not-initialized");
+  return false;
+}
+
+/**
+ * @brief Handle nox conditioning process
  *
  * @return true Success
  * @return false Failure
  */
-bool Sgp41::turnHeaterOff(void) {
-  if (this->checkInit() == false) {
-    return false;
-  }
-
-  if (sgpSensor()->turnHeaterOff() == 0) {
-    return true;
-  }
-  return false;
-}
-
-bool Sgp41::getSerialNumber(uint16_t serialNumbers[],
-                            uint8_t serialNumberSize) {
-  if (this->checkInit() == false) {
-    return false;
-  }
-
-  if (sgpSensor()->getSerialNumber(serialNumbers) == 0) {
-    return true;
-  }
-  return false;
-}
-
-bool Sgp41::checkInit(void) {
-  if (this->_isInit) {
-    return true;
-  }
-  AgLog("Sensor no-initialized");
-  return false;
-}
-
 bool Sgp41::_noxConditioning(void) {
   uint16_t err;
   uint16_t srawVoc;

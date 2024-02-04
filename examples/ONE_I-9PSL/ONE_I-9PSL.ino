@@ -78,8 +78,9 @@ enum {
   APP_SM_NORMAL,
 };
 
-#define WIFI_CONNECT_COUNTDOWN_MAX 180 /** sec */
-#define LED_BAR_COUNT_INIT_VALUE (-1)
+#define WIFI_CONNECT_COUNTDOWN_MAX 180       /** sec */
+#define WIFI_CONNECT_RETRY_MS 10000          /** ms */
+#define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
 #define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
@@ -89,11 +90,13 @@ enum {
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
-#define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 3000   /** ms */
+#define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
+  "cleanair" /** default WiFi AP password                                      \
+              */
 
 /**
  * @brief Use use LED bar state
- *
  */
 typedef enum {
   UseLedBarOff, /** Don't use LED bar */
@@ -101,99 +104,336 @@ typedef enum {
   UseLedBarCO2, /** Use LED bar for CO2 */
 } UseLedBar;
 
-typedef struct {
-  bool inF;             /** Temperature unit */
-  bool inUSAQI;         /** PMS standard */
-  uint8_t ledBarMode;   /** @ref UseLedBar*/
-  char model[16];       /** Model string value, Just define, don't know how much
-                        memory usage */
-  char mqttBroker[128]; /** Mqtt broker link */
-  uint32_t _check;      /** Checksum configuration data */
-} ServerConfig_t;
-static ServerConfig_t serverConfig;
+/**
+ * @brief Schedule handle with timing period
+ *
+ */
+class AgSchedule {
+public:
+  AgSchedule(int period, void (*handler)(void))
+      : period(period), handler(handler) {}
+  void run(void) {
+    uint32_t ms = (uint32_t)(millis() - count);
+    if (ms >= period) {
+      /** Call handler */
+      handler();
 
-#define DEBUG true
+      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+                    (unsigned int)handler, period);
 
-/** Create airgradient instance */
-AirGradient ag(BOARD_ONE_INDOOR_MONITOR_V9_0);
+      /** Update period time */
+      count = millis();
+    }
+  }
 
-WiFiManager wifiManager;                /** wifi manager instance */
+private:
+  void (*handler)(void);
+  int period;
+  int count;
+};
+
+/**
+ * @brief AirGradient server configuration and sync data
+ *
+ */
+class AgServer {
+public:
+  void begin(void) {
+    inF = false;
+    inUSAQI = false;
+    configFailed = false;
+    serverFailed = false;
+    memset(models, 0, sizeof(models));
+    memset(mqttBroker, 0, sizeof(mqttBroker));
+  }
+
+  /**
+   * @brief Get server configuration
+   *
+   * @param id Device ID
+   * @return true Success
+   * @return false Failure
+   */
+  bool pollServerConfig(String id) {
+    String uri =
+        "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
+
+    /** Init http client */
+    HTTPClient client;
+    if (client.begin(uri) == false) {
+      configFailed = true;
+      return false;
+    }
+
+    /** Get */
+    int retCode = client.GET();
+    if (retCode != 200) {
+      client.end();
+      configFailed = true;
+      return false;
+    }
+
+    /** clear failed */
+    configFailed = false;
+
+    /** Get response string */
+    String respContent = client.getString();
+    client.end();
+    Serial.println("Get server config: " + respContent);
+
+    /** Parse JSON */
+    JSONVar root = JSON.parse(respContent);
+    if (JSON.typeof(root) == "undefined") {
+      /** JSON invalid */
+      return false;
+    }
+
+    /** Get "country" */
+    if (JSON.typeof_(root["country"]) == "string") {
+      String country = root["country"];
+      if (country == "US") {
+        inF = true;
+      } else {
+        inF = false;
+      }
+    }
+
+    /** Get "pmsStandard" */
+    if (JSON.typeof_(root["pmsStandard"]) == "string") {
+      String standard = root["pmsStandard"];
+      if (standard == "ugm3") {
+        inUSAQI = false;
+      } else {
+        inUSAQI = true;
+      }
+    }
+
+    /** Get "co2CalibrationRequested" */
+    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
+      co2Calib = root["co2CalibrationRequested"];
+    }
+
+    /** Get "ledBarMode" */
+    if (JSON.typeof_(root["ledBarMode"]) == "string") {
+      String mode = root["ledBarMode"];
+      if (mode == "co2") {
+        ledBarMode = UseLedBarCO2;
+      } else if (mode == "pm") {
+        ledBarMode = UseLedBarPM;
+      } else if (mode == "off") {
+        ledBarMode = UseLedBarOff;
+      } else {
+        ledBarMode = UseLedBarOff;
+      }
+    }
+
+    /** Get model */
+    if (JSON.typeof_(root["model"]) == "string") {
+      String model = root["model"];
+      if (model.length()) {
+        int len =
+            model.length() < sizeof(models) ? model.length() : sizeof(models);
+        memset(models, 0, sizeof(models));
+        memcpy(models, model.c_str(), len);
+      }
+    }
+
+    /** Get "mqttBrokerUrl" */
+    if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
+      String mqtt = root["mqttBrokerUrl"];
+      if (mqtt.length()) {
+        int len = mqtt.length() < sizeof(mqttBroker) ? mqtt.length()
+                                                     : sizeof(mqttBroker);
+        memset(mqttBroker, 0, sizeof(mqttBroker));
+        memcpy(mqttBroker, mqtt.c_str(), len);
+      }
+    }
+
+    /** Show configuration */
+    showServerConfig();
+
+    return true;
+  }
+
+  bool postToServer(String id, String payload) {
+    /**
+     * @brief Only post data if WiFi is connected
+     */
+    if (WiFi.isConnected() == false) {
+      return false;
+    }
+
+    Serial.printf("Post payload: %s\r\n", payload.c_str());
+
+    String uri =
+        "http://hw.airgradient.com/sensors/airgradient:" + id + "/measures";
+
+    WiFiClient wifiClient;
+    HTTPClient client;
+    if (client.begin(wifiClient, uri.c_str()) == false) {
+      return false;
+    }
+    client.addHeader("content-type", "application/json");
+    int retCode = client.POST(payload);
+    client.end();
+
+    if ((retCode == 200) || (retCode == 429)) {
+      serverFailed = false;
+      return true;
+    }
+    serverFailed = true;
+    return false;
+  }
+
+  /**
+   * @brief Get temperature configuration unit
+   *
+   * @return true F unit
+   * @return false C Unit
+   */
+  bool isTemperatureUnitF(void) { return inF; }
+
+  /**
+   * @brief Get PMS standard unit
+   *
+   * @return true USAQI
+   * @return false ugm3
+   */
+  bool isPMSinUSAQI(void) { return inUSAQI; }
+
+  /**
+   * @brief Get status of get server coniguration is failed
+   *
+   * @return true Failed
+   * @return false Success
+   */
+  bool isConfigFailed(void) { return configFailed; }
+
+  /**
+   * @brief Get status of post server configuration is failed
+   *
+   * @return true Failed
+   * @return false Success
+   */
+  bool isServerFailed(void) { return serverFailed; }
+
+  /**
+   * @brief Get request calibration CO2
+   *
+   * @return true Requested. If result = true, it's clear after function call
+   * @return false Not-requested
+   */
+  bool isCo2Calib(void) {
+    bool ret = co2Calib;
+    if (ret) {
+      co2Calib = false;
+    }
+    return ret;
+  }
+
+  /**
+   * @brief Get device configuration model name
+   *
+   * @return String Model name, empty string if server failed
+   */
+  String getModelName(void) { return String(models); }
+
+  /**
+   * @brief Get mqttBroker url
+   *
+   * @return String Broker url, empty if server failed
+   */
+  String getMqttBroker(void) { return String(mqttBroker); }
+
+  /**
+   * @brief Show server configuration parameter
+   */
+  void showServerConfig(void) {
+    Serial.println("Server configuration: ");
+    Serial.printf("         inF: %s\r\n", inF ? "true" : "false");
+    Serial.printf("     inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
+    Serial.printf("useRGBLedBar: %d\r\n", (int)ledBarMode);
+    Serial.printf("       Model: %s\r\n", models);
+    Serial.printf(" Mqtt Broker: %s\r\n", mqttBroker);
+  }
+
+  /**
+   * @brief Get server config led bar mode
+   *
+   * @return UseLedBar
+   */
+  UseLedBar getLedBarMode(void) { return ledBarMode; }
+
+private:
+  bool inF;          /** Temperature unit, true: F, false: C */
+  bool inUSAQI;      /** PMS unit, true: USAQI, false: ugm3 */
+  bool configFailed; /** Flag indicate get server configuration failed */
+  bool serverFailed; /** Flag indicate post data to server failed */
+  bool co2Calib;     /** Is co2Ppmcalibration requset */
+  UseLedBar ledBarMode = UseLedBarCO2; /** */
+  char models[20];                     /** */
+  char mqttBroker[256];                /** */
+};
+AgServer agServer;
+
+/** Create airgradient instance for 'ONE_INDOOR' board */
+AirGradient ag(ONE_INDOOR);
+
+/** Create u8g2 instance */
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
+
+/** wifi manager instance */
+WiFiManager wifiManager;
+
+static bool wifiHasConfig = false;      /** */
 static int connectCountDown;            /** wifi configuration countdown */
 static int ledCount;                    /** For LED animation */
 static int ledSmState = APP_SM_NORMAL;  /** Save display SM */
 static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
-static bool configFailed = false; /** Save is get server configuration failed */
-static bool serverFailed = false; /** Save is send server failed */
 
-// Display bottom right
-U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
+static int tvocIndex = -1;
+static int noxIndex = -1;
+static int co2Ppm = -1;
+static int pm25 = -1;
+static int pm01 = -1;
+static int pm10 = -1;
+static int pm03PCount = -1;
+static float temp = -1;
+static int hum = -1;
+static int bootCount;
+static String wifiSSID = "";
 
-String APIROOT = "http://hw.airgradient.com/";
+static void boardInit(void);
+static void failedHandler(String msg);
+static void serverConfigPoll(void);
+static void co2Calibration(void);
+static void setRGBledPMcolor(int pm25Value);
+static void ledSmHandler(int sm);
+static void ledSmHandler(void);
+static void dispSmHandler(int sm);
+static void sensorLedColorHandler(void);
+static void appLedHandler(void);
+static void appDispHandler(void);
+static void updateWiFiConnect(void);
+static void updateDispLedBar(void);
+static void tvocPoll(void);
+static void pmPoll(void);
+static void sendDataToServer(void);
+static void tempHumPoll(void);
+static void co2Poll(void);
 
-bool co2CalibrationRequest = false;
-bool ledBarTestRequested = false;
-uint32_t serverConfigLoadTime = 0;
-String HOSTPOT = "";
-static bool wifiHasConfig = false;
-
-// set to true if you want to connect to wifi. You have 60 seconds to connect.
-// Then it will go into an offline mode.
-boolean connectWIFI = true;
-
-int loopCount = 0;
-
-unsigned long currentMillis = 0;
-unsigned long previousOled = 0;
-unsigned long previoussendToServer = 0;
-
-unsigned long previousTVOC = 0;
-int TVOC = -1;
-int NOX = -1;
-
-unsigned long previousCo2 = 0;
-int Co2 = 0;
-
-unsigned long previousPm = 0;
-int pm25 = -1;
-int pm01 = -1;
-int pm10 = -1;
-int pm03PCount = -1;
-
-unsigned long previousTempHum = 0;
-float temp;
-int hum;
-
-int buttonConfig = 0;
-PushButton::State lastState = PushButton::BUTTON_RELEASED;
-PushButton::State currentState;
-unsigned long pressedTime = 0;
-unsigned long releasedTime = 0;
-
-void boardInit(void);
-void failedHandler(String msg);
-void getServerConfig(void);
-void co2Calibration(void);
-void setRGBledPMcolor(int pm25Value);
-void setWifiConnectLedColor(void);
-void setWifiConnectingLedColor(void);
-void ledSmHandler(int sm);
-void ledSmHandler(void);
-void dispSmHandler(int sm);
-void sensorLedColorHandler(void);
-void appLedHandler(void);
-void appDispHandler(void);
-void appLedUnUseHandler(void);
-void updateWiFiConnect(void);
+/** Init schedule */
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
+AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
+AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
+AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmPoll);
+AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
+AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 
 void setup() {
-  if (DEBUG) {
-    Serial.begin(115200);
-  }
-
-  /** Init default server configuration */
-  serverConfig.inF = false;
-  serverConfig.inUSAQI = false;
-  serverConfig.ledBarMode = UseLedBarCO2;
+  /** Serial fore print debug message */
+  Serial.begin(115200);
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
@@ -203,15 +443,20 @@ void setup() {
 
   /** Show boot display */
   displayShowText("One V9", "Lib Ver: " + ag.getVersion(), "");
-  delay(2000); /** Boot display wait */
+  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
   boardInit();
 
+  /** Init AirGradient server */
+  agServer.begin();
+
   /** WIFI connect */
-  if (connectWIFI) {
-    connectToWifi();
-  }
+  connectToWifi();
+
+  /**
+   * Send first data to ping server and get server configuration
+   */
   if (WiFi.status() == WL_CONNECTED) {
     sendPing();
     Serial.println(F("WiFi connected!"));
@@ -219,35 +464,36 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     /** Get first connected to wifi */
-    getServerConfig();
-    if (configFailed) {
+    agServer.pollServerConfig(getDevId());
+    if (agServer.isConfigFailed()) {
       dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
-      delay(5000);
+      delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     }
   }
 
   /** Show display Warning up */
   displayShowText("Warming Up", "Serial Number:", String(getNormalizedMac()));
-  delay(10000);
+  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   appLedHandler();
   appDispHandler();
 }
 
 void loop() {
-  currentMillis = millis();
-  updateTVOC();
-  updateDispLedBar();
-  updateCo2();
-  updatePm();
-  updateTempHum();
-  sendToServer();
-  getServerConfig();
+  /** Handle schedule */
+  dispLedSchedule.run();
+  configSchedule.run();
+  serverSchedule.run();
+  co2Schedule.run();
+  pmsSchedule.run();
+  tempHumSchedule.run();
+
+  /** Check for handle WiFi reconnect */
   updateWiFiConnect();
 }
 
-void ledTest() {
+static void ledTest() {
   displayShowText("LED Test", "running", ".....");
   setRGBledColor('r');
   delay(1000);
@@ -259,78 +505,50 @@ void ledTest() {
   delay(1000);
   setRGBledColor('n');
   delay(1000);
-  // LED Test
 }
 
-void updateTVOC() {
-  if (currentMillis - previousTVOC >= SENSOR_TVOC_UPDATE_INTERVAL) {
-    previousTVOC += SENSOR_TVOC_UPDATE_INTERVAL;
-
-    TVOC = ag.sgp41.getTvocIndex();
-    NOX = ag.sgp41.getNoxIndex();
-
-    Serial.println(String(TVOC));
-    Serial.println(String(NOX));
-  }
+static void co2Poll(void) {
+  co2Ppm = ag.s8.getCo2();
+  Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
-void updateCo2() {
-  if (currentMillis - previousCo2 >= SENSOR_CO2_UPDATE_INTERVAL) {
-    previousCo2 += SENSOR_CO2_UPDATE_INTERVAL;
-    Co2 = ag.s8.getCo2();
-    Serial.println(String(Co2));
-  }
-}
+static void sendPing() {
+  JSONVar root;
+  root["wifi"] = WiFi.RSSI();
+  root["boot"] = bootCount;
 
-void updatePm() {
-  if (currentMillis - previousPm >= SENSOR_PM_UPDATE_INTERVAL) {
-    previousPm += SENSOR_PM_UPDATE_INTERVAL;
-    if (ag.pms5003.readData()) {
-      pm01 = ag.pms5003.getPm01Ae();
-      pm25 = ag.pms5003.getPm25Ae();
-      pm10 = ag.pms5003.getPm10Ae();
-      pm03PCount = ag.pms5003.getPm03ParticleCount();
-    } else {
-      pm01 = -1;
-      pm25 = -1;
-      pm10 = -1;
-      pm03PCount = -1;
-    }
-  }
-}
-
-void updateTempHum() {
-  if (currentMillis - previousTempHum >= SENSOR_TEMP_HUM_UPDATE_INTERVAL) {
-    previousTempHum += SENSOR_TEMP_HUM_UPDATE_INTERVAL;
-    temp = ag.sht.getTemperature();
-    hum = ag.sht.getRelativeHumidity();
-  }
-}
-
-void updateDispLedBar() {
-  if (currentMillis - previousOled >= DISP_UPDATE_INTERVAL) {
-    previousOled += DISP_UPDATE_INTERVAL;
-    appDispHandler();
-    appLedHandler();
-  }
-}
-
-void sendPing() {
-  String payload =
-      "{\"wifi\":" + String(WiFi.RSSI()) + ", \"boot\":" + loopCount + "}";
+  /** Change disp and led state */
   dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTING);
+  ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTING);
+
+  /** Task handle led connecting animation */
+  xTaskCreate(
+      [](void *obj) {
+        for (;;) {
+          ledSmHandler();
+          if (ledSmState != APP_SM_WIFI_OK_SERVER_CONNECTING) {
+            break;
+          }
+          delay(LED_BAR_ANIMATION_PERIOD);
+        }
+        vTaskDelete(NULL);
+      },
+      "task_led", 2048, NULL, 5, NULL);
+
   delay(1500);
-  if (postToServer(payload)) {
+  if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
     dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
     ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
   } else {
     dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
     ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
   }
-  delay(5000);
+  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+
+  ledSmHandler(APP_SM_NORMAL);
 }
 
-void displayShowText(String ln1, String ln2, String ln3) {
+static void displayShowText(String ln1, String ln2, String ln3) {
   char buf[9];
   // u8g2.firstPage();
   u8g2.firstPage();
@@ -342,8 +560,8 @@ void displayShowText(String ln1, String ln2, String ln3) {
   } while (u8g2.nextPage());
 }
 
-void displayShowDashboard(String err) {
-  char buf[9];
+static void displayShowDashboard(String err) {
+  char strBuf[10];
 
   /** Clear display dashboard */
   u8g2.firstPage();
@@ -353,35 +571,33 @@ void displayShowDashboard(String err) {
     u8g2.setFont(u8g2_font_t0_16_tf);
     if ((err == NULL) || err.isEmpty()) {
       /** Show temperature */
-      if (serverConfig.inF) {
+      if (agServer.isTemperatureUnitF()) {
         if (temp > -10001) {
           float tempF = (temp * 9 / 5) + 32;
-          sprintf(buf, "%.1f°F", tempF);
+          sprintf(strBuf, "%.1f°F", tempF);
         } else {
-          sprintf(buf, "-°F");
+          sprintf(strBuf, "-°F");
         }
-        u8g2.drawUTF8(1, 10, buf);
+        u8g2.drawUTF8(1, 10, strBuf);
       } else {
         if (temp > -10001) {
-          sprintf(buf, "%.1f°C", temp);
+          sprintf(strBuf, "%.1f°C", temp);
         } else {
-          sprintf(buf, "-°C");
+          sprintf(strBuf, "-°C");
         }
-        u8g2.drawUTF8(1, 10, buf);
+        u8g2.drawUTF8(1, 10, strBuf);
       }
 
       /** Show humidity */
       if (hum >= 0) {
-        sprintf(buf, "%d%%", hum);
+        sprintf(strBuf, "%d%%", hum);
       } else {
-        sprintf(buf, " -%%");
+        sprintf(strBuf, " -%%");
       }
       if (hum > 99) {
-        u8g2.drawStr(97, 10, buf);
+        u8g2.drawStr(97, 10, strBuf);
       } else {
-        u8g2.drawStr(105, 10, buf);
-        // there might also be single digits, not considered, sprintf might
-        // actually support a leading space
+        u8g2.drawStr(105, 10, strBuf);
       }
     } else {
       Serial.println("Disp show error: " + err);
@@ -398,19 +614,20 @@ void displayShowDashboard(String err) {
 
     /** Show CO2 value */
     u8g2.setFont(u8g2_font_t0_22b_tf);
-    if (Co2 > 0) {
-      sprintf(buf, "%d", Co2);
+    if (co2Ppm > 0) {
+      sprintf(strBuf, "%d", co2Ppm);
     } else {
-      sprintf(buf, "%s", "-");
+      sprintf(strBuf, "%s", "-");
     }
-    u8g2.drawStr(1, 48, buf);
+    u8g2.drawStr(1, 48, strBuf);
 
     /** Show CO2 value index */
     u8g2.setFont(u8g2_font_t0_12_tf);
     u8g2.drawStr(1, 61, "ppm");
 
     /** Draw vertical line */
-    u8g2.drawLine(45, 15, 45, 64);
+    u8g2.drawLine(45, 14, 45, 64);
+    u8g2.drawLine(82, 14, 82, 64);
 
     /** Draw PM2.5 label */
     u8g2.setFont(u8g2_font_t0_12_tf);
@@ -418,121 +635,62 @@ void displayShowDashboard(String err) {
 
     /** Draw PM2.5 value */
     u8g2.setFont(u8g2_font_t0_22b_tf);
-    if (serverConfig.inUSAQI) {
+    if (agServer.isPMSinUSAQI()) {
       if (pm25 >= 0) {
-        sprintf(buf, "%d", ag.pms5003.convertPm25ToUsAqi(pm25));
+        sprintf(strBuf, "%d", ag.pms5003.convertPm25ToUsAqi(pm25));
       } else {
-        sprintf(buf, "%s", "-");
+        sprintf(strBuf, "%s", "-");
       }
-      u8g2.drawStr(48, 48, buf);
+      u8g2.drawStr(48, 48, strBuf);
       u8g2.setFont(u8g2_font_t0_12_tf);
       u8g2.drawUTF8(48, 61, "AQI");
     } else {
       if (pm25 >= 0) {
-        sprintf(buf, "%d", pm25);
+        sprintf(strBuf, "%d", pm25);
       } else {
-        sprintf(buf, "%s", "-");
+        sprintf(strBuf, "%s", "-");
       }
-      u8g2.drawStr(48, 48, buf);
+      u8g2.drawStr(48, 48, strBuf);
       u8g2.setFont(u8g2_font_t0_12_tf);
       u8g2.drawUTF8(48, 61, "ug/m³");
     }
 
-    /** Draw vertical line */
-    u8g2.drawLine(82, 15, 82, 64);
-
-    /** Draw TVOC label */
+    /** Draw tvocIndexlabel */
     u8g2.setFont(u8g2_font_t0_12_tf);
-    u8g2.drawStr(85, 27, "TVOC:");
+    u8g2.drawStr(85, 27, "tvoc:");
 
-    /** Draw TVOC value */
-    if (TVOC >= 0) {
-      sprintf(buf, "%d", TVOC);
+    /** Draw tvocIndexvalue */
+    if (tvocIndex >= 0) {
+      sprintf(strBuf, "%d", tvocIndex);
     } else {
-      sprintf(buf, "%s", "-");
+      sprintf(strBuf, "%s", "-");
     }
-    u8g2.drawStr(85, 39, buf);
+    u8g2.drawStr(85, 39, strBuf);
 
     /** Draw NOx label */
     u8g2.drawStr(85, 53, "NOx:");
-    if (NOX >= 0) {
-      sprintf(buf, "%d", NOX);
+    if (noxIndex >= 0) {
+      sprintf(strBuf, "%d", noxIndex);
     } else {
-      sprintf(buf, "%s", "-");
+      sprintf(strBuf, "%s", "-");
     }
-    u8g2.drawStr(85, 63, buf);
+    u8g2.drawStr(85, 63, strBuf);
   } while (u8g2.nextPage());
 }
 
-bool postToServer(String payload) {
-  Serial.println(payload);
-  String POSTURL = APIROOT +
-                   "sensors/airgradient:" + String(getNormalizedMac()) +
-                   "/measures";
-  Serial.println(POSTURL);
-  WiFiClient client;
-  HTTPClient http;
-  http.begin(client, POSTURL);
-  http.addHeader("content-type", "application/json");
-  int httpCode = http.POST(payload);
-  String response = http.getString();
-  Serial.println(httpCode);
-  Serial.println(response);
-  http.end();
+/**
+ * @brief Must reset each 5min to avoid ESP32 reset
+ */
+static void resetWatchdog() { ag.watchdog.reset(); }
 
-  return (httpCode == 200);
-}
-
-void sendToServer() {
-  if (currentMillis - previoussendToServer >= SERVER_SYNC_INTERVAL) {
-    previoussendToServer += SERVER_SYNC_INTERVAL;
-    String payload =
-        "{\"wifi\":" + String(WiFi.RSSI()) +
-        (Co2 < 0 ? "" : ", \"rco2\":" + String(Co2)) +
-        (pm01 < 0 ? "" : ", \"pm01\":" + String(pm01)) +
-        (pm25 < 0 ? "" : ", \"pm02\":" + String(pm25)) +
-        (pm10 < 0 ? "" : ", \"pm10\":" + String(pm10)) +
-        (pm03PCount < 0 ? "" : ", \"pm003_count\":" + String(pm03PCount)) +
-        (TVOC < 0 ? "" : ", \"tvoc_index\":" + String(TVOC)) +
-        (NOX < 0 ? "" : ", \"nox_index\":" + String(NOX)) +
-        ", \"atmp\":" + String(temp) +
-        (hum < 0 ? "" : ", \"rhum\":" + String(hum)) +
-        ", \"boot\":" + loopCount + "}";
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println(payload);
-      if (postToServer(payload)) {
-        serverFailed = false;
-      } else {
-        serverFailed = true;
-      }
-      resetWatchdog();
-      loopCount++;
-    } else {
-      Serial.println("WiFi Disconnected");
-    }
-  }
-}
-
-void countdown(int from) {
-  debug("\n");
-  while (from > 0) {
-    debug(String(from--));
-    debug(" ");
-    delay(1000);
-  }
-  debug("\n");
-}
-
-void resetWatchdog() { ag.watchdog.reset(); }
-
-bool wifiMangerClientConnected(void) {
+static bool wifiMangerClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
 // Wifi Manager
-void connectToWifi() {
+static void connectToWifi() {
   /** get wifi AP ssid */
-  HOSTPOT = "airgradient-" + String(getNormalizedMac());
+  wifiSSID = "airgradient-" + String(getNormalizedMac());
   wifiManager.setConfigPortalBlocking(false);
   wifiManager.setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
@@ -555,7 +713,7 @@ void connectToWifi() {
     dispSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
     ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
   });
-  wifiManager.autoConnect(HOSTPOT.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
+  wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
       [](void *obj) {
         while (wifiManager.getConfigPortalActive()) {
@@ -621,34 +779,16 @@ void connectToWifi() {
   appLedHandler();
 }
 
-void debug(String msg) {
-  if (DEBUG)
-    Serial.print(msg);
-}
+static String getDevId(void) { return getNormalizedMac(); }
 
-void debug(int msg) {
-  if (DEBUG)
-    Serial.print(msg);
-}
-
-void debugln(String msg) {
-  if (DEBUG)
-    Serial.println(msg);
-}
-
-void debugln(int msg) {
-  if (DEBUG)
-    Serial.println(msg);
-}
-
-String getNormalizedMac() {
+static String getNormalizedMac() {
   String mac = WiFi.macAddress();
   mac.replace(":", "");
   mac.toLowerCase();
   return mac;
 }
 
-void setRGBledCO2color(int co2Value) {
+static void setRGBledCO2color(int co2Value) {
   if (co2Value >= 300 && co2Value < 800) {
     setRGBledColor('g');
   } else if (co2Value >= 800 && co2Value < 1000) {
@@ -666,7 +806,7 @@ void setRGBledCO2color(int co2Value) {
   }
 }
 
-void setRGBledColor(char color) {
+static void setRGBledColor(char color) {
   int r = 0;
   int g = 0;
   int b = 0;
@@ -713,7 +853,10 @@ void setRGBledColor(char color) {
   ag.ledBar.setColor(r, g, b, ledNum);
 }
 
-void boardInit(void) {
+/**
+ * @brief Initialize board
+ */
+static void boardInit(void) {
   /** Init LED Bar */
   ag.ledBar.begin();
 
@@ -744,193 +887,34 @@ void boardInit(void) {
   }
 }
 
-void failedHandler(String msg) {
+/**
+ * @brief Failed handler
+ *
+ * @param msg Failure message
+ */
+static void failedHandler(String msg) {
   while (true) {
     Serial.println(msg);
     vTaskDelay(1000);
   }
 }
 
-void getServerConfigLoadTime(void) {
-  serverConfigLoadTime = millis();
-  if (serverConfigLoadTime == 0) {
-    serverConfigLoadTime = 1;
+/**
+ * @brief Send data to server
+ */
+static void serverConfigPoll(void) {
+  if (agServer.pollServerConfig(getDevId())) {
+    if (agServer.isCo2Calib()) {
+      co2Calibration();
+    }
   }
 }
 
-void getServerConfig(void) {
-  /** Only trigger load configuration again after pollServerConfigInterval sec
-   */
-  if (serverConfigLoadTime) {
-    uint32_t ms = (uint32_t)(millis() - serverConfigLoadTime);
-    if (ms < SERVER_CONFIG_UPDATE_INTERVAL) {
-      return;
-    }
-  }
-
-  getServerConfigLoadTime();
-
-  Serial.println("Trigger load server configuration");
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println(
-        "Ignore get server configuration because WIFI not connected");
-    return;
-  }
-
-  // WiFiClient wifiClient;
-  HTTPClient httpClient;
-
-  String getUrl = "http://hw.airgradient.com/sensors/airgradient:" +
-                  String(getNormalizedMac()) + "/one/config";
-  Serial.println("HttpClient get: " + getUrl);
-  if (httpClient.begin(getUrl) == false) {
-    Serial.println("HttpClient init failed");
-    getServerConfigLoadTime();
-    configFailed = true;
-    return;
-  }
-
-  int respCode = httpClient.GET();
-
-  /** get failure */
-  if (respCode != 200) {
-    Serial.printf("HttpClient get failed: %d\r\n", respCode);
-    getServerConfigLoadTime();
-
-    /** Close client */
-    httpClient.end();
-
-    configFailed = true;
-
-    return;
-  }
-  configFailed = false;
-
-  /** Get configuration content */
-  String respContent = httpClient.getString();
-  Serial.println("Server config: " + respContent);
-
-  /** close client */
-  httpClient.end();
-
-  /** Parse JSON */
-  JSONVar root = JSON.parse(respContent);
-  if (JSON.typeof_(root) == "undefined") {
-    Serial.println("Server configura JSON invalid");
-    getServerConfigLoadTime();
-    return;
-  }
-
-  /** Get "country" */
-  bool inF = serverConfig.inF;
-  if (JSON.typeof_(root["country"]) == "string") {
-    String country = root["country"];
-    if (country == "US") {
-      inF = true;
-    } else {
-      inF = false;
-    }
-  }
-
-  /** Get "pmStandard" */
-  bool inUSAQI = serverConfig.inUSAQI;
-  if (JSON.typeof_(root["pmStandard"]) == "string") {
-    String standard = root["pmStandard"];
-    if (standard == "ugm3") {
-      inUSAQI = false;
-    } else {
-      inUSAQI = true;
-    }
-  }
-
-  /** Get CO2 "co2CalibrationRequested" */
-  co2CalibrationRequest = false;
-  if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-    co2CalibrationRequest = root["co2CalibrationRequested"];
-  }
-
-  /** Get "ledBarTestRequested" */
-  if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
-    ledBarTestRequested = root["ledBarTestRequested"];
-  }
-
-  /** get "ledBarMode" */
-  uint8_t ledBarMode = serverConfig.ledBarMode;
-  if (JSON.typeof_(root["ledBarMode"]) == "string") {
-    String _ledBarMode = root["ledBarMode"];
-    if (_ledBarMode == "co2") {
-      ledBarMode = UseLedBarCO2;
-    } else if (_ledBarMode == "pm") {
-      ledBarMode = UseLedBarPM;
-    } else if (_ledBarMode == "off") {
-      ledBarMode = UseLedBarOff;
-    }
-  }
-
-  /** get "model" */
-  String model = "";
-  if (JSON.typeof_(root["model"]) == "string") {
-    String _model = root["model"];
-    model = _model;
-  }
-
-  /** get "mqttBrokerUrl" */
-  String mqtt = "";
-  if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
-    String _mqtt = root["mqttBrokerUrl"];
-    mqtt = _mqtt;
-  }
-
-  if (inF != serverConfig.inF) {
-    serverConfig.inF = inF;
-  }
-  if (inUSAQI != serverConfig.inUSAQI) {
-    serverConfig.inUSAQI = inUSAQI;
-  }
-  if (ledBarMode != serverConfig.ledBarMode) {
-    serverConfig.ledBarMode = ledBarMode;
-  }
-  if (model.length()) {
-    if (model != String(serverConfig.model)) {
-      memset(serverConfig.model, 0, sizeof(serverConfig.model));
-      memcpy(serverConfig.model, model.c_str(), model.length());
-    }
-  }
-  if (mqtt.length()) {
-    if (mqtt != String(serverConfig.mqttBroker)) {
-      memset(serverConfig.mqttBroker, 0, sizeof(serverConfig.mqttBroker));
-      memcpy(serverConfig.mqttBroker, mqtt.c_str(), mqtt.length());
-    }
-  }
-
-  /** Show server configuration */
-  showServerConfig();
-
-  /** Calibration */
-  if (ledBarTestRequested) {
-    ledTest();
-  }
-  if (co2CalibrationRequest) {
-    co2Calibration();
-  }
-
-  /** Update LED status */
-  appLedHandler();
-}
-
-void showServerConfig(void) {
-  Serial.println("Server configuration: ");
-  Serial.printf("         inF: %s\r\n", serverConfig.inF ? "true" : "false");
-  Serial.printf("     inUSAQI: %s\r\n",
-                serverConfig.inUSAQI ? "true" : "false");
-  Serial.printf("useRGBLedBar: %d\r\n", (int)serverConfig.ledBarMode);
-  Serial.printf("       Model: %.*s\r\n", sizeof(serverConfig.model),
-                serverConfig.model);
-  Serial.printf(" Mqtt Broker: %.*s\r\n", sizeof(serverConfig.mqttBroker),
-                serverConfig.mqttBroker);
-}
-
-void co2Calibration(void) {
+/**
+ * @brief Calibration CO2 sensor, it's base calibration, after calib complete
+ * the value will be start at 400 if do calib on clean environment
+ */
+static void co2Calibration(void) {
   /** Count down for co2CalibCountdown secs */
   for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
     displayShowText(
@@ -959,7 +943,12 @@ void co2Calibration(void) {
   appDispHandler();
 }
 
-void setRGBledPMcolor(int pm25Value) {
+/**
+ * @brief Set LED color for special PMS value
+ *
+ * @param pm25Value PMS2.5 value
+ */
+static void setRGBledPMcolor(int pm25Value) {
   if (pm25Value >= 0 && pm25Value < 10)
     setRGBledColor('g');
   if (pm25Value >= 10 && pm25Value < 35)
@@ -974,11 +963,7 @@ void setRGBledPMcolor(int pm25Value) {
     setRGBledColor('p');
 }
 
-void setWifiConnectLedColor(void) { ag.ledBar.setColor(0, 0, 255); }
-
-void setWifiConnectingLedColor(void) { ag.ledBar.setColor(255, 255, 255); }
-
-void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
+static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
   if (ledCount < 0) {
     ledCount = 0;
     ag.ledBar.setColor(r, g, b, ledCount);
@@ -991,13 +976,18 @@ void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
   }
 }
 
-void ledSmHandler(int sm) {
+/**
+ * @brief LED state machine handler
+ *
+ * @param sm APP state machine
+ */
+static void ledSmHandler(int sm) {
   if (sm > APP_SM_NORMAL) {
     return;
   }
 
   ledSmState = sm;
-  ag.ledBar.clear();  // Set all LED OFF
+  ag.ledBar.clear(); // Set all LED OFF
   switch (sm) {
   case APP_SM_WIFI_MANAGER_MODE: {
     /** In WiFi Manager Mode */
@@ -1071,7 +1061,7 @@ void ledSmHandler(int sm) {
   case APP_SM_SENSOR_CONFIG_FAILED: {
     /** Server is reachable but there is some conﬁguration issue to be ﬁxed on
      * the server side */
-    
+
     ag.ledBar.setColor(139, 24, 248, 0);
 
     /** Show CO2 or PM color status */
@@ -1079,7 +1069,7 @@ void ledSmHandler(int sm) {
     break;
   }
   case APP_SM_NORMAL: {
-    
+
     sensorLedColorHandler();
     break;
   }
@@ -1089,9 +1079,17 @@ void ledSmHandler(int sm) {
   ag.ledBar.show();
 }
 
-void ledSmHandler(void) { ledSmHandler(ledSmState); }
+/**
+ * @brief LED state machine handler
+ */
+static void ledSmHandler(void) { ledSmHandler(ledSmState); }
 
-void dispSmHandler(int sm) {
+/**
+ * @brief Display state machine handler
+ *
+ * @param sm APP state machine
+ */
+static void dispSmHandler(int sm) {
   if (sm > APP_SM_NORMAL) {
     return;
   }
@@ -1103,13 +1101,13 @@ void dispSmHandler(int sm) {
   case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
     if (connectCountDown >= 0) {
       displayShowText(String(connectCountDown) + "s to connect",
-                      "to airgradient-", String(getNormalizedMac()));
+                      "to Wifi Hotspot", wifiSSID);
       connectCountDown--;
     }
     break;
   }
   case APP_SM_WIFI_MANAGER_STA_CONNECTING: {
-    displayShowText("Trying to", "connect to WiFi", "..");
+    displayShowText("Trying to", "connect to WiFi", "...");
     break;
   }
   case APP_SM_WIFI_MANAGER_STA_CONNECTED: {
@@ -1129,7 +1127,7 @@ void dispSmHandler(int sm) {
     break;
   }
   case APP_SM_WIFI_OK_SERVER_CONNECT_FAILED: {
-    //displayShowText("Server not", "reachable", "");
+    // displayShowText("Server not", "reachable", "");
     break;
   }
   case APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED: {
@@ -1156,10 +1154,13 @@ void dispSmHandler(int sm) {
   }
 }
 
-void sensorLedColorHandler(void) {
-  switch (serverConfig.ledBarMode) {
+/**
+ * @brief Handle change LED color base on sensor value of CO2 and PMS
+ */
+static void sensorLedColorHandler(void) {
+  switch (agServer.getLedBarMode()) {
   case UseLedBarCO2:
-    setRGBledCO2color(Co2);
+    setRGBledCO2color(co2Ppm);
     break;
   case UseLedBarPM:
     setRGBledPMcolor(pm25);
@@ -1171,31 +1172,40 @@ void sensorLedColorHandler(void) {
   }
 }
 
-void appLedHandler(void) {
+/**
+ * @brief APP LED color handler
+ */
+static void appLedHandler(void) {
   uint8_t state = APP_SM_NORMAL;
   if (WiFi.isConnected() == false) {
     state = APP_SM_WIFI_LOST;
-  } else if (configFailed) {
+  } else if (agServer.isConfigFailed()) {
     state = APP_SM_SENSOR_CONFIG_FAILED;
-  } else if (serverFailed) {
+  } else if (agServer.isServerFailed()) {
     state = APP_SM_SERVER_LOST;
   }
   ledSmHandler(state);
 }
 
-void appDispHandler(void) {
+/**
+ * @brief APP display content handler
+ */
+static void appDispHandler(void) {
   uint8_t state = APP_SM_NORMAL;
   if (WiFi.isConnected() == false) {
     state = APP_SM_WIFI_LOST;
-  } else if (configFailed) {
+  } else if (agServer.isConfigFailed()) {
     state = APP_SM_SENSOR_CONFIG_FAILED;
-  } else if (serverFailed) {
+  } else if (agServer.isServerFailed()) {
     state = APP_SM_SERVER_LOST;
   }
   dispSmHandler(state);
 }
 
-void updateWiFiConnect(void) {
+/**
+ * @brief WiFi reconnect handler
+ */
+static void updateWiFiConnect(void) {
   static uint32_t lastRetry;
   if (wifiHasConfig == false) {
     return;
@@ -1205,8 +1215,108 @@ void updateWiFiConnect(void) {
     return;
   }
   uint32_t ms = (uint32_t)(millis() - lastRetry);
-  if (ms >= 10000) {
+  if (ms >= WIFI_CONNECT_RETRY_MS) {
     lastRetry = millis();
     WiFi.reconnect();
+
+    Serial.printf("Re-Connect WiFi\r\n");
   }
+}
+
+/**
+ * @brief APP display and LED handler
+ *
+ */
+static void updateDispLedBar(void) {
+  appDispHandler();
+  appLedHandler();
+}
+
+/**
+ * @brief Update tvocIndexindex
+ *
+ */
+static void tvocPoll(void) {
+  tvocIndex = ag.sgp41.getTvocIndex();
+  noxIndex = ag.sgp41.getNoxIndex();
+
+  Serial.printf("tvocIndexindex: %d\r\n", tvocIndex);
+  Serial.printf(" NOx index: %d\r\n", noxIndex);
+}
+
+/**
+ * @brief Update PMS data
+ *
+ */
+static void pmPoll(void) {
+  if (ag.pms5003.readData()) {
+    pm01 = ag.pms5003.getPm01Ae();
+    pm25 = ag.pms5003.getPm25Ae();
+    pm10 = ag.pms5003.getPm10Ae();
+    pm03PCount = ag.pms5003.getPm03ParticleCount();
+
+    Serial.printf("      PMS0.1: %d\r\n", pm01);
+    Serial.printf("      PMS2.5: %d\r\n", pm25);
+    Serial.printf("     PMS10.0: %d\r\n", pm10);
+    Serial.printf("PMS3.0 Count: %d\r\n", pm03PCount);
+  } else {
+    pm01 = -1;
+    pm25 = -1;
+    pm10 = -1;
+    pm03PCount = -1;
+  }
+}
+
+/**
+ * @brief Send data to server
+ *
+ */
+static void sendDataToServer(void) {
+  JSONVar root;
+  root["wifi"] = WiFi.RSSI();
+  if (co2Ppm >= 0) {
+    root["rco2"] = co2Ppm;
+  }
+  if (pm01 >= 0) {
+    root["pm01"] = pm01;
+  }
+  if (pm25 >= 0) {
+    root["pm02"] = pm25;
+  }
+  if (pm10 >= 0) {
+    root["pm10"] = pm10;
+  }
+  if (pm03PCount >= 0) {
+    root["pm003_count"] = pm03PCount;
+  }
+  if (tvocIndex >= 0) {
+    root["tvoc_index"] = tvocIndex;
+  }
+  if (noxIndex >= 0) {
+    root["noxIndex"] = noxIndex;
+  }
+  if (temp >= 0) {
+    root["atmp"] = temp;
+  }
+  if (hum >= 0) {
+    root["rhum"] = hum;
+  }
+  root["boot"] = bootCount;
+
+  // NOTE Need determine offline mode to reset watchdog timer
+  if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
+    resetWatchdog();
+  }
+  bootCount++;
+}
+
+/**
+ * @brief Update temperature and humidity value
+ */
+static void tempHumPoll(void) {
+  temp = ag.sht.getTemperature();
+  hum = ag.sht.getRelativeHumidity();
+
+  Serial.printf("Temperature: %0.2f\r\n", temp);
+  Serial.printf("   Humidity: %d\r\n", hum);
 }

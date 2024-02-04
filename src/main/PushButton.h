@@ -4,6 +4,10 @@
 #include "BoardDef.h"
 #include <Arduino.h>
 
+/**
+ * @brief The class define how to handle the Push button
+ *
+ */
 class PushButton {
 public:
   /**
@@ -26,7 +30,7 @@ private:
   /** Board type */
   BoardType _boardType;
   /** Is inititalize flag */
-  bool _isInit = false;
+  bool _isBegin = false;
 
   /** Special variable for ESP8266 */
 #if defined(ESP8266)
@@ -37,7 +41,7 @@ private:
 
   /** Method */
 
-  bool checkInit(void);
+  bool isBegin(void);
 };
 
 #endif /** _AIR_GRADIENT_SW_H_ */

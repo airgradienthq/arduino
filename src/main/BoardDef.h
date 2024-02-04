@@ -13,14 +13,21 @@
 #define AgLog(c, ...) log_i(c, ##__VA_ARGS__)
 #endif
 
+/**
+ * @brief Define Airgradient supported board type
+ */
 enum BoardType {
-  BOARD_DIY_BASIC_KIT = 0x00,
-  BOARD_DIY_PRO_INDOOR_V4_2 = 0x01,
-  BOARD_ONE_INDOOR_MONITOR_V9_0 = 0x02,
-  BOARD_OUTDOOR_MONITOR_V1_3 = 0x03,
-  BOARD_DEF_MAX
+  DIY_BASIC = 0x00,
+  DIY_PRO_INDOOR_V4_2 = 0x01,
+  ONE_INDOOR = 0x02,
+  OPEN_AIR_OUTDOOR = 0x03,
+  _BOARD_MAX
 };
 
+/**
+ * @brief Board definitions
+ * 
+ */
 struct BoardDef {
   /** Board Support CO2 SenseS8 */
   struct {
@@ -34,7 +41,7 @@ struct BoardDef {
     const int uart_tx_pin; /** UART tx pin */
     const int uart_rx_pin; /** UART rx pin */
     const bool supported;  /** Is BSP supported for this sensor */
-  } PMS5003;
+  } Pms5003;
 
   /** I2C Bus */
   struct {

@@ -1,10 +1,13 @@
 #ifndef _AIR_GRADIENT_PMS5003_H_
 #define _AIR_GRADIENT_PMS5003_H_
 
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 #include "Stream.h"
 #include "PMS.h"
 
+/**
+ * @brief The class define how to handle PMS5003 sensor bas on @ref PMS class
+ */
 class PMS5003 {
 public:
   PMS5003(BoardType def);
@@ -13,6 +16,7 @@ public:
 #else
   bool begin(HardwareSerial &serial);
 #endif
+  void end(void);
 
   bool readData(void);
   int getPm01Ae(void);
@@ -22,7 +26,7 @@ public:
   int convertPm25ToUsAqi(int pm25);
 
 private:
-  bool _isInit = false;
+  bool _isBegin = false;
   BoardType _boardDef;
   PMS pms;
   const BoardDef *bsp;
@@ -36,7 +40,7 @@ private:
   PMS::DATA pmsData;
 
   bool begin(void);
-  bool checkInit(void);
+  bool isBegin(void);
   int pm25ToAQI(int pm02);
 };
 #endif /** _AIR_GRADIENT_PMS5003_H_ */

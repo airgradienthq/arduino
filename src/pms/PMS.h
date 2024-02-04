@@ -3,10 +3,15 @@
 
 #include <Arduino.h>
 
+/**
+ * @brief Class define how to handle plantower PMS sensor it's upport for
+ * PMS5003 and PMS5003T series. The data @ref AMB_TMP and @ref AMB_HUM only
+ * valid on PMS5003T
+ */
 class PMS {
 public:
   static const uint16_t SINGLE_RESPONSE_TIME = 1000;
-  static const uint16_t TOTAL_RESPONSE_TIME  = 1000 * 10;
+  static const uint16_t TOTAL_RESPONSE_TIME = 1000 * 10;
   static const uint16_t STEADY_RESPONSE_TIME = 1000 * 30;
 
   // static const uint16_t BAUD_RATE = 9600;
@@ -38,7 +43,7 @@ public:
     uint16_t AMB_HUM;
   };
 
-  bool begin(Stream* stream);
+  bool begin(Stream *stream);
   void sleep();
   void wakeUp();
   void activeMode();

@@ -378,55 +378,59 @@ AgServer agServer;
 /** Create airgradient instance for 'OPEN_AIR_OUTDOOR' board */
 AirGradient ag(OPEN_AIR_OUTDOOR);
 
+float pm1Value01 = 0;
+float pm1Value25 = 0;
+float pm1Value10 = 0;
+float pm1PCount = 0;
+float pm1temp = 0;
+float pm1hum = 0;
+
+float pm2Value01 = 0;
+float pm2Value25 = 0;
+float pm2Value10 = 0;
+float pm2PCount = 0;
+float pm2temp = 0;
+float pm2hum = 0;
+
+int countPosition = 0;
+int targetCount = 20;
+
 static int ledSmState = APP_SM_NORMAL;
-
-int loopCount = 0;
-
-WiFiManager wifiManager; /** wifi manager instance */
 static bool wifiHasConfig = false;
 static String wifiSSID = "";
 
+WiFiManager wifiManager; /** wifi manager instance */
+
+int loopCount = 0;
 int tvocIndex = -1;
 int noxIndex = -1;
-int co2Ppm = 0;
-int pm25 = -1;
-int pm01 = -1;
-int pm10 = -1;
-int pm03PCount = -1;
-float temp;
-int hum;
 
 void boardInit(void);
 void failedHandler(String msg);
-void co2Calibration(void);
 static String getDevId(void);
-static void updateWiFiConnect(void);
-static void tvocPoll(void);
-static void pmPoll(void);
-static void sendDataToServer(void);
-static void co2Poll(void);
+static void sendDataToServerHandler(void);
 static void serverConfigPoll(void);
+static void tvocPoll(void);
+static void updateWiFiConnect(void);
 
+AgSchedule agSyncDataSchedule(2000, sendDataToServerHandler);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
-AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
-AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
-AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmPoll);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 
+// select board LOLIN C3 mini to flash
 void setup() {
   Serial.begin(115200);
 
   /** Board init */
   boardInit();
 
-  /** Server init */
+  /** Init AgServer */
   agServer.begin();
 
   /** WiFi connect */
   connectToWifi();
 
   if (WiFi.isConnected()) {
-    wifiHasConfig = true;
     sendPing();
 
     agServer.pollServerConfig(getDevId());
@@ -440,10 +444,8 @@ void setup() {
 }
 
 void loop() {
+  agSyncDataSchedule.run();
   configSchedule.run();
-  serverSchedule.run();
-  co2Schedule.run();
-  pmsSchedule.run();
   tvocSchedule.run();
   updateWiFiConnect();
 }
@@ -460,49 +462,44 @@ void sendPing() {
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 }
 
-static void sendDataToServer(void) {
+void sendToServer(int pm1Value01, int pm1Value25, int pm1Value10, int pm1PCount,
+                  float pm1temp, float pm1hum, int pm2Value01, int pm2Value25,
+                  int pm2Value10, int pm2PCount, float pm2temp, float pm2hum,
+                  int tvoc, int nox) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
-  }
-  if (pm01 >= 0) {
-    root["pm01"] = pm01;
-  }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
-  }
-  if (pm10 >= 0) {
-    root["pm10"] = pm10;
-  }
-  if (pm03PCount >= 0) {
-    root["pm003_count"] = pm03PCount;
-  }
-  if (tvocIndex >= 0) {
-    root["tvoc_index"] = tvocIndex;
-  }
-  if (noxIndex >= 0) {
-    root["noxIndex"] = noxIndex;
-  }
-  if (temp >= 0) {
-    root["atmp"] = temp;
-  }
-  if (hum >= 0) {
-    root["rhum"] = hum;
-  }
   root["boot"] = loopCount;
+  if (tvocIndex > 0) {
+    root["tvoc_index"] = loopCount;
+  }
+  if (noxIndex > 0) {
+    root["nox_index"] = loopCount;
+  }
+  root["pm01"] = (int)((pm1Value01 + pm2Value01) / 2);
+  root["pm02"] = (int)((pm1Value25 + pm2Value25) / 2);
+  root["pm003_count"] = (int)((pm1PCount + pm2PCount) / 2);
+  root["atmp"] = (int)((pm1temp + pm2temp) / 2);
+  root["rhum"] = (int)((pm1hum + pm2hum) / 2);
+  root["channels"]["1"]["pm01"] = pm1Value01;
+  root["channels"]["1"]["pm02"] = pm1Value25;
+  root["channels"]["1"]["pm10"] = pm1Value10;
+  root["channels"]["1"]["pm003_count"] = pm1PCount;
+  root["channels"]["1"]["atmp"] = pm1temp;
+  root["channels"]["1"]["rhum"] = pm1hum;
+  root["channels"]["2"]["pm01"] = pm2Value01;
+  root["channels"]["2"]["pm02"] = pm2Value25;
+  root["channels"]["2"]["pm10"] = pm2Value10;
+  root["channels"]["2"]["pm003_count"] = pm2PCount;
+  root["channels"]["2"]["atmp"] = pm2temp;
+  root["channels"]["2"]["rhum"] = pm2hum;
 
-  // NOTE Need determine offline mode to reset watchdog timer
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
     resetWatchdog();
   }
   loopCount++;
 }
 
-void resetWatchdog() {
-  Serial.println("Watchdog reset");
-  ag.watchdog.reset();
-}
+void resetWatchdog() { ag.watchdog.reset(); }
 
 bool wifiMangerClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
@@ -510,7 +507,7 @@ bool wifiMangerClientConnected(void) {
 
 // Wifi Manager
 void connectToWifi() {
-  wifiSSID = "airgradient-" + String(getNormalizedMac());
+  wifiSSID = "airgradient-" + getDevId();
 
   wifiManager.setConfigPortalBlocking(false);
   wifiManager.setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
@@ -565,10 +562,10 @@ void connectToWifi() {
   }
 
   /** Show display wifi connect result failed */
-  ag.statusLed.setOff();
-  delay(2000);
   if (WiFi.isConnected() == false) {
     ledSmHandler(APP_SM_WIFI_MANAGER_CONNECT_FAILED);
+  } else {
+    wifiHasConfig = true;
   }
 }
 
@@ -580,24 +577,19 @@ String getNormalizedMac() {
 }
 
 void boardInit(void) {
-  if (Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin()) == false) {
-    failedHandler("Init I2C failed");
-  }
-
   ag.watchdog.begin();
-
-  ag.button.begin();
-
   ag.statusLed.begin();
-
+  ag.button.begin();
   if (ag.pms5003t_1.begin(Serial0) == false) {
-    failedHandler("Init PMS5003T failed");
+    failedHandler("PMS5003T_1 init failed");
+  }
+  if (ag.pms5003t_2.begin(Serial1) == false) {
+    failedHandler("PMS5003T_2 init failed");
   }
 
-  if (ag.s8.begin(Serial1) == false) {
-    failedHandler("Init SenseAirS8 failed");
-  }
-
+  /** Init I2C */
+  Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
+  /** Init sensor SGP41 */
   if (ag.sgp41.begin(Wire) == false) {
     failedHandler("Init SGP41 failed");
   }
@@ -606,33 +598,75 @@ void boardInit(void) {
 void failedHandler(String msg) {
   while (true) {
     Serial.println(msg);
-    vTaskDelay(1000);
+    delay(1000);
   }
 }
 
-void co2Calibration(void) {
-  /** Count down for co2CalibCountdown secs */
-  for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-    Serial.printf("Start CO2 calib after %d sec\r\n",
-                  SENSOR_CO2_CALIB_COUNTDOWN_MAX - i);
-    delay(1000);
-  }
+static String getDevId(void) { return getNormalizedMac(); }
 
-  if (ag.s8.setBaselineCalibration()) {
-    Serial.println("Calibration success");
-    delay(1000);
-    Serial.println("Wait for calib finish...");
-    int count = 0;
-    while (ag.s8.isBaseLineCalibrationDone() == false) {
-      delay(1000);
-      count++;
+static void sendDataToServerHandler(void) {
+  if (ag.pms5003t_1.readData() && ag.pms5003t_2.readData()) {
+    pm1Value01 = pm1Value01 + ag.pms5003t_1.getPm01Ae();
+    pm1Value25 = pm1Value25 + ag.pms5003t_1.getPm25Ae();
+    pm1Value10 = pm1Value10 + ag.pms5003t_1.getPm10Ae();
+    pm1PCount = pm1PCount + ag.pms5003t_1.getPm03ParticleCount();
+    pm1temp = pm1temp + ag.pms5003t_1.getTemperature();
+    pm1hum = pm1hum + ag.pms5003t_1.getRelativeHumidity();
+    pm2Value01 = pm2Value01 + ag.pms5003t_2.getPm01Ae();
+    pm2Value25 = pm2Value25 + ag.pms5003t_2.getPm25Ae();
+    pm2Value10 = pm2Value10 + ag.pms5003t_2.getPm10Ae();
+    pm2PCount = pm2PCount + ag.pms5003t_2.getPm03ParticleCount();
+    pm2temp = pm2temp + ag.pms5003t_2.getTemperature();
+    pm2hum = pm2hum + ag.pms5003t_2.getRelativeHumidity();
+    countPosition++;
+    if (countPosition == targetCount) {
+      pm1Value01 = pm1Value01 / targetCount;
+      pm1Value25 = pm1Value25 / targetCount;
+      pm1Value10 = pm1Value10 / targetCount;
+      pm1PCount = pm1PCount / targetCount;
+      pm1temp = pm1temp / targetCount;
+      pm1hum = pm1hum / targetCount;
+      pm2Value01 = pm2Value01 / targetCount;
+      pm2Value25 = pm2Value25 / targetCount;
+      pm2Value10 = pm2Value10 / targetCount;
+      pm2PCount = pm2PCount / targetCount;
+      pm2temp = pm2temp / targetCount;
+      pm2hum = pm2hum / targetCount;
+      sendToServer(pm1Value01, pm1Value25, pm1Value10, pm1PCount, pm1temp,
+                   pm1hum, pm2Value01, pm2Value25, pm2Value10, pm2PCount,
+                   pm2temp, pm2hum, tvocIndex, noxIndex);
+
+      countPosition = 0;
+      pm1Value01 = 0;
+      pm1Value25 = 0;
+      pm1Value10 = 0;
+      pm1PCount = 0;
+      pm1temp = 0;
+      pm1hum = 0;
+      pm2Value01 = 0;
+      pm2Value25 = 0;
+      pm2Value10 = 0;
+      pm2PCount = 0;
+      pm2temp = 0;
+      pm2hum = 0;
     }
-    Serial.printf("Calib finish after %d sec\r\n", count);
-    delay(2000);
-  } else {
-    Serial.println("Calibration failure!!!");
-    delay(2000);
   }
+}
+
+static void serverConfigPoll(void) {
+  if (agServer.pollServerConfig(getDevId())) {
+    Serial.println("Get server configure success");
+  } else {
+    Serial.println("Get server configure failure");
+  }
+}
+
+static void tvocPoll(void) {
+  tvocIndex = ag.sgp41.getTvocIndex();
+  noxIndex = ag.sgp41.getNoxIndex();
+
+  Serial.printf("tvocIndexindex: %d\r\n", tvocIndex);
+  Serial.printf(" NOx index: %d\r\n", noxIndex);
 }
 
 /**
@@ -655,48 +689,6 @@ static void updateWiFiConnect(void) {
     Serial.printf("Re-Connect WiFi\r\n");
   }
 }
-
-/**
- * @brief Update tvocIndexindex
- *
- */
-static void tvocPoll(void) {
-  tvocIndex = ag.sgp41.getTvocIndex();
-  noxIndex = ag.sgp41.getNoxIndex();
-
-  Serial.printf("tvocIndexindex: %d\r\n", tvocIndex);
-  Serial.printf(" NOx index: %d\r\n", noxIndex);
-}
-
-/**
- * @brief Update PMS data
- *
- */
-static void pmPoll(void) {
-  if (ag.pms5003t_1.readData()) {
-    pm01 = ag.pms5003t_1.getPm01Ae();
-    pm25 = ag.pms5003t_1.getPm25Ae();
-    pm25 = ag.pms5003t_1.getPm10Ae();
-    pm03PCount = ag.pms5003t_1.getPm03ParticleCount();
-    temp = ag.pms5003t_1.getTemperature();
-    hum = ag.pms5003t_1.getRelativeHumidity();
-  }
-}
-
-static void co2Poll(void) {
-  co2Ppm = ag.s8.getCo2();
-  Serial.printf("CO2 index: %d\r\n", co2Ppm);
-}
-
-static void serverConfigPoll(void) {
-  if (agServer.pollServerConfig(getDevId())) {
-    if (agServer.isCo2Calib()) {
-      co2Calibration();
-    }
-  }
-}
-
-static String getDevId(void) { return getNormalizedMac(); }
 
 void ledBlinkDelay(uint32_t tdelay) {
   ag.statusLed.setOn();

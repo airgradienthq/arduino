@@ -6,7 +6,7 @@
 #endif
 
 /**
- * @brief Construct a new Sense Air S 8:: Sense Air S 8 object
+ * @brief Construct a new Sense Air S8:: Sense Air S8 object
  *
  * @param def
  */
@@ -18,7 +18,7 @@ S8::S8(BoardType def) : _boardDef(def) {}
  * @return true = success, otherwise is failure
  */
 bool S8::begin(void) {
-  if (this->_isInit) {
+  if (this->_isBegin) {
     AgLog("Initialized, Call end() then try again");
     return true;
   }
@@ -27,8 +27,8 @@ bool S8::begin(void) {
 }
 
 /**
- * @brief Init sensor has print debug log, if class create without serial debug
- *        before it's override last define
+ * @brief Init S8 sensor, this methos should be call before other, if not it's
+ * always return the failure status
  *
  * @param _debugStream Serial print debug log, NULL if don't use
  * @return true = success, otherwise is failure
@@ -56,13 +56,12 @@ bool S8::begin(HardwareSerial &serial) {
  *
  */
 void S8::end(void) {
-  if (this->_isInit == false) {
-    AgLog("Senor is not initialized");
+  if (this->_isBegin == false) {
     return;
   }
 
   // Deinit
-  AgLog("De-Inititlized");
+  AgLog("De-Inititlize");
 }
 
 /**
@@ -71,7 +70,7 @@ void S8::end(void) {
  * @param firmver String buffer, len = 10 char
  */
 void S8::getFirmwareVersion(char firmver[]) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return;
   }
 
@@ -103,7 +102,7 @@ void S8::getFirmwareVersion(char firmver[]) {
  * @return int32_t Return ID
  */
 int32_t S8::getSensorTypeId(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -149,7 +148,7 @@ int32_t S8::getSensorTypeId(void) {
  * @return int32_t ID
  */
 int32_t S8::getSensorId(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -195,7 +194,7 @@ int32_t S8::getSensorId(void) {
  * @return int16_t
  */
 int16_t S8::getMemoryMapVersion(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -225,7 +224,7 @@ int16_t S8::getMemoryMapVersion(void) {
  * @return int16_t (PPM), -1 if invalid.
  */
 int16_t S8::getCo2(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -266,7 +265,7 @@ bool S8::setBaselineCalibration(void) {
 
 /**
  * @brief Wait for background calibration done
- * 
+ *
  * @return true Done
  * @return false On calib
  */
@@ -286,7 +285,7 @@ bool S8::isBaseLineCalibrationDone(void) {
  * @return int16_t PWM
  */
 int16_t S8::getOutputPWM(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -318,7 +317,7 @@ int16_t S8::getOutputPWM(void) {
  * @return int16_t Hour
  */
 int16_t S8::getCalibPeriodABC(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -350,7 +349,7 @@ int16_t S8::getCalibPeriodABC(void) {
  * @return false Failure
  */
 bool S8::setCalibPeriodABC(int16_t period) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -391,7 +390,7 @@ bool S8::setCalibPeriodABC(int16_t period) {
  * @return false Failure
  */
 bool S8::manualCalib(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -416,7 +415,7 @@ bool S8::manualCalib(void) {
  * @return int16_t Flags
  */
 int16_t S8::getAcknowledgement(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -446,7 +445,7 @@ int16_t S8::getAcknowledgement(void) {
  * @return false Failure
  */
 bool S8::clearAcknowledgement(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -480,7 +479,7 @@ bool S8::clearAcknowledgement(void) {
  * @return int16_t Alarm status
  */
 int16_t S8::getAlarmStatus(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -509,7 +508,7 @@ int16_t S8::getAlarmStatus(void) {
  * @return S8::Status Sensor status
  */
 S8::Status S8::getStatus(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return (Status)0;
   }
 
@@ -538,7 +537,7 @@ S8::Status S8::getStatus(void) {
  * @return int16_t Output status
  */
 int16_t S8::getOutputStatus(void) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return -1;
   }
 
@@ -569,7 +568,7 @@ int16_t S8::getOutputStatus(void) {
  * @return false Failure
  */
 bool S8::sendSpecialCommand(CalibrationSpecialComamnd command) {
-  if (this->isInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -656,16 +655,16 @@ bool S8::init(int txPin, int rxPin, uint32_t baud) {
 
   /** Check communication by get firmware version */
   char fwVers[11];
-  this->_isInit = true;
+  this->_isBegin = true;
   this->getFirmwareVersion(fwVers);
   if (strlen(fwVers) == 0) {
-    this->_isInit = false;
+    this->_isBegin = false;
     return false;
   }
   AgLog("Firmware version: %s", fwVers);
 
   AgLog("Sensor successfully initialized. Heating up for 10s");
-  this->_isInit = true;
+  this->_isBegin = true;
   this->_lastInitTime = millis();
   return true;
 }
@@ -676,11 +675,11 @@ bool S8::init(int txPin, int rxPin, uint32_t baud) {
  * @return true Initialized
  * @return false No-Initialized
  */
-bool S8::isInit(void) {
-  if (this->_isInit) {
+bool S8::isBegin(void) {
+  if (this->_isBegin) {
     return true;
   }
-  AgLog("Sensor no-initialized");
+  AgLog("Sensor not-initialized");
   return false;
 }
 

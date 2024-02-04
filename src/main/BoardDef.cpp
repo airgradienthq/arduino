@@ -3,9 +3,9 @@
 #include "esp32-hal-log.h"
 #endif
 
-const BoardDef bsps[BOARD_DEF_MAX] = {
-    /** BOARD_DIY_BASIC_KIT */
-    [BOARD_DIY_BASIC_KIT] =
+const BoardDef bsps[_BOARD_MAX] = {
+    /** DIY_BASIC */
+    [DIY_BASIC] =
         {
             .SenseAirS8 =
                 {
@@ -17,7 +17,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                     .supported = false,
 #endif
                 },
-            .PMS5003 =
+            .Pms5003 =
                 {
                     .uart_tx_pin = 14,
                     .uart_rx_pin = 12,
@@ -70,10 +70,10 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                     .resetPin = -1,
                     .supported = false,
                 },
-            .name = "BOARD_DIY_BASIC_KIT",
+            .name = "DIY_BASIC",
         },
-    /** BOARD_DIY_PRO_INDOOR_V4_2 */
-    [BOARD_DIY_PRO_INDOOR_V4_2] =
+    /** DIY_PRO_INDOOR_V4_2 */
+    [DIY_PRO_INDOOR_V4_2] =
         {
             .SenseAirS8 =
                 {
@@ -85,7 +85,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                     .supported = false,
 #endif
                 },
-            .PMS5003 =
+            .Pms5003 =
                 {
                     .uart_tx_pin = 14,
                     .uart_rx_pin = 12,
@@ -144,10 +144,10 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                     .resetPin = -1,
                     .supported = false,
                 },
-            .name = "BOARD_DIY_PRO_INDOOR_V4_2",
+            .name = "DIY_PRO_INDOOR_V4_2",
         },
-    /** BOARD_ONE_INDOOR_MONITOR_V9_0 */
-    [BOARD_ONE_INDOOR_MONITOR_V9_0] =
+    /** ONE_INDOOR */
+    [ONE_INDOOR] =
         {
             .SenseAirS8 =
                 {
@@ -160,7 +160,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
 #endif
                 },
             /** Use UART0 don't use define pin number */
-            .PMS5003 =
+            .Pms5003 =
                 {
                     .uart_tx_pin = -1,
                     .uart_rx_pin = -1,
@@ -232,10 +232,10 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                     .supported = true,
 #endif
                 },
-            .name = "BOARD_ONE_INDOOR_MONITOR_V9_0",
+            .name = "ONE_INDOOR",
         },
-    /** BOARD_OUTDOOR_MONITOR_V1_3 */
-    [BOARD_OUTDOOR_MONITOR_V1_3] = {
+    /** OPEN_AIR_OUTDOOR */
+    [OPEN_AIR_OUTDOOR] = {
         .SenseAirS8 =
             {
                 .uart_tx_pin = 1,
@@ -247,7 +247,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
 #endif
             },
         /** Use UART0 don't use define pin number */
-        .PMS5003 =
+        .Pms5003 =
             {
                 .uart_tx_pin = -1,
                 .uart_rx_pin = -1,
@@ -319,7 +319,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
                 .supported = true,
 #endif
             },
-        .name = "BOARD_OUTDOOR_MONITOR_V1_3",
+        .name = "OPEN_AIR_OUTDOOR",
     }};
 
 /**
@@ -329,7 +329,7 @@ const BoardDef bsps[BOARD_DEF_MAX] = {
  * @return const BoardDef*
  */
 const BoardDef *getBoardDef(BoardType def) {
-  if (def >= BOARD_DEF_MAX) {
+  if (def >= _BOARD_MAX) {
     return NULL;
   }
   return &bsps[def];
@@ -356,7 +356,7 @@ void printBoardDef(Stream *_debug) {
   }
 #endif
 
-  for (int i = 0; i < BOARD_DEF_MAX; i++) {
+  for (int i = 0; i < _BOARD_MAX; i++) {
     bspPrintf("Board name: %s", bsps[i].name);
     bspPrintf("\tSensor CO2 S8:");
     bspPrintf("\t\tSupported: %d", bsps[i].SenseAirS8.supported);
@@ -366,10 +366,10 @@ void printBoardDef(Stream *_debug) {
     }
 
     bspPrintf("\tSensor PMS5003:");
-    bspPrintf("\t\tSupported: %d", bsps[i].PMS5003.supported);
-    if (bsps[i].PMS5003.supported) {
-      bspPrintf("\t\tUART Tx: %d", bsps[i].PMS5003.uart_tx_pin);
-      bspPrintf("\t\tUART Rx: %d", bsps[i].PMS5003.uart_rx_pin);
+    bspPrintf("\t\tSupported: %d", bsps[i].Pms5003.supported);
+    if (bsps[i].Pms5003.supported) {
+      bspPrintf("\t\tUART Tx: %d", bsps[i].Pms5003.uart_tx_pin);
+      bspPrintf("\t\tUART Rx: %d", bsps[i].Pms5003.uart_rx_pin);
     }
 
     bspPrintf("\tI2C");

@@ -4,6 +4,10 @@
 #include "BoardDef.h"
 #include <Arduino.h>
 
+/**
+ * @brief The class define how to handle the LED
+ * 
+ */
 class StatusLed {
 public:
   enum State {
@@ -17,6 +21,7 @@ public:
 #else
 #endif
   void begin(void);
+  void end(void);
   void setOn(void);
   void setOff(void);
   void setToggle(void);
@@ -26,7 +31,7 @@ public:
 private:
   const BoardDef *bsp = nullptr;
   BoardType boardType;
-  bool isInit = false;
+  bool _isBegin = false;
   State state;
 #if defined(ESP8266)
   Stream *_debugStream;
@@ -34,7 +39,7 @@ private:
 #else
 #endif
 
-  bool checkInit(void);
+  bool isBegin(void);
 };
 
 #endif /** _STATUS_LED_H_ */

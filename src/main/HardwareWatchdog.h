@@ -5,6 +5,10 @@
 
 #include "BoardDef.h"
 
+/**
+ * @brief The class define how to control external watchdog on ONE-V9 and
+ * Outdoor
+ */
 class HardwareWatchdog {
 public:
   HardwareWatchdog(BoardType type);

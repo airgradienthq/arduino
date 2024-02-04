@@ -1,18 +1,22 @@
 #ifndef _AIR_GRADIENT_H_
 #define _AIR_GRADIENT_H_
 
-#include "bsp/BoardDef.h"
-#include "bsp/LedBar.h"
-#include "bsp/PushButton.h"
-#include "bsp/StatusLed.h"
-#include "bsp/HardwareWatchdog.h"
-#include "co2/s8.h"
+#include "main/BoardDef.h"
+#include "main/HardwareWatchdog.h"
+#include "main/LedBar.h"
+#include "main/PushButton.h"
+#include "main/StatusLed.h"
+#include "s8/s8.h"
 #include "display/oled.h"
-#include "pm/pms5003.h"
-#include "pm/pms5003t.h"
-#include "sgp/sgp41.h"
-#include "sht/sht4x.h"
+#include "pms/pms5003.h"
+#include "pms/pms5003t.h"
+#include "sgp41/sgp41.h"
+#include "sht4x/sht4x.h"
 
+/**
+ * @brief Class with define all the sensor has supported by Airgradient. Each
+ * sensor usage must be init before use.
+ */
 class AirGradient {
 public:
   AirGradient(BoardType type);
@@ -21,7 +25,13 @@ public:
    * @brief Plantower PMS5003 sensor
    */
   PMS5003 pms5003;
+  /**
+   * @brief Plantower PMS5003T sensor: connect to PM1 connector on outdoor board.
+   */
   PMS5003T pms5003t_1;
+  /**
+   * @brief Plantower PMS5003T sensor: connect to PM2 connector on outdoor board
+   */
   PMS5003T pms5003t_2;
 
   /**
@@ -30,18 +40,18 @@ public:
   S8 s8;
 
   /**
-   * @brief Temperature and humidity sensor
+   * @brief SHT41 Temperature and humidity sensor
    */
   Sht sht;
 
   /**
-   * @brief TVOC and NOx sensor
+   * @brief  SGP41 TVOC and NOx sensor
    *
    */
   Sgp41 sgp41;
 
   /**
-   * @brief Display
+   * @brief OLED Display
    *
    */
   Display display;
@@ -55,18 +65,43 @@ public:
    * @brief LED
    */
   StatusLed statusLed;
+
+  /**
+   * @brief RGB LED array
+   * 
+   */
   LedBar ledBar;
 
   /**
-   * @brief Hardware watchdog
+   * @brief External hardware watchdog
    */
   HardwareWatchdog watchdog;
 
+  /**
+   * @brief Get I2C SDA pin has of board supported
+   * 
+   * @return int Pin number if -1 invalid
+   */
   int getI2cSdaPin(void);
+  /**
+   * @brief Get I2C SCL pin has of board supported
+   * 
+   * @return int Pin number if -1 invalid
+   */
   int getI2cSclPin(void);
 
+  /**
+   * @brief Get the Board Type
+   * 
+   * @return BoardType @ref BoardType
+   */
   BoardType getBoardType(void);
 
+  /**
+   * @brief Get the library version string
+   * 
+   * @return String 
+   */
   String getVersion(void);
 
 private:

@@ -2,10 +2,13 @@
 #define _PMS5003T_H_
 
 #include <HardwareSerial.h>
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 #include "PMS.h"
 #include "Stream.h"
 
+/**
+ * @brief The class define how to handle PMS5003T sensor bas on @ref PMS class
+ */
 class PMS5003T {
 public:
   PMS5003T(BoardType def);
@@ -14,6 +17,7 @@ public:
 #else
   bool begin(HardwareSerial &serial);
 #endif
+  void end(void);
 
   bool readData(void);
   int getPm01Ae(void);
@@ -25,7 +29,7 @@ public:
   float getRelativeHumidity(void);
 
 private:
-  bool _isInit = false;
+  bool _isBegin = false;
   bool _isSleep = false;
 
   BoardType _boardDef;
@@ -41,7 +45,7 @@ private:
   int pm25ToAQI(int pm02);
   PMS pms;
   PMS::DATA pmsData;
-  bool checkInit(void);
+  bool isBegin(void);
   float correctionTemperature(float inTemp);
 };
 

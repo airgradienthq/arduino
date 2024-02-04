@@ -15,7 +15,8 @@ void PushButton::begin(Stream &debugStream) {
  *
  */
 void PushButton::begin(void) {
-  if (this->_isInit) {
+  if (this->_isBegin) {
+    AgLog("Initialized, call end() then try again");
     return;
   }
 
@@ -25,14 +26,14 @@ void PushButton::begin(void) {
     return;
   }
 
-  if (this->_boardType == BOARD_DIY_PRO_INDOOR_V4_2) {
+  if (this->_boardType == DIY_PRO_INDOOR_V4_2) {
     pinMode(this->_bsp->SW.pin, INPUT_PULLUP);
   } else {
     pinMode(this->_bsp->SW.pin, INPUT);
   }
 
-  this->_isInit = true;
-  AgLog("Init");
+  this->_isBegin = true;
+  AgLog("Initialize");
 }
 
 /**
@@ -41,7 +42,7 @@ void PushButton::begin(void) {
  * @return PushButton::State
  */
 PushButton::State PushButton::getState(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return State::BUTTON_RELEASED;
   }
 
@@ -64,8 +65,8 @@ String PushButton::toString(PushButton::State state) {
   return "Released";
 }
 
-bool PushButton::checkInit(void) {
-  if (this->_isInit) {
+bool PushButton::isBegin(void) {
+  if (this->_isBegin) {
     return true;
   }
   AgLog("Switch not initialized");

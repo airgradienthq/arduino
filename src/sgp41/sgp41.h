@@ -1,10 +1,15 @@
 #ifndef _AIR_GRADIENT_SGP4X_H_
 #define _AIR_GRADIENT_SGP4X_H_
 
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 #include <Arduino.h>
 #include <Wire.h>
 
+/**
+ * @brief The class define how to handle Sensirion sensor SGP41 (VOC and NOx
+ * sensor)
+ *
+ */
 class Sgp41 {
 public:
   Sgp41(BoardType type);
@@ -12,7 +17,7 @@ public:
 #if defined(ESP8266)
   bool begin(TwoWire &wire, Stream &stream);
   void handle(void);
-#else 
+#else
   void _handle(void);
 #endif
   void end(void);
@@ -22,7 +27,7 @@ public:
 private:
   bool onConditioning = true;
   bool ready = false;
-  bool _isInit = false;
+  bool _isBegin = false;
   void *_sensor;
   void *_vocAlgorithm;
   void *_noxAlgorithm;
@@ -40,14 +45,10 @@ private:
 #else
   TaskHandle_t pollTask;
 #endif
-  bool checkInit(void);
+  bool isBegin(void);
   bool boardSupported(void);
-  int sdaPin(void);
-  int sclPin(void);
   bool getRawSignal(uint16_t &raw_voc, uint16_t &raw_nox,
                     uint16_t defaultRh = 0x8000, uint16_t defaultT = 0x6666);
-  bool turnHeaterOff(void);
-  bool getSerialNumber(uint16_t serialNumbers[], uint8_t serialNumberSize);
   bool _noxConditioning(void);
 };
 

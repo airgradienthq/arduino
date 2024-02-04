@@ -1,10 +1,14 @@
 #ifndef _AIR_GRADIENT_OLED_H_
 #define _AIR_GRADIENT_OLED_H_
 
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 #include <Arduino.h>
 #include <Wire.h>
 
+/**
+ * @brief The class define how to handle the OLED display on Airgradient has
+ * attached or support OLED display like: ONE-V9, Basic-V4
+ */
 class Display {
 public:
   const uint16_t COLOR_WHILTE = 1;
@@ -15,10 +19,11 @@ public:
 #endif
   Display(BoardType type);
   void begin(TwoWire &wire);
+  void end(void);
 
-  void clear(void); // .clear
+  void clear(void);
   void invertDisplay(uint8_t i);
-  void show(); // .show()
+  void show();
 
   void setContrast(uint8_t value);
   void drawPixel(int16_t x, int16_t y, uint16_t color);
@@ -39,14 +44,14 @@ private:
   BoardType _boardType;
   const BoardDef *_bsp = nullptr;
   void *oled;
-  bool _isInit = false;
+  bool _isBegin = false;
 #if defined(ESP8266)
   const char *TAG = "oled";
   Stream *_debugStream = nullptr;
 #else
 
 #endif
-  bool checkInit(void);
+  bool isBegin(void);
 };
 
 #endif /** _AIR_GRADIENT_OLED_H_ */

@@ -1,7 +1,5 @@
 #include "PMS.h"
 
-// PMS::PMS(Stream &stream) { this->_stream = &stream; }
-
 bool PMS::begin(Stream *stream) {
   _stream = stream;
 

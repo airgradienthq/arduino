@@ -43,32 +43,27 @@ PMS5003::PMS5003(BoardType def) : _boardDef(def) {}
  * @return false Failure
  */
 bool PMS5003::begin(void) {
-  if (this->_isInit) {
+  if (this->_isBegin) {
+    AgLog("Initialized, call end() then try again");
     return true;
   }
 
 #if defined(ESP32)
-  // if (this->_serial != &Serial) {
-  //   AgLog("Hardware serial must be Serial(0)");
-  //   return false;
-  // }
 #endif
-
   this->bsp = getBoardDef(this->_boardDef);
   if (bsp == NULL) {
     AgLog("Board [%d] not supported", this->_boardDef);
     return false;
   }
 
-  if (bsp->PMS5003.supported == false) {
+  if (bsp->Pms5003.supported == false) {
     AgLog("Board [%d] PMS50035003 not supported", this->_boardDef);
     return false;
   }
 
 #if defined(ESP8266)
-  bsp->PMS5003.uart_tx_pin;
-  SoftwareSerial *uart =
-      new SoftwareSerial(bsp->PMS5003.uart_tx_pin, bsp->PMS5003.uart_rx_pin);
+  bsp->Pms5003.uart_tx_pin;
+  SoftwareSerial *uart = new SoftwareSerial(bsp->Pms5003.uart_tx_pin, bsp->Pms5003.uart_rx_pin);
   uart->begin(9600);
   if (pms.begin(uart) == false) {
     AgLog("PMS failed");
@@ -82,7 +77,7 @@ bool PMS5003::begin(void) {
   }
 #endif
 
-  this->_isInit = true;
+  this->_isBegin = true;
   return true;
 }
 
@@ -119,7 +114,7 @@ int PMS5003::pm25ToAQI(int pm02) {
  * @return false Failure
  */
 bool PMS5003::readData(void) {
-  if (this->checkInit() == false) {
+  if (this->isBegin() == false) {
     return false;
   }
 
@@ -168,10 +163,26 @@ int PMS5003::convertPm25ToUsAqi(int pm25) { return this->pm25ToAQI(pm25); }
  * @return true Initialized
  * @return false No-initialized
  */
-bool PMS5003::checkInit(void) {
-  if (this->_isInit == false) {
-    AgLog("No initialized");
+bool PMS5003::isBegin(void) {
+  if (this->_isBegin == false) {
+    AgLog("Not-initialized");
     return false;
   }
   return true;
+}
+
+/**
+ * @brief De-initialize sensor
+ */
+void PMS5003::end(void) {
+  if (_isBegin == false) {
+    return;
+  }
+  _isBegin = false;
+#if defined(ESP8266)
+  _debugStream = NULL;
+#else
+  delete _serial;
+#endif
+  AgLog("De-initialize");
 }
