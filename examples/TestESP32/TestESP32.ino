@@ -11,8 +11,8 @@
 /**
  * @brief Define test board
  */
-#define TEST_BOARD_OUTDOOR_MONITOR_V1_3 0
-#define TEST_BOARD_ONE_INDOOR_MONITOR_V9_0 1
+#define TEST_OPEN_AIR_OUTDOOR 0
+#define TEST_ONE_INDOOR 1
 /**
  * @brief Define test sensor
  */
@@ -21,21 +21,21 @@
 #define TEST_SENSOR_SGP4x 0
 #define TEST_SWITCH 0
 #define TEST_OLED 0
-#if TEST_BOARD_OUTDOOR_MONITOR_V1_3
+#if TEST_OPEN_AIR_OUTDOOR
 #define TEST_STATUS_LED 0
 #define TEST_PMS5003T 1
 #endif
 #define TEST_WATCHDOG 1
 
-#if TEST_BOARD_ONE_INDOOR_MONITOR_V9_0
+#if TEST_ONE_INDOOR
 #define TEST_LED_BAR 1
 #define TEST_SENSOR_PMS5003 0
 #endif
 
-#if TEST_BOARD_OUTDOOR_MONITOR_V1_3
-AirGradient ag(BOARD_OUTDOOR_MONITOR_V1_3);
-#elif TEST_BOARD_ONE_INDOOR_MONITOR_V9_0
-AirGradient ag(BOARD_ONE_INDOOR_MONITOR_V9_0);
+#if TEST_OPEN_AIR_OUTDOOR
+AirGradient ag(OPEN_AIR_OUTDOOR);
+#elif TEST_ONE_INDOOR
+AirGradient ag(ONE_INDOOR);
 #else
 #error "Must enable board test
 #endif
@@ -237,14 +237,14 @@ void loop() {
 
 #if TEST_LED
   static uint32_t ledTime;
-#if TEST_BOARD_OUTDOOR_MONITOR_V1_3
+#if TEST_OPEN_AIR_OUTDOOR
   // ms = (uint32_t)(millis() - ledTime);
   // if(ms >= 500)
   // {
   //   ledTime = millis();
   //   led.ledToggle();
   // }
-#elif TEST_BOARD_ONE_INDOOR_MONITOR_V9_0
+#elif TEST_ONE_INDOOR
 
   static int ledIndex;
   static int ledIndexOld;
@@ -262,7 +262,7 @@ void loop() {
     led.ledSetColor(255, 0, 0, ledIndex);
     ledIndexOld = ledIndex;
     ledIndex++;
-    if (ledIndex >= led.getNumberOfLed()) {
+    if (ledIndex >= led.getNumberOfLeds()) {
       ledIndex = 0;
     }
   }
@@ -293,7 +293,7 @@ void loop() {
   static bool ledOn = false;
 
   if (ledNum == 0) {
-    ledNum = ag.ledBar.getNumberOfLed();
+    ledNum = ag.ledBar.getNumberOfLeds();
     log_i("Get number of led: %d", ledNum);
     if (ledNum) {
       ag.ledBar.setBrighness(0xff);

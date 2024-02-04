@@ -846,10 +846,10 @@ static void setRGBledColor(char color) {
   }
 
   /** Sensor LED indicator has only show status on last 2 LED on LED Bar */
-  int ledNum = ag.ledBar.getNumberOfLed() - 1;
+  int ledNum = ag.ledBar.getNumberOfLeds() - 1;
   ag.ledBar.setColor(r, g, b, ledNum);
 
-  ledNum = ag.ledBar.getNumberOfLed() - 2;
+  ledNum = ag.ledBar.getNumberOfLeds() - 2;
   ag.ledBar.setColor(r, g, b, ledNum);
 }
 
@@ -969,7 +969,7 @@ static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
     ag.ledBar.setColor(r, g, b, ledCount);
   } else {
     ledCount++;
-    if (ledCount >= ag.ledBar.getNumberOfLed()) {
+    if (ledCount >= ag.ledBar.getNumberOfLeds()) {
       ledCount = 0;
     }
     ag.ledBar.setColor(r, g, b, ledCount);
@@ -993,7 +993,7 @@ static void ledSmHandler(int sm) {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
     /** Turn midle LED Color */
-    ag.ledBar.setColor(0, 0, 255, ag.ledBar.getNumberOfLed() / 2);
+    ag.ledBar.setColor(0, 0, 255, ag.ledBar.getNumberOfLeds() / 2);
     break;
   }
   case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
@@ -1166,8 +1166,8 @@ static void sensorLedColorHandler(void) {
     setRGBledPMcolor(pm25);
     break;
   default:
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLed() - 1);
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLed() - 2);
+    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
     break;
   }
 }

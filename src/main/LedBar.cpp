@@ -48,7 +48,7 @@ void LedBar::begin(void) {
  * @param red Color Red (0 - 255)
  * @param green Color Green (0 - 255)
  * @param blue Color Blue (0 - 255)
- * @param ledNum Index of LED from 0 to getNumberOfLed() - 1
+ * @param ledNum Index of LED from 0 to getNumberOfLeds() - 1
  */
 void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue, int ledNum) {
   if (this->ledNumInvalid(ledNum)) {
@@ -75,7 +75,7 @@ void LedBar::setBrighness(uint8_t brightness) {
  *
  * @return int Number of LED
  */
-int LedBar::getNumberOfLed(void) {
+int LedBar::getNumberOfLeds(void) {
   if (this->isBegin() == false) {
     return 0;
   }

@@ -4,8 +4,7 @@
 /**
  * @brief Define test board
  */
-#define TEST_BOARD_DIY_BASIC_KIT 0
-#define TEST_BOARD_DIY_PRO_INDOOR_V4_2 1
+#define TEST_DIY_BASIC 1
 
 /**
  * @brief Define test sensor
@@ -17,10 +16,10 @@
 #define TEST_SWITCH 0
 #define TEST_OLED 0
 
-#if TEST_BOARD_DIY_BASIC_KIT
-AirGradient ag(BOARD_DIY_BASIC_KIT);
-#elif TEST_BOARD_DIY_PRO_INDOOR_V4_2
-AirGradient ag(BOARD_DIY_PRO_INDOOR_V4_2);
+#if TEST_DIY_BASIC
+AirGradient ag(DIY_BASIC);
+#elif TEST_DIY_PRO_INDOOR_V4_2
+AirGradient ag(DIY_PRO_INDOOR_V4_2);
 #else
 #error "Board test not defined"
 #endif

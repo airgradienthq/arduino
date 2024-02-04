@@ -20,7 +20,7 @@ public:
   void setColor(uint8_t red, uint8_t green, uint8_t blue, int ledNum);
   void setColor(uint8_t red, uint8_t green, uint8_t blue);
   void setBrighness(uint8_t brightness);
-  int getNumberOfLed(void);
+  int getNumberOfLeds(void);
   void show(void);
   void clear(void);
 
