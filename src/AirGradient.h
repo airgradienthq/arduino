@@ -1,15 +1,15 @@
 #ifndef _AIR_GRADIENT_H_
 #define _AIR_GRADIENT_H_
 
+#include "display/oled.h"
 #include "main/BoardDef.h"
 #include "main/HardwareWatchdog.h"
 #include "main/LedBar.h"
 #include "main/PushButton.h"
 #include "main/StatusLed.h"
-#include "s8/s8.h"
-#include "display/oled.h"
 #include "pms/pms5003.h"
 #include "pms/pms5003t.h"
+#include "s8/s8.h"
 #include "sgp41/sgp41.h"
 #include "sht4x/sht4x.h"
 
@@ -26,11 +26,13 @@ public:
    */
   PMS5003 pms5003;
   /**
-   * @brief Plantower PMS5003T sensor: connect to PM1 connector on outdoor board.
+   * @brief Plantower PMS5003T sensor: connect to PM1 connector on
+   * OPEN_AIR_OUTDOOR.
    */
   PMS5003T pms5003t_1;
   /**
-   * @brief Plantower PMS5003T sensor: connect to PM2 connector on outdoor board
+   * @brief Plantower PMS5003T sensor: connect to PM2 connector on
+   * OPEN_AIR_OUTDOOR.
    */
   PMS5003T pms5003t_2;
 
@@ -68,7 +70,7 @@ public:
 
   /**
    * @brief RGB LED array
-   * 
+   *
    */
   LedBar ledBar;
 
@@ -79,28 +81,28 @@ public:
 
   /**
    * @brief Get I2C SDA pin has of board supported
-   * 
+   *
    * @return int Pin number if -1 invalid
    */
   int getI2cSdaPin(void);
   /**
    * @brief Get I2C SCL pin has of board supported
-   * 
+   *
    * @return int Pin number if -1 invalid
    */
   int getI2cSclPin(void);
 
   /**
    * @brief Get the Board Type
-   * 
+   *
    * @return BoardType @ref BoardType
    */
   BoardType getBoardType(void);
 
   /**
    * @brief Get the library version string
-   * 
-   * @return String 
+   *
+   * @return String
    */
   String getVersion(void);
 
