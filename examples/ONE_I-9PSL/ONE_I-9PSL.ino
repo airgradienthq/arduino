@@ -1,7 +1,9 @@
 /*
-This is the code for the AirGradient ONE open-source hardware indoor Air Quality Monitor with an ESP32-C3 Microcontroller.
+This is the code for the AirGradient ONE open-source hardware indoor Air Quality
+Monitor with an ESP32-C3 Microcontroller.
 
-It is an air quality monitor for PM2.5, CO2, TVOCs, NOx, Temperature and Humidity with a small display, an RGB led bar and can send data over Wifi.
+It is an air quality monitor for PM2.5, CO2, TVOCs, NOx, Temperature and
+Humidity with a small display, an RGB led bar and can send data over Wifi.
 
 Open source air quality monitors and kits are available:
 Indoor Monitor: https://www.airgradient.com/indoor/
@@ -14,7 +16,8 @@ The codes needs the following libraries installed:
 "Arduino_JSON" by Arduino version 0.2.0
 "U8g2" by oliver version 2.34.22
 
-Please make sure you have esp32 board manager installed. Tested with version 2.0.11.
+Please make sure you have esp32 board manager installed. Tested with
+version 2.0.11.
 
 Important flashing settings:
 - Set board to "ESP32C3 Dev Module"
@@ -25,7 +28,8 @@ Important flashing settings:
 - Partition scheme "Default 4MB with spiffs (1.2MB APP/1,5MB SPIFFS)"
 - JTAG adapter "Disabled"
 
-Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3) can be set through the AirGradient dashboard.
+Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
+can be set through the AirGradient dashboard.
 
 If you have any questions please visit our forum at
 https://forum.airgradient.com/
@@ -548,9 +552,19 @@ static void sendPing() {
   ledSmHandler(APP_SM_NORMAL);
 }
 
+static void displayShowWifiText(String ln1, String ln2, String ln3,
+                                String ln4) {
+  u8g2.firstPage();
+  do {
+    u8g2.setFont(u8g2_font_t0_16_tf);
+    u8g2.drawStr(1, 10, ln1.c_str());
+    u8g2.drawStr(1, 25, ln2.c_str());
+    u8g2.drawStr(1, 40, ln3.c_str());
+    u8g2.drawStr(1, 55, ln4.c_str());
+  } while (u8g2.nextPage());
+}
+
 static void displayShowText(String ln1, String ln2, String ln3) {
-  char buf[9];
-  // u8g2.firstPage();
   u8g2.firstPage();
   do {
     u8g2.setFont(u8g2_font_t0_16_tf);
@@ -1100,8 +1114,8 @@ static void dispSmHandler(int sm) {
   case APP_SM_WIFI_MANAGER_MODE:
   case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
     if (connectCountDown >= 0) {
-      displayShowText(String(connectCountDown) + "s to connect",
-                      "to Wifi Hotspot", wifiSSID);
+      displayShowWifiText(String(connectCountDown) + "s to connect",
+                          "to WiFi hotspot:", "\"airgradient-", getDevId() + "\"");
       connectCountDown--;
     }
     break;
