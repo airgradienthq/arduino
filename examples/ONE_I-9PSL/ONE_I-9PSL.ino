@@ -492,6 +492,7 @@ void loop() {
   co2Schedule.run();
   pmsSchedule.run();
   tempHumSchedule.run();
+  tvocSchedule.run();
 
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
