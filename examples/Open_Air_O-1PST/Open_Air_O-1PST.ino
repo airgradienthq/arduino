@@ -1,19 +1,23 @@
 /*
-This is the code for the AirGradient Open Air open-source hardware outdoor Air Quality Monitor with an ESP32-C3 Microcontroller.
+This is the code for the AirGradient Open Air open-source hardware outdoor Air
+Quality Monitor with an ESP32-C3 Microcontroller.
 
-It is an air quality monitor for PM2.5, CO2, TVOCs, NOx, Temperature and Humidity and can send data over Wifi.
+It is an air quality monitor for PM2.5, CO2, TVOCs, NOx, Temperature and
+Humidity and can send data over Wifi.
 
 Open source air quality monitors and kits are available:
 Indoor Monitor: https://www.airgradient.com/indoor/
 Outdoor Monitor: https://www.airgradient.com/outdoor/
 
-Build Instructions: https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
+Build Instructions:
+https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.16-rc.2
 "Arduino_JSON" by Arduino Version 0.2.0
 
-Please make sure you have esp32 board manager installed. Tested with version 2.0.11.
+Please make sure you have esp32 board manager installed. Tested with
+version 2.0.11.
 
 Important flashing settings:
 - Set board to "ESP32C3 Dev Module"
@@ -248,6 +252,13 @@ public:
       }
     }
 
+    /** Get 'abcDays' */
+    if (JSON.typeof_(root["abcDays"]) == "number") {
+      co2AbcCalib = root["abcDays"];
+    } else {
+      co2AbcCalib = -1;
+    }
+
     /** Show configuration */
     showServerConfig();
 
@@ -331,6 +342,13 @@ public:
   }
 
   /**
+   * @brief Get the Co2 auto calib period
+   *
+   * @return int  days, -1 if invalid.
+   */
+  int getCo2Abccalib(void) { return co2AbcCalib; }
+
+  /**
    * @brief Get device configuration model name
    *
    * @return String Model name, empty string if server failed
@@ -349,11 +367,12 @@ public:
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("         inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("     inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("       Model: %s\r\n", models);
-    Serial.printf(" Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
+    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
+    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
+    Serial.printf("           Model: %s\r\n", models);
+    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
   }
 
   /**
@@ -364,11 +383,12 @@ public:
   UseLedBar getLedBarMode(void) { return ledBarMode; }
 
 private:
-  bool inF;          /** Temperature unit, true: F, false: C */
-  bool inUSAQI;      /** PMS unit, true: USAQI, false: ugm3 */
-  bool configFailed; /** Flag indicate get server configuration failed */
-  bool serverFailed; /** Flag indicate post data to server failed */
-  bool co2Calib;     /** Is co2Ppmcalibration requset */
+  bool inF;             /** Temperature unit, true: F, false: C */
+  bool inUSAQI;         /** PMS unit, true: USAQI, false: ugm3 */
+  bool configFailed;    /** Flag indicate get server configuration failed */
+  bool serverFailed;    /** Flag indicate post data to server failed */
+  bool co2Calib;        /** Is co2Ppmcalibration requset */
+  int co2AbcCalib = -1; /** update auto calibration number of day */
   UseLedBar ledBarMode = UseLedBarCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
@@ -692,6 +712,11 @@ static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
       co2Calibration();
+    }
+    if (agServer.getCo2Abccalib() > 0) {
+      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
+        Serial.println("Set S8 auto calib failed");
+      }
     }
   }
 }

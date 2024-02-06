@@ -78,6 +78,7 @@ public:
   int16_t getCo2(void);
   bool setBaselineCalibration(void);
   bool isBaseLineCalibrationDone(void);
+  bool setAutoCalib(int hours);
 
 private:
   /** Variables */

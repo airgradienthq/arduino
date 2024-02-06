@@ -1,7 +1,9 @@
 /*
-This is the code for the AirGradient DIY BASIC Air Quality Monitor with an D1 ESP8266 Microcontroller.
+This is the code for the AirGradient DIY BASIC Air Quality Monitor with an D1
+ESP8266 Microcontroller.
 
-It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a small display and can send data over Wifi.
+It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
+small display and can send data over Wifi.
 
 Open source air quality monitors and kits are available:
 Indoor Monitor: https://www.airgradient.com/indoor/
@@ -15,11 +17,13 @@ Following libraries need to be installed:
 "Arduino_JSON" by Arduino version 0.2.0
 "U8g2" by oliver version 2.34.22
 
-Please make sure you have esp8266 board manager installed. Tested with version 3.1.2.
+Please make sure you have esp8266 board manager installed. Tested with
+version 3.1.2.
 
 Set board to "LOLIN(WEMOS) D1 R2 & mini"
 
-Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3) can be set through the AirGradient dashboard.
+Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
+can be set through the AirGradient dashboard.
 
 If you have any questions please visit our forum at
 https://forum.airgradient.com/
@@ -207,6 +211,13 @@ public:
       }
     }
 
+    /** Get 'abcDays' */
+    if (JSON.typeof_(root["abcDays"]) == "number") {
+      co2AbcCalib = root["abcDays"];
+    } else {
+      co2AbcCalib = -1;
+    }
+
     /** Show configuration */
     showServerConfig();
 
@@ -290,6 +301,13 @@ public:
   }
 
   /**
+   * @brief Get the Co2 auto calib period
+   *
+   * @return int  days, -1 if invalid.
+   */
+  int getCo2Abccalib(void) { return co2AbcCalib; }
+
+  /**
    * @brief Get device configuration model name
    *
    * @return String Model name, empty string if server failed
@@ -308,11 +326,12 @@ public:
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("         inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("     inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("       Model: %s\r\n", models);
-    Serial.printf(" Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
+    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
+    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
+    Serial.printf("           Model: %s\r\n", models);
+    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
   }
 
   /**
@@ -323,11 +342,12 @@ public:
   UseLedBar getLedBarMode(void) { return ledBarMode; }
 
 private:
-  bool inF;          /** Temperature unit, true: F, false: C */
-  bool inUSAQI;      /** PMS unit, true: USAQI, false: ugm3 */
-  bool configFailed; /** Flag indicate get server configuration failed */
-  bool serverFailed; /** Flag indicate post data to server failed */
-  bool co2Calib;     /** Is co2Ppmcalibration requset */
+  bool inF;             /** Temperature unit, true: F, false: C */
+  bool inUSAQI;         /** PMS unit, true: USAQI, false: ugm3 */
+  bool configFailed;    /** Flag indicate get server configuration failed */
+  bool serverFailed;    /** Flag indicate post data to server failed */
+  bool co2Calib;        /** Is co2Ppmcalibration requset */
+  int co2AbcCalib = -1; /** update auto calibration number of day */
   UseLedBar ledBarMode = UseLedBarCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
@@ -526,6 +546,11 @@ static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
       co2Calibration();
+    }
+    if (agServer.getCo2Abccalib() > 0) {
+      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
+        Serial.println("Set S8 auto calib failed");
+      }
     }
   }
 }

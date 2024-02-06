@@ -793,3 +793,23 @@ void S8::sendCommand(uint8_t func, uint16_t reg, uint16_t value) {
     uartWriteBytes(8);
   }
 }
+
+/**
+ * @brief Set Auto calib baseline period
+ *
+ * @param hours Number of hour will trigger auto calib: [0, 4800], 0: disable
+ * @return true Success
+ * @return false Failure
+ */
+bool S8::setAutoCalib(int hours) {
+  if (isBegin() == false) {
+    return false;
+  }
+
+  int curCalib = getCalibPeriodABC();
+  if (curCalib == hours) {
+    return true;
+  }
+
+  return setCalibPeriodABC(hours);
+}

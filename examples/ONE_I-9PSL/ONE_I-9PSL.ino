@@ -253,6 +253,13 @@ public:
       }
     }
 
+    /** Get 'abcDays' */
+    if (JSON.typeof_(root["abcDays"]) == "number") {
+      co2AbcCalib = root["abcDays"];
+    } else {
+      co2AbcCalib = -1;
+    }
+
     /** Show configuration */
     showServerConfig();
 
@@ -336,6 +343,13 @@ public:
   }
 
   /**
+   * @brief Get the Co2 auto calib period
+   *
+   * @return int  days, -1 if invalid.
+   */
+  int getCo2Abccalib(void) { return co2AbcCalib; }
+
+  /**
    * @brief Get device configuration model name
    *
    * @return String Model name, empty string if server failed
@@ -354,11 +368,12 @@ public:
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("         inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("     inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("       Model: %s\r\n", models);
-    Serial.printf(" Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
+    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
+    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
+    Serial.printf("           Model: %s\r\n", models);
+    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
   }
 
   /**
@@ -369,11 +384,12 @@ public:
   UseLedBar getLedBarMode(void) { return ledBarMode; }
 
 private:
-  bool inF;          /** Temperature unit, true: F, false: C */
-  bool inUSAQI;      /** PMS unit, true: USAQI, false: ugm3 */
-  bool configFailed; /** Flag indicate get server configuration failed */
-  bool serverFailed; /** Flag indicate post data to server failed */
-  bool co2Calib;     /** Is co2Ppmcalibration requset */
+  bool inF;             /** Temperature unit, true: F, false: C */
+  bool inUSAQI;         /** PMS unit, true: USAQI, false: ugm3 */
+  bool configFailed;    /** Flag indicate get server configuration failed */
+  bool serverFailed;    /** Flag indicate post data to server failed */
+  bool co2Calib;        /** Is co2Ppmcalibration requset */
+  int co2AbcCalib = -1; /** update auto calibration number of day */
   UseLedBar ledBarMode = UseLedBarCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
@@ -922,6 +938,11 @@ static void serverConfigPoll(void) {
     if (agServer.isCo2Calib()) {
       co2Calibration();
     }
+    if (agServer.getCo2Abccalib() > 0) {
+      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
+        Serial.println("Set S8 auto calib failed");
+      }
+    }
   }
 }
 
@@ -1116,7 +1137,8 @@ static void dispSmHandler(int sm) {
   case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
     if (connectCountDown >= 0) {
       displayShowWifiText(String(connectCountDown) + "s to connect",
-                          "to WiFi hotspot:", "\"airgradient-", getDevId() + "\"");
+                          "to WiFi hotspot:", "\"airgradient-",
+                          getDevId() + "\"");
       connectCountDown--;
     }
     break;

@@ -9,10 +9,11 @@
 /**
  * @brief Define test sensor
  */
-#define TEST_SENSOR_SenseAirS8 0
+#define TEST_SENSOR_SenseAirS8 1
+// #define S8_BASELINE_CALIB
 #define TEST_SENSOR_PMS5003 0
 #define TEST_SENSOR_SHT4x 0
-#define TEST_SENSOR_SGP4x 1
+#define TEST_SENSOR_SGP4x 0
 #define TEST_SWITCH 0
 #define TEST_OLED 0
 
@@ -37,11 +38,19 @@ void setup() {
     Serial.println("CO2S8 sensor init failure");
   }
 
+#ifdef S8_BASELINE_CALIB
   if (ag.s8.setBaselineCalibration()) {
     Serial.println("Manual calib success");
   } else {
     Serial.println("Manual calib failure");
   }
+#else
+  if (ag.s8.setAutoCalib(8)) {
+    Serial.println("Set auto calib success");
+  } else {
+    Serial.println("Set auto calib failure");
+  }
+#endif
   delay(5000);
 #endif
 
@@ -141,7 +150,7 @@ void loop() {
 
   /***
    * Must call this task on loop and avoid delay on loop over 1000 ms
-  */
+   */
   ag.sgp41.handle();
 
   if (ms >= 1000) {
