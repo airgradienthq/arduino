@@ -538,17 +538,63 @@ void loop() {
   updateWiFiConnect();
 }
 
+static void setTestColor(char color) {
+  int r = 0;
+  int g = 0;
+  int b = 0;
+  switch (color) {
+  case 'g':
+    g = 255;
+    break;
+  case 'y':
+    r = 255;
+    g = 255;
+    break;
+  case 'o':
+    r = 255;
+    g = 128;
+    break;
+  case 'r':
+    r = 255;
+    break;
+  case 'b':
+    b = 255;
+    break;
+  case 'w':
+    r = 255;
+    g = 255;
+    b = 255;
+    break;
+  case 'p':
+    r = 153;
+    b = 153;
+    break;
+  case 'z':
+    r = 102;
+    break;
+  case 'n':
+  default:
+    break;
+  }
+  ag.ledBar.setColor(r, g, b);
+}
+
 static void ledTest() {
   displayShowText("LED Test", "running", ".....");
-  setRGBledColor('r');
+  setTestColor('r');
+  ag.ledBar.show();
   delay(1000);
-  setRGBledColor('g');
+  setTestColor('g');
+  ag.ledBar.show();
   delay(1000);
-  setRGBledColor('b');
+  setTestColor('b');
+  ag.ledBar.show();
   delay(1000);
-  setRGBledColor('w');
+  setTestColor('w');
+  ag.ledBar.show();
   delay(1000);
-  setRGBledColor('n');
+  setTestColor('n');
+  ag.ledBar.show();
   delay(1000);
 }
 
