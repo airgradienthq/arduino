@@ -4,23 +4,23 @@
 /**
  * @brief Define test board
  */
-#define TEST_BOARD_DIY_BASIC_KIT 0
-#define TEST_BOARD_DIY_PRO_INDOOR_V4_2 1
+#define TEST_DIY_BASIC 1
 
 /**
  * @brief Define test sensor
  */
-#define TEST_SENSOR_SenseAirS8 0
+#define TEST_SENSOR_SenseAirS8 1
+// #define S8_BASELINE_CALIB
 #define TEST_SENSOR_PMS5003 0
 #define TEST_SENSOR_SHT4x 0
-#define TEST_SENSOR_SGP4x 1
+#define TEST_SENSOR_SGP4x 0
 #define TEST_SWITCH 0
 #define TEST_OLED 0
 
-#if TEST_BOARD_DIY_BASIC_KIT
-AirGradient ag(BOARD_DIY_BASIC_KIT);
-#elif TEST_BOARD_DIY_PRO_INDOOR_V4_2
-AirGradient ag(BOARD_DIY_PRO_INDOOR_V4_2);
+#if TEST_DIY_BASIC
+AirGradient ag(DIY_BASIC);
+#elif TEST_DIY_PRO_INDOOR_V4_2
+AirGradient ag(DIY_PRO_INDOOR_V4_2);
 #else
 #error "Board test not defined"
 #endif
@@ -38,11 +38,19 @@ void setup() {
     Serial.println("CO2S8 sensor init failure");
   }
 
+#ifdef S8_BASELINE_CALIB
   if (ag.s8.setBaselineCalibration()) {
     Serial.println("Manual calib success");
   } else {
     Serial.println("Manual calib failure");
   }
+#else
+  if (ag.s8.setAutoCalib(8)) {
+    Serial.println("Set auto calib success");
+  } else {
+    Serial.println("Set auto calib failure");
+  }
+#endif
   delay(5000);
 #endif
 
@@ -59,7 +67,7 @@ void setup() {
 #endif
 
 #if TEST_SENSOR_SHT4x
-  if (ag.sht.begin(Wire, Serial)) {
+  if (ag.sht4x.begin(Wire, Serial)) {
     Serial.println("SHT init success");
   } else {
     Serial.println("SHT init failed");
@@ -132,7 +140,7 @@ void loop() {
     shtTime = millis();
     float temperature, humidity;
     Serial.printf("SHT Temperature: %f, Humidity: %f\r\n",
-                  ag.sht.getTemperature(), ag.sht.getRelativeHumidity());
+                  ag.sht4x.getTemperature(), ag.sht4x.getRelativeHumidity());
   }
 #endif
 
@@ -142,7 +150,7 @@ void loop() {
 
   /***
    * Must call this task on loop and avoid delay on loop over 1000 ms
-  */
+   */
   ag.sgp41.handle();
 
   if (ms >= 1000) {

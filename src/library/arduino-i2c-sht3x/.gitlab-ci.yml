@@ -1,0 +1,110 @@
+stages:
+  - validate
+  - test
+
+variables:
+  YQ_URL: https://github.com/mikefarah/yq/releases/download/v4.33.3/yq_linux_amd64
+
+compile_test:
+    stage: test
+    image:
+        name: registry.gitlab.sensirion.lokal/sensirion/docker/docker-arduino:0.4.0
+    tags: [docker, linux]
+    before_script:
+        - rm -rf ../sensirion-core-arduino-library
+    script:
+        - git clone --depth 1 --branch 0.5.2 https://github.com/Sensirion/arduino-core.git ../sensirion-core-arduino-library
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:samd:mkrzero ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:mega ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:nano ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:uno ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp32:esp32:esp32 ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp8266:esp8266:generic ./examples/exampleUsageSingleShot/exampleUsageSingleShot.ino
+
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:samd:mkrzero ./examples/exampleUsage/exampleUsage.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:mega ./examples/exampleUsage/exampleUsage.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:nano ./examples/exampleUsage/exampleUsage.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn arduino:avr:uno ./examples/exampleUsage/exampleUsage.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp32:esp32:esp32 ./examples/exampleUsage/exampleUsage.ino
+        - arduino-cli compile --libraries=".." --warnings all --fqbn esp8266:esp8266:generic ./examples/exampleUsage/exampleUsage.ino
+
+arduino_lint:
+  stage: validate
+  image:
+    name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.2.0
+  tags: [linux, docker]
+  script:
+    - mkdir ~/arlint
+    - PATH=~/arlint:$PATH
+    - curl -fsSL https://raw.githubusercontent.com/arduino/arduino-lint/main/etc/install.sh | BINDIR=~/arlint sh
+    - arduino-lint --library-manager false
+
+syntax_check:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.2.0
+  tags: [linux, docker]
+  script:
+    - find . -type f -iregex ".*\.\(c\|h\|cpp\|ino\)" -exec clang-format-6.0 -i -style=file {} \; && git diff --exit-code
+
+
+cppcheck:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.2.0
+  tags: [linux, docker]
+  script:
+    - cppcheck --std=c++11 --language=c++ --error-exitcode=1 --enable=warning,style,performance,portability --suppress=unreadVariable src/*
+
+TODO_check:
+  stage: validate
+  image:
+      name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.2.0
+  tags: [linux, docker]
+  script:
+    - '! grep -rnw --exclude=.gitlab-ci.yml --exclude-dir=.git . -e "TODO"'
+
+metadata_check:
+  stage: validate
+  image:
+    name: registry.gitlab.sensirion.lokal/mso-sw/drivers/docker-driver-generator:0.2.0
+  tags: [linux, docker]
+  before_script:
+    - apt-get -qq update && apt-get -qq install -y wget
+    - if ! [ -d downloads/ ]; then mkdir downloads; fi
+    - if ! [ -e downloads/yq ]; then wget --no-verbose $YQ_URL -O downloads/yq; fi
+    - cp downloads/yq /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+  script:
+    # check if metadata.yml exists
+    - >
+      if ! [ -f "metadata.yml" ]; then
+        echo "metadata.yml file not found"
+        exit 1
+      fi
+    # check that dg_status is 'released'
+    - export DG_STATUS=$(yq ".dg_status.[]" ./metadata.yml)
+    - >
+      if [ $DG_STATUS != "released" ]; then
+        echo "dg_status in metadata.yml has to be 'released', not '$DG_STATUS'"
+        exit 1
+      fi
+    # check that last_generated is not older than timestamp of last non-merge commit (+ 3 minutes)
+    - export IS_MANUALLY_MODIFIED=$(yq ".is_manually_modified" ./metadata.yml)
+    - >
+      if [ $IS_MANUALLY_MODIFIED = false ]; then
+        export LAST_GENERATED_TS=$(yq ".last_generated" ./metadata.yml)
+        export LAST_GENERATED_TS_EPOCH=$(date -d "$LAST_GENERATED_TS" +%s)
+        export LAST_NON_MERGE_COMMIT_TS=$(git log --format=%ad --date=iso-strict --no-merges -1)
+        export COMMIT_TS_EPOCH=$(date -d "$LAST_NON_MERGE_COMMIT_TS" +%s)
+        if [ $(($LAST_GENERATED_TS_EPOCH + 180)) -lt $COMMIT_TS_EPOCH  ]; then
+          echo "'last_generated' timestamp in metadata.yml is older than commit timestamp ($LAST_GENERATED_TS vs $LAST_NON_MERGE_COMMIT_TS)"
+          exit 1
+        fi
+      fi
+    # check that 'is_manually_modified' is set to true if commit is not from driver generator
+    - export LAST_NON_MERGE_COMMIT_AUTHOR=$(git log --format=%an --no-merges -1)
+    - >
+      if ! [ "$LAST_NON_MERGE_COMMIT_AUTHOR" = "Driver Generator 2" ] && [ "$IS_MANUALLY_MODIFIED" = false ]; then
+        echo "Last commit is not from Driver Generator. Please update 'is_manually_modified' in metadata.yml"
+        exit 1
+      fi

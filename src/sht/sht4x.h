@@ -4,24 +4,27 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "../bsp/BoardDef.h"
+#include "../main/BoardDef.h"
 
-class Sht {
+/**
+ * @brief The class with define how to handle the Sensirion sensor SHT41
+ * (temperature and humidity sensor).
+ */
+class Sht4x {
 public:
 #if defined(ESP8266)
   bool begin(TwoWire &wire, Stream &debugStream);
 #else
 #endif
-  Sht(BoardType type);
+  Sht4x(BoardType type);
   bool begin(TwoWire &wire);
   void end(void);
-
   float getTemperature(void);
   float getRelativeHumidity(void);
 
 private:
   BoardType _boardType;
-  bool _isInit = false;
+  bool _isBegin = false; /** Flag indicate that sensor initialized or not */
   void *_sensor;
   const BoardDef *_bsp = NULL;
 #if defined(ESP8266)
@@ -29,21 +32,9 @@ private:
   const char *TAG = "SHT4x";
 #else
 #endif
-  bool checkInit(void);
+  bool isBegin(void);
   bool boardSupported(void);
-  int sdaPin(void);
-  int sclPin(void);
-
-  bool measureHighPrecision(float &temperature, float &humidity);
   bool measureMediumPrecision(float &temperature, float &humidity);
-  bool measureLowestPrecision(float &temperature, float &humidity);
-
-  bool activateHighestHeaterPowerShort(float &temperature, float &humidity);
-  bool activateMediumHeaterPowerLong(float &temperature, float &humidity);
-  bool activateLowestHeaterPowerLong(float &temperature, float &humidity);
-
-  bool getSerialNumber(uint32_t &serialNumber);
-  bool softReset(void);
 };
 
 #endif /** _AIR_GRADIENT_SHT_H_ */
