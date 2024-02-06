@@ -215,6 +215,8 @@ public:
     /** Get "co2CalibrationRequested" */
     if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
       co2Calib = root["co2CalibrationRequested"];
+    } else {
+      co2Calib = false;
     }
 
     /** Get "ledBarMode" */
@@ -258,6 +260,13 @@ public:
       co2AbcCalib = root["abcDays"];
     } else {
       co2AbcCalib = -1;
+    }
+
+    /** Get "ledBarTestRequested" */
+    if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
+      ledBarTestRequested = root["ledBarTestRequested"];
+    } else {
+      ledBarTestRequested = false;
     }
 
     /** Show configuration */
@@ -343,6 +352,20 @@ public:
   }
 
   /**
+   * @brief Get request LedBar test
+   *
+   * @return true Requested. If result = true, it's clear after function call
+   * @return false Not-requested
+   */
+  bool isLedBarTestRequested(void) {
+    bool ret = ledBarTestRequested;
+    if (ret) {
+      ledBarTestRequested = false;
+    }
+    return ret;
+  }
+
+  /**
    * @brief Get the Co2 auto calib period
    *
    * @return int  days, -1 if invalid.
@@ -384,12 +407,13 @@ public:
   UseLedBar getLedBarMode(void) { return ledBarMode; }
 
 private:
-  bool inF;             /** Temperature unit, true: F, false: C */
-  bool inUSAQI;         /** PMS unit, true: USAQI, false: ugm3 */
-  bool configFailed;    /** Flag indicate get server configuration failed */
-  bool serverFailed;    /** Flag indicate post data to server failed */
-  bool co2Calib;        /** Is co2Ppmcalibration requset */
-  int co2AbcCalib = -1; /** update auto calibration number of day */
+  bool inF;                 /** Temperature unit, true: F, false: C */
+  bool inUSAQI;             /** PMS unit, true: USAQI, false: ugm3 */
+  bool configFailed;        /** Flag indicate get server configuration failed */
+  bool serverFailed;        /** Flag indicate post data to server failed */
+  bool co2Calib;            /** Is co2Ppmcalibration requset */
+  bool ledBarTestRequested; /** */
+  int co2AbcCalib = -1;     /** update auto calibration number of day */
   UseLedBar ledBarMode = UseLedBarCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
@@ -942,6 +966,9 @@ static void serverConfigPoll(void) {
       if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
         Serial.println("Set S8 auto calib failed");
       }
+    }
+    if (agServer.isLedBarTestRequested()) {
+      ledTest();
     }
   }
 }
