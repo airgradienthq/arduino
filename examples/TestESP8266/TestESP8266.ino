@@ -58,7 +58,7 @@ void setup() {
 #endif
 
 #if TEST_SENSOR_SHT4x
-  if (ag.sht.begin(Wire, Serial)) {
+  if (ag.sht4x.begin(Wire, Serial)) {
     Serial.println("SHT init success");
   } else {
     Serial.println("SHT init failed");
@@ -131,7 +131,7 @@ void loop() {
     shtTime = millis();
     float temperature, humidity;
     Serial.printf("SHT Temperature: %f, Humidity: %f\r\n",
-                  ag.sht.getTemperature(), ag.sht.getRelativeHumidity());
+                  ag.sht4x.getTemperature(), ag.sht4x.getRelativeHumidity());
   }
 #endif
 

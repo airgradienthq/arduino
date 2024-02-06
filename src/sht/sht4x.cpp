@@ -14,7 +14,7 @@
  * @return true Sucecss
  * @return false Failure
  */
-bool Sht::begin(TwoWire &wire, Stream &debugStream) {
+bool Sht4x::begin(TwoWire &wire, Stream &debugStream) {
   this->_debugStream = &debugStream;
   return this->begin(wire);
 }
@@ -22,11 +22,11 @@ bool Sht::begin(TwoWire &wire, Stream &debugStream) {
 #endif
 
 /**
- * @brief Construct a new Sht:: Sht object
+ * @brief Construct a new Sht4x:: Sht4x object
  * 
  * @param type Board type @ref BoardType
  */
-Sht::Sht(BoardType type) : _boardType(type) {}
+Sht4x::Sht4x(BoardType type) : _boardType(type) {}
 
 /**
  * @brief Init sensor, Ifthis funciton not call the other funtion call will
@@ -36,7 +36,7 @@ Sht::Sht(BoardType type) : _boardType(type) {}
  * @return true Success
  * @return false Failure
  */
-bool Sht::begin(TwoWire &wire) {
+bool Sht4x::begin(TwoWire &wire) {
   /** Ignore next step if sensor has intiialized */
   if (this->_isBegin) {
     AgLog("Initialized, call end() then try again");
@@ -67,7 +67,7 @@ bool Sht::begin(TwoWire &wire) {
  * @brief De-initialize SHT41 sensor
  * 
  */
-void Sht::end(void) {
+void Sht4x::end(void) {
   if (this->_isBegin == false) {
     return;
   }
@@ -87,7 +87,7 @@ AgLog("De-initialize");
  * @return float value <= 256.0f is invalid, That mean sensor has issue or
  * communication to sensor not worked as well.
  */
-float Sht::getTemperature(void) {
+float Sht4x::getTemperature(void) {
   float temperature;
   float humidity;
   if (this->measureMediumPrecision(temperature, humidity)) {
@@ -102,7 +102,7 @@ float Sht::getTemperature(void) {
  *
  * @return float Percent(0 - 100), value < 0 is invalid.
  */
-float Sht::getRelativeHumidity(void) {
+float Sht4x::getRelativeHumidity(void) {
   float temperature;
   float humidity;
   if (this->measureMediumPrecision(temperature, humidity)) {
@@ -118,7 +118,7 @@ float Sht::getRelativeHumidity(void) {
  * @return true Supported
  * @return false Not supported
  */
-bool Sht::boardSupported(void) {
+bool Sht4x::boardSupported(void) {
   if (this->_bsp == NULL) {
     this->_bsp = getBoardDef(this->_boardType);
   }
@@ -136,7 +136,7 @@ bool Sht::boardSupported(void) {
  * @return true Initialized
  * @return false Not-initialized
  */
-bool Sht::isBegin(void) {
+bool Sht4x::isBegin(void) {
   if (this->_isBegin) {
     return true;
   }
@@ -152,7 +152,7 @@ bool Sht::isBegin(void) {
  * @return true Success
  * @return false Failure
  */
-bool Sht::measureMediumPrecision(float &temperature, float &humidity) {
+bool Sht4x::measureMediumPrecision(float &temperature, float &humidity) {
   if (this->isBegin() == false) {
     return false;
   }

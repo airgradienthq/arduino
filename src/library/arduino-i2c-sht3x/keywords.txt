@@ -1,0 +1,59 @@
+#######################################
+# Syntax Coloring Map
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SensirionI2cSht3x	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+measureSingleShot	KEYWORD2
+startPeriodicMeasurement	KEYWORD2
+blockingReadMeasurement	KEYWORD2
+readStatusRegister	KEYWORD2
+measureSingleShotHighRepeatability	KEYWORD2
+measureSingleShotHighRepeatabilityClockStretching	KEYWORD2
+measureSingleShotMediumRepeatability	KEYWORD2
+measureSingleShotMediumRepeatabilityClockStretching	KEYWORD2
+measureSingleShotLowRepeatability	KEYWORD2
+measureSingleShotLowRepeatabilityClockStretching	KEYWORD2
+startMeasurement05MpsHighRepeatability	KEYWORD2
+startMeasurement05MpsMediumRepeatability	KEYWORD2
+startMeasurement05MpsLowRepeatability	KEYWORD2
+startMeasurement1MpsHighRepeatability	KEYWORD2
+startMeasurement1MpsMediumRepeatability	KEYWORD2
+startMeasurement1MpsLowRepeatability	KEYWORD2
+startMeasurement2MpsHighRepeatability	KEYWORD2
+startMeasurement2MpsMediumRepeatability	KEYWORD2
+startMeasurement2MpsLowRepeatability	KEYWORD2
+startMeasurement4MpsHighRepeatability	KEYWORD2
+startMeasurement4MpsMediumRepeatability	KEYWORD2
+startMeasurement4MpsLowRepeatability	KEYWORD2
+startMeasurement10MpsHighRepeatability	KEYWORD2
+startMeasurement10MpsMediumRepeatability	KEYWORD2
+startMeasurement10MpsLowRepeatability	KEYWORD2
+startArtMeasurement	KEYWORD2
+readMeasurement	KEYWORD2
+stopMeasurement	KEYWORD2
+enableHeater	KEYWORD2
+disableHeater	KEYWORD2
+llreadStatusRegister	KEYWORD2
+clearStatusRegister	KEYWORD2
+softReset	KEYWORD2
+signalTemperature	KEYWORD2
+signalHumidity	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+sensor	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################

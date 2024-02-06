@@ -99,7 +99,7 @@ void setup() {
 
 #if TEST_SENSOR_SHT4x
 
-  if (ag.sht.begin(Wire)) {
+  if (ag.sht4x.begin(Wire)) {
     log_i("SHT init success");
   } else {
     log_i("SHT init failed");
@@ -218,9 +218,9 @@ void loop() {
   ms = (uint32_t)(millis() - shtTime);
   if (ms >= 1000) {
     shtTime = millis();
-    log_i("Get sht temperature: %0.2f (degree celsius)",
-          ag.sht.getTemperature());
-    log_i("Get sht temperature: %0.2f (%%)", ag.sht.getRelativeHumidity());
+    log_i("Get sht4x temperature: %0.2f (degree celsius)",
+          ag.sht4x.getTemperature());
+    log_i("Get sht4x temperature: %0.2f (%%)", ag.sht4x.getRelativeHumidity());
   }
 #endif
 

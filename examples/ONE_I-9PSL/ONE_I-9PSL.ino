@@ -884,7 +884,7 @@ static void boardInit(void) {
   }
 
   /** INit SHT */
-  if (ag.sht.begin(Wire) == false) {
+  if (ag.sht4x.begin(Wire) == false) {
     failedHandler("Init SHT failed");
   }
 
@@ -1329,8 +1329,8 @@ static void sendDataToServer(void) {
  * @brief Update temperature and humidity value
  */
 static void tempHumPoll(void) {
-  temp = ag.sht.getTemperature();
-  hum = ag.sht.getRelativeHumidity();
+  temp = ag.sht4x.getTemperature();
+  hum = ag.sht4x.getRelativeHumidity();
 
   Serial.printf("Temperature: %0.2f\r\n", temp);
   Serial.printf("   Humidity: %d\r\n", hum);

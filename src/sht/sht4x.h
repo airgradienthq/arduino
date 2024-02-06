@@ -10,13 +10,13 @@
  * @brief The class with define how to handle the Sensirion sensor SHT41
  * (temperature and humidity sensor).
  */
-class Sht {
+class Sht4x {
 public:
 #if defined(ESP8266)
   bool begin(TwoWire &wire, Stream &debugStream);
 #else
 #endif
-  Sht(BoardType type);
+  Sht4x(BoardType type);
   bool begin(TwoWire &wire);
   void end(void);
   float getTemperature(void);

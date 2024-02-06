@@ -471,7 +471,7 @@ void connectToWifi() {
 
 static void boardInit(void) {
   /** Init SHT sensor */
-  if (ag.sht.begin(Wire) == false) {
+  if (ag.sht4x.begin(Wire) == false) {
     failedHandler("SHT init failed");
   }
 
@@ -545,8 +545,8 @@ void pmPoll() {
 }
 
 static void tempHumPoll() {
-  temp = ag.sht.getTemperature();
-  hum = ag.sht.getRelativeHumidity();
+  temp = ag.sht4x.getTemperature();
+  hum = ag.sht4x.getRelativeHumidity();
 
   Serial.printf("Temperature: %0.2f\r\n", temp);
   Serial.printf("   Humidity: %d\r\n", hum);
