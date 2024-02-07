@@ -412,9 +412,23 @@ void setup() {
     }
   }
 
-  /** Show display */
-  displayShowText("Warm Up", "Serial#", String(ESP.getChipId(), HEX));
-  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+  /** Show serial number display */
+  ag.display.clear();
+  ag.display.setCursor(1, 1);
+  ag.display.setText("Warm Up");
+  ag.display.setCursor(1, 15);
+  ag.display.setText("Serial#");
+  ag.display.setCursor(1, 29);
+  String id = getNormalizedMac();
+  Serial.println("Device id: " + id);
+  String id1 = id.substring(0, 9);
+  String id2 = id.substring(9, 12);
+  ag.display.setText("\'"+ id1);
+  ag.display.setCursor(1, 40);
+  ag.display.setText(id2 + "\'");
+  ag.display.show();
+
+  delay(5000);
 }
 
 void loop() {
