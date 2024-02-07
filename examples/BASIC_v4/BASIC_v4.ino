@@ -413,7 +413,21 @@ void setup() {
   }
 
   /** Show display */
-  displayShowText("Warm Up", "Serial#", String(ESP.getChipId(), HEX));
+  // displayShowText("Warm Up", "Serial#", String(ESP.getChipId(), HEX));
+  ag.display.clear();
+  ag.display.setCursor(1, 1);
+  ag.display.setText("Warn Up");
+  ag.display.setCursor(1, 17);
+  ag.display.setText("Serial#");
+  ag.display.setCursor(1, 29);
+  String id = getNormalizedMac();
+  String id1 = id.substring(0, 8);
+  String id2 = id.substring(9, 12);
+  ag.display.setText("\'"+ id1);
+  ag.display.setCursor(1, 40);
+  ag.display.setText(id2 + "\'");
+  ag.display.show();
+
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 }
 
