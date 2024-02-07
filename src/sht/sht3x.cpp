@@ -36,26 +36,6 @@ bool Sht3x::boardSupported(void) {
 }
 
 /**
- * @brief Get temperature and humidity data
- *
- * @param temp Tempreature read out
- * @param hum Humidity read out
- * @return true Success
- * @return false Failure
- */
-bool Sht3x::measure(float &temp, float &hum) {
-  if (isBegin() == false) {
-    return false;
-  }
-
-  if (sht3x()->measureSingleShot(REPEATABILITY_MEDIUM, false, temp, hum) ==
-      NO_ERROR) {
-    return true;
-  }
-  return false;
-}
-
-/**
  * @brief Construct a new Sht 3x:: Sht 3x object
  *
  * @param type
@@ -106,8 +86,15 @@ bool Sht3x::begin(TwoWire &wire) {
   /** Create sensor and init */
   _sensor = new SensirionI2cSht3x();
   sht3x()->begin(wire, SHT30_I2C_ADDR_44);
-  if (sht3x()->softReset() != NO_ERROR) {
-    AgLog("Reset sensor fail, look like sensor is not on I2C bus");
+  sht3x()->stopMeasurement();
+  delay(1);
+  sht3x()->softReset();
+  delay(100);
+
+  uint16_t statusRegister = 0;
+  uint16_t err = sht3x()->readStatusRegister(statusRegister);
+  if (err != NO_ERROR) {
+    AgLog("Read status register invalid");
     return false;
   }
 
@@ -139,25 +126,30 @@ void Sht3x::end(void) {
  * @return float value <= 256.0f is invalid, that mean sensor has issue or
  * communication to sensor not worked as well
  */
-float Sht3x::getTemperature(void) {
-  float temp;
-  float hum;
-  if (measure(temp, hum)) {
-    return temp;
-  }
-  return -256.0f;
-}
+float Sht3x::getTemperature(void) { return temp; }
 
 /**
  * @brief Get humidity
  *
  * @return float Percent(0 - 100), value < 0 is invalid.
  */
-float Sht3x::getRelativeHumidity(void) {
-  float temp;
-  float hum;
-  if (measure(temp, hum)) {
-    return hum;
+float Sht3x::getRelativeHumidity(void) { return hum; }
+
+/**
+ * @brief Measure temperature and humidity. Must call @getTemperature and
+ * @getRelativeHumidity after this function return success
+ *
+ * @return true Success
+ * @return false Failure
+ */
+bool Sht3x::measure(void) {
+  if (isBegin() == false) {
+    return false;
   }
-  return -1.0f;
+
+  if (sht3x()->measureSingleShot(REPEATABILITY_MEDIUM, false, temp, hum) ==
+      NO_ERROR) {
+    return true;
+  }
+  return false;
 }

@@ -14,21 +14,16 @@ void setup() {
 }
 
 void loop() {
-  float temp = ag.sht3x.getTemperature();
-  if (temp <= -256.0f) {
-    Serial.println("Get temperature failed");
-  } else {
+  if (ag.sht3x.measure()) {
+    float hum = ag.sht3x.getRelativeHumidity();
+    float temp = ag.sht3x.getTemperature();
+
     Serial.printf("Get temperature: %f\r\n", temp);
-  }
-
-  float hum = ag.sht3x.getRelativeHumidity();
-  if (hum < 0) {
-    Serial.println("Get humidity failed");
+    Serial.printf("   Get humidity: %f\r\n", hum);
   } else {
-    Serial.printf("Get humidity: %f\r\n", hum);
+    Serial.println("Measure sht3x failed");
   }
-
-  delay(1000);
+  delay(5000);
 }
 
 void failedHandler(String msg) {

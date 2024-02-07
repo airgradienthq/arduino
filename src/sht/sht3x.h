@@ -20,10 +20,11 @@ private:
   const char *TAG = "SHT3x";
 #else
 #endif
+  float temp;
+  float hum;
 
   bool isBegin(void);
   bool boardSupported(void);
-  bool measure(float &temp, float &hum);
 
 public:
   Sht3x(BoardType type);
@@ -35,6 +36,7 @@ public:
 #endif
   bool begin(TwoWire &wire);
   void end(void);
+  bool measure(void);
   float getTemperature(void);
   float getRelativeHumidity(void);
 };
