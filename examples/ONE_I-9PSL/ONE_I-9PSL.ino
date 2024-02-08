@@ -1259,7 +1259,7 @@ static void dispSmHandler(int sm) {
   case APP_SM_NORMAL: {
     displayShowDashboard("");
   }
-  detault:
+  default:
     break;
   }
 }
