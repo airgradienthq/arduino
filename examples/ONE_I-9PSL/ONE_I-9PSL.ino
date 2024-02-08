@@ -52,7 +52,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
  */
 enum {
   APP_SM_WIFI_MANAGER_MODE,           /** In WiFi Manger Mode */
-  APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
+  APP_SM_WIFI_MANAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
                                          phone */
   APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
                                         clicked, connection to WiFI network is
@@ -60,24 +60,24 @@ enum {
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
-  APP_SM_WIFI_OK_SERVER_CONNNECTED,   /** Server is reachable, all ﬁne */
+  APP_SM_WIFI_OK_SERVER_CONNECTED,   /** Server is reachable, all ﬁne */
   /** Exceptions during WIFi Setup */
   APP_SM_WIFI_MANAGER_CONNECT_FAILED,   /** Cannot connect to WiFi (e.g. wrong
                                             password, WPA Enterprise etc.) */
   APP_SM_WIFI_OK_SERVER_CONNECT_FAILED, /** Connected to WiFi but server not
-                                          reachable, e.g. ﬁrewall block/
+                                          reachable, e.g. firewall block/
                                           whitelisting needed etc. */
   APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED, /** Server reachable but sensor
-                                                   not conﬁgured correctly*/
+                                                   not configured correctly*/
 
   /** During Normal Operation */
   APP_SM_WIFI_LOST, /** Connection to WiFi network failed credentials incorrect
                        encryption not supported etc. */
   APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
-                         reached through the internet, e.g. blocked by ﬁrewall
+                         reached through the internet, e.g. blocked by firewall
                        */
   APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachable but there is some
-                                  conﬁguration issue to be ﬁxed on the server
+                                  conﬁguration issue to be fixed on the server
                                   side */
   APP_SM_NORMAL,
 };
@@ -322,7 +322,7 @@ public:
   bool isPMSinUSAQI(void) { return inUSAQI; }
 
   /**
-   * @brief Get status of get server coniguration is failed
+   * @brief Get status of get server configuration is failed
    *
    * @return true Failed
    * @return false Success
@@ -411,7 +411,7 @@ private:
   bool inUSAQI;             /** PMS unit, true: USAQI, false: ugm3 */
   bool configFailed;        /** Flag indicate get server configuration failed */
   bool serverFailed;        /** Flag indicate post data to server failed */
-  bool co2Calib;            /** Is co2Ppmcalibration requset */
+  bool co2Calib;            /** Is co2Ppmcalibration request */
   bool ledBarTestRequested; /** */
   int co2AbcCalib = -1;     /** update auto calibration number of day */
   UseLedBar ledBarMode = UseLedBarCO2; /** */
@@ -628,8 +628,8 @@ static void sendPing() {
 
   delay(1500);
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
-    dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
-    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
+    dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
+    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
   } else {
     dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
     ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
@@ -796,7 +796,7 @@ static void connectToWifi() {
   wifiManager.setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
   wifiManager.setAPCallback([](WiFiManager *obj) {
-    /** This callback if wifi connnected failed and try to start configuration
+    /** This callback if wifi CONNECTED failed and try to start configuration
      * portal */
     connectCountDown = WIFI_CONNECT_COUNTDOWN_MAX;
     ledCount = LED_BAR_COUNT_INIT_VALUE;
@@ -857,7 +857,7 @@ static void connectToWifi() {
       if (clientConnected != clientConnectChanged) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
-          ledSmHandler(APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE);
+          ledSmHandler(APP_SM_WIFI_MANAGER_PORTAL_ACTIVE);
         } else {
           ledCount = LED_BAR_COUNT_INIT_VALUE;
           ledSmHandler(APP_SM_WIFI_MANAGER_MODE);
@@ -1101,11 +1101,11 @@ static void ledSmHandler(int sm) {
   case APP_SM_WIFI_MANAGER_MODE: {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
-    /** Turn midle LED Color */
+    /** Turn middle LED Color */
     ag.ledBar.setColor(0, 0, 255, ag.ledBar.getNumberOfLeds() / 2);
     break;
   }
-  case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
+  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
     /** WiFi Manager has connected to mobile phone */
     ag.ledBar.setColor(0, 0, 255);
     break;
@@ -1126,7 +1126,7 @@ static void ledSmHandler(int sm) {
     singleLedAnimation(0, 255, 0);
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNNECTED: {
+  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
     /** Server is reachable, all ﬁne */
     ag.ledBar.setColor(0, 255, 0);
     break;
@@ -1137,13 +1137,13 @@ static void ledSmHandler(int sm) {
     break;
   }
   case APP_SM_WIFI_OK_SERVER_CONNECT_FAILED: {
-    /** Connected to WiFi but server not reachable, e.g. ﬁrewall block/
+    /** Connected to WiFi but server not reachable, e.g. firewall block/
      * whitelisting needed etc. */
     ag.ledBar.setColor(233, 183, 54); /** orange */
     break;
   }
   case APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED: {
-    /** Server reachable but sensor not conﬁgured correctly */
+    /** Server reachable but sensor not configured correctly */
     ag.ledBar.setColor(139, 24, 248); /** violet */
     break;
   }
@@ -1159,7 +1159,7 @@ static void ledSmHandler(int sm) {
   }
   case APP_SM_SERVER_LOST: {
     /** Connected to WiFi network but the server cannot be reached through the
-     * internet, e.g. blocked by ﬁrewall */
+     * internet, e.g. blocked by firewall */
 
     ag.ledBar.setColor(233, 183, 54, 0);
 
@@ -1168,7 +1168,7 @@ static void ledSmHandler(int sm) {
     break;
   }
   case APP_SM_SENSOR_CONFIG_FAILED: {
-    /** Server is reachable but there is some conﬁguration issue to be ﬁxed on
+    /** Server is reachable but there is some conﬁguration issue to be fixed on
      * the server side */
 
     ag.ledBar.setColor(139, 24, 248, 0);
@@ -1207,7 +1207,7 @@ static void dispSmHandler(int sm) {
 
   switch (sm) {
   case APP_SM_WIFI_MANAGER_MODE:
-  case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
+  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
     if (connectCountDown >= 0) {
       displayShowWifiText(String(connectCountDown) + "s to connect",
                           "to WiFi hotspot:", "\"airgradient-",
@@ -1228,7 +1228,7 @@ static void dispSmHandler(int sm) {
     displayShowText("Connecting to", "Server", "...");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNNECTED: {
+  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
     displayShowText("Server", "connection", "successful");
     break;
   }
