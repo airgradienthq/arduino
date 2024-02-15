@@ -201,9 +201,9 @@ public:
       }
     }
 
-    /** Get "pmsStandard" */
-    if (JSON.typeof_(root["pmsStandard"]) == "string") {
-      String standard = root["pmsStandard"];
+    /** Get "pmStandard" */
+    if (JSON.typeof_(root["pmStandard"]) == "string") {
+      String standard = root["pmStandard"];
       if (standard == "ugm3") {
         inUSAQI = false;
       } else {
