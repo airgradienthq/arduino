@@ -128,6 +128,7 @@ public:
       count = millis();
     }
   }
+  void setPeriod(int period) { this->period = period; }
 
 private:
   void (*handler)(void);
@@ -409,12 +410,42 @@ static String wifiSSID = "";
 int tvocIndex = -1;
 int noxIndex = -1;
 int co2Ppm = 0;
-int pm25 = -1;
-int pm01 = -1;
-int pm10 = -1;
-int pm03PCount = -1;
-float temp;
-int hum;
+
+int pm25_1 = -1;
+int pm01_1 = -1;
+int pm10_1 = -1;
+int pm03PCount_1 = -1;
+float temp_1;
+int hum_1;
+
+int pm25_2 = -1;
+int pm01_2 = -1;
+int pm10_2 = -1;
+int pm03PCount_2 = -1;
+float temp_2;
+int hum_2;
+
+int pm1Value01;
+int pm1Value25;
+int pm1Value10;
+int pm1PCount;
+int pm1temp;
+int pm1hum;
+int pm2Value01;
+int pm2Value25;
+int pm2Value10;
+int pm2PCount;
+int pm2temp;
+int pm2hum;
+int countPosition;
+const int targetCount = 20;
+
+enum {
+  FW_MODE_PST, /** PMS5003T, S8 and SGP41 */
+  FW_MODE_PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
+  FW_MODE_PP   /** PMS5003T_1, PMS5003T_2 */
+};
+int fw_mode = FW_MODE_PST;
 
 void boardInit(void);
 void failedHandler(String msg);
@@ -426,6 +457,7 @@ static void pmPoll(void);
 static void sendDataToServer(void);
 static void co2Poll(void);
 static void serverConfigPoll(void);
+static const char *getFwMode(int mode);
 
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -462,9 +494,13 @@ void setup() {
 void loop() {
   configSchedule.run();
   serverSchedule.run();
-  co2Schedule.run();
+  if (fw_mode == FW_MODE_PST) {
+    co2Schedule.run();
+  }
   pmsSchedule.run();
-  tvocSchedule.run();
+  if (fw_mode == FW_MODE_PST || fw_mode == FW_MODE_PPT) {
+    tvocSchedule.run();
+  }
   updateWiFiConnect();
 }
 
@@ -483,36 +519,65 @@ void sendPing() {
 static void sendDataToServer(void) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
-  }
-  if (pm01 >= 0) {
-    root["pm01"] = pm01;
-  }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
-  }
-  if (pm10 >= 0) {
-    root["pm10"] = pm10;
-  }
-  if (pm03PCount >= 0) {
-    root["pm003_count"] = pm03PCount;
-  }
-  if (tvocIndex >= 0) {
-    root["tvoc_index"] = tvocIndex;
-  }
-  if (noxIndex >= 0) {
-    root["noxIndex"] = noxIndex;
-  }
-  if (temp >= 0) {
-    root["atmp"] = temp;
-  }
-  if (hum >= 0) {
-    root["rhum"] = hum;
-  }
   root["boot"] = loopCount;
+  if (fw_mode == FW_MODE_PST) {
+    if (co2Ppm >= 0) {
+      root["rco2"] = co2Ppm;
+    }
+    if (pm01_1 >= 0) {
+      root["pm01"] = pm01_1;
+    }
+    if (pm25_1 >= 0) {
+      root["pm02"] = pm25_1;
+    }
+    if (pm10_1 >= 0) {
+      root["pm10"] = pm10_1;
+    }
+    if (pm03PCount_1 >= 0) {
+      root["pm003_count"] = pm03PCount_1;
+    }
+    if (tvocIndex >= 0) {
+      root["tvoc_index"] = tvocIndex;
+    }
+    if (noxIndex >= 0) {
+      root["noxIndex"] = noxIndex;
+    }
+    if (temp_1 >= 0) {
+      root["atmp"] = temp_1;
+    }
+    if (hum_1 >= 0) {
+      root["rhum"] = hum_1;
+    }
+  } else if (fw_mode == FW_MODE_PPT) {
+    if (tvocIndex > 0) {
+      root["tvoc_index"] = loopCount;
+    }
+    if (noxIndex > 0) {
+      root["nox_index"] = loopCount;
+    }
+  }
 
-  // NOTE Need determine offline mode to reset watchdog timer
+  if (fw_mode == FW_MODE_PP || FW_MODE_PPT) {
+    root["pm01"] = (int)((pm01_1 + pm01_2) / 2);
+    root["pm02"] = (int)((pm25_1 + pm25_2) / 2);
+    root["pm003_count"] = (int)((pm03PCount_1 + pm03PCount_2) / 2);
+    root["atmp"] = (int)((temp_1 + temp_2) / 2);
+    root["rhum"] = (int)((hum_1 + hum_2) / 2);
+    root["channels"]["1"]["pm01"] = pm01_1;
+    root["channels"]["1"]["pm02"] = pm25_1;
+    root["channels"]["1"]["pm10"] = pm10_1;
+    root["channels"]["1"]["pm003_count"] = pm03PCount_1;
+    root["channels"]["1"]["atmp"] = temp_1;
+    root["channels"]["1"]["rhum"] = hum_1;
+    root["channels"]["2"]["pm01"] = pm01_2;
+    root["channels"]["2"]["pm02"] = pm25_2;
+    root["channels"]["2"]["pm10"] = pm10_2;
+    root["channels"]["2"]["pm003_count"] = pm03PCount_2;
+    root["channels"]["2"]["atmp"] = temp_2;
+    root["channels"]["2"]["rhum"] = hum_2;
+  }
+
+  /** Send data to sensor */
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
     resetWatchdog();
   }
@@ -610,17 +675,37 @@ void boardInit(void) {
 
   ag.statusLed.begin();
 
-  if (ag.pms5003t_1.begin(Serial0) == false) {
-    failedHandler("Init PMS5003T failed");
-  }
-
+  /** detect sensor: PMS5003, PMS5003T, SGP41 and S8 */
   if (ag.s8.begin(Serial1) == false) {
-    failedHandler("Init SenseAirS8 failed");
+    Serial.println("S8 not detect run mode 'PPT'");
+    fw_mode = FW_MODE_PPT;
+
+    /** De-initialize Serial1 */
+    Serial1.end();
+  }
+  if (ag.sgp41.begin(Wire) == false) {
+    if (fw_mode == FW_MODE_PST) {
+      failedHandler("Init SGP41 failed");
+    } else {
+      Serial.println("SGP41 not detect run mode 'PP'");
+      fw_mode = FW_MODE_PP;
+    }
   }
 
-  if (ag.sgp41.begin(Wire) == false) {
-    failedHandler("Init SGP41 failed");
+  if (ag.pms5003t_1.begin(Serial0) == false) {
+    failedHandler("Init PMS5003T_1 failed");
   }
+  if (fw_mode != FW_MODE_PST) {
+    if (ag.pms5003t_2.begin(Serial1) == false) {
+      failedHandler("Init PMS5003T_2 failed");
+    }
+  }
+
+  if (fw_mode != FW_MODE_PST) {
+    pmsSchedule.setPeriod(2000);
+  }
+
+  Serial.printf("Firmware node: %s\r\n", getFwMode(fw_mode));
 }
 
 void failedHandler(String msg) {
@@ -693,13 +778,60 @@ static void tvocPoll(void) {
  *
  */
 static void pmPoll(void) {
-  if (ag.pms5003t_1.readData()) {
-    pm01 = ag.pms5003t_1.getPm01Ae();
-    pm25 = ag.pms5003t_1.getPm25Ae();
-    pm25 = ag.pms5003t_1.getPm10Ae();
-    pm03PCount = ag.pms5003t_1.getPm03ParticleCount();
-    temp = ag.pms5003t_1.getTemperature();
-    hum = ag.pms5003t_1.getRelativeHumidity();
+  if (fw_mode == FW_MODE_PST) {
+    if (ag.pms5003t_1.readData()) {
+      pm01_1 = ag.pms5003t_1.getPm01Ae();
+      pm25_1 = ag.pms5003t_1.getPm25Ae();
+      pm25_1 = ag.pms5003t_1.getPm10Ae();
+      pm03PCount_1 = ag.pms5003t_1.getPm03ParticleCount();
+      temp_1 = ag.pms5003t_1.getTemperature();
+      hum_1 = ag.pms5003t_1.getRelativeHumidity();
+    }
+  } else {
+    if (ag.pms5003t_1.readData() && ag.pms5003t_2.readData()) {
+      pm1Value01 = pm1Value01 + ag.pms5003t_1.getPm01Ae();
+      pm1Value25 = pm1Value25 + ag.pms5003t_1.getPm25Ae();
+      pm1Value10 = pm1Value10 + ag.pms5003t_1.getPm10Ae();
+      pm1PCount = pm1PCount + ag.pms5003t_1.getPm03ParticleCount();
+      pm1temp = pm1temp + ag.pms5003t_1.getTemperature();
+      pm1hum = pm1hum + ag.pms5003t_1.getRelativeHumidity();
+      pm2Value01 = pm2Value01 + ag.pms5003t_2.getPm01Ae();
+      pm2Value25 = pm2Value25 + ag.pms5003t_2.getPm25Ae();
+      pm2Value10 = pm2Value10 + ag.pms5003t_2.getPm10Ae();
+      pm2PCount = pm2PCount + ag.pms5003t_2.getPm03ParticleCount();
+      pm2temp = pm2temp + ag.pms5003t_2.getTemperature();
+      pm2hum = pm2hum + ag.pms5003t_2.getRelativeHumidity();
+      countPosition++;
+      if (countPosition == targetCount) {
+        pm01_1 = pm1Value01 / targetCount;
+        pm25_1 = pm1Value25 / targetCount;
+        pm10_1 = pm1Value10 / targetCount;
+        pm03PCount_1 = pm1PCount / targetCount;
+        temp_1 = pm1temp / targetCount;
+        hum_1 = pm1hum / targetCount;
+        pm01_2 = pm2Value01 / targetCount;
+        pm25_2 = pm2Value25 / targetCount;
+        pm10_2 = pm2Value10 / targetCount;
+        pm03PCount_2 = pm2PCount / targetCount;
+        temp_2 = pm2temp / targetCount;
+        hum_2 = pm2hum / targetCount;
+
+        countPosition = 0;
+
+        pm1Value01 = 0;
+        pm1Value25 = 0;
+        pm1Value10 = 0;
+        pm1PCount = 0;
+        pm1temp = 0;
+        pm1hum = 0;
+        pm2Value01 = 0;
+        pm2Value25 = 0;
+        pm2Value10 = 0;
+        pm2PCount = 0;
+        pm2temp = 0;
+        pm2hum = 0;
+      }
+    }
   }
 }
 
@@ -710,12 +842,15 @@ static void co2Poll(void) {
 
 static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
-    if (agServer.isCo2Calib()) {
-      co2Calibration();
-    }
-    if (agServer.getCo2Abccalib() > 0) {
-      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
-        Serial.println("Set S8 auto calib failed");
+    /** Only support CO2 S8 sensor on FW_MODE_PST */
+    if (fw_mode == FW_MODE_PST) {
+      if (agServer.isCo2Calib()) {
+        co2Calibration();
+      }
+      if (agServer.getCo2Abccalib() > 0) {
+        if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
+          Serial.println("Set S8 auto calib failed");
+        }
       }
     }
   }
@@ -822,4 +957,18 @@ void ledSmHandler(int sm) {
   default:
     break;
   }
+}
+
+static const char *getFwMode(int mode) {
+  switch (mode) {
+  case FW_MODE_PST:
+    return "FW_MODE_PST";
+  case FW_MODE_PPT:
+    return "FW_MODE_PPT";
+  case FW_MODE_PP:
+    return "FW_MODE_PP";
+  default:
+    break;
+  }
+  return "FW_MODE_UNKNOW";
 }
