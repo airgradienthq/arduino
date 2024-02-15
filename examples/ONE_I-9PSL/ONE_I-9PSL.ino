@@ -194,7 +194,9 @@ public:
 
     /** Get "country" */
     if (JSON.typeof_(root["country"]) == "string") {
-      String country = root["country"];
+      String _country = root["country"];
+      country = _country;
+
       if (country == "US") {
         inF = true;
       } else {
@@ -406,6 +408,13 @@ public:
    */
   UseLedBar getLedBarMode(void) { return ledBarMode; }
 
+  /**
+   * @brief Get the Country
+   *
+   * @return String
+   */
+  String getCountry(void) { return country; }
+
 private:
   bool inF;                 /** Temperature unit, true: F, false: C */
   bool inUSAQI;             /** PMS unit, true: USAQI, false: ugm3 */
@@ -417,6 +426,7 @@ private:
   UseLedBar ledBarMode = UseLedBarCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
+  String country;                      /***/
 };
 AgServer agServer;
 
@@ -596,6 +606,19 @@ static void ledTest() {
   setTestColor('n');
   ag.ledBar.show();
   delay(1000);
+}
+static void ledTest2Min(void) {
+  uint32_t tstart = millis();
+
+  Serial.println("Start run LED test for 2 min");
+  while (1) {
+    ledTest();
+    uint32_t ms = (uint32_t)(millis() - tstart);
+    if (ms >= (60 * 1000 * 2)) {
+      Serial.println("LED test after 2 min finish");
+      break;
+    }
+  }
 }
 
 static void co2Poll(void) {
@@ -814,6 +837,8 @@ static void connectToWifi() {
     dispSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
     ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
   });
+
+  displayShowText("Connecting to", "config WiFi", "...");
   wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
       [](void *obj) {
@@ -988,7 +1013,21 @@ static void boardInit(void) {
   }
 
   /** Run LED test on start up */
-  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+  displayShowText("Press now for", "LED test", "");
+  bool test = false;
+  uint32_t stime = millis();
+  while (1) {
+    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+      test = true;
+      break;
+    }
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - stime);
+    if (ms >= 3000) {
+      break;
+    }
+  }
+  if (test) {
     ledTest();
   }
 }
@@ -1019,7 +1058,11 @@ static void serverConfigPoll(void) {
       }
     }
     if (agServer.isLedBarTestRequested()) {
-      ledTest();
+      if (agServer.getCountry() == "TH") {
+        ledTest2Min();
+      } else {
+        ledTest();
+      }
     }
   }
 }
