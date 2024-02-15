@@ -89,7 +89,7 @@ enum {
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
-#define DISPLAY_DELAY_SHOW_CONTENT_MS 3000   /** ms */
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 6000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
               */
@@ -197,9 +197,9 @@ public:
       }
     }
 
-    /** Get "pmsStandard" */
-    if (JSON.typeof_(root["pmsStandard"]) == "string") {
-      String standard = root["pmsStandard"];
+    /** Get "pmStandard" */
+    if (JSON.typeof_(root["pmStandard"]) == "string") {
+      String standard = root["pmStandard"];
       if (standard == "ugm3") {
         inUSAQI = false;
       } else {
