@@ -986,6 +986,11 @@ static void boardInit(void) {
   if (ag.pms5003.begin(Serial0) == false) {
     failedHandler("Init PMS5003 failed");
   }
+
+  /** Run LED test on start up */
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    ledTest();
+  }
 }
 
 /**
