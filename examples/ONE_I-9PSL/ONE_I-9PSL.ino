@@ -94,7 +94,7 @@ enum {
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
-#define DISPLAY_DELAY_SHOW_CONTENT_MS 6000   /** ms */
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
               */
@@ -204,7 +204,7 @@ public:
       }
     }
 
-    /** Get "pmStandard" */
+    /** Get "pmsStandard" */
     if (JSON.typeof_(root["pmStandard"]) == "string") {
       String standard = root["pmStandard"];
       if (standard == "ugm3") {
@@ -505,8 +505,29 @@ void setup() {
   /** Init AirGradient server */
   agServer.begin();
 
-  /** WIFI connect */
-  connectToWifi();
+
+
+    /** Run LED test on start up */
+  displayShowText("Press now for", "LED test", "");
+  bool test = false;
+  uint32_t stime = millis();
+  while (1) {
+    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+      test = true;
+      break;
+    }
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - stime);
+    if (ms >= 3000) {
+      break;
+    }
+  }
+  if (test) {
+    ledTest();
+  } else {
+      /** WIFI connect */
+      connectToWifi();
+  }
 
   /**
    * Send first data to ping server and get server configuration
@@ -694,6 +715,8 @@ static void displayShowDashboard(String err) {
   do {
     u8g2.setFont(u8g2_font_t0_16_tf);
     if ((err == NULL) || err.isEmpty()) {
+
+
       /** Show temperature */
       if (agServer.isTemperatureUnitF()) {
         if (temp > -10001) {
@@ -727,6 +750,39 @@ static void displayShowDashboard(String err) {
       Serial.println("Disp show error: " + err);
       int strWidth = u8g2.getStrWidth(err.c_str());
       u8g2.drawStr((126 - strWidth) / 2, 10, err.c_str());
+
+      if (err == "WiFi N/A") {
+        u8g2.setFont(u8g2_font_t0_12_tf);
+         if (agServer.isTemperatureUnitF()) {
+                if (temp > -10001) {
+                  float tempF = (temp * 9 / 5) + 32;
+                  sprintf(strBuf, "%.1f", tempF);
+                } else {
+                  sprintf(strBuf, "-");
+                }
+                u8g2.drawUTF8(1, 10, strBuf);
+              } else {
+                if (temp > -10001) {
+                  sprintf(strBuf, "%.1f", temp);
+                } else {
+                  sprintf(strBuf, "-");
+                }
+                u8g2.drawUTF8(1, 10, strBuf);
+              }
+
+              /** Show humidity */
+              if (hum >= 0) {
+                sprintf(strBuf, "%d%%", hum);
+              } else {
+                sprintf(strBuf, " -%%");
+              }
+              if (hum > 99) {
+                u8g2.drawStr(97, 10, strBuf);
+              } else {
+                u8g2.drawStr(105, 10, strBuf);
+              }
+
+            }
     }
 
     /** Draw horizontal line */
@@ -1012,24 +1068,6 @@ static void boardInit(void) {
     failedHandler("Init PMS5003 failed");
   }
 
-  /** Run LED test on start up */
-  displayShowText("Press now for", "LED test", "");
-  bool test = false;
-  uint32_t stime = millis();
-  while (1) {
-    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
-      test = true;
-      break;
-    }
-    delay(1);
-    uint32_t ms = (uint32_t)(millis() - stime);
-    if (ms >= 3000) {
-      break;
-    }
-  }
-  if (test) {
-    ledTest();
-  }
 }
 
 /**
