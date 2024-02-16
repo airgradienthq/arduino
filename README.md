@@ -34,8 +34,7 @@ If you have any questions or problems, check out [our forum](https://forum.airgr
 - [Sensirion Gas Index Algorithm](https://github.com/Sensirion/arduino-gas-index-algorithm)
 - [Sensirion Core](https://github.com/Sensirion/arduino-core/)
 - [Sensirion I2C SGP41](https://github.com/Sensirion/arduino-i2c-sgp41)
-- [Sensirion I2C SHT4x](https://github.com/Sensirion/arduino-i2c-sht4x)
-- [Sensirion I2C SHT3x](https://github.com/Sensirion/arduino-i2c-sht3x)
+- [Sensirion I2C SHT](https://github.com/Sensirion/arduino-sht)
 - [PMS](https://github.com/fu-hsi/pms)
 
 ## License

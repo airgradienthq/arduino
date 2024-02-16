@@ -11,8 +11,7 @@
 #include "pms/pms5003t.h"
 #include "s8/s8.h"
 #include "sgp41/sgp41.h"
-#include "sht/sht4x.h"
-#include "sht/sht3x.h"
+#include "sht/sht.h"
 
 /**
  * @brief Class with define all the sensor has supported by Airgradient. Each
@@ -43,15 +42,10 @@ public:
   S8 s8;
 
   /**
-   * @brief SHT41 Temperature and humidity sensor
+   * @brief Temperature and humidity sensor supported SHT3x and SHT4x
+   *
    */
-  Sht4x sht4x;
-
-  /**
-   * @brief SHT3x Temperature and humidity sensor
-   * 
-   */
-  Sht3x sht3x;
+  Sht sht;
 
   /**
    * @brief  SGP41 TVOC and NOx sensor

@@ -1,11 +1,11 @@
 #include "AirGradient.h"
 
-#define AG_LIB_VER "3.0.2"
+#define AG_LIB_VER "3.0.3"
 
 AirGradient::AirGradient(BoardType type)
-    : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sht4x(type),
-      sht3x(type), sgp41(type), display(type), boardType(type), button(type),
-      statusLed(type), ledBar(type), watchdog(type) {}
+    : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
+      display(type), boardType(type), button(type), statusLed(type),
+      ledBar(type), watchdog(type), sht(type) {}
 
 /**
  * @brief Get pin number for I2C SDA

@@ -51,7 +51,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
-#define DISPLAY_DELAY_SHOW_CONTENT_MS 6000   /** ms */
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
               */
@@ -389,6 +389,7 @@ void setup() {
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
+  delay(1000);
 
   /** Board init */
   boardInit();
@@ -423,7 +424,7 @@ void setup() {
   Serial.println("Device id: " + id);
   String id1 = id.substring(0, 9);
   String id2 = id.substring(9, 12);
-  ag.display.setText("\'"+ id1);
+  ag.display.setText("\'" + id1);
   ag.display.setCursor(1, 40);
   ag.display.setText(id2 + "\'");
   ag.display.show();
@@ -505,7 +506,7 @@ void connectToWifi() {
 
 static void boardInit(void) {
   /** Init SHT sensor */
-  if (ag.sht4x.begin(Wire) == false) {
+  if (ag.sht.begin(Wire) == false) {
     failedHandler("SHT init failed");
   }
 
@@ -584,11 +585,14 @@ void pmPoll() {
 }
 
 static void tempHumPoll() {
-  temp = ag.sht4x.getTemperature();
-  hum = ag.sht4x.getRelativeHumidity();
-
-  Serial.printf("Temperature: %0.2f\r\n", temp);
-  Serial.printf("   Humidity: %d\r\n", hum);
+  if (ag.sht.measure()) {
+    temp = ag.sht.getTemperature();
+    hum = ag.sht.getRelativeHumidity();
+    Serial.printf("Temperature: %0.2f\r\n", temp);
+    Serial.printf("   Humidity: %d\r\n", hum);
+  } else {
+    Serial.println("Meaure SHT failed");
+  }
 }
 
 static void sendDataToServer() {
