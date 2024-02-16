@@ -12,9 +12,10 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Hello");
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
+  delay(1000);
 
   if (ag.sht.begin(Wire) == false) {
-    failedHandler("SHT3x init failed");
+    failedHandler("SHT init failed");
   }
 }
 

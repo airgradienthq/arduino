@@ -491,6 +491,7 @@ void setup() {
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
+  delay(1000);
 
   /** Display init */
   u8g2.begin();
@@ -505,9 +506,7 @@ void setup() {
   /** Init AirGradient server */
   agServer.begin();
 
-
-
-    /** Run LED test on start up */
+  /** Run LED test on start up */
   displayShowText("Press now for", "LED test", "");
   bool test = false;
   uint32_t stime = millis();
@@ -525,8 +524,8 @@ void setup() {
   if (test) {
     ledTest();
   } else {
-      /** WIFI connect */
-      connectToWifi();
+    /** WIFI connect */
+    connectToWifi();
   }
 
   /**
@@ -716,7 +715,6 @@ static void displayShowDashboard(String err) {
     u8g2.setFont(u8g2_font_t0_16_tf);
     if ((err == NULL) || err.isEmpty()) {
 
-
       /** Show temperature */
       if (agServer.isTemperatureUnitF()) {
         if (temp > -10001) {
@@ -753,36 +751,35 @@ static void displayShowDashboard(String err) {
 
       if (err == "WiFi N/A") {
         u8g2.setFont(u8g2_font_t0_12_tf);
-         if (agServer.isTemperatureUnitF()) {
-                if (temp > -10001) {
-                  float tempF = (temp * 9 / 5) + 32;
-                  sprintf(strBuf, "%.1f", tempF);
-                } else {
-                  sprintf(strBuf, "-");
-                }
-                u8g2.drawUTF8(1, 10, strBuf);
-              } else {
-                if (temp > -10001) {
-                  sprintf(strBuf, "%.1f", temp);
-                } else {
-                  sprintf(strBuf, "-");
-                }
-                u8g2.drawUTF8(1, 10, strBuf);
-              }
+        if (agServer.isTemperatureUnitF()) {
+          if (temp > -10001) {
+            float tempF = (temp * 9 / 5) + 32;
+            sprintf(strBuf, "%.1f", tempF);
+          } else {
+            sprintf(strBuf, "-");
+          }
+          u8g2.drawUTF8(1, 10, strBuf);
+        } else {
+          if (temp > -10001) {
+            sprintf(strBuf, "%.1f", temp);
+          } else {
+            sprintf(strBuf, "-");
+          }
+          u8g2.drawUTF8(1, 10, strBuf);
+        }
 
-              /** Show humidity */
-              if (hum >= 0) {
-                sprintf(strBuf, "%d%%", hum);
-              } else {
-                sprintf(strBuf, " -%%");
-              }
-              if (hum > 99) {
-                u8g2.drawStr(97, 10, strBuf);
-              } else {
-                u8g2.drawStr(105, 10, strBuf);
-              }
-
-            }
+        /** Show humidity */
+        if (hum >= 0) {
+          sprintf(strBuf, "%d%%", hum);
+        } else {
+          sprintf(strBuf, " -%%");
+        }
+        if (hum > 99) {
+          u8g2.drawStr(97, 10, strBuf);
+        } else {
+          u8g2.drawStr(105, 10, strBuf);
+        }
+      }
     }
 
     /** Draw horizontal line */
@@ -1051,7 +1048,7 @@ static void boardInit(void) {
   }
 
   /** INit SHT */
-  if (ag.sht4x.begin(Wire) == false) {
+  if (ag.sht.begin(Wire) == false) {
     failedHandler("Init SHT failed");
   }
 
@@ -1067,7 +1064,6 @@ static void boardInit(void) {
   if (ag.pms5003.begin(Serial0) == false) {
     failedHandler("Init PMS5003 failed");
   }
-
 }
 
 /**
@@ -1510,9 +1506,14 @@ static void sendDataToServer(void) {
  * @brief Update temperature and humidity value
  */
 static void tempHumPoll(void) {
-  temp = ag.sht4x.getTemperature();
-  hum = ag.sht4x.getRelativeHumidity();
+  if (ag.sht.measure()) {
 
-  Serial.printf("Temperature: %0.2f\r\n", temp);
-  Serial.printf("   Humidity: %d\r\n", hum);
+    temp = ag.sht.getTemperature();
+    hum = ag.sht.getRelativeHumidity();
+
+    Serial.printf("Temperature: %0.2f\r\n", temp);
+    Serial.printf("   Humidity: %d\r\n", hum);
+  } else {
+    Serial.println("Measure SHT failed");
+  }
 }
