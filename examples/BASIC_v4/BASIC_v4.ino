@@ -525,6 +525,7 @@ static void boardInit(void) {
   /** Display init */
   ag.display.begin(Wire);
   ag.display.setTextColor(1);
+  ag.display.clear();
 }
 
 static void failedHandler(String msg) {
@@ -667,7 +668,10 @@ static void updateWiFiConnect(void) {
   }
 }
 
-static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
+static void showNr(void) {
+  Serial.println();
+  Serial.println("Serial nr: " + getDevId());
+}
 
 String getNormalizedMac() {
   String mac = WiFi.macAddress();
