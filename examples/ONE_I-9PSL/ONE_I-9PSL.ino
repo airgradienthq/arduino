@@ -60,7 +60,7 @@ enum {
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
-  APP_SM_WIFI_OK_SERVER_CONNECTED,   /** Server is reachable, all ﬁne */
+  APP_SM_WIFI_OK_SERVER_CONNECTED,    /** Server is reachable, all ﬁne */
   /** Exceptions during WIFi Setup */
   APP_SM_WIFI_MANAGER_CONNECT_FAILED,   /** Cannot connect to WiFi (e.g. wrong
                                             password, WPA Enterprise etc.) */
@@ -446,6 +446,7 @@ static int ledSmState = APP_SM_NORMAL;  /** Save display SM */
 static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
 
 static int tvocIndex = -1;
+static int tvocRawIndex = -1;
 static int noxIndex = -1;
 static int co2Ppm = -1;
 static int pm25 = -1;
@@ -1440,10 +1441,12 @@ static void updateDispLedBar(void) {
  */
 static void tvocPoll(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
+  tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
 
-  Serial.printf("tvocIndexindex: %d\r\n", tvocIndex);
-  Serial.printf(" NOx index: %d\r\n", noxIndex);
+  Serial.printf("    TVOC index: %d\r\n", tvocIndex);
+  Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
+  Serial.printf("     NOx index: %d\r\n", noxIndex);
 }
 
 /**
@@ -1493,6 +1496,9 @@ static void sendDataToServer(void) {
   }
   if (tvocIndex >= 0) {
     root["tvoc_index"] = tvocIndex;
+  }
+  if (tvocRawIndex >= 0) {
+    root["tvoc_raw"] = tvocRawIndex;
   }
   if (noxIndex >= 0) {
     root["noxIndex"] = noxIndex;

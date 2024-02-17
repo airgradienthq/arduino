@@ -23,6 +23,7 @@ public:
   void end(void);
   int getTvocIndex(void);
   int getNoxIndex(void);
+  int getTvocRaw(void);
 
 private:
   bool onConditioning = true;
@@ -36,6 +37,7 @@ private:
   uint16_t defaultRh = 0x8000;
   uint16_t defaultT = 0x6666;
   int tvoc = 0;
+  int tvocRaw;
   int nox = 0;
 #if defined(ESP8266)
   uint32_t conditioningPeriod;

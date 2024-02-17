@@ -120,6 +120,7 @@ void Sgp41::_handle(void) {
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (getRawSignal(srawVoc, srawNox)) {
+      tvocRaw = srawVoc;
       nox = noxAlgorithm()->process(srawNox);
       tvoc = vocAlgorithm()->process(srawVoc);
       AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
@@ -241,3 +242,10 @@ bool Sgp41::_noxConditioning(void) {
   err = sgpSensor()->executeConditioning(defaultRh, defaultT, srawVoc);
   return (err == 0);
 }
+
+/**
+ * @brief Get TVOC raw value
+ *
+ * @return int
+ */
+int Sgp41::getTvocRaw(void) { return tvocRaw; }
