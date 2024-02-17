@@ -471,6 +471,7 @@ void displayShowText(String ln1, String ln2, String ln3) {
   ag.display.setText(ln3);
 
   ag.display.show();
+  delay(100);
 }
 
 // Wifi Manager
@@ -526,6 +527,8 @@ static void boardInit(void) {
   ag.display.begin(Wire);
   ag.display.setTextColor(1);
   ag.display.clear();
+  ag.display.show();
+  delay(100);
 }
 
 static void failedHandler(String msg) {
