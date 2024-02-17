@@ -271,7 +271,7 @@ public:
   bool isPMSinUSAQI(void) { return inUSAQI; }
 
   /**
-   * @brief Get status of get server coniguration is failed
+   * @brief Get status of get server configuration is failed
    *
    * @return true Failed
    * @return false Success

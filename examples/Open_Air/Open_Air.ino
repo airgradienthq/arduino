@@ -49,7 +49,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
  */
 enum {
   APP_SM_WIFI_MANAGER_MODE,           /** In WiFi Manger Mode */
-  APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
+  APP_SM_WIFI_MANAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
                                          phone */
   APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
                                         clicked, connection to WiFI network is
@@ -57,24 +57,24 @@ enum {
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
-  APP_SM_WIFI_OK_SERVER_CONNNECTED,   /** Server is reachable, all ﬁne */
+  APP_SM_WIFI_OK_SERVER_CONNECTED,   /** Server is reachable, all ﬁne */
   /** Exceptions during WIFi Setup */
   APP_SM_WIFI_MANAGER_CONNECT_FAILED,   /** Cannot connect to WiFi (e.g. wrong
                                             password, WPA Enterprise etc.) */
   APP_SM_WIFI_OK_SERVER_CONNECT_FAILED, /** Connected to WiFi but server not
-                                          reachable, e.g. ﬁrewall block/
+                                          reachable, e.g. firewall block/
                                           whitelisting needed etc. */
   APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED, /** Server reachable but sensor
-                                                   not conﬁgured correctly*/
+                                                   not configured correctly*/
 
   /** During Normal Operation */
   APP_SM_WIFI_LOST, /** Connection to WiFi network failed credentials incorrect
                        encryption not supported etc. */
   APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
-                         reached through the internet, e.g. blocked by ﬁrewall
+                         reached through the internet, e.g. blocked by firewall
                        */
   APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachable but there is some
-                                  conﬁguration issue to be ﬁxed on the server
+                                  conﬁguration issue to be fixed on the server
                                   side */
   APP_SM_NORMAL,
 };
@@ -313,7 +313,7 @@ public:
   bool isPMSinUSAQI(void) { return inUSAQI; }
 
   /**
-   * @brief Get status of get server coniguration is failed
+   * @brief Get status of get server configuration is failed
    *
    * @return true Failed
    * @return false Success
@@ -511,7 +511,7 @@ void sendPing() {
   root["wifi"] = WiFi.RSSI();
   root["boot"] = loopCount;
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
-    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
+    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
   } else {
     ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
   }
@@ -643,7 +643,7 @@ void connectToWifi() {
       if (clientConnected != clientConnectChanged) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
-          ledSmHandler(APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE);
+          ledSmHandler(APP_SM_WIFI_MANAGER_PORTAL_ACTIVE);
         } else {
           ledSmHandler(APP_SM_WIFI_MANAGER_MODE);
         }
@@ -884,7 +884,7 @@ void ledSmHandler(int sm) {
     ag.statusLed.setToggle();
     break;
   }
-  case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
+  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
     ag.statusLed.setOn();
     break;
   }
@@ -900,7 +900,7 @@ void ledSmHandler(int sm) {
     ag.statusLed.setOff();
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNNECTED: {
+  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
     ag.statusLed.setOff();
 
     /** two time slow blink, then off */
