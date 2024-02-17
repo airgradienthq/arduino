@@ -372,7 +372,7 @@ public:
    *
    * @return int  days, -1 if invalid.
    */
-  int getCo2Abccalib(void) { return co2AbcCalib; }
+  int getCo2AbcDaysConfig(void) { return co2AbcCalib; }
 
   /**
    * @brief Get device configuration model name
@@ -1086,9 +1086,15 @@ static void serverConfigPoll(void) {
     if (agServer.isCo2Calib()) {
       co2Calibration();
     }
-    if (agServer.getCo2Abccalib() > 0) {
-      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
-        Serial.println("Set S8 auto calib failed");
+    if (agServer.getCo2AbcDaysConfig() > 0) {
+      Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                    agServer.getCo2AbcDaysConfig(),
+                    agServer.getCo2AbcDaysConfig() * 24);
+      Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+      if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) == false) {
+        Serial.println("Set S8 abcDays period calib failed");
+      } else {
+        Serial.println("Set S8 abcDays period calib success");
       }
     }
     if (agServer.isLedBarTestRequested()) {
