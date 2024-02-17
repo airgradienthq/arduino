@@ -557,7 +557,7 @@ static void sendDataToServer(void) {
     }
   }
 
-  if (fw_mode == FW_MODE_PP || FW_MODE_PPT) {
+  if ((fw_mode == FW_MODE_PP) || (fw_mode == FW_MODE_PPT)) {
     root["pm01"] = (int)((pm01_1 + pm01_2) / 2);
     root["pm02"] = (int)((pm25_1 + pm25_2) / 2);
     root["pm003_count"] = (int)((pm03PCount_1 + pm03PCount_2) / 2);
