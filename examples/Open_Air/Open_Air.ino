@@ -121,8 +121,8 @@ public:
       /** Call handler */
       handler();
 
-      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-                    (unsigned int)handler, period);
+      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+      //               (unsigned int)handler, period);
 
       /** Update period time */
       count = millis();
@@ -545,7 +545,7 @@ static void sendDataToServer(void) {
       root["noxIndex"] = noxIndex;
     }
     if (temp_1 >= 0) {
-      root["atmp"] = temp_1;
+      root["atmp"] = ag.round2(temp_1);
     }
     if (hum_1 >= 0) {
       root["rhum"] = hum_1;
@@ -560,22 +560,22 @@ static void sendDataToServer(void) {
   }
 
   if ((fw_mode == FW_MODE_PP) || (fw_mode == FW_MODE_PPT)) {
-    root["pm01"] = (int)((pm01_1 + pm01_2) / 2);
-    root["pm02"] = (int)((pm25_1 + pm25_2) / 2);
-    root["pm003_count"] = (int)((pm03PCount_1 + pm03PCount_2) / 2);
-    root["atmp"] = (int)((temp_1 + temp_2) / 2);
-    root["rhum"] = (int)((hum_1 + hum_2) / 2);
+    root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
+    root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
+    root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+    root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
+    root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
     root["channels"]["1"]["pm01"] = pm01_1;
     root["channels"]["1"]["pm02"] = pm25_1;
     root["channels"]["1"]["pm10"] = pm10_1;
     root["channels"]["1"]["pm003_count"] = pm03PCount_1;
-    root["channels"]["1"]["atmp"] = temp_1;
+    root["channels"]["1"]["atmp"] = ag.round2(temp_1);
     root["channels"]["1"]["rhum"] = hum_1;
     root["channels"]["2"]["pm01"] = pm01_2;
     root["channels"]["2"]["pm02"] = pm25_2;
     root["channels"]["2"]["pm10"] = pm10_2;
     root["channels"]["2"]["pm003_count"] = pm03PCount_2;
-    root["channels"]["2"]["atmp"] = temp_2;
+    root["channels"]["2"]["atmp"] = ag.round2(temp_2);
     root["channels"]["2"]["rhum"] = hum_2;
   }
 

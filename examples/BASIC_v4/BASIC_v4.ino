@@ -79,8 +79,8 @@ public:
       /** Call handler */
       handler();
 
-      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-                    (unsigned int)handler, period);
+      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+      //               (unsigned int)handler, period);
 
       /** Update period time */
       count = millis();
@@ -613,7 +613,7 @@ static void sendDataToServer() {
     root["pm02"] = pm25;
   }
   if (temp >= 0) {
-    root["atmp"] = temp;
+    root["atmp"] = ag.round2(temp);
   }
   if (hum >= 0) {
     root["rhum"] = hum;
@@ -667,9 +667,7 @@ static void updateWiFiConnect(void) {
   }
 }
 
-static void showNr(void) {
-  Serial.println("Serial nr: " + getDevId());
-}
+static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
 
 String getNormalizedMac() {
   String mac = WiFi.macAddress();

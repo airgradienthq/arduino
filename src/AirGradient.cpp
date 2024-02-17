@@ -36,3 +36,7 @@ int AirGradient::getI2cSclPin(void) {
 String AirGradient::getVersion(void) { return AG_LIB_VER; }
 
 BoardType AirGradient::getBoardType(void) { return boardType; }
+
+double AirGradient::round2(double value) {
+  return (int)(value * 100 + 0.5) / 100.0;
+}

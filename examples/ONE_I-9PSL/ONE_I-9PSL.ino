@@ -122,8 +122,8 @@ public:
       /** Call handler */
       handler();
 
-      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-                    (unsigned int)handler, period);
+      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+      //               (unsigned int)handler, period);
 
       /** Update period time */
       count = millis();
@@ -648,9 +648,7 @@ static void co2Poll(void) {
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
-static void showNr(void) {
-  Serial.println("Serial nr: " + getDevId());
-}
+static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
 
 static void sendPing() {
   JSONVar root;
@@ -1500,7 +1498,7 @@ static void sendDataToServer(void) {
     root["noxIndex"] = noxIndex;
   }
   if (temp >= 0) {
-    root["atmp"] = temp;
+    root["atmp"] = ag.round2(temp);
   }
   if (hum >= 0) {
     root["rhum"] = hum;

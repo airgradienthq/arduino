@@ -107,6 +107,14 @@ public:
    */
   String getVersion(void);
 
+  /**
+   * @brief Round double value with for 2 decimal
+   * 
+   * @param valuem Round value
+   * @return double 
+   */
+  double round2(double value);
+
 private:
   BoardType boardType;
 };
