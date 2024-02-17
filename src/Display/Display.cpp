@@ -1,6 +1,6 @@
-#include "oled.h"
-#include "../library/Adafruit_SH110x/Adafruit_SH110X.h"
-#include "../library/Adafruit_SSD1306_Wemos_OLED/Adafruit_SSD1306.h"
+#include "Display.h"
+#include "../Libraries/Adafruit_SH110x/Adafruit_SH110X.h"
+#include "../Libraries/Adafruit_SSD1306_Wemos_OLED/Adafruit_SSD1306.h"
 
 #define disp(func)                                                             \
   if (this->_boardType == DIY_BASIC) {                               \

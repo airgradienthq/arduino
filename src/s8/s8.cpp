@@ -1,4 +1,4 @@
-#include "s8.h"
+#include "S8.h"
 #include "mb_crc.h"
 #if defined(ESP8266)
 #include <SoftwareSerial.h>

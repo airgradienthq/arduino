@@ -1,6 +1,6 @@
-#include "sht.h"
+#include "Sht.h"
 
-#include "../library/arduino-sht/SHTSensor.h"
+#include "../Libraries/arduino-sht/SHTSensor.h"
 
 /** Cast _sensor to SHTSensor */
 #define shtSensor() ((SHTSensor *)(this->_sensor))

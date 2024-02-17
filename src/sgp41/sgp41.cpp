@@ -1,7 +1,7 @@
-#include "sgp41.h"
-#include "../library/SensirionSGP41/src/SensirionI2CSgp41.h"
-#include "../library/Sensirion_Gas_Index_Algorithm/src/NOxGasIndexAlgorithm.h"
-#include "../library/Sensirion_Gas_Index_Algorithm/src/VOCGasIndexAlgorithm.h"
+#include "Sgp41.h"
+#include "../Libraries/SensirionSGP41/src/SensirionI2CSgp41.h"
+#include "../Libraries/Sensirion_Gas_Index_Algorithm/src/NOxGasIndexAlgorithm.h"
+#include "../Libraries/Sensirion_Gas_Index_Algorithm/src/VOCGasIndexAlgorithm.h"
 
 #define sgpSensor() ((SensirionI2CSgp41 *)(this->_sensor))
 #define vocAlgorithm() ((VOCGasIndexAlgorithm *)(this->_vocAlgorithm))
