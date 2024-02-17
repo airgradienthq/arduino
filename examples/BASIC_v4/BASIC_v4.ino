@@ -376,6 +376,7 @@ static void sendDataToServer(void);
 static void dispHandler(void);
 static String getDevId(void);
 static void updateWiFiConnect(void);
+static void showNr(void);
 
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -386,6 +387,7 @@ AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
 
 void setup() {
   Serial.begin(115200);
+  showNr();
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
@@ -663,6 +665,10 @@ static void updateWiFiConnect(void) {
 
     Serial.printf("Re-Connect WiFi\r\n");
   }
+}
+
+static void showNr(void) {
+  Serial.println("Serial nr: " + getDevId());
 }
 
 String getNormalizedMac() {

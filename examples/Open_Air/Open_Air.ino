@@ -458,6 +458,7 @@ static void sendDataToServer(void);
 static void co2Poll(void);
 static void serverConfigPoll(void);
 static const char *getFwMode(int mode);
+static void showNr(void);
 
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -467,6 +468,7 @@ AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 
 void setup() {
   Serial.begin(115200);
+  showNr();
 
   /** Board init */
   boardInit();
@@ -978,3 +980,5 @@ static const char *getFwMode(int mode) {
   }
   return "FW_MODE_UNKNOW";
 }
+
+static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }

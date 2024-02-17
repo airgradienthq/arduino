@@ -475,6 +475,7 @@ static void pmPoll(void);
 static void sendDataToServer(void);
 static void tempHumPoll(void);
 static void co2Poll(void);
+static void showNr(void);
 
 /** Init schedule */
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
@@ -488,6 +489,7 @@ AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 void setup() {
   /** Serial fore print debug message */
   Serial.begin(115200);
+  showNr();
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
@@ -644,6 +646,10 @@ static void ledTest2Min(void) {
 static void co2Poll(void) {
   co2Ppm = ag.s8.getCo2();
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
+}
+
+static void showNr(void) {
+  Serial.println("Serial nr: " + getDevId());
 }
 
 static void sendPing() {
