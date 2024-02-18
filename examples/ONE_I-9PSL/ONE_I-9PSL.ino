@@ -46,6 +46,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <U8g2lib.h>
+#include <WebServer.h>
 
 /**
  * @brief Application state machine state
@@ -549,6 +550,9 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 /** wifi manager instance */
 WiFiManager wifiManager;
 
+/** Web server instance */
+WebServer webServer;
+
 static bool wifiHasConfig = false;      /** */
 static int connectCountDown;            /** wifi configuration countdown */
 static int ledCount;                    /** For LED animation */
@@ -587,6 +591,8 @@ static void sendDataToServer(void);
 static void tempHumPoll(void);
 static void co2Poll(void);
 static void showNr(void);
+static void webServerInit(void);
+static String getServerSyncData(void);
 
 /** Init schedule */
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
@@ -646,6 +652,8 @@ void setup() {
    * Send first data to ping server and get server configuration
    */
   if (WiFi.status() == WL_CONNECTED) {
+    webServerInit();
+
     sendPing();
     Serial.println(F("WiFi connected!"));
     Serial.println("IP address: ");
@@ -761,6 +769,65 @@ static void co2Poll(void) {
 }
 
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
+
+void webServerMeasureCurrentGet(void) {
+  webServer.send(200, "application/json", getServerSyncData());
+}
+
+void webServerHandler(void* param) {
+  for (;;) {
+    webServer.handleClient();
+  }
+}
+
+static void webServerInit(void) {
+  webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
+  webServer.begin();
+
+  if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
+      pdTRUE) {
+    Serial.println("Create task handle webserver failed");
+  }
+  Serial.println("Webserver init");
+}
+
+static String getServerSyncData(void) {
+  JSONVar root;
+  root["wifi"] = WiFi.RSSI();
+  if (co2Ppm >= 0) {
+    root["rco2"] = co2Ppm;
+  }
+  if (pm01 >= 0) {
+    root["pm01"] = pm01;
+  }
+  if (pm25 >= 0) {
+    root["pm02"] = pm25;
+  }
+  if (pm10 >= 0) {
+    root["pm10"] = pm10;
+  }
+  if (pm03PCount >= 0) {
+    root["pm003_count"] = pm03PCount;
+  }
+  if (tvocIndex >= 0) {
+    root["tvoc_index"] = tvocIndex;
+  }
+  if (tvocRawIndex >= 0) {
+    root["tvoc_raw"] = tvocRawIndex;
+  }
+  if (noxIndex >= 0) {
+    root["noxIndex"] = noxIndex;
+  }
+  if (temp >= 0) {
+    root["atmp"] = ag.round2(temp);
+  }
+  if (hum >= 0) {
+    root["rhum"] = hum;
+  }
+  root["boot"] = bootCount;
+
+  return JSON.stringify(root);
+}
 
 static void sendPing() {
   JSONVar root;
@@ -1598,41 +1665,7 @@ static void pmPoll(void) {
  *
  */
 static void sendDataToServer(void) {
-  JSONVar root;
-  root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
-  }
-  if (pm01 >= 0) {
-    root["pm01"] = pm01;
-  }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
-  }
-  if (pm10 >= 0) {
-    root["pm10"] = pm10;
-  }
-  if (pm03PCount >= 0) {
-    root["pm003_count"] = pm03PCount;
-  }
-  if (tvocIndex >= 0) {
-    root["tvoc_index"] = tvocIndex;
-  }
-  if (tvocRawIndex >= 0) {
-    root["tvoc_raw"] = tvocRawIndex;
-  }
-  if (noxIndex >= 0) {
-    root["noxIndex"] = noxIndex;
-  }
-  if (temp >= 0) {
-    root["atmp"] = ag.round2(temp);
-  }
-  if (hum >= 0) {
-    root["rhum"] = hum;
-  }
-  root["boot"] = bootCount;
-
-  String syncData = JSON.stringify(root);
+  String syncData = getServerSyncData();
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }
@@ -1663,7 +1696,6 @@ static void tempHumPoll(void) {
     Serial.println("Measure SHT failed");
   }
 }
-
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                int32_t event_id, void *event_data) {
