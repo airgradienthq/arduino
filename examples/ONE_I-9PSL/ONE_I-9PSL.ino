@@ -643,10 +643,9 @@ void setup() {
   }
   if (test) {
     ledTest();
-  } else {
-    /** WIFI connect */
-    connectToWifi();
   }
+  /** WIFI connect */
+  connectToWifi();
 
   /**
    * Send first data to ping server and get server configuration
