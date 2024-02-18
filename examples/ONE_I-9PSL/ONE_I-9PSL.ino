@@ -46,6 +46,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "EEPROM.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
+#include <ESPmDNS.h>
 #include <U8g2lib.h>
 #include <WebServer.h>
 
@@ -897,14 +898,21 @@ void webServerHandler(void *param) {
 }
 
 static void webServerInit(void) {
+  String host = "airgradient_" + getDevId();
+  if (!MDNS.begin(host)) {
+    Serial.println("Init MDNS failed");
+    return;
+  }
+
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   webServer.begin();
+  MDNS.addService("http", "tcp", 80);
 
   if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
       pdTRUE) {
     Serial.println("Create task handle webserver failed");
   }
-  Serial.println("Webserver init");
+  Serial.printf("Webserver init: %s.local\r\n", host.c_str());
 }
 
 static String getServerSyncData(bool localServer) {
