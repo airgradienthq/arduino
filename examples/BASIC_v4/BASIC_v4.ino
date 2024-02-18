@@ -569,14 +569,19 @@ static void serverConfigPoll(void) {
       co2Calibration();
     }
     if (agServer.getCo2AbcDaysConfig() > 0) {
+      int newHour = agServer.getCo2AbcDaysConfig() * 24;
       Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                    agServer.getCo2AbcDaysConfig(),
-                    agServer.getCo2AbcDaysConfig() * 24);
+                    agServer.getCo2AbcDaysConfig(), newHour);
+      int curHour = ag.s8.getAbcPeriod();
       Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
-      if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) == false) {
-        Serial.println("Set S8 abcDays period calib failed");
+      if (curHour == newHour) {
+        Serial.println("set 'abcDays' ignored");
       } else {
-        Serial.println("Set S8 abcDays period calib success");
+        if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) == false) {
+          Serial.println("Set S8 abcDays period calib failed");
+        } else {
+          Serial.println("Set S8 abcDays period calib success");
+        }
       }
     }
   }
