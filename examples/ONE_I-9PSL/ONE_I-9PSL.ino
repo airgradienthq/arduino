@@ -43,6 +43,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <HardwareSerial.h>
 #include <WiFiManager.h>
 
+#include "EEPROM.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <U8g2lib.h>
@@ -145,12 +146,9 @@ private:
 class AgServer {
 public:
   void begin(void) {
-    inF = false;
-    inUSAQI = false;
     configFailed = false;
     serverFailed = false;
-    memset(models, 0, sizeof(models));
-    memset(mqttBroker, 0, sizeof(mqttBroker));
+    loadConfig();
   }
 
   /**
@@ -195,6 +193,7 @@ public:
     }
 
     /** Get "country" */
+    bool inF = false;
     if (JSON.typeof_(root["country"]) == "string") {
       String _country = root["country"];
       country = _country;
@@ -207,6 +206,7 @@ public:
     }
 
     /** Get "pmsStandard" */
+    bool inUSAQI = false;
     if (JSON.typeof_(root["pmStandard"]) == "string") {
       String standard = root["pmStandard"];
       if (standard == "ugm3") {
@@ -224,6 +224,7 @@ public:
     }
 
     /** Get "ledBarMode" */
+    uint8_t ledBarMode = UseLedBarOff;
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
       if (mode == "co2") {
@@ -238,13 +239,18 @@ public:
     }
 
     /** Get model */
+    bool _saveConfig = false;
     if (JSON.typeof_(root["model"]) == "string") {
       String model = root["model"];
       if (model.length()) {
-        int len =
-            model.length() < sizeof(models) ? model.length() : sizeof(models);
-        memset(models, 0, sizeof(models));
-        memcpy(models, model.c_str(), len);
+        int len = model.length() < sizeof(config.models)
+                      ? model.length()
+                      : sizeof(config.models);
+        if (model != String(config.models)) {
+          memset(config.models, 0, sizeof(config.models));
+          memcpy(config.models, model.c_str(), len);
+          _saveConfig = true;
+        }
       }
     }
 
@@ -252,10 +258,14 @@ public:
     if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
       String mqtt = root["mqttBrokerUrl"];
       if (mqtt.length()) {
-        int len = mqtt.length() < sizeof(mqttBroker) ? mqtt.length()
-                                                     : sizeof(mqttBroker);
-        memset(mqttBroker, 0, sizeof(mqttBroker));
-        memcpy(mqttBroker, mqtt.c_str(), len);
+        int len = mqtt.length() < sizeof(config.mqttBrokers)
+                      ? mqtt.length()
+                      : sizeof(config.mqttBrokers);
+        if (mqtt != String(config.mqttBrokers)) {
+          memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+          memcpy(config.mqttBrokers, mqtt.c_str(), len);
+          _saveConfig = true;
+        }
       }
     }
 
@@ -275,6 +285,14 @@ public:
 
     /** Show configuration */
     showServerConfig();
+    if (_saveConfig || (inF != config.inF) || (inUSAQI != config.inUSAQI) ||
+        (ledBarMode != config.useRGBLedBar)) {
+      config.inF = inF;
+      config.inUSAQI = inUSAQI;
+      config.useRGBLedBar = ledBarMode;
+
+      saveConfig();
+    }
 
     return true;
   }
@@ -315,7 +333,7 @@ public:
    * @return true F unit
    * @return false C Unit
    */
-  bool isTemperatureUnitF(void) { return inF; }
+  bool isTemperatureUnitF(void) { return config.inF; }
 
   /**
    * @brief Get PMS standard unit
@@ -323,7 +341,7 @@ public:
    * @return true USAQI
    * @return false ugm3
    */
-  bool isPMSinUSAQI(void) { return inUSAQI; }
+  bool isPMSinUSAQI(void) { return config.inUSAQI; }
 
   /**
    * @brief Get status of get server configuration is failed
@@ -381,25 +399,26 @@ public:
    *
    * @return String Model name, empty string if server failed
    */
-  String getModelName(void) { return String(models); }
+  String getModelName(void) { return String(config.models); }
 
   /**
    * @brief Get mqttBroker url
    *
    * @return String Broker url, empty if server failed
    */
-  String getMqttBroker(void) { return String(mqttBroker); }
+  String getMqttBroker(void) { return String(config.mqttBrokers); }
 
   /**
    * @brief Show server configuration parameter
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("           Model: %s\r\n", models);
-    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf("             inF: %s\r\n", config.inF ? "true" : "false");
+    Serial.printf("         inUSAQI: %s\r\n",
+                  config.inUSAQI ? "true" : "false");
+    Serial.printf("    useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
+    Serial.printf("           Model: %s\r\n", config.models);
+    Serial.printf("     Mqtt Broker: %s\r\n", config.mqttBrokers);
     Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
   }
 
@@ -408,7 +427,7 @@ public:
    *
    * @return UseLedBar
    */
-  UseLedBar getLedBarMode(void) { return ledBarMode; }
+  UseLedBar getLedBarMode(void) { return (UseLedBar)config.useRGBLedBar; }
 
   /**
    * @brief Get the Country
@@ -418,17 +437,67 @@ public:
   String getCountry(void) { return country; }
 
 private:
-  bool inF;                 /** Temperature unit, true: F, false: C */
-  bool inUSAQI;             /** PMS unit, true: USAQI, false: ugm3 */
   bool configFailed;        /** Flag indicate get server configuration failed */
   bool serverFailed;        /** Flag indicate post data to server failed */
   bool co2Calib;            /** Is co2Ppmcalibration requset */
   bool ledBarTestRequested; /** */
   int co2AbcCalib = -1;     /** update auto calibration number of day */
-  UseLedBar ledBarMode = UseLedBarCO2; /** */
-  char models[20];                     /** */
-  char mqttBroker[256];                /** */
-  String country;                      /***/
+  String country;           /***/
+
+  struct config_s {
+    bool inF;
+    bool inUSAQI;
+    uint8_t useRGBLedBar;
+    char models[20];
+    char mqttBrokers[256];
+    uint32_t checksum;
+  };
+  struct config_s config;
+
+  void defaultConfig(void) {
+    config.inF = false;
+    config.inUSAQI = false;
+    memset(config.models, 0, sizeof(config.models));
+    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+
+    Serial.println("Load config default");
+    saveConfig();
+  }
+
+  void loadConfig(void) {
+    if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
+      config.inF = false;
+      config.inUSAQI = false;
+      memset(config.models, 0, sizeof(config.models));
+      memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+
+      Serial.println("Load configure failed");
+    } else {
+      uint32_t sum = 0;
+      uint8_t *data = (uint8_t *)&config;
+      for (int i = 0; i < sizeof(config) - 4; i++) {
+        sum += data[i];
+      }
+      if (sum != config.checksum) {
+        Serial.println("config checksum failed");
+        defaultConfig();
+      }
+    }
+
+    showServerConfig();
+  }
+
+  void saveConfig(void) {
+    config.checksum = 0;
+    uint8_t *data = (uint8_t *)&config;
+    for (int i = 0; i < sizeof(config) - 4; i++) {
+      config.checksum += data[i];
+    }
+
+    EEPROM.writeBytes(0, &config, sizeof(config));
+    EEPROM.commit();
+    Serial.println("Save config");
+  }
 };
 AgServer agServer;
 
@@ -445,6 +514,7 @@ private:
   int port;
   esp_mqtt_client_handle_t client;
   bool clientConnected = false;
+  int connectFailedCount = 0;
 
 public:
   AgMqtt() {}
@@ -463,6 +533,12 @@ public:
       Serial.println("Mqtt already begin, call 'end' and try again");
       return true;
     }
+
+    if (uri.isEmpty()) {
+      Serial.println("Mqtt uri is empty");
+      return false;
+    }
+
     this->uri = uri;
     Serial.printf("mqtt init '%s'\r\n", uri.c_str());
 
@@ -529,7 +605,14 @@ public:
    */
   String getUri(void) { return uri; }
 
-  void _connectionHandler(bool connected) { clientConnected = connected; }
+  void _connectionHandler(bool connected) {
+    clientConnected = connected;
+    if (clientConnected == false) {
+      connectFailedCount++;
+    } else {
+      connectFailedCount = 0;
+    }
+  }
 
   /**
    * @brief Mqtt client connect status
@@ -538,6 +621,13 @@ public:
    * @return false Disconnected or Not initialize
    */
   bool isConnected(void) { return (_isBegin && clientConnected); }
+
+  /**
+   * @brief Get number of times connection failed
+   *
+   * @return int
+   */
+  int connectionFailedCount(void) { return connectFailedCount; }
 };
 AgMqtt agMqtt;
 
@@ -608,7 +698,9 @@ AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 
 void setup() {
-  /** Serial fore print debug message */
+  EEPROM.begin(512);
+
+  /** Serial for print debug message */
   Serial.begin(115200);
   delay(100); /** For bester show log */
   showNr();
@@ -656,6 +748,15 @@ void setup() {
    */
   if (WiFi.status() == WL_CONNECTED) {
     webServerInit();
+
+    /** MQTT init */
+    if (agServer.getMqttBroker().isEmpty() == false) {
+      if (agMqtt.begin(agServer.getMqttBroker())) {
+        Serial.println("MQTT client init success");
+      } else {
+        Serial.println("MQTT client init failure");
+      }
+    }
 
     sendPing();
     Serial.println(F("WiFi connected!"));
