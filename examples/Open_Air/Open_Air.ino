@@ -530,15 +530,15 @@ int pm25_1 = -1;
 int pm01_1 = -1;
 int pm10_1 = -1;
 int pm03PCount_1 = -1;
-float temp_1;
-int hum_1;
+float temp_1 = -1001;
+int hum_1 = -1;
 
 int pm25_2 = -1;
 int pm01_2 = -1;
 int pm10_2 = -1;
 int pm03PCount_2 = -1;
-float temp_2;
-int hum_2;
+float temp_2 = -1001;
+int hum_2 = -1;
 
 int pm1Value01;
 int pm1Value25;
@@ -577,6 +577,10 @@ static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(void);
 
+bool hasSensorS8 = true;
+bool hasSensorPMS1 = true;
+bool hasSensorPMS2 = true;
+bool hasSensorSGP = true;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
@@ -616,12 +620,21 @@ void setup() {
 void loop() {
   configSchedule.run();
   serverSchedule.run();
+
   if (fw_mode == FW_MODE_PST) {
-    co2Schedule.run();
+    if (hasSensorS8) {
+      co2Schedule.run();
+    }
   }
-  pmsSchedule.run();
+
+  if (hasSensorPMS1 || hasSensorPMS2) {
+    pmsSchedule.run();
+  }
+
   if (fw_mode == FW_MODE_PST || fw_mode == FW_MODE_PPT) {
-    tvocSchedule.run();
+    if (hasSensorSGP) {
+      tvocSchedule.run();
+    }
   }
   updateWiFiConnect();
 }
@@ -741,39 +754,50 @@ void boardInit(void) {
   }
 
   ag.watchdog.begin();
-
   ag.button.begin();
-
   ag.statusLed.begin();
 
   /** detect sensor: PMS5003, PMS5003T, SGP41 and S8 */
   if (ag.s8.begin(Serial1) == false) {
-    Serial.println("S8 not detect run mode 'PPT'");
+    hasSensorS8 = false;
+
+    Serial.println("CO2 S8 sensor not found");
+    Serial.println("Can not detect S8 run mode 'PPT'");
     fw_mode = FW_MODE_PPT;
 
     /** De-initialize Serial1 */
     Serial1.end();
   }
   if (ag.sgp41.begin(Wire) == false) {
-    if (fw_mode == FW_MODE_PST) {
-      failedHandler("Init SGP41 failed");
-    } else {
-      Serial.println("SGP41 not detect run mode 'PP'");
-      fw_mode = FW_MODE_PP;
-    }
+    hasSensorSGP = false;
+    Serial.println("SGP sensor not found");
+
+    Serial.println("Can not detect SGP run mode 'PP'");
+    fw_mode = FW_MODE_PP;
   }
 
   if (ag.pms5003t_1.begin(Serial0) == false) {
-    failedHandler("Init PMS5003T_1 failed");
-  }
-  if (fw_mode != FW_MODE_PST) {
+    hasSensorPMS1 = false;
+    Serial.println("PMS1 sensor not found");
+
     if (ag.pms5003t_2.begin(Serial1) == false) {
-      failedHandler("Init PMS5003T_2 failed");
+      hasSensorPMS2 = false;
+      Serial.println("PMS2 sensor not found");
     }
   }
 
   if (fw_mode != FW_MODE_PST) {
-    pmsSchedule.setPeriod(2000);
+    if (ag.pms5003t_2.begin(Serial1) == false) {
+      hasSensorPMS2 = false;
+      Serial.println("PMS2 sensor not found");
+    }
+  }
+
+  /** update the PMS poll period base on fw mode and sensor available */
+  if (fw_mode != FW_MODE_PST) {
+    if (hasSensorPMS1 && hasSensorPMS2) {
+      pmsSchedule.setPeriod(2000);
+    }
   }
 
   Serial.printf("Firmware node: %s\r\n", getFwMode(fw_mode));
@@ -841,6 +865,7 @@ static void tvocPoll(void) {
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
 
+  Serial.println();
   Serial.printf("    TVOC index: %d\r\n", tvocIndex);
   Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
   Serial.printf("     NOx index: %d\r\n", noxIndex);
@@ -851,59 +876,109 @@ static void tvocPoll(void) {
  *
  */
 static void pmPoll(void) {
-  if (fw_mode == FW_MODE_PST) {
-    if (ag.pms5003t_1.readData()) {
-      pm01_1 = ag.pms5003t_1.getPm01Ae();
-      pm25_1 = ag.pms5003t_1.getPm25Ae();
-      pm25_1 = ag.pms5003t_1.getPm10Ae();
-      pm03PCount_1 = ag.pms5003t_1.getPm03ParticleCount();
-      temp_1 = ag.pms5003t_1.getTemperature();
-      hum_1 = ag.pms5003t_1.getRelativeHumidity();
-    }
+  bool pmsResult_1 = false;
+  bool pmsResult_2 = false;
+  if (hasSensorPMS1 && ag.pms5003t_1.readData()) {
+    pm01_1 = ag.pms5003t_1.getPm01Ae();
+    pm25_1 = ag.pms5003t_1.getPm25Ae();
+    pm10_1 = ag.pms5003t_1.getPm10Ae();
+    pm03PCount_1 = ag.pms5003t_1.getPm03ParticleCount();
+    temp_1 = ag.pms5003t_1.getTemperature();
+    hum_1 = ag.pms5003t_1.getRelativeHumidity();
+
+    pmsResult_1 = true;
+
+    Serial.println();
+    Serial.printf("[1]      PMS0.1: %d\r\n", pm01_1);
+    Serial.printf("[1]      PMS2.5: %d\r\n", pm25_1);
+    Serial.printf("[1]     PMS10.0: %d\r\n", pm10_1);
+    Serial.printf("[1]PMS3.0 Count: %d\r\n", pm03PCount_1);
+    Serial.printf("[1] Temperature: %0.2f\r\n", temp_1);
+    Serial.printf("[1]    Humidity: %d\r\n", hum_1);
   } else {
-    if (ag.pms5003t_1.readData() && ag.pms5003t_2.readData()) {
-      pm1Value01 = pm1Value01 + ag.pms5003t_1.getPm01Ae();
-      pm1Value25 = pm1Value25 + ag.pms5003t_1.getPm25Ae();
-      pm1Value10 = pm1Value10 + ag.pms5003t_1.getPm10Ae();
-      pm1PCount = pm1PCount + ag.pms5003t_1.getPm03ParticleCount();
-      pm1temp = pm1temp + ag.pms5003t_1.getTemperature();
-      pm1hum = pm1hum + ag.pms5003t_1.getRelativeHumidity();
-      pm2Value01 = pm2Value01 + ag.pms5003t_2.getPm01Ae();
-      pm2Value25 = pm2Value25 + ag.pms5003t_2.getPm25Ae();
-      pm2Value10 = pm2Value10 + ag.pms5003t_2.getPm10Ae();
-      pm2PCount = pm2PCount + ag.pms5003t_2.getPm03ParticleCount();
-      pm2temp = pm2temp + ag.pms5003t_2.getTemperature();
-      pm2hum = pm2hum + ag.pms5003t_2.getRelativeHumidity();
-      countPosition++;
-      if (countPosition == targetCount) {
-        pm01_1 = pm1Value01 / targetCount;
-        pm25_1 = pm1Value25 / targetCount;
-        pm10_1 = pm1Value10 / targetCount;
-        pm03PCount_1 = pm1PCount / targetCount;
-        temp_1 = pm1temp / targetCount;
-        hum_1 = pm1hum / targetCount;
-        pm01_2 = pm2Value01 / targetCount;
-        pm25_2 = pm2Value25 / targetCount;
-        pm10_2 = pm2Value10 / targetCount;
-        pm03PCount_2 = pm2PCount / targetCount;
-        temp_2 = pm2temp / targetCount;
-        hum_2 = pm2hum / targetCount;
+    pm01_1 = -1;
+    pm25_1 = -1;
+    pm10_1 = -1;
+    pm03PCount_1 = -1;
+    temp_1 = -1001;
+    hum_1 = -1;
+  }
 
-        countPosition = 0;
+  if (hasSensorPMS2 && ag.pms5003t_2.readData()) {
+    pm01_2 = ag.pms5003t_2.getPm01Ae();
+    pm25_2 = ag.pms5003t_2.getPm25Ae();
+    pm10_2 = ag.pms5003t_2.getPm10Ae();
+    pm03PCount_2 = ag.pms5003t_2.getPm03ParticleCount();
+    temp_2 = ag.pms5003t_2.getTemperature();
+    hum_2 = ag.pms5003t_2.getRelativeHumidity();
 
-        pm1Value01 = 0;
-        pm1Value25 = 0;
-        pm1Value10 = 0;
-        pm1PCount = 0;
-        pm1temp = 0;
-        pm1hum = 0;
-        pm2Value01 = 0;
-        pm2Value25 = 0;
-        pm2Value10 = 0;
-        pm2PCount = 0;
-        pm2temp = 0;
-        pm2hum = 0;
-      }
+    pmsResult_2 = true;
+
+    Serial.println();
+    Serial.printf("[2]      PMS0.1: %d\r\n", pm01_2);
+    Serial.printf("[2]      PMS2.5: %d\r\n", pm25_2);
+    Serial.printf("[2]     PMS10.0: %d\r\n", pm10_2);
+    Serial.printf("[2]PMS3.0 Count: %d\r\n", pm03PCount_2);
+    Serial.printf("[2] Temperature: %0.2f\r\n", temp_2);
+    Serial.printf("[2]    Humidity: %d\r\n", hum_2);
+  } else {
+    pm01_2 = -1;
+    pm25_2 = -1;
+    pm10_2 = -1;
+    pm03PCount_2 = -1;
+    temp_2 = -1001;
+    hum_2 = -1;
+  }
+
+  if (hasSensorPMS1 && hasSensorPMS2 && pmsResult_1 && pmsResult_2) {
+    /** Get total of PMS1*/
+    pm1Value01 = pm1Value01 + pm01_1;
+    pm1Value25 = pm1Value25 + pm25_1;
+    pm1Value10 = pm1Value10 + pm10_1;
+    pm1PCount = pm1PCount + pm03PCount_1;
+    pm1temp = pm1temp + temp_1;
+    pm1hum = pm1hum + hum_1;
+
+    /** Get total of PMS2 */
+    pm2Value01 = pm2Value01 + pm01_2;
+    pm2Value25 = pm2Value25 + pm25_2;
+    pm2Value10 = pm2Value10 + pm10_2;
+    pm2PCount = pm2PCount + pm03PCount_2;
+    pm2temp = pm2temp + temp_2;
+    pm2hum = pm2hum + hum_2;
+
+    countPosition++;
+
+    /** Get average */
+    if (countPosition == targetCount) {
+      pm01_1 = pm1Value01 / targetCount;
+      pm25_1 = pm1Value25 / targetCount;
+      pm10_1 = pm1Value10 / targetCount;
+      pm03PCount_1 = pm1PCount / targetCount;
+      temp_1 = pm1temp / targetCount;
+      hum_1 = pm1hum / targetCount;
+
+      pm01_2 = pm2Value01 / targetCount;
+      pm25_2 = pm2Value25 / targetCount;
+      pm10_2 = pm2Value10 / targetCount;
+      pm03PCount_2 = pm2PCount / targetCount;
+      temp_2 = pm2temp / targetCount;
+      hum_2 = pm2hum / targetCount;
+
+      countPosition = 0;
+
+      pm1Value01 = 0;
+      pm1Value25 = 0;
+      pm1Value10 = 0;
+      pm1PCount = 0;
+      pm1temp = 0;
+      pm1hum = 0;
+      pm2Value01 = 0;
+      pm2Value25 = 0;
+      pm2Value10 = 0;
+      pm2PCount = 0;
+      pm2temp = 0;
+      pm2hum = 0;
     }
   }
 }
@@ -918,25 +993,33 @@ static void serverConfigPoll(void) {
     /** Only support CO2 S8 sensor on FW_MODE_PST */
     if (fw_mode == FW_MODE_PST) {
       if (agServer.isCo2Calib()) {
-        co2Calibration();
+        if (hasSensorS8) {
+          co2Calibration();
+        } else {
+          Serial.println("CO2 S8 not available, calib ignored");
+        }
       }
 
       if (agServer.getCo2AbcDaysConfig() > 0) {
-        int newHour = agServer.getCo2AbcDaysConfig() * 24;
-        Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                      agServer.getCo2AbcDaysConfig(), newHour);
-        int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
-        if (curHour == newHour) {
-          Serial.println("set 'abcDays' ignored");
-        } else {
-          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
-              false) {
-            Serial.println("Set S8 abcDays period calib failed");
+        if (hasSensorS8) {
+          int newHour = agServer.getCo2AbcDaysConfig() * 24;
+          Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                        agServer.getCo2AbcDaysConfig(), newHour);
+          int curHour = ag.s8.getAbcPeriod();
+          Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+          if (curHour == newHour) {
+            Serial.println("set 'abcDays' ignored");
           } else {
-            Serial.println("Set S8 abcDays period calib success");
+            if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+                false) {
+              Serial.println("Set S8 abcDays period calib failed");
+            } else {
+              Serial.println("Set S8 abcDays period calib success");
+            }
           }
         }
+      } else {
+        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
       }
     }
 
@@ -1096,66 +1179,94 @@ static String getServerSyncData(void) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
   root["boot"] = loopCount;
+
   if (fw_mode == FW_MODE_PST) {
-    if (co2Ppm >= 0) {
-      root["rco2"] = co2Ppm;
+    if (hasSensorS8) {
+      if (co2Ppm >= 0) {
+        root["rco2"] = co2Ppm;
+      }
     }
-    if (pm01_1 >= 0) {
-      root["pm01"] = pm01_1;
-    }
-    if (pm25_1 >= 0) {
-      root["pm02"] = pm25_1;
-    }
-    if (pm10_1 >= 0) {
-      root["pm10"] = pm10_1;
-    }
-    if (pm03PCount_1 >= 0) {
-      root["pm003_count"] = pm03PCount_1;
-    }
-    if (tvocIndex >= 0) {
-      root["tvoc_index"] = tvocIndex;
-    }
-    if (noxIndex >= 0) {
-      root["noxIndex"] = noxIndex;
-    }
-    if (temp_1 >= 0) {
-      root["atmp"] = ag.round2(temp_1);
-    }
-    if (hum_1 >= 0) {
-      root["rhum"] = hum_1;
+
+    if (hasSensorPMS1) {
+      if (pm01_1 >= 0) {
+        root["pm01"] = pm01_1;
+      }
+      if (pm25_1 >= 0) {
+        root["pm02"] = pm25_1;
+      }
+      if (pm10_1 >= 0) {
+        root["pm10"] = pm10_1;
+      }
+      if (pm03PCount_1 >= 0) {
+        root["pm003_count"] = pm03PCount_1;
+      }
+      if (temp_1 > -1001) {
+        root["atmp"] = ag.round2(temp_1);
+      }
+      if (hum_1 >= 0) {
+        root["rhum"] = hum_1;
+      }
+    } else if (hasSensorPMS2) {
+      if (pm01_2 >= 0) {
+        root["pm01"] = pm01_2;
+      }
+      if (pm25_2 >= 0) {
+        root["pm02"] = pm25_2;
+      }
+      if (pm10_2 >= 0) {
+        root["pm10"] = pm10_2;
+      }
+      if (pm03PCount_2 >= 0) {
+        root["pm003_count"] = pm03PCount_2;
+      }
+      if (temp_2 > -1001) {
+        root["atmp"] = ag.round2(temp_2);
+      }
+      if (hum_2 >= 0) {
+        root["rhum"] = hum_2;
+      }
     }
   }
 
   if ((fw_mode == FW_MODE_PPT) || (fw_mode == FW_MODE_PST)) {
-    if (tvocIndex > 0) {
-      root["tvoc_index"] = loopCount;
-    }
-    if (tvocRawIndex >= 0) {
-      root["tvoc_raw"] = tvocRawIndex;
-    }
-    if (noxIndex > 0) {
-      root["nox_index"] = loopCount;
+    if (hasSensorSGP) {
+      if (tvocIndex > 0) {
+        root["tvoc_index"] = tvocIndex;
+      }
+      if (tvocRawIndex >= 0) {
+        root["tvoc_raw"] = tvocRawIndex;
+      }
+      if (noxIndex > 0) {
+        root["nox_index"] = noxIndex;
+      }
     }
   }
 
   if ((fw_mode == FW_MODE_PP) || (fw_mode == FW_MODE_PPT)) {
-    root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
-    root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
-    root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
-    root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
-    root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
-    root["channels"]["1"]["pm01"] = pm01_1;
-    root["channels"]["1"]["pm02"] = pm25_1;
-    root["channels"]["1"]["pm10"] = pm10_1;
-    root["channels"]["1"]["pm003_count"] = pm03PCount_1;
-    root["channels"]["1"]["atmp"] = ag.round2(temp_1);
-    root["channels"]["1"]["rhum"] = hum_1;
-    root["channels"]["2"]["pm01"] = pm01_2;
-    root["channels"]["2"]["pm02"] = pm25_2;
-    root["channels"]["2"]["pm10"] = pm10_2;
-    root["channels"]["2"]["pm003_count"] = pm03PCount_2;
-    root["channels"]["2"]["atmp"] = ag.round2(temp_2);
-    root["channels"]["2"]["rhum"] = hum_2;
+    if (hasSensorPMS1 && hasSensorPMS2) {
+      root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
+      root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
+      root["pm10"] = ag.round2((pm10_1 + pm10_2) / 2.0);
+      root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+      root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
+      root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
+    }
+    if (hasSensorPMS1) {
+      root["channels"]["1"]["pm01"] = pm01_1;
+      root["channels"]["1"]["pm02"] = pm25_1;
+      root["channels"]["1"]["pm10"] = pm10_1;
+      root["channels"]["1"]["pm003_count"] = pm03PCount_1;
+      root["channels"]["1"]["atmp"] = ag.round2(temp_1);
+      root["channels"]["1"]["rhum"] = hum_1;
+    }
+    if (hasSensorPMS2) {
+      root["channels"]["2"]["pm01"] = pm01_2;
+      root["channels"]["2"]["pm02"] = pm25_2;
+      root["channels"]["2"]["pm10"] = pm10_2;
+      root["channels"]["2"]["pm003_count"] = pm03PCount_2;
+      root["channels"]["2"]["atmp"] = ag.round2(temp_2);
+      root["channels"]["2"]["rhum"] = hum_2;
+    }
   }
 
   return JSON.stringify(root);

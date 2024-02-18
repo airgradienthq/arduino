@@ -359,7 +359,7 @@ AirGradient ag = AirGradient(DIY_BASIC);
 
 static int co2Ppm = -1;
 static int pm25 = -1;
-static float temp = -1;
+static float temp = -1001;
 static int hum = -1;
 static long val;
 static String wifiSSID = "";
@@ -378,6 +378,9 @@ static String getDevId(void);
 static void updateWiFiConnect(void);
 static void showNr(void);
 
+bool hasSensorS8 = true;
+bool hasSensorPMS = true;
+bool hasSensorSHT = true;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
@@ -438,9 +441,15 @@ void loop() {
   configSchedule.run();
   serverSchedule.run();
   dispSchedule.run();
-  co2Schedule.run();
-  pmsSchedule.run();
-  tempHumSchedule.run();
+  if (hasSensorS8) {
+    co2Schedule.run();
+  }
+  if (hasSensorPMS) {
+    pmsSchedule.run();
+  }
+  if (hasSensorSHT) {
+    tempHumSchedule.run();
+  }
 
   updateWiFiConnect();
 }
@@ -510,17 +519,20 @@ void connectToWifi() {
 static void boardInit(void) {
   /** Init SHT sensor */
   if (ag.sht.begin(Wire) == false) {
-    failedHandler("SHT init failed");
+    hasSensorSHT = false;
+    Serial.println("SHT sensor not found");
   }
 
   /** CO2 init */
   if (ag.s8.begin(&Serial) == false) {
-    failedHandler("SenseAirS8 init failed");
+    Serial.println("CO2 S8 snsor not found");
+    hasSensorS8 = false;
   }
 
   /** PMS init */
   if (ag.pms5003.begin(&Serial) == false) {
-    failedHandler("PMS5003 init failed");
+    Serial.println("PMS sensor not found");
+    hasSensorPMS = false;
   }
 
   /** Display init */
@@ -566,22 +578,31 @@ static void co2Calibration(void) {
 static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
-      co2Calibration();
+      if (hasSensorS8) {
+        co2Calibration();
+      } else {
+        Serial.println("CO2 S8 not available, calib ignored");
+      }
     }
     if (agServer.getCo2AbcDaysConfig() > 0) {
-      int newHour = agServer.getCo2AbcDaysConfig() * 24;
-      Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                    agServer.getCo2AbcDaysConfig(), newHour);
-      int curHour = ag.s8.getAbcPeriod();
-      Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
-      if (curHour == newHour) {
-        Serial.println("set 'abcDays' ignored");
-      } else {
-        if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) == false) {
-          Serial.println("Set S8 abcDays period calib failed");
+      if (hasSensorS8) {
+        int newHour = agServer.getCo2AbcDaysConfig() * 24;
+        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                      agServer.getCo2AbcDaysConfig(), newHour);
+        int curHour = ag.s8.getAbcPeriod();
+        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        if (curHour == newHour) {
+          Serial.println("set 'abcDays' ignored");
         } else {
-          Serial.println("Set S8 abcDays period calib success");
+          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+              false) {
+            Serial.println("Set S8 abcDays period calib failed");
+          } else {
+            Serial.println("Set S8 abcDays period calib success");
+          }
         }
+      } else {
+        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
       }
     }
   }
@@ -621,7 +642,7 @@ static void sendDataToServer() {
   if (pm25 >= 0) {
     root["pm02"] = pm25;
   }
-  if (temp >= 0) {
+  if (temp > -1001) {
     root["atmp"] = ag.round2(temp);
   }
   if (hum >= 0) {

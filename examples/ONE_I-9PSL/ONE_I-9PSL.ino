@@ -567,7 +567,7 @@ static int pm25 = -1;
 static int pm01 = -1;
 static int pm10 = -1;
 static int pm03PCount = -1;
-static float temp = -1;
+static float temp = -1001;
 static int hum = -1;
 static int bootCount;
 static String wifiSSID = "";
@@ -595,6 +595,10 @@ static void webServerInit(void);
 static String getServerSyncData(void);
 
 /** Init schedule */
+bool hasSensorS8 = true;
+bool hasSensorPMS = true;
+bool hasSensorSGP = true;
+bool hasSensorSHT = true;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -680,10 +684,22 @@ void loop() {
   dispLedSchedule.run();
   configSchedule.run();
   serverSchedule.run();
-  co2Schedule.run();
-  pmsSchedule.run();
-  tempHumSchedule.run();
-  tvocSchedule.run();
+
+  if (hasSensorS8) {
+    co2Schedule.run();
+  }
+
+  if (hasSensorPMS) {
+    pmsSchedule.run();
+  }
+
+  if (hasSensorSHT) {
+    tempHumSchedule.run();
+  }
+
+  if (hasSensorSGP) {
+    tvocSchedule.run();
+  }
 
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
@@ -793,35 +809,43 @@ static void webServerInit(void) {
 static String getServerSyncData(void) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
+  if (hasSensorS8) {
+    if (co2Ppm >= 0) {
+      root["rco2"] = co2Ppm;
+    }
   }
-  if (pm01 >= 0) {
-    root["pm01"] = pm01;
+  if (hasSensorPMS) {
+    if (pm01 >= 0) {
+      root["pm01"] = pm01;
+    }
+    if (pm25 >= 0) {
+      root["pm02"] = pm25;
+    }
+    if (pm10 >= 0) {
+      root["pm10"] = pm10;
+    }
+    if (pm03PCount >= 0) {
+      root["pm003_count"] = pm03PCount;
+    }
   }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
+  if (hasSensorSGP) {
+    if (tvocIndex >= 0) {
+      root["tvoc_index"] = tvocIndex;
+    }
+    if (tvocRawIndex >= 0) {
+      root["tvoc_raw"] = tvocRawIndex;
+    }
+    if (noxIndex >= 0) {
+      root["noxIndex"] = noxIndex;
+    }
   }
-  if (pm10 >= 0) {
-    root["pm10"] = pm10;
-  }
-  if (pm03PCount >= 0) {
-    root["pm003_count"] = pm03PCount;
-  }
-  if (tvocIndex >= 0) {
-    root["tvoc_index"] = tvocIndex;
-  }
-  if (tvocRawIndex >= 0) {
-    root["tvoc_raw"] = tvocRawIndex;
-  }
-  if (noxIndex >= 0) {
-    root["noxIndex"] = noxIndex;
-  }
-  if (temp >= 0) {
-    root["atmp"] = ag.round2(temp);
-  }
-  if (hum >= 0) {
-    root["rhum"] = hum;
+  if (hasSensorSHT) {
+    if (temp > -1001) {
+      root["atmp"] = ag.round2(temp);
+    }
+    if (hum >= 0) {
+      root["rhum"] = hum;
+    }
   }
   root["boot"] = bootCount;
 
@@ -1226,12 +1250,14 @@ static void boardInit(void) {
 
   /** Init sensor SGP41 */
   if (ag.sgp41.begin(Wire) == false) {
-    failedHandler("Init SGP41 failed");
+    Serial.println("SGP41 sensor not found");
+    hasSensorSGP = false;
   }
 
   /** INit SHT */
   if (ag.sht.begin(Wire) == false) {
-    failedHandler("Init SHT failed");
+    Serial.println("SHTx sensor not found");
+    hasSensorSHT = false;
   }
 
   /** Init watchdog */
@@ -1239,12 +1265,15 @@ static void boardInit(void) {
 
   /** Init S8 CO2 sensor */
   if (ag.s8.begin(Serial1) == false) {
-    failedHandler("Init SenseAirS8 failed");
+    // failedHandler("Init SenseAirS8 failed");
+    Serial.println("CO2 S8 sensor not found");
+    hasSensorS8 = false;
   }
 
   /** Init PMS5003 */
   if (ag.pms5003.begin(Serial0) == false) {
-    failedHandler("Init PMS5003 failed");
+    Serial.println("PMS sensor not found");
+    hasSensorPMS = false;
   }
 }
 
@@ -1266,23 +1295,32 @@ static void failedHandler(String msg) {
 static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
-      co2Calibration();
+      if (hasSensorS8) {
+        co2Calibration();
+      } else {
+        Serial.println("CO2 S8 not available, calib ignored");
+      }
     }
 
     if (agServer.getCo2AbcDaysConfig() > 0) {
-      int newHour = agServer.getCo2AbcDaysConfig() * 24;
-      Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                    agServer.getCo2AbcDaysConfig(), newHour);
-      int curHour = ag.s8.getAbcPeriod();
-      Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
-      if (curHour == newHour) {
-        Serial.println("set 'abcDays' ignored");
-      } else {
-        if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) == false) {
-          Serial.println("Set S8 abcDays period calib failed");
+      if (hasSensorS8) {
+        int newHour = agServer.getCo2AbcDaysConfig() * 24;
+        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                      agServer.getCo2AbcDaysConfig(), newHour);
+        int curHour = ag.s8.getAbcPeriod();
+        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        if (curHour == newHour) {
+          Serial.println("set 'abcDays' ignored");
         } else {
-          Serial.println("Set S8 abcDays period calib success");
+          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+              false) {
+            Serial.println("Set S8 abcDays period calib failed");
+          } else {
+            Serial.println("Set S8 abcDays period calib success");
+          }
         }
+      } else {
+        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
       }
     }
 
@@ -1638,6 +1676,7 @@ static void tvocPoll(void) {
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
 
+  Serial.println();
   Serial.printf("    TVOC index: %d\r\n", tvocIndex);
   Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
   Serial.printf("     NOx index: %d\r\n", noxIndex);
@@ -1654,6 +1693,7 @@ static void pmPoll(void) {
     pm10 = ag.pms5003.getPm10Ae();
     pm03PCount = ag.pms5003.getPm03ParticleCount();
 
+    Serial.println();
     Serial.printf("      PMS0.1: %d\r\n", pm01);
     Serial.printf("      PMS2.5: %d\r\n", pm25);
     Serial.printf("     PMS10.0: %d\r\n", pm10);
