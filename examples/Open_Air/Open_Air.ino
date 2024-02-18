@@ -40,6 +40,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <Arduino_JSON.h>
 #include <HTTPClient.h>
 #include <HardwareSerial.h>
+#include <WebServer.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 
@@ -517,6 +518,9 @@ WiFiManager wifiManager; /** wifi manager instance */
 static bool wifiHasConfig = false;
 static String wifiSSID = "";
 
+/** Web server instance */
+WebServer webServer;
+
 int tvocIndex = -1;
 int tvocRawIndex = -1;
 int noxIndex = -1;
@@ -570,6 +574,8 @@ static void co2Poll(void);
 static void serverConfigPoll(void);
 static const char *getFwMode(int mode);
 static void showNr(void);
+static void webServerInit(void);
+static String getServerSyncData(void);
 
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -592,6 +598,8 @@ void setup() {
   connectToWifi();
 
   if (WiFi.isConnected()) {
+    webServerInit();
+
     wifiHasConfig = true;
     sendPing();
 
@@ -631,73 +639,7 @@ void sendPing() {
 }
 
 static void sendDataToServer(void) {
-  JSONVar root;
-  root["wifi"] = WiFi.RSSI();
-  root["boot"] = loopCount;
-  if (fw_mode == FW_MODE_PST) {
-    if (co2Ppm >= 0) {
-      root["rco2"] = co2Ppm;
-    }
-    if (pm01_1 >= 0) {
-      root["pm01"] = pm01_1;
-    }
-    if (pm25_1 >= 0) {
-      root["pm02"] = pm25_1;
-    }
-    if (pm10_1 >= 0) {
-      root["pm10"] = pm10_1;
-    }
-    if (pm03PCount_1 >= 0) {
-      root["pm003_count"] = pm03PCount_1;
-    }
-    if (tvocIndex >= 0) {
-      root["tvoc_index"] = tvocIndex;
-    }
-    if (noxIndex >= 0) {
-      root["noxIndex"] = noxIndex;
-    }
-    if (temp_1 >= 0) {
-      root["atmp"] = ag.round2(temp_1);
-    }
-    if (hum_1 >= 0) {
-      root["rhum"] = hum_1;
-    }
-  }
-
-  if ((fw_mode == FW_MODE_PPT) || (fw_mode == FW_MODE_PST)) {
-    if (tvocIndex > 0) {
-      root["tvoc_index"] = loopCount;
-    }
-    if (tvocRawIndex >= 0) {
-      root["tvoc_raw"] = tvocRawIndex;
-    }
-    if (noxIndex > 0) {
-      root["nox_index"] = loopCount;
-    }
-  }
-
-  if ((fw_mode == FW_MODE_PP) || (fw_mode == FW_MODE_PPT)) {
-    root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
-    root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
-    root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
-    root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
-    root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
-    root["channels"]["1"]["pm01"] = pm01_1;
-    root["channels"]["1"]["pm02"] = pm25_1;
-    root["channels"]["1"]["pm10"] = pm10_1;
-    root["channels"]["1"]["pm003_count"] = pm03PCount_1;
-    root["channels"]["1"]["atmp"] = ag.round2(temp_1);
-    root["channels"]["1"]["rhum"] = hum_1;
-    root["channels"]["2"]["pm01"] = pm01_2;
-    root["channels"]["2"]["pm02"] = pm25_2;
-    root["channels"]["2"]["pm10"] = pm10_2;
-    root["channels"]["2"]["pm003_count"] = pm03PCount_2;
-    root["channels"]["2"]["atmp"] = ag.round2(temp_2);
-    root["channels"]["2"]["rhum"] = hum_2;
-  }
-
-  /** Send data to sensor */
-  String syncData = JSON.stringify(root);
+  String syncData = getServerSyncData();
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }
@@ -1128,6 +1070,96 @@ static const char *getFwMode(int mode) {
 }
 
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
+
+void webServerMeasureCurrentGet(void) {
+  webServer.send(200, "application/json", getServerSyncData());
+}
+
+void webServerHandler(void *param) {
+  for (;;) {
+    webServer.handleClient();
+  }
+}
+
+static void webServerInit(void) {
+  webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
+  webServer.begin();
+
+  if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
+      pdTRUE) {
+    Serial.println("Create task handle webserver failed");
+  }
+  Serial.println("Webserver init");
+}
+
+static String getServerSyncData(void) {
+  JSONVar root;
+  root["wifi"] = WiFi.RSSI();
+  root["boot"] = loopCount;
+  if (fw_mode == FW_MODE_PST) {
+    if (co2Ppm >= 0) {
+      root["rco2"] = co2Ppm;
+    }
+    if (pm01_1 >= 0) {
+      root["pm01"] = pm01_1;
+    }
+    if (pm25_1 >= 0) {
+      root["pm02"] = pm25_1;
+    }
+    if (pm10_1 >= 0) {
+      root["pm10"] = pm10_1;
+    }
+    if (pm03PCount_1 >= 0) {
+      root["pm003_count"] = pm03PCount_1;
+    }
+    if (tvocIndex >= 0) {
+      root["tvoc_index"] = tvocIndex;
+    }
+    if (noxIndex >= 0) {
+      root["noxIndex"] = noxIndex;
+    }
+    if (temp_1 >= 0) {
+      root["atmp"] = ag.round2(temp_1);
+    }
+    if (hum_1 >= 0) {
+      root["rhum"] = hum_1;
+    }
+  }
+
+  if ((fw_mode == FW_MODE_PPT) || (fw_mode == FW_MODE_PST)) {
+    if (tvocIndex > 0) {
+      root["tvoc_index"] = loopCount;
+    }
+    if (tvocRawIndex >= 0) {
+      root["tvoc_raw"] = tvocRawIndex;
+    }
+    if (noxIndex > 0) {
+      root["nox_index"] = loopCount;
+    }
+  }
+
+  if ((fw_mode == FW_MODE_PP) || (fw_mode == FW_MODE_PPT)) {
+    root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
+    root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
+    root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+    root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
+    root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
+    root["channels"]["1"]["pm01"] = pm01_1;
+    root["channels"]["1"]["pm02"] = pm25_1;
+    root["channels"]["1"]["pm10"] = pm10_1;
+    root["channels"]["1"]["pm003_count"] = pm03PCount_1;
+    root["channels"]["1"]["atmp"] = ag.round2(temp_1);
+    root["channels"]["1"]["rhum"] = hum_1;
+    root["channels"]["2"]["pm01"] = pm01_2;
+    root["channels"]["2"]["pm02"] = pm25_2;
+    root["channels"]["2"]["pm10"] = pm10_2;
+    root["channels"]["2"]["pm003_count"] = pm03PCount_2;
+    root["channels"]["2"]["atmp"] = ag.round2(temp_2);
+    root["channels"]["2"]["rhum"] = hum_2;
+  }
+
+  return JSON.stringify(root);
+}
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                int32_t event_id, void *event_data) {
