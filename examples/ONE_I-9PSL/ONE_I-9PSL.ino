@@ -592,7 +592,7 @@ static void tempHumPoll(void);
 static void co2Poll(void);
 static void showNr(void);
 static void webServerInit(void);
-static String getServerSyncData(void);
+static String getServerSyncData(bool localServer);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -786,7 +786,7 @@ static void co2Poll(void) {
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
 
 void webServerMeasureCurrentGet(void) {
-  webServer.send(200, "application/json", getServerSyncData());
+  webServer.send(200, "application/json", getServerSyncData(true));
 }
 
 void webServerHandler(void *param) {
@@ -806,9 +806,12 @@ static void webServerInit(void) {
   Serial.println("Webserver init");
 }
 
-static String getServerSyncData(void) {
+static String getServerSyncData(bool localServer) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
+  if (localServer) {
+    root["serialno"] = getDevId();
+  }
   if (hasSensorS8) {
     if (co2Ppm >= 0) {
       root["rco2"] = co2Ppm;
@@ -1711,7 +1714,7 @@ static void pmPoll(void) {
  *
  */
 static void sendDataToServer(void) {
-  String syncData = getServerSyncData();
+  String syncData = getServerSyncData(false);
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }

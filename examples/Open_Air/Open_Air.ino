@@ -575,7 +575,7 @@ static void serverConfigPoll(void);
 static const char *getFwMode(int mode);
 static void showNr(void);
 static void webServerInit(void);
-static String getServerSyncData(void);
+static String getServerSyncData(bool localServer);
 
 bool hasSensorS8 = true;
 bool hasSensorPMS1 = true;
@@ -652,7 +652,7 @@ void sendPing() {
 }
 
 static void sendDataToServer(void) {
-  String syncData = getServerSyncData();
+  String syncData = getServerSyncData(false);
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }
@@ -1155,7 +1155,7 @@ static const char *getFwMode(int mode) {
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
 
 void webServerMeasureCurrentGet(void) {
-  webServer.send(200, "application/json", getServerSyncData());
+  webServer.send(200, "application/json", getServerSyncData(true));
 }
 
 void webServerHandler(void *param) {
@@ -1175,10 +1175,13 @@ static void webServerInit(void) {
   Serial.println("Webserver init");
 }
 
-static String getServerSyncData(void) {
+static String getServerSyncData(bool localServer) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
   root["boot"] = loopCount;
+  if (localServer) {
+    root["serialno"] = getDevId();
+  }
 
   if (fw_mode == FW_MODE_PST) {
     if (hasSensorS8) {
