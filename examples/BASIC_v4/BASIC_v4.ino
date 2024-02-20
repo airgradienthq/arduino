@@ -620,7 +620,7 @@ void pmPoll() {
     Serial.printf("PMS2.5: %d\r\n", pm25);
     pmFailCount = 0;
   } else {
-    Seria.printf("PM read failed, %d", pmFailCount);
+    Serial.printf("PM read failed, %d", pmFailCount);
     pmFailCount++;
     if (pmFailCount >= 3) {
       pm25 = -1;
@@ -666,16 +666,42 @@ static void dispHandler() {
   String ln3 = "";
 
   if (agServer.isPMSinUSAQI()) {
-    ln1 = "AQI:" + String(ag.pms5003.convertPm25ToUsAqi(pm25));
+    if (pm25 < 0) {
+      ln1 = "AQI: -";
+    } else {
+      ln1 = "AQI:" + String(ag.pms5003.convertPm25ToUsAqi(pm25));
+    }
   } else {
-    ln1 = "PM :" + String(pm25) + " ug";
+    if (pm25 < 0) {
+      ln1 = "PM :- ug";
+
+    } else {
+      ln1 = "PM :" + String(pm25) + " ug";
+    }
   }
-  ln2 = "CO2:" + String(co2Ppm);
+  if (co2Ppm > -1001) {
+    ln2 = "CO2:" + String(co2Ppm);
+  } else {
+    ln2 = "CO2: -";
+  }
+
+  String _hum = "-";
+  if (hum > 0) {
+    _hum = String(hum);
+  }
+
+  String _temp = "-";
 
   if (agServer.isTemperatureUnitF()) {
-    ln3 = String((temp * 9 / 5) + 32).substring(0, 4) + " " + String(hum) + "%";
+    if (temp > -1001) {
+      _temp = String((temp * 9 / 5) + 32).substring(0, 4);
+    }
+    ln3 = _temp + " " + _hum + "%";
   } else {
-    ln3 = String(temp).substring(0, 4) + " " + String(hum) + "%";
+    if (temp > -1001) {
+      _temp = String(temp).substring(0, 4);
+    }
+    ln3 = _temp + " " + _hum + "%";
   }
   displayShowText(ln1, ln2, ln3);
 }
