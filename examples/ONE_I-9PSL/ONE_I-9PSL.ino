@@ -690,6 +690,7 @@ bool hasSensorS8 = true;
 bool hasSensorPMS = true;
 bool hasSensorSGP = true;
 bool hasSensorSHT = true;
+int pmFailCount = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -1035,7 +1036,7 @@ static void displayShowDashboard(String err) {
 
       /** Show temperature */
       if (agServer.isTemperatureUnitF()) {
-        if (temp > -10001) {
+        if (temp > -1001) {
           float tempF = (temp * 9 / 5) + 32;
           sprintf(strBuf, "%.1f°F", tempF);
         } else {
@@ -1043,7 +1044,7 @@ static void displayShowDashboard(String err) {
         }
         u8g2.drawUTF8(1, 10, strBuf);
       } else {
-        if (temp > -10001) {
+        if (temp > -1001) {
           sprintf(strBuf, "%.1f°C", temp);
         } else {
           sprintf(strBuf, "-°C");
@@ -1070,7 +1071,7 @@ static void displayShowDashboard(String err) {
       if (err == "WiFi N/A") {
         u8g2.setFont(u8g2_font_t0_12_tf);
         if (agServer.isTemperatureUnitF()) {
-          if (temp > -10001) {
+          if (temp > -1001) {
             float tempF = (temp * 9 / 5) + 32;
             sprintf(strBuf, "%.1f", tempF);
           } else {
@@ -1078,7 +1079,7 @@ static void displayShowDashboard(String err) {
           }
           u8g2.drawUTF8(1, 10, strBuf);
         } else {
-          if (temp > -10001) {
+          if (temp > -1001) {
             sprintf(strBuf, "%.1f", temp);
           } else {
             sprintf(strBuf, "-");
@@ -1810,11 +1811,16 @@ static void pmPoll(void) {
     Serial.printf("      PMS2.5: %d\r\n", pm25);
     Serial.printf("     PMS10.0: %d\r\n", pm10);
     Serial.printf("PMS3.0 Count: %d\r\n", pm03PCount);
+    pmFailCount = 0;
   } else {
-    pm01 = -1;
-    pm25 = -1;
-    pm10 = -1;
-    pm03PCount = -1;
+    pmFailCount++;
+    Serial.printf("PM read failed: %d\r\n", pmFailCount);
+    if (pmFailCount >= 3) {
+      pm01 = -1;
+      pm25 = -1;
+      pm10 = -1;
+      pm03PCount = -1;
+    }
   }
 }
 

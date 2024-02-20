@@ -381,6 +381,7 @@ static void showNr(void);
 bool hasSensorS8 = true;
 bool hasSensorPMS = true;
 bool hasSensorSHT = true;
+int pmFailCount = 0;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
@@ -617,8 +618,13 @@ void pmPoll() {
   if (ag.pms5003.readData()) {
     pm25 = ag.pms5003.getPm25Ae();
     Serial.printf("PMS2.5: %d\r\n", pm25);
+    pmFailCount = 0;
   } else {
-    pm25 = -1;
+    Seria.printf("PM read failed, %d", pmFailCount);
+    pmFailCount++;
+    if (pmFailCount >= 3) {
+      pm25 = -1;
+    }
   }
 }
 
