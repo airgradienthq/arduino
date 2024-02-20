@@ -1351,6 +1351,11 @@ static void setRGBledColor(char color) {
   ag.ledBar.setColor(r, g, b, ledNum);
 }
 
+void dispSensorNotFound(String ss) {
+  displayShowText("Sensor init", "Error:", ss + " not found");
+  delay(2000);
+}
+
 /**
  * @brief Initialize board
  */
@@ -1365,12 +1370,14 @@ static void boardInit(void) {
   if (ag.sgp41.begin(Wire) == false) {
     Serial.println("SGP41 sensor not found");
     hasSensorSGP = false;
+    dispSensorNotFound("SGP41");
   }
 
   /** INit SHT */
   if (ag.sht.begin(Wire) == false) {
     Serial.println("SHTx sensor not found");
     hasSensorSHT = false;
+    dispSensorNotFound("SHT");
   }
 
   /** Init watchdog */
@@ -1381,12 +1388,15 @@ static void boardInit(void) {
     // failedHandler("Init SenseAirS8 failed");
     Serial.println("CO2 S8 sensor not found");
     hasSensorS8 = false;
+    dispSensorNotFound("S8");
   }
 
   /** Init PMS5003 */
   if (ag.pms5003.begin(Serial0) == false) {
     Serial.println("PMS sensor not found");
     hasSensorPMS = false;
+
+    dispSensorNotFound("PMS");
   }
 }
 
