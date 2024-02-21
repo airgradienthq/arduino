@@ -79,8 +79,8 @@ public:
       /** Call handler */
       handler();
 
-      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-                    (unsigned int)handler, period);
+      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+      //               (unsigned int)handler, period);
 
       /** Update period time */
       count = millis();
@@ -271,7 +271,7 @@ public:
   bool isPMSinUSAQI(void) { return inUSAQI; }
 
   /**
-   * @brief Get status of get server coniguration is failed
+   * @brief Get status of get server configuration is failed
    *
    * @return true Failed
    * @return false Success
@@ -305,7 +305,7 @@ public:
    *
    * @return int  days, -1 if invalid.
    */
-  int getCo2Abccalib(void) { return co2AbcCalib; }
+  int getCo2AbcDaysConfig(void) { return co2AbcCalib; }
 
   /**
    * @brief Get device configuration model name
@@ -359,7 +359,7 @@ AirGradient ag = AirGradient(DIY_BASIC);
 
 static int co2Ppm = -1;
 static int pm25 = -1;
-static float temp = -1;
+static float temp = -1001;
 static int hum = -1;
 static long val;
 static String wifiSSID = "";
@@ -376,7 +376,12 @@ static void sendDataToServer(void);
 static void dispHandler(void);
 static String getDevId(void);
 static void updateWiFiConnect(void);
+static void showNr(void);
 
+bool hasSensorS8 = true;
+bool hasSensorPMS = true;
+bool hasSensorSHT = true;
+int pmFailCount = 0;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
@@ -386,6 +391,7 @@ AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
 
 void setup() {
   Serial.begin(115200);
+  showNr();
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
@@ -436,9 +442,15 @@ void loop() {
   configSchedule.run();
   serverSchedule.run();
   dispSchedule.run();
-  co2Schedule.run();
-  pmsSchedule.run();
-  tempHumSchedule.run();
+  if (hasSensorS8) {
+    co2Schedule.run();
+  }
+  if (hasSensorPMS) {
+    pmsSchedule.run();
+  }
+  if (hasSensorSHT) {
+    tempHumSchedule.run();
+  }
 
   updateWiFiConnect();
 }
@@ -469,6 +481,7 @@ void displayShowText(String ln1, String ln2, String ln3) {
   ag.display.setText(ln3);
 
   ag.display.show();
+  delay(100);
 }
 
 // Wifi Manager
@@ -507,22 +520,28 @@ void connectToWifi() {
 static void boardInit(void) {
   /** Init SHT sensor */
   if (ag.sht.begin(Wire) == false) {
-    failedHandler("SHT init failed");
+    hasSensorSHT = false;
+    Serial.println("SHT sensor not found");
   }
 
   /** CO2 init */
   if (ag.s8.begin(&Serial) == false) {
-    failedHandler("SenseAirS8 init failed");
+    Serial.println("CO2 S8 snsor not found");
+    hasSensorS8 = false;
   }
 
   /** PMS init */
   if (ag.pms5003.begin(&Serial) == false) {
-    failedHandler("PMS5003 init failed");
+    Serial.println("PMS sensor not found");
+    hasSensorPMS = false;
   }
 
   /** Display init */
   ag.display.begin(Wire);
   ag.display.setTextColor(1);
+  ag.display.clear();
+  ag.display.show();
+  delay(100);
 }
 
 static void failedHandler(String msg) {
@@ -560,11 +579,31 @@ static void co2Calibration(void) {
 static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
-      co2Calibration();
+      if (hasSensorS8) {
+        co2Calibration();
+      } else {
+        Serial.println("CO2 S8 not available, calib ignored");
+      }
     }
-    if (agServer.getCo2Abccalib() > 0) {
-      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
-        Serial.println("Set S8 auto calib failed");
+    if (agServer.getCo2AbcDaysConfig() > 0) {
+      if (hasSensorS8) {
+        int newHour = agServer.getCo2AbcDaysConfig() * 24;
+        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                      agServer.getCo2AbcDaysConfig(), newHour);
+        int curHour = ag.s8.getAbcPeriod();
+        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        if (curHour == newHour) {
+          Serial.println("set 'abcDays' ignored");
+        } else {
+          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+              false) {
+            Serial.println("Set S8 abcDays period calib failed");
+          } else {
+            Serial.println("Set S8 abcDays period calib success");
+          }
+        }
+      } else {
+        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
       }
     }
   }
@@ -579,8 +618,13 @@ void pmPoll() {
   if (ag.pms5003.readData()) {
     pm25 = ag.pms5003.getPm25Ae();
     Serial.printf("PMS2.5: %d\r\n", pm25);
+    pmFailCount = 0;
   } else {
-    pm25 = -1;
+    Serial.printf("PM read failed, %d", pmFailCount);
+    pmFailCount++;
+    if (pmFailCount >= 3) {
+      pm25 = -1;
+    }
   }
 }
 
@@ -604,8 +648,8 @@ static void sendDataToServer() {
   if (pm25 >= 0) {
     root["pm02"] = pm25;
   }
-  if (temp >= 0) {
-    root["atmp"] = temp;
+  if (temp > -1001) {
+    root["atmp"] = ag.round2(temp);
   }
   if (hum >= 0) {
     root["rhum"] = hum;
@@ -622,16 +666,42 @@ static void dispHandler() {
   String ln3 = "";
 
   if (agServer.isPMSinUSAQI()) {
-    ln1 = "AQI:" + String(ag.pms5003.convertPm25ToUsAqi(pm25));
+    if (pm25 < 0) {
+      ln1 = "AQI: -";
+    } else {
+      ln1 = "AQI:" + String(ag.pms5003.convertPm25ToUsAqi(pm25));
+    }
   } else {
-    ln1 = "PM :" + String(pm25) + " ug";
+    if (pm25 < 0) {
+      ln1 = "PM :- ug";
+
+    } else {
+      ln1 = "PM :" + String(pm25) + " ug";
+    }
   }
-  ln2 = "CO2:" + String(co2Ppm);
+  if (co2Ppm > -1001) {
+    ln2 = "CO2:" + String(co2Ppm);
+  } else {
+    ln2 = "CO2: -";
+  }
+
+  String _hum = "-";
+  if (hum > 0) {
+    _hum = String(hum);
+  }
+
+  String _temp = "-";
 
   if (agServer.isTemperatureUnitF()) {
-    ln3 = String((temp * 9 / 5) + 32).substring(0, 4) + " " + String(hum) + "%";
+    if (temp > -1001) {
+      _temp = String((temp * 9 / 5) + 32).substring(0, 4);
+    }
+    ln3 = _temp + " " + _hum + "%";
   } else {
-    ln3 = String(temp).substring(0, 4) + " " + String(hum) + "%";
+    if (temp > -1001) {
+      _temp = String(temp).substring(0, 4);
+    }
+    ln3 = _temp + " " + _hum + "%";
   }
   displayShowText(ln1, ln2, ln3);
 }
@@ -657,6 +727,11 @@ static void updateWiFiConnect(void) {
 
     Serial.printf("Re-Connect WiFi\r\n");
   }
+}
+
+static void showNr(void) {
+  Serial.println();
+  Serial.println("Serial nr: " + getDevId());
 }
 
 String getNormalizedMac() {

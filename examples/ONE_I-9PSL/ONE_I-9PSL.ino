@@ -38,13 +38,17 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
+#include "mqtt_client.h"
 #include <HTTPClient.h>
 #include <HardwareSerial.h>
 #include <WiFiManager.h>
 
+#include "EEPROM.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
+#include <ESPmDNS.h>
 #include <U8g2lib.h>
+#include <WebServer.h>
 
 /**
  * @brief Application state machine state
@@ -52,7 +56,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
  */
 enum {
   APP_SM_WIFI_MANAGER_MODE,           /** In WiFi Manger Mode */
-  APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
+  APP_SM_WIFI_MANAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
                                          phone */
   APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
                                         clicked, connection to WiFI network is
@@ -60,24 +64,24 @@ enum {
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
-  APP_SM_WIFI_OK_SERVER_CONNNECTED,   /** Server is reachable, all ﬁne */
+  APP_SM_WIFI_OK_SERVER_CONNECTED,    /** Server is reachable, all ﬁne */
   /** Exceptions during WIFi Setup */
   APP_SM_WIFI_MANAGER_CONNECT_FAILED,   /** Cannot connect to WiFi (e.g. wrong
                                             password, WPA Enterprise etc.) */
   APP_SM_WIFI_OK_SERVER_CONNECT_FAILED, /** Connected to WiFi but server not
-                                          reachable, e.g. ﬁrewall block/
+                                          reachable, e.g. firewall block/
                                           whitelisting needed etc. */
   APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED, /** Server reachable but sensor
-                                                   not conﬁgured correctly*/
+                                                   not configured correctly*/
 
   /** During Normal Operation */
   APP_SM_WIFI_LOST, /** Connection to WiFi network failed credentials incorrect
                        encryption not supported etc. */
   APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
-                         reached through the internet, e.g. blocked by ﬁrewall
+                         reached through the internet, e.g. blocked by firewall
                        */
   APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachable but there is some
-                                  conﬁguration issue to be ﬁxed on the server
+                                  conﬁguration issue to be fixed on the server
                                   side */
   APP_SM_NORMAL,
 };
@@ -122,8 +126,8 @@ public:
       /** Call handler */
       handler();
 
-      Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-                    (unsigned int)handler, period);
+      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
+      //               (unsigned int)handler, period);
 
       /** Update period time */
       count = millis();
@@ -143,12 +147,9 @@ private:
 class AgServer {
 public:
   void begin(void) {
-    inF = false;
-    inUSAQI = false;
     configFailed = false;
     serverFailed = false;
-    memset(models, 0, sizeof(models));
-    memset(mqttBroker, 0, sizeof(mqttBroker));
+    loadConfig();
   }
 
   /**
@@ -193,6 +194,7 @@ public:
     }
 
     /** Get "country" */
+    bool inF = false;
     if (JSON.typeof_(root["country"]) == "string") {
       String _country = root["country"];
       country = _country;
@@ -205,6 +207,7 @@ public:
     }
 
     /** Get "pmsStandard" */
+    bool inUSAQI = false;
     if (JSON.typeof_(root["pmStandard"]) == "string") {
       String standard = root["pmStandard"];
       if (standard == "ugm3") {
@@ -222,6 +225,7 @@ public:
     }
 
     /** Get "ledBarMode" */
+    uint8_t ledBarMode = UseLedBarOff;
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
       if (mode == "co2") {
@@ -236,13 +240,18 @@ public:
     }
 
     /** Get model */
+    bool _saveConfig = false;
     if (JSON.typeof_(root["model"]) == "string") {
       String model = root["model"];
       if (model.length()) {
-        int len =
-            model.length() < sizeof(models) ? model.length() : sizeof(models);
-        memset(models, 0, sizeof(models));
-        memcpy(models, model.c_str(), len);
+        int len = model.length() < sizeof(config.models)
+                      ? model.length()
+                      : sizeof(config.models);
+        if (model != String(config.models)) {
+          memset(config.models, 0, sizeof(config.models));
+          memcpy(config.models, model.c_str(), len);
+          _saveConfig = true;
+        }
       }
     }
 
@@ -250,10 +259,14 @@ public:
     if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
       String mqtt = root["mqttBrokerUrl"];
       if (mqtt.length()) {
-        int len = mqtt.length() < sizeof(mqttBroker) ? mqtt.length()
-                                                     : sizeof(mqttBroker);
-        memset(mqttBroker, 0, sizeof(mqttBroker));
-        memcpy(mqttBroker, mqtt.c_str(), len);
+        int len = mqtt.length() < sizeof(config.mqttBrokers)
+                      ? mqtt.length()
+                      : sizeof(config.mqttBrokers);
+        if (mqtt != String(config.mqttBrokers)) {
+          memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+          memcpy(config.mqttBrokers, mqtt.c_str(), len);
+          _saveConfig = true;
+        }
       }
     }
 
@@ -273,6 +286,14 @@ public:
 
     /** Show configuration */
     showServerConfig();
+    if (_saveConfig || (inF != config.inF) || (inUSAQI != config.inUSAQI) ||
+        (ledBarMode != config.useRGBLedBar)) {
+      config.inF = inF;
+      config.inUSAQI = inUSAQI;
+      config.useRGBLedBar = ledBarMode;
+
+      saveConfig();
+    }
 
     return true;
   }
@@ -313,7 +334,7 @@ public:
    * @return true F unit
    * @return false C Unit
    */
-  bool isTemperatureUnitF(void) { return inF; }
+  bool isTemperatureUnitF(void) { return config.inF; }
 
   /**
    * @brief Get PMS standard unit
@@ -321,10 +342,10 @@ public:
    * @return true USAQI
    * @return false ugm3
    */
-  bool isPMSinUSAQI(void) { return inUSAQI; }
+  bool isPMSinUSAQI(void) { return config.inUSAQI; }
 
   /**
-   * @brief Get status of get server coniguration is failed
+   * @brief Get status of get server configuration is failed
    *
    * @return true Failed
    * @return false Success
@@ -372,32 +393,33 @@ public:
    *
    * @return int  days, -1 if invalid.
    */
-  int getCo2Abccalib(void) { return co2AbcCalib; }
+  int getCo2AbcDaysConfig(void) { return co2AbcCalib; }
 
   /**
    * @brief Get device configuration model name
    *
    * @return String Model name, empty string if server failed
    */
-  String getModelName(void) { return String(models); }
+  String getModelName(void) { return String(config.models); }
 
   /**
    * @brief Get mqttBroker url
    *
    * @return String Broker url, empty if server failed
    */
-  String getMqttBroker(void) { return String(mqttBroker); }
+  String getMqttBroker(void) { return String(config.mqttBrokers); }
 
   /**
    * @brief Show server configuration parameter
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("           Model: %s\r\n", models);
-    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
+    Serial.printf("             inF: %s\r\n", config.inF ? "true" : "false");
+    Serial.printf("         inUSAQI: %s\r\n",
+                  config.inUSAQI ? "true" : "false");
+    Serial.printf("    useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
+    Serial.printf("           Model: %s\r\n", config.models);
+    Serial.printf("     Mqtt Broker: %s\r\n", config.mqttBrokers);
     Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
   }
 
@@ -406,7 +428,7 @@ public:
    *
    * @return UseLedBar
    */
-  UseLedBar getLedBarMode(void) { return ledBarMode; }
+  UseLedBar getLedBarMode(void) { return (UseLedBar)config.useRGBLedBar; }
 
   /**
    * @brief Get the Country
@@ -416,19 +438,199 @@ public:
   String getCountry(void) { return country; }
 
 private:
-  bool inF;                 /** Temperature unit, true: F, false: C */
-  bool inUSAQI;             /** PMS unit, true: USAQI, false: ugm3 */
   bool configFailed;        /** Flag indicate get server configuration failed */
   bool serverFailed;        /** Flag indicate post data to server failed */
   bool co2Calib;            /** Is co2Ppmcalibration requset */
   bool ledBarTestRequested; /** */
   int co2AbcCalib = -1;     /** update auto calibration number of day */
-  UseLedBar ledBarMode = UseLedBarCO2; /** */
-  char models[20];                     /** */
-  char mqttBroker[256];                /** */
-  String country;                      /***/
+  String country;           /***/
+
+  struct config_s {
+    bool inF;
+    bool inUSAQI;
+    uint8_t useRGBLedBar;
+    char models[20];
+    char mqttBrokers[256];
+    uint32_t checksum;
+  };
+  struct config_s config;
+
+  void defaultConfig(void) {
+    config.inF = false;
+    config.inUSAQI = false;
+    memset(config.models, 0, sizeof(config.models));
+    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+
+    Serial.println("Load config default");
+    saveConfig();
+  }
+
+  void loadConfig(void) {
+    if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
+      config.inF = false;
+      config.inUSAQI = false;
+      memset(config.models, 0, sizeof(config.models));
+      memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+
+      Serial.println("Load configure failed");
+    } else {
+      uint32_t sum = 0;
+      uint8_t *data = (uint8_t *)&config;
+      for (int i = 0; i < sizeof(config) - 4; i++) {
+        sum += data[i];
+      }
+      if (sum != config.checksum) {
+        Serial.println("config checksum failed");
+        defaultConfig();
+      }
+    }
+
+    showServerConfig();
+  }
+
+  void saveConfig(void) {
+    config.checksum = 0;
+    uint8_t *data = (uint8_t *)&config;
+    for (int i = 0; i < sizeof(config) - 4; i++) {
+      config.checksum += data[i];
+    }
+
+    EEPROM.writeBytes(0, &config, sizeof(config));
+    EEPROM.commit();
+    Serial.println("Save config");
+  }
 };
 AgServer agServer;
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
+                               int32_t event_id, void *event_data);
+
+class AgMqtt {
+private:
+  bool _isBegin = false;
+  String uri;
+  String hostname;
+  String user;
+  String pass;
+  int port;
+  esp_mqtt_client_handle_t client;
+  bool clientConnected = false;
+  int connectFailedCount = 0;
+
+public:
+  AgMqtt() {}
+  ~AgMqtt() {}
+
+  /**
+   * @brief Initialize mqtt
+   *
+   * @param uri Complete mqtt uri, ex:
+   * mqtts://username:password@my.broker.com:4711
+   * @return true Success
+   * @return false Failure
+   */
+  bool begin(String uri) {
+    if (_isBegin) {
+      Serial.println("Mqtt already begin, call 'end' and try again");
+      return true;
+    }
+
+    if (uri.isEmpty()) {
+      Serial.println("Mqtt uri is empty");
+      return false;
+    }
+
+    this->uri = uri;
+    Serial.printf("mqtt init '%s'\r\n", uri.c_str());
+
+    /** config esp_mqtt client */
+    esp_mqtt_client_config_t config = {
+        .uri = this->uri.c_str(),
+    };
+
+    /** init client */
+    client = esp_mqtt_client_init(&config);
+    if (client == NULL) {
+      Serial.println("mqtt client init failed");
+      return false;
+    }
+
+    /** Register event */
+    if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY,
+                                       mqtt_event_handler, NULL) != ESP_OK) {
+      Serial.println("mqtt client register event failed");
+      return false;
+    }
+
+    if (esp_mqtt_client_start(client) != ESP_OK) {
+      Serial.println("mqtt client start failed");
+      return false;
+    }
+
+    _isBegin = true;
+    return true;
+  }
+
+  /**
+   * @brief Deinitialize mqtt
+   *
+   */
+  void end(void) {
+    if (_isBegin == false) {
+      return;
+    }
+
+    esp_mqtt_client_disconnect(client);
+    esp_mqtt_client_stop(client);
+    esp_mqtt_client_destroy(client);
+    _isBegin = false;
+
+    Serial.println("mqtt de-init");
+  }
+
+  bool publish(const char *topic, const char *payload, int len) {
+    if ((_isBegin == false) || (clientConnected == false)) {
+      return false;
+    }
+
+    if (esp_mqtt_client_publish(client, topic, payload, len, 0, 0) == ESP_OK) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @brief Get current complete mqtt uri
+   *
+   * @return String
+   */
+  String getUri(void) { return uri; }
+
+  void _connectionHandler(bool connected) {
+    clientConnected = connected;
+    if (clientConnected == false) {
+      connectFailedCount++;
+    } else {
+      connectFailedCount = 0;
+    }
+  }
+
+  /**
+   * @brief Mqtt client connect status
+   *
+   * @return true Connected
+   * @return false Disconnected or Not initialize
+   */
+  bool isConnected(void) { return (_isBegin && clientConnected); }
+
+  /**
+   * @brief Get number of times connection failed
+   *
+   * @return int
+   */
+  int connectionFailedCount(void) { return connectFailedCount; }
+};
+AgMqtt agMqtt;
 
 /** Create airgradient instance for 'ONE_INDOOR' board */
 AirGradient ag(ONE_INDOOR);
@@ -439,6 +641,9 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 /** wifi manager instance */
 WiFiManager wifiManager;
 
+/** Web server instance */
+WebServer webServer;
+
 static bool wifiHasConfig = false;      /** */
 static int connectCountDown;            /** wifi configuration countdown */
 static int ledCount;                    /** For LED animation */
@@ -446,13 +651,14 @@ static int ledSmState = APP_SM_NORMAL;  /** Save display SM */
 static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
 
 static int tvocIndex = -1;
+static int tvocRawIndex = -1;
 static int noxIndex = -1;
 static int co2Ppm = -1;
 static int pm25 = -1;
 static int pm01 = -1;
 static int pm10 = -1;
 static int pm03PCount = -1;
-static float temp = -1;
+static float temp = -1001;
 static int hum = -1;
 static int bootCount;
 static String wifiSSID = "";
@@ -475,8 +681,16 @@ static void pmPoll(void);
 static void sendDataToServer(void);
 static void tempHumPoll(void);
 static void co2Poll(void);
+static void showNr(void);
+static void webServerInit(void);
+static String getServerSyncData(bool localServer);
 
 /** Init schedule */
+bool hasSensorS8 = true;
+bool hasSensorPMS = true;
+bool hasSensorSGP = true;
+bool hasSensorSHT = true;
+int pmFailCount = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -486,8 +700,12 @@ AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
 
 void setup() {
-  /** Serial fore print debug message */
+  EEPROM.begin(512);
+
+  /** Serial for print debug message */
   Serial.begin(115200);
+  delay(100); /** For bester show log */
+  showNr();
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
@@ -523,15 +741,25 @@ void setup() {
   }
   if (test) {
     ledTest();
-  } else {
-    /** WIFI connect */
-    connectToWifi();
   }
+  /** WIFI connect */
+  connectToWifi();
 
   /**
    * Send first data to ping server and get server configuration
    */
   if (WiFi.status() == WL_CONNECTED) {
+    webServerInit();
+
+    /** MQTT init */
+    if (agServer.getMqttBroker().isEmpty() == false) {
+      if (agMqtt.begin(agServer.getMqttBroker())) {
+        Serial.println("MQTT client init success");
+      } else {
+        Serial.println("MQTT client init failure");
+      }
+    }
+
     sendPing();
     Serial.println(F("WiFi connected!"));
     Serial.println("IP address: ");
@@ -559,10 +787,22 @@ void loop() {
   dispLedSchedule.run();
   configSchedule.run();
   serverSchedule.run();
-  co2Schedule.run();
-  pmsSchedule.run();
-  tempHumSchedule.run();
-  tvocSchedule.run();
+
+  if (hasSensorS8) {
+    co2Schedule.run();
+  }
+
+  if (hasSensorPMS) {
+    pmsSchedule.run();
+  }
+
+  if (hasSensorSHT) {
+    tempHumSchedule.run();
+  }
+
+  if (hasSensorSGP) {
+    tvocSchedule.run();
+  }
 
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
@@ -646,6 +886,85 @@ static void co2Poll(void) {
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
+static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
+
+void webServerMeasureCurrentGet(void) {
+  webServer.send(200, "application/json", getServerSyncData(true));
+}
+
+void webServerHandler(void *param) {
+  for (;;) {
+    webServer.handleClient();
+  }
+}
+
+static void webServerInit(void) {
+  String host = "airgradient_" + getDevId();
+  if (!MDNS.begin(host)) {
+    Serial.println("Init MDNS failed");
+    return;
+  }
+
+  webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
+  webServer.begin();
+  MDNS.addService("http", "tcp", 80);
+
+  if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
+      pdTRUE) {
+    Serial.println("Create task handle webserver failed");
+  }
+  Serial.printf("Webserver init: %s.local\r\n", host.c_str());
+}
+
+static String getServerSyncData(bool localServer) {
+  JSONVar root;
+  root["wifi"] = WiFi.RSSI();
+  if (localServer) {
+    root["serialno"] = getDevId();
+  }
+  if (hasSensorS8) {
+    if (co2Ppm >= 0) {
+      root["rco2"] = co2Ppm;
+    }
+  }
+  if (hasSensorPMS) {
+    if (pm01 >= 0) {
+      root["pm01"] = pm01;
+    }
+    if (pm25 >= 0) {
+      root["pm02"] = pm25;
+    }
+    if (pm10 >= 0) {
+      root["pm10"] = pm10;
+    }
+    if (pm03PCount >= 0) {
+      root["pm003_count"] = pm03PCount;
+    }
+  }
+  if (hasSensorSGP) {
+    if (tvocIndex >= 0) {
+      root["tvoc_index"] = tvocIndex;
+    }
+    if (tvocRawIndex >= 0) {
+      root["tvoc_raw"] = tvocRawIndex;
+    }
+    if (noxIndex >= 0) {
+      root["noxIndex"] = noxIndex;
+    }
+  }
+  if (hasSensorSHT) {
+    if (temp > -1001) {
+      root["atmp"] = ag.round2(temp);
+    }
+    if (hum >= 0) {
+      root["rhum"] = hum;
+    }
+  }
+  root["boot"] = bootCount;
+
+  return JSON.stringify(root);
+}
+
 static void sendPing() {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
@@ -671,8 +990,8 @@ static void sendPing() {
 
   delay(1500);
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
-    dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
-    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNNECTED);
+    dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
+    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
   } else {
     dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
     ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
@@ -717,7 +1036,7 @@ static void displayShowDashboard(String err) {
 
       /** Show temperature */
       if (agServer.isTemperatureUnitF()) {
-        if (temp > -10001) {
+        if (temp > -1001) {
           float tempF = (temp * 9 / 5) + 32;
           sprintf(strBuf, "%.1f°F", tempF);
         } else {
@@ -725,7 +1044,7 @@ static void displayShowDashboard(String err) {
         }
         u8g2.drawUTF8(1, 10, strBuf);
       } else {
-        if (temp > -10001) {
+        if (temp > -1001) {
           sprintf(strBuf, "%.1f°C", temp);
         } else {
           sprintf(strBuf, "-°C");
@@ -752,7 +1071,7 @@ static void displayShowDashboard(String err) {
       if (err == "WiFi N/A") {
         u8g2.setFont(u8g2_font_t0_12_tf);
         if (agServer.isTemperatureUnitF()) {
-          if (temp > -10001) {
+          if (temp > -1001) {
             float tempF = (temp * 9 / 5) + 32;
             sprintf(strBuf, "%.1f", tempF);
           } else {
@@ -760,7 +1079,7 @@ static void displayShowDashboard(String err) {
           }
           u8g2.drawUTF8(1, 10, strBuf);
         } else {
-          if (temp > -10001) {
+          if (temp > -1001) {
             sprintf(strBuf, "%.1f", temp);
           } else {
             sprintf(strBuf, "-");
@@ -935,7 +1254,7 @@ static void connectToWifi() {
       if (clientConnected != clientConnectChanged) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
-          ledSmHandler(APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE);
+          ledSmHandler(APP_SM_WIFI_MANAGER_PORTAL_ACTIVE);
         } else {
           ledCount = LED_BAR_COUNT_INIT_VALUE;
           ledSmHandler(APP_SM_WIFI_MANAGER_MODE);
@@ -1032,6 +1351,11 @@ static void setRGBledColor(char color) {
   ag.ledBar.setColor(r, g, b, ledNum);
 }
 
+void dispSensorNotFound(String ss) {
+  displayShowText("Sensor init", "Error:", ss + " not found");
+  delay(2000);
+}
+
 /**
  * @brief Initialize board
  */
@@ -1044,12 +1368,16 @@ static void boardInit(void) {
 
   /** Init sensor SGP41 */
   if (ag.sgp41.begin(Wire) == false) {
-    failedHandler("Init SGP41 failed");
+    Serial.println("SGP41 sensor not found");
+    hasSensorSGP = false;
+    dispSensorNotFound("SGP41");
   }
 
   /** INit SHT */
   if (ag.sht.begin(Wire) == false) {
-    failedHandler("Init SHT failed");
+    Serial.println("SHTx sensor not found");
+    hasSensorSHT = false;
+    dispSensorNotFound("SHT");
   }
 
   /** Init watchdog */
@@ -1057,12 +1385,18 @@ static void boardInit(void) {
 
   /** Init S8 CO2 sensor */
   if (ag.s8.begin(Serial1) == false) {
-    failedHandler("Init SenseAirS8 failed");
+    // failedHandler("Init SenseAirS8 failed");
+    Serial.println("CO2 S8 sensor not found");
+    hasSensorS8 = false;
+    dispSensorNotFound("S8");
   }
 
   /** Init PMS5003 */
   if (ag.pms5003.begin(Serial0) == false) {
-    failedHandler("Init PMS5003 failed");
+    Serial.println("PMS sensor not found");
+    hasSensorPMS = false;
+
+    dispSensorNotFound("PMS");
   }
 }
 
@@ -1084,18 +1418,50 @@ static void failedHandler(String msg) {
 static void serverConfigPoll(void) {
   if (agServer.pollServerConfig(getDevId())) {
     if (agServer.isCo2Calib()) {
-      co2Calibration();
-    }
-    if (agServer.getCo2Abccalib() > 0) {
-      if (ag.s8.setAutoCalib(agServer.getCo2Abccalib() * 24) == false) {
-        Serial.println("Set S8 auto calib failed");
+      if (hasSensorS8) {
+        co2Calibration();
+      } else {
+        Serial.println("CO2 S8 not available, calib ignored");
       }
     }
+
+    if (agServer.getCo2AbcDaysConfig() > 0) {
+      if (hasSensorS8) {
+        int newHour = agServer.getCo2AbcDaysConfig() * 24;
+        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+                      agServer.getCo2AbcDaysConfig(), newHour);
+        int curHour = ag.s8.getAbcPeriod();
+        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        if (curHour == newHour) {
+          Serial.println("set 'abcDays' ignored");
+        } else {
+          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+              false) {
+            Serial.println("Set S8 abcDays period calib failed");
+          } else {
+            Serial.println("Set S8 abcDays period calib success");
+          }
+        }
+      } else {
+        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
+      }
+    }
+
     if (agServer.isLedBarTestRequested()) {
       if (agServer.getCountry() == "TH") {
         ledTest2Min();
       } else {
         ledTest();
+      }
+    }
+
+    String mqttUri = agServer.getMqttBroker();
+    if (mqttUri != agMqtt.getUri()) {
+      agMqtt.end();
+      if (agMqtt.begin(mqttUri)) {
+        Serial.println("Connect to new mqtt broker success");
+      } else {
+        Serial.println("Connect to new mqtt broker failed");
       }
     }
   }
@@ -1187,7 +1553,7 @@ static void ledSmHandler(int sm) {
     ag.ledBar.setColor(0, 0, 255, ag.ledBar.getNumberOfLeds() / 2);
     break;
   }
-  case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
+  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
     /** WiFi Manager has connected to mobile phone */
     ag.ledBar.setColor(0, 0, 255);
     break;
@@ -1208,7 +1574,7 @@ static void ledSmHandler(int sm) {
     singleLedAnimation(0, 255, 0);
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNNECTED: {
+  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
     /** Server is reachable, all ﬁne */
     ag.ledBar.setColor(0, 255, 0);
     break;
@@ -1219,13 +1585,13 @@ static void ledSmHandler(int sm) {
     break;
   }
   case APP_SM_WIFI_OK_SERVER_CONNECT_FAILED: {
-    /** Connected to WiFi but server not reachable, e.g. ﬁrewall block/
+    /** Connected to WiFi but server not reachable, e.g. firewall block/
      * whitelisting needed etc. */
     ag.ledBar.setColor(233, 183, 54); /** orange */
     break;
   }
   case APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED: {
-    /** Server reachable but sensor not conﬁgured correctly */
+    /** Server reachable but sensor not configured correctly */
     ag.ledBar.setColor(139, 24, 248); /** violet */
     break;
   }
@@ -1241,7 +1607,7 @@ static void ledSmHandler(int sm) {
   }
   case APP_SM_SERVER_LOST: {
     /** Connected to WiFi network but the server cannot be reached through the
-     * internet, e.g. blocked by ﬁrewall */
+     * internet, e.g. blocked by firewall */
 
     ag.ledBar.setColor(233, 183, 54, 0);
 
@@ -1250,7 +1616,7 @@ static void ledSmHandler(int sm) {
     break;
   }
   case APP_SM_SENSOR_CONFIG_FAILED: {
-    /** Server is reachable but there is some conﬁguration issue to be ﬁxed on
+    /** Server is reachable but there is some conﬁguration issue to be fixed on
      * the server side */
 
     ag.ledBar.setColor(139, 24, 248, 0);
@@ -1289,7 +1655,7 @@ static void dispSmHandler(int sm) {
 
   switch (sm) {
   case APP_SM_WIFI_MANAGER_MODE:
-  case APP_SM_WIFI_MAMAGER_PORTAL_ACTIVE: {
+  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
     if (connectCountDown >= 0) {
       displayShowWifiText(String(connectCountDown) + "s to connect",
                           "to WiFi hotspot:", "\"airgradient-",
@@ -1310,7 +1676,7 @@ static void dispSmHandler(int sm) {
     displayShowText("Connecting to", "Server", "...");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNNECTED: {
+  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
     displayShowText("Server", "connection", "successful");
     break;
   }
@@ -1341,7 +1707,7 @@ static void dispSmHandler(int sm) {
   case APP_SM_NORMAL: {
     displayShowDashboard("");
   }
-  detault:
+  default:
     break;
   }
 }
@@ -1430,10 +1796,13 @@ static void updateDispLedBar(void) {
  */
 static void tvocPoll(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
+  tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
 
-  Serial.printf("tvocIndexindex: %d\r\n", tvocIndex);
-  Serial.printf(" NOx index: %d\r\n", noxIndex);
+  Serial.println();
+  Serial.printf("    TVOC index: %d\r\n", tvocIndex);
+  Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
+  Serial.printf("     NOx index: %d\r\n", noxIndex);
 }
 
 /**
@@ -1447,15 +1816,21 @@ static void pmPoll(void) {
     pm10 = ag.pms5003.getPm10Ae();
     pm03PCount = ag.pms5003.getPm03ParticleCount();
 
+    Serial.println();
     Serial.printf("      PMS0.1: %d\r\n", pm01);
     Serial.printf("      PMS2.5: %d\r\n", pm25);
     Serial.printf("     PMS10.0: %d\r\n", pm10);
     Serial.printf("PMS3.0 Count: %d\r\n", pm03PCount);
+    pmFailCount = 0;
   } else {
-    pm01 = -1;
-    pm25 = -1;
-    pm10 = -1;
-    pm03PCount = -1;
+    pmFailCount++;
+    Serial.printf("PM read failed: %d\r\n", pmFailCount);
+    if (pmFailCount >= 3) {
+      pm01 = -1;
+      pm25 = -1;
+      pm10 = -1;
+      pm03PCount = -1;
+    }
   }
 }
 
@@ -1464,40 +1839,18 @@ static void pmPoll(void) {
  *
  */
 static void sendDataToServer(void) {
-  JSONVar root;
-  root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
-  }
-  if (pm01 >= 0) {
-    root["pm01"] = pm01;
-  }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
-  }
-  if (pm10 >= 0) {
-    root["pm10"] = pm10;
-  }
-  if (pm03PCount >= 0) {
-    root["pm003_count"] = pm03PCount;
-  }
-  if (tvocIndex >= 0) {
-    root["tvoc_index"] = tvocIndex;
-  }
-  if (noxIndex >= 0) {
-    root["noxIndex"] = noxIndex;
-  }
-  if (temp >= 0) {
-    root["atmp"] = temp;
-  }
-  if (hum >= 0) {
-    root["rhum"] = hum;
-  }
-  root["boot"] = bootCount;
-
-  // NOTE Need determine offline mode to reset watchdog timer
-  if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
+  String syncData = getServerSyncData(false);
+  if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
+  }
+
+  if (agMqtt.isConnected()) {
+    String topic = "airgradient/readings/" + getDevId();
+    if (agMqtt.publish(topic.c_str(), syncData.c_str(), syncData.length())) {
+      Serial.println("Mqtt sync success");
+    } else {
+      Serial.println("Mqtt sync failure");
+    }
   }
   bootCount++;
 }
@@ -1515,5 +1868,56 @@ static void tempHumPoll(void) {
     Serial.printf("   Humidity: %d\r\n", hum);
   } else {
     Serial.println("Measure SHT failed");
+  }
+}
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
+                               int32_t event_id, void *event_data) {
+
+  ESP_LOGD(TAG,
+           "Event dispatched from event loop base=%s, event_id=%" PRIi32 "",
+           base, event_id);
+  esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
+  esp_mqtt_client_handle_t client = event->client;
+  int msg_id;
+  switch ((esp_mqtt_event_id_t)event_id) {
+  case MQTT_EVENT_CONNECTED:
+    Serial.println("MQTT_EVENT_CONNECTED");
+    // msg_id = esp_mqtt_client_subscribe(client, "helloworld", 0);
+    // Serial.printf("sent subscribe successful, msg_id=%d\r\n", msg_id);
+    agMqtt._connectionHandler(true);
+    break;
+  case MQTT_EVENT_DISCONNECTED:
+    Serial.println("MQTT_EVENT_DISCONNECTED");
+    agMqtt._connectionHandler(false);
+    break;
+  case MQTT_EVENT_SUBSCRIBED:
+    break;
+  case MQTT_EVENT_UNSUBSCRIBED:
+    Serial.printf("MQTT_EVENT_UNSUBSCRIBED, msg_id=%d\r\n", event->msg_id);
+    break;
+  case MQTT_EVENT_PUBLISHED:
+    Serial.printf("MQTT_EVENT_PUBLISHED, msg_id=%d\r\n", event->msg_id);
+    break;
+  case MQTT_EVENT_DATA:
+    Serial.println("MQTT_EVENT_DATA");
+    // add null terminal to data
+    // event->data[event->data_len] = 0;
+    // rpc_attritbutes_handler(event->data, event->data_len);
+    break;
+  case MQTT_EVENT_ERROR:
+    Serial.println("MQTT_EVENT_ERROR");
+    if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+      Serial.printf("reported from esp-tls: %d",
+                    event->error_handle->esp_tls_last_esp_err);
+      Serial.printf("reported from tls stack: %d",
+                    event->error_handle->esp_tls_stack_err);
+      Serial.printf("captured as transport's socket errno: %d",
+                    event->error_handle->esp_transport_sock_errno);
+    }
+    break;
+  default:
+    Serial.printf("Other event id:%d\r\n", event->event_id);
+    break;
   }
 }

@@ -1,6 +1,6 @@
 #include "LedBar.h"
 
-#include "../library/Adafruit_NeoPixel/Adafruit_NeoPixel.h"
+#include "../Libraries/Adafruit_NeoPixel/Adafruit_NeoPixel.h"
 
 #define pixel() ((Adafruit_NeoPixel *)this->pixels)
 

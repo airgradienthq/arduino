@@ -2,7 +2,7 @@
 #define _PMS5003T_H_
 
 #include <HardwareSerial.h>
-#include "../main/BoardDef.h"
+#include "../Main/BoardDef.h"
 #include "PMS.h"
 #include "Stream.h"
 

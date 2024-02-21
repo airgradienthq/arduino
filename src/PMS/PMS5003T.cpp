@@ -1,4 +1,4 @@
-#include "pms5003t.h"
+#include "PMS5003T.h"
 #include "Arduino.h"
 
 #if defined(ESP8266)

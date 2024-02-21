@@ -1,6 +1,6 @@
 #include "AirGradient.h"
 
-#define AG_LIB_VER "3.0.3"
+#define AG_LIB_VER "3.0.4"
 
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
@@ -36,3 +36,7 @@ int AirGradient::getI2cSclPin(void) {
 String AirGradient::getVersion(void) { return AG_LIB_VER; }
 
 BoardType AirGradient::getBoardType(void) { return boardType; }
+
+double AirGradient::round2(double value) {
+  return (int)(value * 100 + 0.5) / 100.0;
+}

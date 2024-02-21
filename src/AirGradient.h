@@ -1,17 +1,17 @@
 #ifndef _AIR_GRADIENT_H_
 #define _AIR_GRADIENT_H_
 
-#include "display/oled.h"
-#include "main/BoardDef.h"
-#include "main/HardwareWatchdog.h"
-#include "main/LedBar.h"
-#include "main/PushButton.h"
-#include "main/StatusLed.h"
-#include "pms/pms5003.h"
-#include "pms/pms5003t.h"
-#include "s8/s8.h"
-#include "sgp41/sgp41.h"
-#include "sht/sht.h"
+#include "Display/Display.h"
+#include "Main/BoardDef.h"
+#include "Main/HardwareWatchdog.h"
+#include "Main/LedBar.h"
+#include "Main/PushButton.h"
+#include "Main/StatusLed.h"
+#include "PMS/PMS5003.h"
+#include "PMS/PMS5003T.h"
+#include "S8/S8.h"
+#include "Sgp41/Sgp41.h"
+#include "Sht/Sht.h"
 
 /**
  * @brief Class with define all the sensor has supported by Airgradient. Each
@@ -106,6 +106,14 @@ public:
    * @return String
    */
   String getVersion(void);
+
+  /**
+   * @brief Round double value with for 2 decimal
+   * 
+   * @param valuem Round value
+   * @return double 
+   */
+  double round2(double value);
 
 private:
   BoardType boardType;

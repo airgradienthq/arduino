@@ -1,4 +1,4 @@
-#include "s8.h"
+#include "S8.h"
 #include "mb_crc.h"
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
@@ -801,7 +801,7 @@ void S8::sendCommand(uint8_t func, uint16_t reg, uint16_t value) {
  * @return true Success
  * @return false Failure
  */
-bool S8::setAutoCalib(int hours) {
+bool S8::setAbcPeriod(int hours) {
   if (isBegin() == false) {
     return false;
   }
@@ -813,3 +813,10 @@ bool S8::setAutoCalib(int hours) {
 
   return setCalibPeriodABC(hours);
 }
+
+/**
+ * @brief Get current 'ABC' calib period
+ *
+ * @return int Hour
+ */
+int S8::getAbcPeriod(void) { return getCalibPeriodABC(); }

@@ -1,7 +1,7 @@
 #ifndef _AIR_GRADIENT_PMS5003_H_
 #define _AIR_GRADIENT_PMS5003_H_
 
-#include "../main/BoardDef.h"
+#include "../Main/BoardDef.h"
 #include "Stream.h"
 #include "PMS.h"
 
