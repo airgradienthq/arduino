@@ -1566,19 +1566,6 @@ static void co2Calibration(void) {
  * @param pm25Value PMS2.5 value
  */
 static void setRGBledPMcolor(int pm25Value) {
-  if (pm25Value >= 0 && pm25Value < 10)
-    setRGBledColor('g');
-  if (pm25Value >= 10 && pm25Value < 35)
-    setRGBledColor('y');
-  if (pm25Value >= 35 && pm25Value < 55)
-    setRGBledColor('o');
-  if (pm25Value >= 55 && pm25Value < 150)
-    setRGBledColor('r');
-  if (pm25Value >= 150 && pm25Value < 250)
-    setRGBledColor('p');
-  if (pm25Value >= 250 && pm25Value < 1000)
-    setRGBledColor('p');
-
   if (pm25Value <= 5) {
     /** G; 1 */
     ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
