@@ -1287,20 +1287,80 @@ static String getNormalizedMac() {
 }
 
 static void setRGBledCO2color(int co2Value) {
-  if (co2Value >= 300 && co2Value < 800) {
-    setRGBledColor('g');
-  } else if (co2Value >= 800 && co2Value < 1000) {
-    setRGBledColor('y');
-  } else if (co2Value >= 1000 && co2Value < 1500) {
-    setRGBledColor('o');
-  } else if (co2Value >= 1500 && co2Value < 2000) {
-    setRGBledColor('r');
-  } else if (co2Value >= 2000 && co2Value < 3000) {
-    setRGBledColor('p');
-  } else if (co2Value >= 3000 && co2Value < 10000) {
-    setRGBledColor('z');
-  } else {
-    setRGBledColor('n');
+  if (co2Value <= 400) {
+    /** G; 1 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+  } else if (co2Value <= 700) {
+    /** GG; 2 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+  } else if (co2Value <= 1000) {
+    /** YYY; 3 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+  } else if (co2Value <= 1333) {
+    /** YYYY; 4 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+  } else if (co2Value <= 1666) {
+    /** YYYYY; 5 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 5);
+  } else if (co2Value <= 2000) {
+    /** RRRRRR; 6 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+  } else if (co2Value <= 2666) {
+    /** RRRRRRR; 7 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+  } else if (co2Value <= 3333) {
+    /** RRRRRRRR; 8 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+  } else if (co2Value <= 4000) {
+    /** RRRRRRRRR; 9 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 9);
+  } else { /** > 4000 */
+    /* PRPRPRPRP; 9 */
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 9);
   }
 }
 
@@ -1518,6 +1578,82 @@ static void setRGBledPMcolor(int pm25Value) {
     setRGBledColor('p');
   if (pm25Value >= 250 && pm25Value < 1000)
     setRGBledColor('p');
+
+  if (pm25Value <= 5) {
+    /** G; 1 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+  } else if (pm25Value <= 10) {
+    /** GG; 2 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+  } else if (pm25Value <= 20) {
+    /** YYY; 3 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+  } else if (pm25Value <= 35) {
+    /** YYYY; 4 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+  } else if (pm25Value <= 45) {
+    /** YYYYY; 5 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 5);
+  } else if (pm25Value <= 55) {
+    /** RRRRRR; 6 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+  } else if (pm25Value <= 65) {
+    /** RRRRRRR; 7 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+  } else if (pm25Value <= 150) {
+    /** RRRRRRRR; 8 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+  } else if (pm25Value <= 250) {
+    /** RRRRRRRRR; 9 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 9);
+  } else { /** > 250 */
+    /* PRPRPRPRP; 9 */
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 9);
+  }
 }
 
 static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
