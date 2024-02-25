@@ -103,6 +103,8 @@ enum {
   "cleanair" /** default WiFi AP password                                      \
               */
 
+static const char* const TAG = "ONE_I-9PSL";
+
 /**
  * @brief Use use LED bar state
  */

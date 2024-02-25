@@ -102,6 +102,8 @@ enum {
   "cleanair" /** default WiFi AP password                                      \
               */
 
+static const char* const TAG = "Open_Air";
+
 /**
  * @brief Use use LED bar state
  */
