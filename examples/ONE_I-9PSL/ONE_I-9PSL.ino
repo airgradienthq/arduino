@@ -93,6 +93,7 @@ enum {
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
 #define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
+#define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
@@ -631,6 +632,7 @@ public:
   int connectionFailedCount(void) { return connectFailedCount; }
 };
 AgMqtt agMqtt;
+static TaskHandle_t mqttTask = NULL;
 
 /** Create airgradient instance for 'ONE_INDOOR' board */
 AirGradient ag(ONE_INDOOR);
@@ -684,6 +686,7 @@ static void co2Poll(void);
 static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(bool localServer);
+static void createMqttTask(void);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -754,6 +757,7 @@ void setup() {
     /** MQTT init */
     if (agServer.getMqttBroker().isEmpty() == false) {
       if (agMqtt.begin(agServer.getMqttBroker())) {
+        createMqttTask();
         Serial.println("MQTT client init success");
       } else {
         Serial.println("MQTT client init failure");
@@ -963,6 +967,37 @@ static String getServerSyncData(bool localServer) {
   root["boot"] = bootCount;
 
   return JSON.stringify(root);
+}
+
+static void createMqttTask(void) {
+  if (mqttTask) {
+    vTaskDelete(mqttTask);
+    mqttTask = NULL;
+  }
+
+  xTaskCreate(
+      [](void *param) {
+        for (;;) {
+          delay(MQTT_SYNC_INTERVAL);
+
+          /** Send data */
+          if (agMqtt.isConnected()) {
+            String syncData = getServerSyncData(false);
+            String topic = "airgradient/readings/" + getDevId();
+            if (agMqtt.publish(topic.c_str(), syncData.c_str(),
+                               syncData.length())) {
+              Serial.println("Mqtt sync success");
+            } else {
+              Serial.println("Mqtt sync failure");
+            }
+          }
+        }
+      },
+      "mqtt-task", 1024 * 3, NULL, 6, &mqttTask);
+
+  if (mqttTask == NULL) {
+    Serial.println("Creat mqttTask failed");
+  }
 }
 
 static void sendPing() {
@@ -1518,8 +1553,14 @@ static void serverConfigPoll(void) {
     String mqttUri = agServer.getMqttBroker();
     if (mqttUri != agMqtt.getUri()) {
       agMqtt.end();
+
+      if (mqttTask != NULL) {
+        vTaskDelete(mqttTask);
+        mqttTask = NULL;
+      }
       if (agMqtt.begin(mqttUri)) {
         Serial.println("Connect to new mqtt broker success");
+        createMqttTask();
       } else {
         Serial.println("Connect to new mqtt broker failed");
       }
@@ -1966,15 +2007,7 @@ static void sendDataToServer(void) {
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }
-
-  if (agMqtt.isConnected()) {
-    String topic = "airgradient/readings/" + getDevId();
-    if (agMqtt.publish(topic.c_str(), syncData.c_str(), syncData.length())) {
-      Serial.println("Mqtt sync success");
-    } else {
-      Serial.println("Mqtt sync failure");
-    }
-  }
+  
   bootCount++;
 }
 
