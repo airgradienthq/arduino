@@ -154,6 +154,19 @@ public:
   }
 
   /**
+   * @brief Reset local config into default value.
+   *
+   */
+  void defaultReset(void) {
+    config.inF = false;
+    config.inUSAQI = false;
+    memset(config.models, 0, sizeof(config.models));
+    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+    config.useRGBLedBar = UseLedBarOff;
+    saveConfig();
+  }
+
+  /**
    * @brief Get server configuration
    *
    * @param id Device ID
@@ -687,6 +700,7 @@ static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
+static void factoryConfigReset(void);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -694,6 +708,7 @@ bool hasSensorPMS = true;
 bool hasSensorSGP = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
+uint32_t factoryBtnPressTime = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -810,6 +825,9 @@ void loop() {
 
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
+
+  /** factory reset handle */
+  factoryConfigReset();
 }
 
 static void setTestColor(char color) {
@@ -997,6 +1015,58 @@ static void createMqttTask(void) {
 
   if (mqttTask == NULL) {
     Serial.println("Creat mqttTask failed");
+  }
+}
+
+static void factoryConfigReset(void) {
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    if (factoryBtnPressTime == 0) {
+      factoryBtnPressTime = millis();
+    } else {
+      uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
+      if (ms >= 2000) {
+        // Show display message: For factory keep for x seconds
+        // Count display.
+        displayShowText("For factory reset", "keep pressed", "for 8 sec");
+
+        int count = 7;
+        while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+          delay(1000);
+          displayShowText("For factory reset", "keep pressed",
+                          "for " + String(count) + " sec");
+          count--;
+          // ms = (uint32_t)(millis() - factoryBtnPressTime);
+          if (count == 0) {
+            /** Stop MQTT task first */
+            if (mqttTask) {
+              vTaskDelete(mqttTask);
+              mqttTask = NULL;
+            }
+
+            /** Disconnect WIFI */
+            WiFi.disconnect();
+            wifiManager.resetSettings();
+
+            /** Reset local config */
+            agServer.defaultReset();
+
+            displayShowText("Factory reset", "successful", "");
+            delay(3000);
+            ESP.restart();
+          }
+        }
+
+        /** Show current content cause reset ignore */
+        factoryBtnPressTime = 0;
+        appDispHandler();
+      }
+    }
+  } else {
+    if (factoryBtnPressTime != 0) {
+      /** Restore last display content */
+      appDispHandler();
+    }
+    factoryBtnPressTime = 0;
   }
 }
 
@@ -1950,7 +2020,9 @@ static void updateWiFiConnect(void) {
  *
  */
 static void updateDispLedBar(void) {
-  appDispHandler();
+  if (factoryBtnPressTime == 0) {
+    appDispHandler();
+  }
   appLedHandler();
 }
 
@@ -2007,7 +2079,7 @@ static void sendDataToServer(void) {
   if (agServer.postToServer(getDevId(), syncData)) {
     resetWatchdog();
   }
-  
+
   bootCount++;
 }
 
