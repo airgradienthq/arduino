@@ -47,6 +47,7 @@ private:
   PMS::DATA pmsData;
   bool isBegin(void);
   float correctionTemperature(float inTemp);
+  float correctionRelativeHumidity(float inHum);
 };
 
 #endif /** _PMS5003T_H_ */
