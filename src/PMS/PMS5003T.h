@@ -1,10 +1,10 @@
 #ifndef _PMS5003T_H_
 #define _PMS5003T_H_
 
-#include <HardwareSerial.h>
 #include "../Main/BoardDef.h"
 #include "PMS.h"
 #include "Stream.h"
+#include <HardwareSerial.h>
 
 /**
  * @brief The class define how to handle PMS5003T sensor bas on @ref PMS class
@@ -42,7 +42,6 @@ private:
 #endif
 
   bool begin(void);
-  int pm25ToAQI(int pm02);
   PMS pms;
   PMS::DATA pmsData;
   bool isBegin(void);
