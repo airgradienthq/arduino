@@ -174,7 +174,7 @@ public:
    * @return true Success
    * @return false Failure
    */
-  bool fetchServerConfigure(String id) {
+  bool fetchServerConfiguration(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -681,7 +681,7 @@ static String wifiSSID = "";
 
 static void boardInit(void);
 static void failedHandler(String msg);
-static void serverConfigUpdate(void);
+static void updateServerConfiguration(void);
 static void co2Calibration(void);
 static void setRGBledPMcolor(int pm25Value);
 static void ledSmHandler(int sm);
@@ -711,7 +711,7 @@ bool hasSensorSHT = true;
 int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
@@ -786,7 +786,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     /** Get first connected to wifi */
-    agServer.fetchServerConfigure(getDevId());
+    agServer.fetchServerConfiguration(getDevId());
     if (agServer.isConfigFailed()) {
       dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
@@ -1721,8 +1721,8 @@ static void failedHandler(String msg) {
 /**
  * @brief Send data to server
  */
-static void serverConfigUpdate(void) {
-  if (agServer.fetchServerConfigure(getDevId())) {
+static void updateServerConfiguration(void) {
+  if (agServer.fetchServerConfiguration(getDevId())) {
     if (agServer.isCo2Calib()) {
       if (hasSensorS8) {
         co2Calibration();

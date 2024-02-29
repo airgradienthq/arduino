@@ -175,7 +175,7 @@ public:
    * @return true Success
    * @return false Failure
    */
-  bool fetchServerConfigure(String id) {
+  bool fetchServerConfiguration(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -713,7 +713,7 @@ static void tvocUpdate(void);
 static void pmUpdate(void);
 static void sendDataToServer(void);
 static void co2Update(void);
-static void serverConfigUpdate(void);
+static void updateServerConfiguration(void);
 static const char *getFwMode(int mode);
 static void showNr(void);
 static void webServerInit(void);
@@ -726,7 +726,7 @@ bool hasSensorPMS1 = true;
 bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
@@ -764,7 +764,7 @@ void setup() {
     wifiHasConfig = true;
     sendPing();
 
-    agServer.fetchServerConfigure(getDevId());
+    agServer.fetchServerConfiguration(getDevId());
     if (agServer.isConfigFailed()) {
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
@@ -1139,8 +1139,8 @@ static void co2Update(void) {
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
-static void serverConfigUpdate(void) {
-  if (agServer.fetchServerConfigure(getDevId())) {
+static void updateServerConfiguration(void) {
+  if (agServer.fetchServerConfiguration(getDevId())) {
     /** Only support CO2 S8 sensor on FW_MODE_PST */
     if (fw_mode == FW_MODE_PST) {
       if (agServer.isCo2Calib()) {

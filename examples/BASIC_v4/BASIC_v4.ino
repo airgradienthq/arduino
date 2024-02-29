@@ -115,7 +115,7 @@ public:
    * @return true Success
    * @return false Failure
    */
-  bool fetchServerConfigure(String id) {
+  bool fetchServerConfiguration(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -368,7 +368,7 @@ static bool wifiHasConfig = false; /** */
 static void boardInit(void);
 static void failedHandler(String msg);
 static void co2Calibration(void);
-static void serverConfigUpdate(void);
+static void updateServerConfiguration(void);
 static void co2Update(void);
 static void pmUpdate(void);
 static void tempHumUpdate(void);
@@ -382,7 +382,7 @@ bool hasSensorS8 = true;
 bool hasSensorPMS = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
@@ -413,7 +413,7 @@ void setup() {
     wifiHasConfig = true;
     sendPing();
 
-    agServer.fetchServerConfigure(getDevId());
+    agServer.fetchServerConfiguration(getDevId());
     if (agServer.isCo2Calib()) {
       co2Calibration();
     }
@@ -576,8 +576,8 @@ static void co2Calibration(void) {
   }
 }
 
-static void serverConfigUpdate(void) {
-  if (agServer.fetchServerConfigure(getDevId())) {
+static void updateServerConfiguration(void) {
+  if (agServer.fetchServerConfiguration(getDevId())) {
     if (agServer.isCo2Calib()) {
       if (hasSensorS8) {
         co2Calibration();
