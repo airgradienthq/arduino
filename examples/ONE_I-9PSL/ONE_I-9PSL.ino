@@ -938,7 +938,7 @@ void webServerMetricsGet(void) {
   };
 
   add_metric("info", "AirGradient device information", "info");
-  add_metric_point("airgradient_serial_number=\"" + getDevId() + "\",airgradient_device_type=\"ONE_I-9PSL\",airgradient_library_version=\"" + ag.getVersion() + "\"", "1");
+  add_metric_point("airgradient_serial_number=\"" + getDevId() + "\",airgradient_device_type=\""+ ag.getBoardName() +"\",airgradient_library_version=\"" + ag.getVersion() + "\"", "1");
 
   add_metric("config_ok", "1 if the AirGradient device was able to successfully fetch its configuration from the server", "gauge");
   add_metric_point("", agServer.isConfigFailed() ? "0" : "1");
