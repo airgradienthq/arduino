@@ -2,8 +2,8 @@
 #define _AIR_GRADIENT_PMS5003_H_
 
 #include "../Main/BoardDef.h"
-#include "Stream.h"
 #include "PMS.h"
+#include "Stream.h"
 
 /**
  * @brief The class define how to handle PMS5003 sensor bas on @ref PMS class
@@ -41,6 +41,5 @@ private:
 
   bool begin(void);
   bool isBegin(void);
-  int pm25ToAQI(int pm02);
 };
 #endif /** _AIR_GRADIENT_PMS5003_H_ */

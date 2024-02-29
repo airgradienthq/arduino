@@ -99,7 +99,7 @@ enum {
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
@@ -175,7 +175,7 @@ public:
    * @return true Success
    * @return false Failure
    */
-  bool pollServerConfig(String id) {
+  bool fetchServerConfigure(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -709,11 +709,11 @@ void failedHandler(String msg);
 void co2Calibration(void);
 static String getDevId(void);
 static void updateWiFiConnect(void);
-static void tvocPoll(void);
-static void pmPoll(void);
+static void tvocUpdate(void);
+static void pmUpdate(void);
 static void sendDataToServer(void);
-static void co2Poll(void);
-static void serverConfigPoll(void);
+static void co2Update(void);
+static void serverConfigUpdate(void);
 static const char *getFwMode(int mode);
 static void showNr(void);
 static void webServerInit(void);
@@ -726,11 +726,11 @@ bool hasSensorPMS1 = true;
 bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
-AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
-AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmPoll);
-AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
+AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
+AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
+AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -764,7 +764,7 @@ void setup() {
     wifiHasConfig = true;
     sendPing();
 
-    agServer.pollServerConfig(getDevId());
+    agServer.fetchServerConfigure(getDevId());
     if (agServer.isConfigFailed()) {
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
@@ -1011,7 +1011,7 @@ static void updateWiFiConnect(void) {
  * @brief Update tvocIndexindex
  *
  */
-static void tvocPoll(void) {
+static void tvocUpdate(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
@@ -1026,7 +1026,7 @@ static void tvocPoll(void) {
  * @brief Update PMS data
  *
  */
-static void pmPoll(void) {
+static void pmUpdate(void) {
   bool pmsResult_1 = false;
   bool pmsResult_2 = false;
   if (hasSensorPMS1 && ag.pms5003t_1.readData()) {
@@ -1134,13 +1134,13 @@ static void pmPoll(void) {
   }
 }
 
-static void co2Poll(void) {
+static void co2Update(void) {
   co2Ppm = ag.s8.getCo2();
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
-static void serverConfigPoll(void) {
-  if (agServer.pollServerConfig(getDevId())) {
+static void serverConfigUpdate(void) {
+  if (agServer.fetchServerConfigure(getDevId())) {
     /** Only support CO2 S8 sensor on FW_MODE_PST */
     if (fw_mode == FW_MODE_PST) {
       if (agServer.isCo2Calib()) {
