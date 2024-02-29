@@ -76,7 +76,7 @@ struct BoardDef {
 
   /** Watchdog */
   struct {
-    const uint8_t resetPin;
+    const int resetPin;
     const bool supported;
   } WDG;
   const char *name;
