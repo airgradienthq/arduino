@@ -85,6 +85,8 @@ enum {
 
 #define LED_FAST_BLINK_DELAY 250             /** ms */
 #define LED_SLOW_BLINK_DELAY 1000            /** ms */
+#define LED_SHORT_BLINK_DELAY 500            /** ms */
+#define LED_LONG_BLINK_DELAY 2000            /** ms */
 #define WIFI_CONNECT_COUNTDOWN_MAX 180       /** sec */
 #define WIFI_CONNECT_RETRY_MS 10000          /** ms */
 #define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
@@ -92,6 +94,7 @@ enum {
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
 #define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
+#define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
@@ -150,6 +153,19 @@ public:
     configFailed = false;
     serverFailed = false;
     loadConfig();
+  }
+
+  /**
+   * @brief Reset local config into default value.
+   *
+   */
+  void defaultReset(void) {
+    config.inF = false;
+    config.inUSAQI = false;
+    memset(config.models, 0, sizeof(config.models));
+    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+    config.useRGBLedBar = UseLedBarOff;
+    saveConfig();
   }
 
   /**
@@ -631,6 +647,7 @@ public:
   int connectionFailedCount(void) { return connectFailedCount; }
 };
 AgMqtt agMqtt;
+static TaskHandle_t mqttTask = NULL;
 
 /** Create airgradient instance for 'OPEN_AIR_OUTDOOR' board */
 AirGradient ag(OPEN_AIR_OUTDOOR);
@@ -701,11 +718,14 @@ static const char *getFwMode(int mode);
 static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(bool localServer);
+static void createMqttTask(void);
+static void factoryConfigReset(void);
 
 bool hasSensorS8 = true;
 bool hasSensorPMS1 = true;
 bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
+uint32_t factoryBtnPressTime = 0;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
@@ -734,6 +754,7 @@ void setup() {
     /** MQTT init */
     if (agServer.getMqttBroker().isEmpty() == false) {
       if (agMqtt.begin(agServer.getMqttBroker())) {
+        createMqttTask();
         Serial.println("MQTT client init success");
       } else {
         Serial.println("MQTT client init failure");
@@ -773,6 +794,8 @@ void loop() {
     }
   }
   updateWiFiConnect();
+
+  factoryConfigReset();
 }
 
 void sendPing() {
@@ -793,14 +816,6 @@ static void sendDataToServer(void) {
     resetWatchdog();
   }
 
-  if (agMqtt.isConnected()) {
-    String topic = "airgradient/readings/" + getDevId();
-    if (agMqtt.publish(topic.c_str(), syncData.c_str(), syncData.length())) {
-      Serial.println("Mqtt sync success");
-    } else {
-      Serial.println("Mqtt sync failure");
-    }
-  }
   loopCount++;
 }
 
@@ -1162,8 +1177,13 @@ static void serverConfigPoll(void) {
     String mqttUri = agServer.getMqttBroker();
     if (mqttUri != agMqtt.getUri()) {
       agMqtt.end();
+      if (mqttTask != NULL) {
+        vTaskDelete(mqttTask);
+        mqttTask = NULL;
+      }
       if (agMqtt.begin(mqttUri)) {
         Serial.println("Connect to new mqtt broker success");
+        createMqttTask();
       } else {
         Serial.println("Connect to new mqtt broker failed");
       }
@@ -1416,6 +1436,94 @@ static String getServerSyncData(bool localServer) {
   }
 
   return JSON.stringify(root);
+}
+
+static void createMqttTask(void) {
+  if (mqttTask) {
+    vTaskDelete(mqttTask);
+    mqttTask = NULL;
+  }
+
+  xTaskCreate(
+      [](void *param) {
+        for (;;) {
+          delay(MQTT_SYNC_INTERVAL);
+
+          /** Send data */
+          if (agMqtt.isConnected()) {
+            String syncData = getServerSyncData(false);
+            String topic = "airgradient/readings/" + getDevId();
+            if (agMqtt.publish(topic.c_str(), syncData.c_str(),
+                               syncData.length())) {
+              Serial.println("Mqtt sync success");
+            } else {
+              Serial.println("Mqtt sync failure");
+            }
+          }
+        }
+      },
+      "mqtt-task", 1024 * 3, NULL, 6, &mqttTask);
+
+  if (mqttTask == NULL) {
+    Serial.println("Creat mqttTask failed");
+  }
+}
+
+static void factoryConfigReset(void) {
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    if (factoryBtnPressTime == 0) {
+      factoryBtnPressTime = millis();
+    } else {
+      uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
+      if (ms >= 2000) {
+        Serial.println("Factory reset keep presssed for 8 sec");
+
+        uint32_t ledTime = millis();
+        bool ledOn = true;
+        ag.statusLed.setOn();
+        while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+          ms = (uint32_t)(millis() - ledTime);
+          if (ms >= LED_SHORT_BLINK_DELAY) {
+            ledTime = millis();
+            ag.statusLed.setToggle();
+          }
+
+          ms = (uint32_t)(millis() - factoryBtnPressTime);
+          if (ms > 10000) {
+            ag.statusLed.setOff();
+            
+            /** Stop MQTT task first */
+            if (mqttTask) {
+              vTaskDelete(mqttTask);
+              mqttTask = NULL;
+            }
+
+            /** Disconnect WIFI */
+            WiFi.disconnect();
+            wifiManager.resetSettings();
+
+            /** Reset local config */
+            agServer.defaultReset();
+
+            Serial.println("Factory successful");
+            ledBlinkDelay(LED_LONG_BLINK_DELAY);
+            ledBlinkDelay(LED_LONG_BLINK_DELAY);
+            ledBlinkDelay(LED_LONG_BLINK_DELAY);
+            ESP.restart();
+          }
+        }
+
+        /** Show current content cause reset ignore */
+        factoryBtnPressTime = 0;
+        ag.statusLed.setOff();
+      }
+    }
+  } else {
+    if (factoryBtnPressTime != 0) {
+      ag.statusLed.setOff();
+    }
+    factoryBtnPressTime = 0;
+  }
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,

@@ -93,6 +93,7 @@ enum {
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
 #define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
+#define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
@@ -150,6 +151,19 @@ public:
     configFailed = false;
     serverFailed = false;
     loadConfig();
+  }
+
+  /**
+   * @brief Reset local config into default value.
+   *
+   */
+  void defaultReset(void) {
+    config.inF = false;
+    config.inUSAQI = false;
+    memset(config.models, 0, sizeof(config.models));
+    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+    config.useRGBLedBar = UseLedBarOff;
+    saveConfig();
   }
 
   /**
@@ -631,6 +645,7 @@ public:
   int connectionFailedCount(void) { return connectFailedCount; }
 };
 AgMqtt agMqtt;
+static TaskHandle_t mqttTask = NULL;
 
 /** Create airgradient instance for 'ONE_INDOOR' board */
 AirGradient ag(ONE_INDOOR);
@@ -684,6 +699,8 @@ static void co2Poll(void);
 static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(bool localServer);
+static void createMqttTask(void);
+static void factoryConfigReset(void);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -691,6 +708,7 @@ bool hasSensorPMS = true;
 bool hasSensorSGP = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
+uint32_t factoryBtnPressTime = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -754,6 +772,7 @@ void setup() {
     /** MQTT init */
     if (agServer.getMqttBroker().isEmpty() == false) {
       if (agMqtt.begin(agServer.getMqttBroker())) {
+        createMqttTask();
         Serial.println("MQTT client init success");
       } else {
         Serial.println("MQTT client init failure");
@@ -806,6 +825,9 @@ void loop() {
 
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
+
+  /** factory reset handle */
+  factoryConfigReset();
 }
 
 static void setTestColor(char color) {
@@ -949,7 +971,7 @@ static String getServerSyncData(bool localServer) {
       root["tvoc_raw"] = tvocRawIndex;
     }
     if (noxIndex >= 0) {
-      root["noxIndex"] = noxIndex;
+      root["nox_index"] = noxIndex;
     }
   }
   if (hasSensorSHT) {
@@ -963,6 +985,89 @@ static String getServerSyncData(bool localServer) {
   root["boot"] = bootCount;
 
   return JSON.stringify(root);
+}
+
+static void createMqttTask(void) {
+  if (mqttTask) {
+    vTaskDelete(mqttTask);
+    mqttTask = NULL;
+  }
+
+  xTaskCreate(
+      [](void *param) {
+        for (;;) {
+          delay(MQTT_SYNC_INTERVAL);
+
+          /** Send data */
+          if (agMqtt.isConnected()) {
+            String syncData = getServerSyncData(false);
+            String topic = "airgradient/readings/" + getDevId();
+            if (agMqtt.publish(topic.c_str(), syncData.c_str(),
+                               syncData.length())) {
+              Serial.println("Mqtt sync success");
+            } else {
+              Serial.println("Mqtt sync failure");
+            }
+          }
+        }
+      },
+      "mqtt-task", 1024 * 3, NULL, 6, &mqttTask);
+
+  if (mqttTask == NULL) {
+    Serial.println("Creat mqttTask failed");
+  }
+}
+
+static void factoryConfigReset(void) {
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    if (factoryBtnPressTime == 0) {
+      factoryBtnPressTime = millis();
+    } else {
+      uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
+      if (ms >= 2000) {
+        // Show display message: For factory keep for x seconds
+        // Count display.
+        displayShowText("For factory reset", "keep pressed", "for 8 sec");
+
+        int count = 7;
+        while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+          delay(1000);
+          displayShowText("For factory reset", "keep pressed",
+                          "for " + String(count) + " sec");
+          count--;
+          // ms = (uint32_t)(millis() - factoryBtnPressTime);
+          if (count == 0) {
+            /** Stop MQTT task first */
+            if (mqttTask) {
+              vTaskDelete(mqttTask);
+              mqttTask = NULL;
+            }
+
+            /** Disconnect WIFI */
+            WiFi.disconnect();
+            wifiManager.resetSettings();
+
+            /** Reset local config */
+            agServer.defaultReset();
+
+            displayShowText("Factory reset", "successful", "");
+            delay(3000);
+            ESP.restart();
+          }
+        }
+
+        /** Show current content cause reset ignore */
+        factoryBtnPressTime = 0;
+        appDispHandler();
+      }
+    }
+  } else {
+    if (factoryBtnPressTime != 0) {
+      /** Restore last display content */
+      appDispHandler();
+    }
+    factoryBtnPressTime = 0;
+  }
 }
 
 static void sendPing() {
@@ -1287,20 +1392,80 @@ static String getNormalizedMac() {
 }
 
 static void setRGBledCO2color(int co2Value) {
-  if (co2Value >= 300 && co2Value < 800) {
-    setRGBledColor('g');
-  } else if (co2Value >= 800 && co2Value < 1000) {
-    setRGBledColor('y');
-  } else if (co2Value >= 1000 && co2Value < 1500) {
-    setRGBledColor('o');
-  } else if (co2Value >= 1500 && co2Value < 2000) {
-    setRGBledColor('r');
-  } else if (co2Value >= 2000 && co2Value < 3000) {
-    setRGBledColor('p');
-  } else if (co2Value >= 3000 && co2Value < 10000) {
-    setRGBledColor('z');
-  } else {
-    setRGBledColor('n');
+  if (co2Value <= 400) {
+    /** G; 1 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+  } else if (co2Value <= 700) {
+    /** GG; 2 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+  } else if (co2Value <= 1000) {
+    /** YYY; 3 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+  } else if (co2Value <= 1333) {
+    /** YYYY; 4 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+  } else if (co2Value <= 1666) {
+    /** YYYYY; 5 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 5);
+  } else if (co2Value <= 2000) {
+    /** RRRRRR; 6 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+  } else if (co2Value <= 2666) {
+    /** RRRRRRR; 7 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+  } else if (co2Value <= 3333) {
+    /** RRRRRRRR; 8 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+  } else if (co2Value <= 4000) {
+    /** RRRRRRRRR; 9 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 9);
+  } else { /** > 4000 */
+    /* PRPRPRPRP; 9 */
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 9);
   }
 }
 
@@ -1458,8 +1623,14 @@ static void serverConfigPoll(void) {
     String mqttUri = agServer.getMqttBroker();
     if (mqttUri != agMqtt.getUri()) {
       agMqtt.end();
+
+      if (mqttTask != NULL) {
+        vTaskDelete(mqttTask);
+        mqttTask = NULL;
+      }
       if (agMqtt.begin(mqttUri)) {
         Serial.println("Connect to new mqtt broker success");
+        createMqttTask();
       } else {
         Serial.println("Connect to new mqtt broker failed");
       }
@@ -1506,18 +1677,81 @@ static void co2Calibration(void) {
  * @param pm25Value PMS2.5 value
  */
 static void setRGBledPMcolor(int pm25Value) {
-  if (pm25Value >= 0 && pm25Value < 10)
-    setRGBledColor('g');
-  if (pm25Value >= 10 && pm25Value < 35)
-    setRGBledColor('y');
-  if (pm25Value >= 35 && pm25Value < 55)
-    setRGBledColor('o');
-  if (pm25Value >= 55 && pm25Value < 150)
-    setRGBledColor('r');
-  if (pm25Value >= 150 && pm25Value < 250)
-    setRGBledColor('p');
-  if (pm25Value >= 250 && pm25Value < 1000)
-    setRGBledColor('p');
+  if (pm25Value <= 5) {
+    /** G; 1 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+  } else if (pm25Value <= 10) {
+    /** GG; 2 */
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(0, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+  } else if (pm25Value <= 20) {
+    /** YYY; 3 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+  } else if (pm25Value <= 35) {
+    /** YYYY; 4 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+  } else if (pm25Value <= 45) {
+    /** YYYYY; 5 */
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 255, 0, ag.ledBar.getNumberOfLeds() - 5);
+  } else if (pm25Value <= 55) {
+    /** RRRRRR; 6 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+  } else if (pm25Value <= 65) {
+    /** RRRRRRR; 7 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+  } else if (pm25Value <= 150) {
+    /** RRRRRRRR; 8 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+  } else if (pm25Value <= 250) {
+    /** RRRRRRRRR; 9 */
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 9);
+  } else { /** > 250 */
+    /* PRPRPRPRP; 9 */
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 1);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 3);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 4);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 5);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 6);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 7);
+    ag.ledBar.setColor(255, 0, 0, ag.ledBar.getNumberOfLeds() - 8);
+    ag.ledBar.setColor(153, 153, 0, ag.ledBar.getNumberOfLeds() - 9);
+  }
 }
 
 static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
@@ -1786,7 +2020,9 @@ static void updateWiFiConnect(void) {
  *
  */
 static void updateDispLedBar(void) {
-  appDispHandler();
+  if (factoryBtnPressTime == 0) {
+    appDispHandler();
+  }
   appLedHandler();
 }
 
@@ -1844,14 +2080,6 @@ static void sendDataToServer(void) {
     resetWatchdog();
   }
 
-  if (agMqtt.isConnected()) {
-    String topic = "airgradient/readings/" + getDevId();
-    if (agMqtt.publish(topic.c_str(), syncData.c_str(), syncData.length())) {
-      Serial.println("Mqtt sync success");
-    } else {
-      Serial.println("Mqtt sync failure");
-    }
-  }
   bootCount++;
 }
 
