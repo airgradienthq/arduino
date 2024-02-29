@@ -167,13 +167,14 @@ public:
   }
 
   /**
-   * @brief Get server configuration
+   * @brief Fetch server configuration, if get sucessed and configuratrion
+   * parameter has changed store into local storage
    *
    * @param id Device ID
    * @return true Success
    * @return false Failure
    */
-  bool pollServerConfig(String id) {
+  bool fetchServerConfigure(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -680,7 +681,7 @@ static String wifiSSID = "";
 
 static void boardInit(void);
 static void failedHandler(String msg);
-static void serverConfigPoll(void);
+static void serverConfigUpdate(void);
 static void co2Calibration(void);
 static void setRGBledPMcolor(int pm25Value);
 static void ledSmHandler(int sm);
@@ -690,12 +691,12 @@ static void sensorLedColorHandler(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
 static void updateWiFiConnect(void);
-static void updateDispLedBar(void);
-static void tvocPoll(void);
-static void pmPoll(void);
+static void displayAndLedBarUpdate(void);
+static void tvocUpdate(void);
+static void pmUpdate(void);
 static void sendDataToServer(void);
-static void tempHumPoll(void);
-static void co2Poll(void);
+static void tempHumUpdate(void);
+static void co2Update(void);
 static void showNr(void);
 static void webServerInit(void);
 static String getServerSyncData(bool localServer);
@@ -709,13 +710,13 @@ bool hasSensorSGP = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDispLedBar);
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
-AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
-AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmPoll);
-AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
-AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocPoll);
+AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
+AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
+AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
+AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -785,7 +786,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     /** Get first connected to wifi */
-    agServer.pollServerConfig(getDevId());
+    agServer.fetchServerConfigure(getDevId());
     if (agServer.isConfigFailed()) {
       dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
@@ -903,7 +904,7 @@ static void ledTest2Min(void) {
   }
 }
 
-static void co2Poll(void) {
+static void co2Update(void) {
   co2Ppm = ag.s8.getCo2();
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
@@ -917,14 +918,15 @@ void webServerMeasureCurrentGet(void) {
 /**
  * Sends metrics in Prometheus/OpenMetrics format to the currently connected
  * webServer client.
- * 
- * For background, see: https://prometheus.io/docs/instrumenting/exposition_formats/
+ *
+ * For background, see:
+ * https://prometheus.io/docs/instrumenting/exposition_formats/
  */
 void webServerMetricsGet(void) {
   String response;
   String current_metric_name;
-  const auto add_metric = [&](const String &name, const String &help, const String &type, const String &unit = "")
-  {
+  const auto add_metric = [&](const String &name, const String &help,
+                              const String &type, const String &unit = "") {
     current_metric_name = "airgradient_" + name;
     if (!unit.isEmpty())
       current_metric_name += "_" + unit;
@@ -938,69 +940,114 @@ void webServerMetricsGet(void) {
   };
 
   add_metric("info", "AirGradient device information", "info");
-  add_metric_point("airgradient_serial_number=\"" + getDevId() + "\",airgradient_device_type=\""+ ag.getBoardName() +"\",airgradient_library_version=\"" + ag.getVersion() + "\"", "1");
+  add_metric_point("airgradient_serial_number=\"" + getDevId() +
+                       "\",airgradient_device_type=\"" + ag.getBoardName() +
+                       "\",airgradient_library_version=\"" + ag.getVersion() +
+                       "\"",
+                   "1");
 
-  add_metric("config_ok", "1 if the AirGradient device was able to successfully fetch its configuration from the server", "gauge");
+  add_metric("config_ok",
+             "1 if the AirGradient device was able to successfully fetch its "
+             "configuration from the server",
+             "gauge");
   add_metric_point("", agServer.isConfigFailed() ? "0" : "1");
 
-  add_metric("post_ok", "1 if the AirGradient device was able to successfully send to the server", "gauge");
+  add_metric(
+      "post_ok",
+      "1 if the AirGradient device was able to successfully send to the server",
+      "gauge");
   add_metric_point("", agServer.isServerFailed() ? "0" : "1");
 
-  add_metric("wifi_rssi", "WiFi signal strength from the AirGradient device perspective, in dBm", "gauge", "dbm");
+  add_metric(
+      "wifi_rssi",
+      "WiFi signal strength from the AirGradient device perspective, in dBm",
+      "gauge", "dbm");
   add_metric_point("", String(WiFi.RSSI()));
 
   if (hasSensorS8 && co2Ppm >= 0) {
-    add_metric("co2", "Carbon dioxide concentration as measured by the AirGradient S8 sensor, in parts per million", "gauge", "ppm");
+    add_metric("co2",
+               "Carbon dioxide concentration as measured by the AirGradient S8 "
+               "sensor, in parts per million",
+               "gauge", "ppm");
     add_metric_point("", String(co2Ppm));
   }
 
   if (hasSensorPMS) {
     if (pm01 >= 0) {
-      add_metric("pm1", "PM1.0 concentration as measured by the AirGradient PMS sensor, in micrograms per cubic meter", "gauge", "ugm3");
+      add_metric("pm1",
+                 "PM1.0 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
       add_metric_point("", String(pm01));
     }
     if (pm25 >= 0) {
-      add_metric("pm2d5", "PM2.5 concentration as measured by the AirGradient PMS sensor, in micrograms per cubic meter", "gauge", "ugm3");
+      add_metric("pm2d5",
+                 "PM2.5 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
       add_metric_point("", String(pm25));
     }
     if (pm10 >= 0) {
-      add_metric("pm10", "PM10 concentration as measured by the AirGradient PMS sensor, in micrograms per cubic meter", "gauge", "ugm3");
+      add_metric("pm10",
+                 "PM10 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
       add_metric_point("", String(pm10));
     }
     if (pm03PCount >= 0) {
-      add_metric("pm0d3", "PM0.3 concentration as measured by the AirGradient PMS sensor, in number of particules per 100 milliliters", "gauge", "p100ml");
+      add_metric("pm0d3",
+                 "PM0.3 concentration as measured by the AirGradient PMS "
+                 "sensor, in number of particules per 100 milliliters",
+                 "gauge", "p100ml");
       add_metric_point("", String(pm03PCount));
     }
   }
 
   if (hasSensorSGP) {
     if (tvocIndex >= 0) {
-      add_metric("tvoc_index", "The processed Total Volatile Organic Compounds (TVOC) index as measured by the AirGradient SGP sensor", "gauge");
+      add_metric("tvoc_index",
+                 "The processed Total Volatile Organic Compounds (TVOC) index "
+                 "as measured by the AirGradient SGP sensor",
+                 "gauge");
       add_metric_point("", String(tvocIndex));
     }
     if (tvocRawIndex >= 0) {
-      add_metric("tvoc_raw_index", "The raw input value to the Total Volatile Organic Compounds (TVOC) index as measured by the AirGradient SGP sensor", "gauge");
+      add_metric("tvoc_raw_index",
+                 "The raw input value to the Total Volatile Organic Compounds "
+                 "(TVOC) index as measured by the AirGradient SGP sensor",
+                 "gauge");
       add_metric_point("", String(tvocRawIndex));
     }
     if (noxIndex >= 0) {
-      add_metric("nox_index", "The processed Nitrous Oxide (NOx) index as measured by the AirGradient SGP sensor", "gauge");
+      add_metric("nox_index",
+                 "The processed Nitrous Oxide (NOx) index as measured by the "
+                 "AirGradient SGP sensor",
+                 "gauge");
       add_metric_point("", String(noxIndex));
     }
   }
 
   if (hasSensorSHT) {
     if (temp > -1001) {
-      add_metric("temperature", "The ambient temperature as measured by the AirGradient SHT sensor, in degrees Celsius", "gauge", "degc");
+      add_metric("temperature",
+                 "The ambient temperature as measured by the AirGradient SHT "
+                 "sensor, in degrees Celsius",
+                 "gauge", "degc");
       add_metric_point("", String(temp));
     }
     if (hum >= 0) {
-      add_metric("humidity", "The relative humidity as measured by the AirGradient SHT sensor", "gauge", "percent");
+      add_metric(
+          "humidity",
+          "The relative humidity as measured by the AirGradient SHT sensor",
+          "gauge", "percent");
       add_metric_point("", String(hum));
     }
   }
 
   response += "# EOF\n";
-  webServer.send(200, "application/openmetrics-text; version=1.0.0; charset=utf-8", response);
+  webServer.send(200,
+                 "application/openmetrics-text; version=1.0.0; charset=utf-8",
+                 response);
 }
 
 void webServerHandler(void *param) {
@@ -1674,8 +1721,8 @@ static void failedHandler(String msg) {
 /**
  * @brief Send data to server
  */
-static void serverConfigPoll(void) {
-  if (agServer.pollServerConfig(getDevId())) {
+static void serverConfigUpdate(void) {
+  if (agServer.fetchServerConfigure(getDevId())) {
     if (agServer.isCo2Calib()) {
       if (hasSensorS8) {
         co2Calibration();
@@ -2113,7 +2160,7 @@ static void updateWiFiConnect(void) {
  * @brief APP display and LED handler
  *
  */
-static void updateDispLedBar(void) {
+static void displayAndLedBarUpdate(void) {
   if (factoryBtnPressTime == 0) {
     appDispHandler();
   }
@@ -2124,7 +2171,7 @@ static void updateDispLedBar(void) {
  * @brief Update tvocIndexindex
  *
  */
-static void tvocPoll(void) {
+static void tvocUpdate(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
@@ -2139,7 +2186,7 @@ static void tvocPoll(void) {
  * @brief Update PMS data
  *
  */
-static void pmPoll(void) {
+static void pmUpdate(void) {
   if (ag.pms5003.readData()) {
     pm01 = ag.pms5003.getPm01Ae();
     pm25 = ag.pms5003.getPm25Ae();
@@ -2180,7 +2227,7 @@ static void sendDataToServer(void) {
 /**
  * @brief Update temperature and humidity value
  */
-static void tempHumPoll(void) {
+static void tempHumUpdate(void) {
   if (ag.sht.measure()) {
 
     temp = ag.sht.getTemperature();

@@ -115,7 +115,7 @@ public:
    * @return true Success
    * @return false Failure
    */
-  bool pollServerConfig(String id) {
+  bool fetchServerConfigure(String id) {
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -368,10 +368,10 @@ static bool wifiHasConfig = false; /** */
 static void boardInit(void);
 static void failedHandler(String msg);
 static void co2Calibration(void);
-static void serverConfigPoll(void);
-static void co2Poll(void);
-static void pmPoll(void);
-static void tempHumPoll(void);
+static void serverConfigUpdate(void);
+static void co2Update(void);
+static void pmUpdate(void);
+static void tempHumUpdate(void);
 static void sendDataToServer(void);
 static void dispHandler(void);
 static String getDevId(void);
@@ -382,12 +382,12 @@ bool hasSensorS8 = true;
 bool hasSensorPMS = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigPoll);
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, serverConfigUpdate);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
-AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Poll);
-AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmPoll);
-AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumPoll);
+AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
+AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
+AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 
 void setup() {
   Serial.begin(115200);
@@ -413,7 +413,7 @@ void setup() {
     wifiHasConfig = true;
     sendPing();
 
-    agServer.pollServerConfig(getDevId());
+    agServer.fetchServerConfigure(getDevId());
     if (agServer.isCo2Calib()) {
       co2Calibration();
     }
@@ -576,8 +576,8 @@ static void co2Calibration(void) {
   }
 }
 
-static void serverConfigPoll(void) {
-  if (agServer.pollServerConfig(getDevId())) {
+static void serverConfigUpdate(void) {
+  if (agServer.fetchServerConfigure(getDevId())) {
     if (agServer.isCo2Calib()) {
       if (hasSensorS8) {
         co2Calibration();
@@ -609,12 +609,12 @@ static void serverConfigPoll(void) {
   }
 }
 
-static void co2Poll() {
+static void co2Update() {
   co2Ppm = ag.s8.getCo2();
   Serial.printf("CO2 index: %d\r\n", co2Ppm);
 }
 
-void pmPoll() {
+void pmUpdate() {
   if (ag.pms5003.readData()) {
     pm25 = ag.pms5003.getPm25Ae();
     Serial.printf("PMS2.5: %d\r\n", pm25);
@@ -628,7 +628,7 @@ void pmPoll() {
   }
 }
 
-static void tempHumPoll() {
+static void tempHumUpdate() {
   if (ag.sht.measure()) {
     temp = ag.sht.getTemperature();
     hum = ag.sht.getRelativeHumidity();
