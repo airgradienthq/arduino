@@ -198,7 +198,8 @@ float PMS5003T::getTemperature(void) {
  */
 float PMS5003T::getRelativeHumidity(void) {
   float temp = pmsData.AMB_HUM;
-  return temp / 10.0f;
+  temp = temp / 10.0f;
+  return temp * 1.259 + 7.34;
 }
 
 /**
