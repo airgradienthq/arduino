@@ -971,7 +971,7 @@ static String getServerSyncData(bool localServer) {
       root["tvoc_raw"] = tvocRawIndex;
     }
     if (noxIndex >= 0) {
-      root["noxIndex"] = noxIndex;
+      root["nox_index"] = noxIndex;
     }
   }
   if (hasSensorSHT) {
