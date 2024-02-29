@@ -197,8 +197,8 @@ float PMS5003T::getTemperature(void) {
  * @return float Percent (%)
  */
 float PMS5003T::getRelativeHumidity(void) {
-  float temp = pmsData.AMB_HUM;
-  return temp / 10.0f;
+  float hum = pmsData.AMB_HUM;
+  return correctionRelativeHumidity(hum / 10.0f);
 }
 
 /**
@@ -233,4 +233,8 @@ void PMS5003T::end(void) {
   delete _serial;
 #endif
   AgLog("De-initialize");
+}
+
+float PMS5003T::correctionRelativeHumidity(float inHum) {
+  return inHum * 1.259 + 7.34;
 }
