@@ -108,6 +108,13 @@ public:
   String getVersion(void);
 
   /**
+   * @brief Get the Board Name object
+   * 
+   * @return String 
+   */
+  String getBoardName(void);
+
+  /**
    * @brief Round double value with for 2 decimal
    * 
    * @param valuem Round value

@@ -40,3 +40,7 @@ BoardType AirGradient::getBoardType(void) { return boardType; }
 double AirGradient::round2(double value) {
   return (int)(value * 100 + 0.5) / 100.0;
 }
+
+String AirGradient::getBoardName(void) {
+  return String(getBoardDefName(boardType));
+}

@@ -1330,6 +1330,9 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
+  MDNS.addServiceTxt("http", "_tcp", "board", ag.getBoardName());
+  MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
+  MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
 
   if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
       pdTRUE) {
@@ -1491,7 +1494,7 @@ static void factoryConfigReset(void) {
           ms = (uint32_t)(millis() - factoryBtnPressTime);
           if (ms > 10000) {
             ag.statusLed.setOff();
-            
+
             /** Stop MQTT task first */
             if (mqttTask) {
               vTaskDelete(mqttTask);
