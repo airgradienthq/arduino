@@ -1,0 +1,51 @@
+on: [push, pull_request]
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - "BASIC_v4"
+          - "ONE_I-9PSL"
+          - "Open_Air"
+          - "TestCO2"
+          - "TestPM"
+          - "TestSht"
+        fqbn:
+          - "esp8266:esp8266:d1_mini"
+          - "esp32:esp32:esp32c3"
+        include:
+          - fqbn: "esp8266:esp8266:d1_mini"
+            core: "esp8266:esp8266@3.1.2"
+            core_url: "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
+          - fqbn: "esp32:esp32:esp32c3"
+            board_options: "JTAGAdapter=default,CDCOnBoot=cdc,PartitionScheme=default,CPUFreq=160,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=verbose,EraseFlash=none"
+            core: "esp32:esp32@2.0.11"
+        exclude:
+          - example: "BASIC_v4"
+            fqbn: "esp32:esp32:esp32c3"
+          - example: "ONE_I-9PSL"
+            fqbn: "esp8266:esp8266:d1_mini"
+          - example: "Open_Air"
+            fqbn: "esp8266:esp8266:d1_mini"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run:
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh |
+          sh -s 0.35.3
+      - run: bin/arduino-cli --verbose core install '${{ matrix.core }}'
+          --additional-urls '${{ matrix.core_url }}'
+      - run: bin/arduino-cli --verbose lib install
+          WiFiManager@2.0.16-rc.2
+          Arduino_JSON@0.2.0
+          U8g2@2.34.22
+      - run: bin/arduino-cli --verbose lib install --git-url .
+        env:
+          ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: "true"
+      - run: bin/arduino-cli --verbose compile 'examples/${{ matrix.example }}'
+          --fqbn '${{ matrix.fqbn }}' --board-options '${{ matrix.board_options }}'
+      # TODO: at this point it would be a good idea to run some smoke tests on
+      # the resulting image (e.g. that it boots successfully and sends metrics)
+      # but that would either require a high fidelity device emulator, or a
+      # "hardware lab" runner that is directly connected to a relevant device.
