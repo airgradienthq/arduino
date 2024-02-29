@@ -1,4 +1,4 @@
- /*
+/*
 This is the code for the AirGradient ONE open-source hardware indoor Air Quality
 Monitor with an ESP32-C3 Microcontroller.
 
@@ -744,7 +744,7 @@ void setup() {
   agServer.begin();
 
   /** Run LED test on start up */
-  displayShowText("Press now for", "LED test", "");
+  displayShowText("Press now for", "LED test &", "offline mode");
   bool test = false;
   uint32_t stime = millis();
   while (1) {
@@ -760,9 +760,10 @@ void setup() {
   }
   if (test) {
     ledTest();
+  } else {
+    connectToWifi();
   }
-  /** WIFI connect */
-  connectToWifi();
+
 
   /**
    * Send first data to ping server and get server configuration
@@ -1168,12 +1169,12 @@ static void factoryConfigReset(void) {
       if (ms >= 2000) {
         // Show display message: For factory keep for x seconds
         // Count display.
-        displayShowText("For factory reset", "keep pressed", "for 8 sec");
+        displayShowText("Factory reset", "keep pressed", "for 8 sec");
 
         int count = 7;
         while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
           delay(1000);
-          displayShowText("For factory reset", "keep pressed",
+          displayShowText("Factory reset", "keep pressed",
                           "for " + String(count) + " sec");
           count--;
           // ms = (uint32_t)(millis() - factoryBtnPressTime);
