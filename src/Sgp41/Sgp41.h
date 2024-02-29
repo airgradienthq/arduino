@@ -1,7 +1,7 @@
 #ifndef _AIR_GRADIENT_SGP4X_H_
 #define _AIR_GRADIENT_SGP4X_H_
 
-#include "../main/BoardDef.h"
+#include "../Main/BoardDef.h"
 #include <Arduino.h>
 #include <Wire.h>
 

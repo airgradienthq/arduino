@@ -1,7 +1,7 @@
 #ifndef _SHT_H_
 #define _SHT_H_
 
-#include "../main/BoardDef.h"
+#include "../Main/BoardDef.h"
 #include <Arduino.h>
 #include <Wire.h>
 

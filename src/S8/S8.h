@@ -1,7 +1,7 @@
 #ifndef _S8_H_
 #define _S8_H_
 
-#include "../main/BoardDef.h"
+#include "../Main/BoardDef.h"
 #include "Arduino.h"
 
 /**
