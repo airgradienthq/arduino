@@ -335,6 +335,19 @@ const BoardDef *getBoardDef(BoardType def) {
   return &bsps[def];
 }
 
+/**
+ * @brief Get the Board Name
+ * 
+ * @param type BoarType
+ * @return const char* 
+ */
+const char *getBoardDefName(BoardType type) {
+  if (type >= _BOARD_MAX) {
+    return NULL;
+  }
+  return bsps[type].name;
+}
+
 #if defined(ESP8266)
 #define bspPrintf(c, ...)                                                      \
   if (_debug != nullptr) {                                                     \
