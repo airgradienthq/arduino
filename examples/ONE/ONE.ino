@@ -1,4 +1,4 @@
-/*
+ /*
 This is the code for the AirGradient ONE open-source hardware indoor Air Quality
 Monitor with an ESP32-C3 Microcontroller.
 
