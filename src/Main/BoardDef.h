@@ -83,6 +83,7 @@ struct BoardDef {
 };
 
 const BoardDef *getBoardDef(BoardType def);
+const char *getBoardDefName(BoardType type);
 void printBoardDef(Stream *_debug);
 
 #endif /** _AIR_GRADIENT_BOARD_DEF_H_ */
