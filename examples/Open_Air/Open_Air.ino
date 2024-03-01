@@ -99,7 +99,7 @@ enum {
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
