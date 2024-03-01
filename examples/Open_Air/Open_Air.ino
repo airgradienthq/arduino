@@ -726,7 +726,9 @@ bool hasSensorPMS1 = true;
 bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
+String mdnsModelName = "";
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
+                          updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
@@ -1188,6 +1190,11 @@ static void updateServerConfiguration(void) {
         Serial.println("Connect to new mqtt broker failed");
       }
     }
+
+    if (mdnsModelName != agServer.getModelName()) {
+      MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
+      mdnsModelName = agServer.getModelName();
+    }
   }
 }
 
@@ -1330,7 +1337,10 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "board", ag.getBoardName());
+  if (mdnsModelName != agServer.getModelName()) {
+    MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
+    mdnsModelName = agServer.getModelName();
+  }
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
 
