@@ -736,7 +736,8 @@ void setup() {
   u8g2.begin();
 
   /** Show boot display */
-  displayShowText("One V9", "Lib Ver: " + ag.getVersion(), "");
+  Serial.println("Firmware Version: "+ag.getVersion());
+  displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
