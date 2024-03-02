@@ -90,13 +90,13 @@ enum {
 #define WIFI_CONNECT_RETRY_MS 10000          /** ms */
 #define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
-#define DISP_UPDATE_INTERVAL 5000            /** ms */
-#define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
+#define DISP_UPDATE_INTERVAL 2500            /** ms */
+#define SERVER_CONFIG_UPDATE_INTERVAL 15000  /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
 #define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
-#define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
+#define SENSOR_CO2_UPDATE_INTERVAL 4000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
@@ -2239,7 +2239,6 @@ static void sendDataToServer(void) {
  * @brief Update temperature and humidity value
  */
 static void tempHumUpdate(void) {
-  Serial.println("Try SHT");
   if (ag.sht.measure()) {
 
     temp = ag.sht.getTemperature();
