@@ -97,7 +97,7 @@ enum {
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
-#define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
+#define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
@@ -819,6 +819,7 @@ void loop() {
   }
 
   if (hasSensorSHT) {
+    delay(100);
     tempHumSchedule.run();
   }
 
@@ -2238,6 +2239,7 @@ static void sendDataToServer(void) {
  * @brief Update temperature and humidity value
  */
 static void tempHumUpdate(void) {
+  Serial.println("Try SHT");
   if (ag.sht.measure()) {
 
     temp = ag.sht.getTemperature();
