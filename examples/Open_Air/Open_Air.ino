@@ -77,7 +77,7 @@ enum {
   APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
                          reached through the internet, e.g. blocked by firewall
                        */
-  APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachable but there is some
+  APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachabFirmware nodele but there is some
                                   conﬁguration issue to be fixed on the server
                                   side */
   APP_SM_NORMAL,
@@ -92,14 +92,14 @@ enum {
 #define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
-#define SERVER_CONFIG_UPDATE_INTERVAL 30000  /** ms */
+#define SERVER_CONFIG_UPDATE_INTERVAL 15000  /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
 #define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
-#define SENSOR_CO2_UPDATE_INTERVAL 5000      /** ms */
-#define SENSOR_PM_UPDATE_INTERVAL 5000       /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
+#define SENSOR_CO2_UPDATE_INTERVAL 4000      /** ms */
+#define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
   "cleanair" /** default WiFi AP password                                      \
@@ -726,7 +726,9 @@ bool hasSensorPMS1 = true;
 bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
+String mdnsModelName = "";
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
+                          updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
@@ -904,6 +906,8 @@ void boardInit(void) {
     failedHandler("Init I2C failed");
   }
 
+  Serial.println("Firmware Version: "+ag.getVersion());
+
   ag.watchdog.begin();
   ag.button.begin();
   ag.statusLed.begin();
@@ -951,7 +955,7 @@ void boardInit(void) {
     }
   }
 
-  Serial.printf("Firmware node: %s\r\n", getFwMode(fw_mode));
+  Serial.printf("Firmware Mode: %s\r\n", getFwMode(fw_mode));
 }
 
 void failedHandler(String msg) {
@@ -1188,6 +1192,11 @@ static void updateServerConfiguration(void) {
         Serial.println("Connect to new mqtt broker failed");
       }
     }
+
+    if (mdnsModelName != agServer.getModelName()) {
+      MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
+      mdnsModelName = agServer.getModelName();
+    }
   }
 }
 
@@ -1330,7 +1339,10 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "board", ag.getBoardName());
+  if (mdnsModelName != agServer.getModelName()) {
+    MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
+    mdnsModelName = agServer.getModelName();
+  }
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
 
@@ -1399,13 +1411,13 @@ static String getServerSyncData(bool localServer) {
 
   if ((fw_mode == FW_MODE_PPT) || (fw_mode == FW_MODE_PST)) {
     if (hasSensorSGP) {
-      if (tvocIndex > 0) {
+      if (tvocIndex >= 0) {
         root["tvoc_index"] = tvocIndex;
       }
       if (tvocRawIndex >= 0) {
         root["tvoc_raw"] = tvocRawIndex;
       }
-      if (noxIndex > 0) {
+      if (noxIndex >= 0) {
         root["nox_index"] = noxIndex;
       }
     }

@@ -5,8 +5,8 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - "BASIC_v4"
-          - "ONE_I-9PSL"
+          - "BASIC"
+          - "ONE"
           - "Open_Air"
           - "TestCO2"
           - "TestPM"
