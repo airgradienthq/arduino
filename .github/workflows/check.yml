@@ -22,7 +22,7 @@ jobs:
             board_options: "JTAGAdapter=default,CDCOnBoot=cdc,PartitionScheme=default,CPUFreq=160,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=verbose,EraseFlash=none"
             core: "esp32:esp32@2.0.11"
         exclude:
-          - example: "BASIC_v4"
+          - example: "BASIC"
             fqbn: "esp8266:esp8266:d1_mini"
           - example: "ONE"
             fqbn: "esp32:esp32:esp32c3"
