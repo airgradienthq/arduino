@@ -1072,10 +1072,7 @@ static void webServerInit(void) {
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  if (agServer.getModelName().isEmpty() != true) {
-    MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
-    mdnsModelName = agServer.getModelName();
-  }
+  MDNS.addServiceTxt("http", "_tcp", "model", ag.getBoardName());
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
 
@@ -1782,11 +1779,6 @@ static void updateServerConfiguration(void) {
       } else {
         Serial.println("Connect to new mqtt broker failed");
       }
-    }
-
-    if (mdnsModelName != agServer.getModelName()) {
-      MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
-      mdnsModelName = agServer.getModelName();
     }
   }
 }
