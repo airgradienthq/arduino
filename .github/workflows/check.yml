@@ -23,11 +23,11 @@ jobs:
             core: "esp32:esp32@2.0.11"
         exclude:
           - example: "BASIC_v4"
+            fqbn: "esp8266:esp8266:d1_mini"
+          - example: "ONE"
             fqbn: "esp32:esp32:esp32c3"
-          - example: "ONE_I-9PSL"
-            fqbn: "esp8266:esp8266:d1_mini"
           - example: "Open_Air"
-            fqbn: "esp8266:esp8266:d1_mini"
+            fqbn: "esp32:esp32:esp32c3"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
