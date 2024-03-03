@@ -669,6 +669,7 @@ static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
 static int tvocIndex = -1;
 static int tvocRawIndex = -1;
 static int noxIndex = -1;
+static int noxRawIndex = -1;
 static int co2Ppm = -1;
 static int pm25 = -1;
 static int pm01 = -1;
@@ -736,7 +737,7 @@ void setup() {
   u8g2.begin();
 
   /** Show boot display */
-  Serial.println("Firmware Version: "+ag.getVersion());
+  Serial.println("Firmware Version: " + ag.getVersion());
   displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
@@ -1016,7 +1017,7 @@ void webServerMetricsGet(void) {
       add_metric_point("", String(tvocIndex));
     }
     if (tvocRawIndex >= 0) {
-      add_metric("tvoc_raw_index",
+      add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
@@ -1028,6 +1029,13 @@ void webServerMetricsGet(void) {
                  "AirGradient SGP sensor",
                  "gauge");
       add_metric_point("", String(noxIndex));
+    }
+    if (noxRawIndex >= 0) {
+      add_metric("nox_raw",
+                 "The raw input value to the Nitrous Oxide (NOx) index as "
+                 "measured by the AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(noxRawIndex));
     }
   }
 
@@ -1117,6 +1125,9 @@ static String getServerSyncData(bool localServer) {
     }
     if (noxIndex >= 0) {
       root["nox_index"] = noxIndex;
+    }
+    if(noxRawIndex >= 0) {
+      root["nox_raw"] = noxRawIndex;
     }
   }
   if (hasSensorSHT) {
@@ -2179,11 +2190,13 @@ static void tvocUpdate(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
+  noxRawIndex = ag.sgp41.getNoxRaw();
 
   Serial.println();
   Serial.printf("    TVOC index: %d\r\n", tvocIndex);
   Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
   Serial.printf("     NOx index: %d\r\n", noxIndex);
+  Serial.printf(" NOx raw index: %d\r\n", noxRawIndex);
 }
 
 /**

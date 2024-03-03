@@ -666,6 +666,7 @@ WebServer webServer;
 int tvocIndex = -1;
 int tvocRawIndex = -1;
 int noxIndex = -1;
+int noxRawIndex = -1;
 int co2Ppm = 0;
 
 int pm25_1 = -1;
@@ -1019,11 +1020,13 @@ static void tvocUpdate(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
+  noxRawIndex = ag.sgp41.getNoxRaw();
 
   Serial.println();
   Serial.printf("    TVOC index: %d\r\n", tvocIndex);
   Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
   Serial.printf("     NOx index: %d\r\n", noxIndex);
+  Serial.printf(" NOx raw index: %d\r\n", noxRawIndex);
 }
 
 /**
@@ -1411,6 +1414,9 @@ static String getServerSyncData(bool localServer) {
       }
       if (noxIndex >= 0) {
         root["nox_index"] = noxIndex;
+      }
+      if(noxRawIndex >= 0) {
+        root["nox_raw"] = noxRawIndex;
       }
     }
   }
