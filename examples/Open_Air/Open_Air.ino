@@ -948,8 +948,12 @@ void boardInit(void) {
     hasSensorSGP = false;
     Serial.println("SGP sensor not found");
 
-    Serial.println("Can not detect SGP run mode 'PP'");
-    fw_mode = FW_MODE_PP;
+    if (hasSensorS8 == false) {
+      fw_mode = FW_MODE_PP;
+      Serial.println("Can not detect SGP run mode 'PP'");
+    } else {
+      Serial.println("Can not detect SGP run mode 'PST' without SGP");
+    }
   }
 
   /** Try to find the PMS on other difference port with S8 */
