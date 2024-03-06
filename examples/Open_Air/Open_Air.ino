@@ -77,9 +77,9 @@ enum {
   APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
                          reached through the internet, e.g. blocked by firewall
                        */
-  APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachabFirmware nodele but there is some
-                                  conﬁguration issue to be fixed on the server
-                                  side */
+  APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachabFirmware nodele but there is
+                                  some conﬁguration issue to be fixed on the
+                                  server side */
   APP_SM_NORMAL,
 };
 
@@ -667,7 +667,7 @@ int tvocIndex = -1;
 int tvocRawIndex = -1;
 int noxIndex = -1;
 int noxRawIndex = -1;
-int co2Ppm = 0;
+int co2Ppm = -1;
 
 int pm25_1 = -1;
 int pm01_1 = -1;
@@ -728,6 +728,7 @@ bool hasSensorPMS2 = true;
 bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "";
+int getCO2FailCount = 0;
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -907,23 +908,42 @@ void boardInit(void) {
     failedHandler("Init I2C failed");
   }
 
-  Serial.println("Firmware Version: "+ag.getVersion());
+  Serial.println("Firmware Version: " + ag.getVersion());
 
   ag.watchdog.begin();
   ag.button.begin();
   ag.statusLed.begin();
 
   /** detect sensor: PMS5003, PMS5003T, SGP41 and S8 */
+  /**
+   * Serial1 and Serial0 is use for connect S8 and PM sensor or both PM
+   */
+  bool serial1Available = true;
+  bool serial0Available = true;
+
   if (ag.s8.begin(Serial1) == false) {
-    hasSensorS8 = false;
-
-    Serial.println("CO2 S8 sensor not found");
-    Serial.println("Can not detect S8 run mode 'PPT'");
-    fw_mode = FW_MODE_PPT;
-
-    /** De-initialize Serial1 */
     Serial1.end();
+    delay(200);
+    Serial.println("Can not detect S8 on Serial1, try on Serial0");
+    /** Check on other port */
+    if (ag.s8.begin(Serial0) == false) {
+      hasSensorS8 = false;
+
+      Serial.println("CO2 S8 sensor not found");
+      Serial.println("Can not detect S8 run mode 'PPT'");
+      fw_mode = FW_MODE_PPT;
+
+      Serial0.end();
+      delay(200);
+    } else {
+      Serial.println("Found S8 on Serial0");
+      serial0Available = false;
+    }
+  } else {
+    Serial.println("Found S8 on Serial1");
+    serial1Available = false;
   }
+
   if (ag.sgp41.begin(Wire) == false) {
     hasSensorSGP = false;
     Serial.println("SGP sensor not found");
@@ -932,20 +952,43 @@ void boardInit(void) {
     fw_mode = FW_MODE_PP;
   }
 
-  if (ag.pms5003t_1.begin(Serial0) == false) {
-    hasSensorPMS1 = false;
-    Serial.println("PMS1 sensor not found");
-
-    if (ag.pms5003t_2.begin(Serial1) == false) {
-      hasSensorPMS2 = false;
-      Serial.println("PMS2 sensor not found");
+  /** Try to find the PMS on other difference port with S8 */
+  if (fw_mode == FW_MODE_PST) {
+    bool pmInitSuccess = false;
+    if (serial0Available) {
+      if (ag.pms5003t_1.begin(Serial0) == false) {
+        hasSensorPMS1 = false;
+        Serial.println("PMS1 sensor not found");
+      } else {
+        serial0Available = false;
+        pmInitSuccess = true;
+        Serial.println("Found PMS 1 on Serial0");
+      }
     }
-  }
-
-  if (fw_mode != FW_MODE_PST) {
+    if (pmInitSuccess == false) {
+      if (serial1Available) {
+        if (ag.pms5003t_1.begin(Serial1) == false) {
+          hasSensorPMS1 = false;
+          Serial.println("PMS1 sensor not found");
+        } else {
+          serial1Available = false;
+          Serial.println("Found PMS 1 on Serial1");
+        }
+      }
+    }
+    hasSensorPMS2 = false; // Disable PM2
+  } else {
+    if (ag.pms5003t_1.begin(Serial0) == false) {
+      hasSensorPMS1 = false;
+      Serial.println("PMS1 sensor not found");
+    } else {
+      Serial.println("Found PMS 1 on Serial0");
+    }
     if (ag.pms5003t_2.begin(Serial1) == false) {
       hasSensorPMS2 = false;
       Serial.println("PMS2 sensor not found");
+    } else {
+      Serial.println("Found PMS 2 on Serial1");
     }
   }
 
@@ -1142,8 +1185,18 @@ static void pmUpdate(void) {
 }
 
 static void co2Update(void) {
-  co2Ppm = ag.s8.getCo2();
-  Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  int value = ag.s8.getCo2();
+  if (value >= 0) {
+    co2Ppm = value;
+    getCO2FailCount = 0;
+    Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  } else {
+    getCO2FailCount++;
+    Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
+    if (getCO2FailCount >= 3) {
+      co2Ppm = -1;
+    }
+  }
 }
 
 static void updateServerConfiguration(void) {
@@ -1164,7 +1217,7 @@ static void updateServerConfiguration(void) {
           Serial.printf("abcDays config: %d days(%d hours)\r\n",
                         agServer.getCo2AbcDaysConfig(), newHour);
           int curHour = ag.s8.getAbcPeriod();
-          Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+          Serial.printf("Current config: %d (hours)\r\n", curHour);
           if (curHour == newHour) {
             Serial.println("set 'abcDays' ignored");
           } else {
@@ -1415,7 +1468,7 @@ static String getServerSyncData(bool localServer) {
       if (noxIndex >= 0) {
         root["nox_index"] = noxIndex;
       }
-      if(noxRawIndex >= 0) {
+      if (noxRawIndex >= 0) {
         root["nox_raw"] = noxRawIndex;
       }
     }

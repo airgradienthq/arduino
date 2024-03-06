@@ -79,19 +79,21 @@ bool PMS5003T::begin(void) {
 
 #if ARDUINO_USB_CDC_ON_BOOT // Serial used for USB CDC
   if (this->_serial == &Serial0) {
+    AgLog("Init Serial0");
+    _serial->begin(9600, SERIAL_8N1);
 #else
   if (this->_serial == &Serial) {
-#endif
     AgLog("Init Serial");
     this->_serial->begin(9600, SERIAL_8N1, bsp->Pms5003.uart_rx_pin,
                          bsp->Pms5003.uart_tx_pin);
+#endif
   } else {
+    /** Share with sensor air s8*/
     if (bsp->SenseAirS8.supported == false) {
       AgLog("Board [%d] PMS5003T_2 not supported", this->_boardDef);
       return false;
     }
 
-    /** Share with sensor air s8*/
     AgLog("Init Serialx");
     this->_serial->begin(9600, SERIAL_8N1, bsp->SenseAirS8.uart_rx_pin,
                          bsp->SenseAirS8.uart_tx_pin);

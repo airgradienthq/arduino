@@ -25,7 +25,7 @@ void setup()
   if (ag.s8.begin(&Serial) == false)
   {
 #else
-  if (ag.s8.begin(Serial1) == false)
+  if (ag.s8.begin(Serial0) == false)
   {
 #endif
     failedHandler("SenseAir S8 init failed");

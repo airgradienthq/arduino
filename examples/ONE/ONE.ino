@@ -712,6 +712,7 @@ bool hasSensorSHT = true;
 int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "";
+int getCO2FailCount = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
@@ -910,8 +911,18 @@ static void ledTest2Min(void) {
 }
 
 static void co2Update(void) {
-  co2Ppm = ag.s8.getCo2();
-  Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  int value = ag.s8.getCo2();
+  if (value >= 0) {
+    co2Ppm = value;
+    getCO2FailCount = 0;
+    Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  } else {
+    getCO2FailCount++;
+    Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
+    if (getCO2FailCount >= 3) {
+      co2Ppm = 1;
+    }
+  }
 }
 
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
@@ -1126,7 +1137,7 @@ static String getServerSyncData(bool localServer) {
     if (noxIndex >= 0) {
       root["nox_index"] = noxIndex;
     }
-    if(noxRawIndex >= 0) {
+    if (noxRawIndex >= 0) {
       root["nox_raw"] = noxRawIndex;
     }
   }
@@ -1752,7 +1763,7 @@ static void updateServerConfiguration(void) {
         Serial.printf("abcDays config: %d days(%d hours)\r\n",
                       agServer.getCo2AbcDaysConfig(), newHour);
         int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
           Serial.println("set 'abcDays' ignored");
         } else {

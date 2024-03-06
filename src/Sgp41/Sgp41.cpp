@@ -91,7 +91,7 @@ void Sgp41::handle(void) {
       if (getRawSignal(srawVoc, srawNox)) {
         nox = noxAlgorithm()->process(srawNox);
         tvoc = vocAlgorithm()->process(srawVoc);
-        AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+        // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
       }
     }
   }
@@ -124,7 +124,7 @@ void Sgp41::_handle(void) {
       noxRaw = srawNox;
       nox = noxAlgorithm()->process(srawNox);
       tvoc = vocAlgorithm()->process(srawVoc);
-      AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+      // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
     }
   }
 }
