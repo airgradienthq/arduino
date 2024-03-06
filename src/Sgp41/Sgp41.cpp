@@ -91,7 +91,7 @@ void Sgp41::handle(void) {
       if (getRawSignal(srawVoc, srawNox)) {
         nox = noxAlgorithm()->process(srawNox);
         tvoc = vocAlgorithm()->process(srawVoc);
-        AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+        // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
       }
     }
   }
@@ -121,9 +121,10 @@ void Sgp41::_handle(void) {
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (getRawSignal(srawVoc, srawNox)) {
       tvocRaw = srawVoc;
+      noxRaw = srawNox;
       nox = noxAlgorithm()->process(srawNox);
       tvoc = vocAlgorithm()->process(srawVoc);
-      AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+      // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
     }
   }
 }
@@ -249,3 +250,10 @@ bool Sgp41::_noxConditioning(void) {
  * @return int
  */
 int Sgp41::getTvocRaw(void) { return tvocRaw; }
+
+/**
+ * @brief Get NOX raw value
+ * 
+ * @return int 
+ */
+int Sgp41::getNoxRaw(void) { return noxRaw; }

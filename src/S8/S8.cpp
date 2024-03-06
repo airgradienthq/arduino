@@ -228,7 +228,7 @@ int16_t S8::getCo2(void) {
     return -1;
   }
 
-  int16_t co2 = 0;
+  int16_t co2 = -1;
 
   // Ask CO2 value
   sendCommand(MODBUS_FUNC_READ_INPUT_REGISTERS, MODBUS_IR4, 0x0001);
@@ -649,11 +649,25 @@ bool S8::init(int txPin, int rxPin, uint32_t baud) {
   uart->begin(baud);
   this->_uartStream = uart;
 #else
+#if ARDUINO_USB_CDC_ON_BOOT
+  /** The 'Serial0' can ont configure tx, rx pin, only use as default */
+  if (_serial == &Serial0) {
+    AgLog("Init on 'Serial0'");
+    _serial->begin(baud, SERIAL_8N1);
+  } else {
+    AgLog("Init on 'Serialx'");
+    this->_serial->begin(baud, SERIAL_8N1, rxPin, txPin);
+  }
+  this->_uartStream = this->_serial;
+#else
+  AgLog("Init on 'Serialx'");
   this->_serial->begin(baud, SERIAL_8N1, rxPin, txPin);
   this->_uartStream = this->_serial;
 #endif
+#endif
 
   /** Check communication by get firmware version */
+  delay(100);
   char fwVers[11];
   this->_isBegin = true;
   this->getFirmwareVersion(fwVers);
@@ -712,7 +726,7 @@ uint8_t S8::uartReadBytes(uint8_t max_bytes, uint32_t timeout_ms) {
 
 #if defined(ESP32)
     // Relax 5ms to avoid watchdog reset
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(pdMS_TO_TICKS(1));
 #endif
   }
   return nb;

@@ -382,7 +382,9 @@ bool hasSensorS8 = true;
 bool hasSensorPMS = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL, updateServerConfiguration);
+int getCO2FailCount = 0;
+AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
+                          updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule dispSchedule(DISP_UPDATE_INTERVAL, dispHandler);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
@@ -591,7 +593,7 @@ static void updateServerConfiguration(void) {
         Serial.printf("abcDays config: %d days(%d hours)\r\n",
                       agServer.getCo2AbcDaysConfig(), newHour);
         int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
           Serial.println("set 'abcDays' ignored");
         } else {
@@ -610,8 +612,18 @@ static void updateServerConfiguration(void) {
 }
 
 static void co2Update() {
-  co2Ppm = ag.s8.getCo2();
-  Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  int value = ag.s8.getCo2();
+  if (value >= 0) {
+    co2Ppm = value;
+    getCO2FailCount = 0;
+    Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  } else {
+    getCO2FailCount++;
+    Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
+    if (getCO2FailCount >= 3) {
+      co2Ppm = -1;
+    }
+  }
 }
 
 void pmUpdate() {

@@ -669,6 +669,7 @@ static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
 static int tvocIndex = -1;
 static int tvocRawIndex = -1;
 static int noxIndex = -1;
+static int noxRawIndex = -1;
 static int co2Ppm = -1;
 static int pm25 = -1;
 static int pm01 = -1;
@@ -711,6 +712,7 @@ bool hasSensorSHT = true;
 int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "";
+int getCO2FailCount = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
@@ -736,7 +738,7 @@ void setup() {
   u8g2.begin();
 
   /** Show boot display */
-  Serial.println("Firmware Version: "+ag.getVersion());
+  Serial.println("Firmware Version: " + ag.getVersion());
   displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
@@ -909,8 +911,18 @@ static void ledTest2Min(void) {
 }
 
 static void co2Update(void) {
-  co2Ppm = ag.s8.getCo2();
-  Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  int value = ag.s8.getCo2();
+  if (value >= 0) {
+    co2Ppm = value;
+    getCO2FailCount = 0;
+    Serial.printf("CO2 index: %d\r\n", co2Ppm);
+  } else {
+    getCO2FailCount++;
+    Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
+    if (getCO2FailCount >= 3) {
+      co2Ppm = 1;
+    }
+  }
 }
 
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
@@ -1016,7 +1028,7 @@ void webServerMetricsGet(void) {
       add_metric_point("", String(tvocIndex));
     }
     if (tvocRawIndex >= 0) {
-      add_metric("tvoc_raw_index",
+      add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
@@ -1028,6 +1040,13 @@ void webServerMetricsGet(void) {
                  "AirGradient SGP sensor",
                  "gauge");
       add_metric_point("", String(noxIndex));
+    }
+    if (noxRawIndex >= 0) {
+      add_metric("nox_raw",
+                 "The raw input value to the Nitrous Oxide (NOx) index as "
+                 "measured by the AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(noxRawIndex));
     }
   }
 
@@ -1072,10 +1091,7 @@ static void webServerInit(void) {
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  if (agServer.getModelName().isEmpty() != true) {
-    MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
-    mdnsModelName = agServer.getModelName();
-  }
+  MDNS.addServiceTxt("http", "_tcp", "model", ag.getBoardName());
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
 
@@ -1120,6 +1136,9 @@ static String getServerSyncData(bool localServer) {
     }
     if (noxIndex >= 0) {
       root["nox_index"] = noxIndex;
+    }
+    if (noxRawIndex >= 0) {
+      root["nox_raw"] = noxRawIndex;
     }
   }
   if (hasSensorSHT) {
@@ -1744,7 +1763,7 @@ static void updateServerConfiguration(void) {
         Serial.printf("abcDays config: %d days(%d hours)\r\n",
                       agServer.getCo2AbcDaysConfig(), newHour);
         int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", ag.s8.getAbcPeriod());
+        Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
           Serial.println("set 'abcDays' ignored");
         } else {
@@ -1782,11 +1801,6 @@ static void updateServerConfiguration(void) {
       } else {
         Serial.println("Connect to new mqtt broker failed");
       }
-    }
-
-    if (mdnsModelName != agServer.getModelName()) {
-      MDNS.addServiceTxt("http", "_tcp", "model", agServer.getModelName());
-      mdnsModelName = agServer.getModelName();
     }
   }
 }
@@ -2187,11 +2201,13 @@ static void tvocUpdate(void) {
   tvocIndex = ag.sgp41.getTvocIndex();
   tvocRawIndex = ag.sgp41.getTvocRaw();
   noxIndex = ag.sgp41.getNoxIndex();
+  noxRawIndex = ag.sgp41.getNoxRaw();
 
   Serial.println();
   Serial.printf("    TVOC index: %d\r\n", tvocIndex);
   Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
   Serial.printf("     NOx index: %d\r\n", noxIndex);
+  Serial.printf(" NOx raw index: %d\r\n", noxRawIndex);
 }
 
 /**
