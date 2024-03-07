@@ -365,7 +365,7 @@ public:
    * @return true Failed
    * @return false Success
    */
-  bool isConfigFailed(void) { return true; /* configFailed;  */}
+  bool isConfigFailed(void) { return configFailed; }
 
   /**
    * @brief Get status of post server configuration is failed
