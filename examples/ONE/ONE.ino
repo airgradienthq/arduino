@@ -365,7 +365,7 @@ public:
    * @return true Failed
    * @return false Success
    */
-  bool isConfigFailed(void) { return configFailed; }
+  bool isConfigFailed(void) { return true; /* configFailed;  */}
 
   /**
    * @brief Get status of post server configuration is failed
@@ -712,6 +712,8 @@ int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "I-9PSL";
 int getCO2FailCount = 0;
+uint32_t addToDashboardTime;
+bool isAddToDashboard = true;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
@@ -2108,7 +2110,16 @@ static void dispSmHandler(int sm) {
     break;
   }
   case APP_SM_SENSOR_CONFIG_FAILED: {
-    displayShowDashboard("Add to Dashboard");
+    uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
+    if (ms >= 5000) {
+      addToDashboardTime = millis();
+      if (isAddToDashboard) {
+        displayShowDashboard("Add to Dashboard");
+      } else {
+        displayShowDashboard(getDevId());
+      }
+      isAddToDashboard = !isAddToDashboard;
+    }
     break;
   }
   case APP_SM_NORMAL: {
