@@ -431,8 +431,7 @@ public:
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
     Serial.printf("inF: %s\r\n", config.inF ? "true" : "false");
-    Serial.printf("inUSAQI: %s\r\n",
-                  config.inUSAQI ? "true" : "false");
+    Serial.printf("inUSAQI: %s\r\n", config.inUSAQI ? "true" : "false");
     Serial.printf("useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
     Serial.printf("Model: %s\r\n", config.models);
     Serial.printf("MQTT Broker: %s\r\n", config.mqttBrokers);
@@ -701,7 +700,8 @@ const int targetCount = 20;
 enum {
   FW_MODE_PST, /** PMS5003T, S8 and SGP41 */
   FW_MODE_PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
-  FW_MODE_PP   /** PMS5003T_1, PMS5003T_2 */
+  FW_MODE_PP,  /** PMS5003T_1, PMS5003T_2 */
+  FW_MDOE_PS   /** PMS5003T, S8 */
 };
 int fw_mode = FW_MODE_PST;
 
@@ -953,6 +953,7 @@ void boardInit(void) {
       Serial.println("Can not detect SGP run mode 'O-1PP'");
     } else {
       Serial.println("Can not detect SGP run mode 'O-1PS'");
+      fw_mode = FW_MDOE_PS;
     }
   }
 
@@ -1004,6 +1005,21 @@ void boardInit(void) {
   }
 
   Serial.printf("Firmware Mode: %s\r\n", getFwMode(fw_mode));
+  switch (fw_mode) {
+  case FW_MODE_PP:
+    mdnsModelName = "O-1PP";
+    break;
+  case FW_MODE_PPT:
+    mdnsModelName = "O-1PPT";
+    break;
+  case FW_MODE_PST:
+    mdnsModelName = "O-1PST";
+    break;
+  case FW_MDOE_PS:
+    mdnsModelName = "0-1PS";
+  default:
+    break;
+  }
 }
 
 void failedHandler(String msg) {
@@ -1366,6 +1382,8 @@ static const char *getFwMode(int mode) {
     return "FW_MODE_PPT";
   case FW_MODE_PP:
     return "FW_MODE_PP";
+  case FW_MDOE_PS:
+    return "FW_MODE_PS";
   default:
     break;
   }
@@ -1394,9 +1412,16 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "model", ag.getBoardName());
+  MDNS.addServiceTxt("http", "_tcp", "model", mdnsModelName);
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
+  MDNS.addServiceTxt("http", "_tcp", "vendor", "AirGradient");
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addService("_airgradient", "tcp", 80);
+  MDNS.addServiceTxt("airgradient", "_tcp", "model", mdnsModelName);
+  MDNS.addServiceTxt("airgradient", "_tcp", "serialno", getDevId());
+  MDNS.addServiceTxt("airgradient", "_tcp", "fw_ver", ag.getVersion());
+  MDNS.addServiceTxt("airgradient", "_tcp", "vendor", "AirGradient");
 
   if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
       pdTRUE) {

@@ -430,8 +430,7 @@ public:
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
     Serial.printf("inF: %s\r\n", config.inF ? "true" : "false");
-    Serial.printf("inUSAQI: %s\r\n",
-                  config.inUSAQI ? "true" : "false");
+    Serial.printf("inUSAQI: %s\r\n", config.inUSAQI ? "true" : "false");
     Serial.printf("useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
     Serial.printf("Model: %s\r\n", config.models);
     Serial.printf("MQTT Broker: %s\r\n", config.mqttBrokers);
@@ -711,7 +710,7 @@ bool hasSensorSGP = true;
 bool hasSensorSHT = true;
 int pmFailCount = 0;
 uint32_t factoryBtnPressTime = 0;
-String mdnsModelName = "";
+String mdnsModelName = "I-9PSL";
 int getCO2FailCount = 0;
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -1091,9 +1090,16 @@ static void webServerInit(void) {
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
   webServer.begin();
   MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "model", ag.getBoardName());
+  MDNS.addServiceTxt("http", "_tcp", "model", mdnsModelName);
   MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
+  MDNS.addServiceTxt("http", "_tcp", "vendor", "AirGradient");
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addService("_airgradient", "tcp", 80);
+  MDNS.addServiceTxt("airgradient", "_tcp", "model", mdnsModelName);
+  MDNS.addServiceTxt("airgradient", "_tcp", "serialno", getDevId());
+  MDNS.addServiceTxt("airgradient", "_tcp", "fw_ver", ag.getVersion());
+  MDNS.addServiceTxt("airgradient", "_tcp", "vendor", "AirGradient");
 
   if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
       pdTRUE) {
