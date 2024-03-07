@@ -1,6 +1,6 @@
 #include "AirGradient.h"
 
-#define AG_LIB_VER "3.0.6"
+#define AG_LIB_VER "3.0.7"
 
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),

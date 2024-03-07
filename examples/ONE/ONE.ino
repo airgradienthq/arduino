@@ -429,13 +429,13 @@ public:
    */
   void showServerConfig(void) {
     Serial.println("Server configuration: ");
-    Serial.printf("             inF: %s\r\n", config.inF ? "true" : "false");
-    Serial.printf("         inUSAQI: %s\r\n",
+    Serial.printf("inF: %s\r\n", config.inF ? "true" : "false");
+    Serial.printf("inUSAQI: %s\r\n",
                   config.inUSAQI ? "true" : "false");
-    Serial.printf("    useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
-    Serial.printf("           Model: %s\r\n", config.models);
-    Serial.printf("     Mqtt Broker: %s\r\n", config.mqttBrokers);
-    Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
+    Serial.printf("useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
+    Serial.printf("Model: %s\r\n", config.models);
+    Serial.printf("MQTT Broker: %s\r\n", config.mqttBrokers);
+    Serial.printf("S8 calibration period: %d\r\n", co2AbcCalib);
   }
 
   /**
@@ -566,19 +566,19 @@ public:
     /** init client */
     client = esp_mqtt_client_init(&config);
     if (client == NULL) {
-      Serial.println("mqtt client init failed");
+      Serial.println("MQTT client init failed");
       return false;
     }
 
     /** Register event */
     if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY,
                                        mqtt_event_handler, NULL) != ESP_OK) {
-      Serial.println("mqtt client register event failed");
+      Serial.println("MQTT client register event failed");
       return false;
     }
 
     if (esp_mqtt_client_start(client) != ESP_OK) {
-      Serial.println("mqtt client start failed");
+      Serial.println("MQTT client start failed");
       return false;
     }
 
@@ -915,7 +915,7 @@ static void co2Update(void) {
   if (value >= 0) {
     co2Ppm = value;
     getCO2FailCount = 0;
-    Serial.printf("CO2 index: %d\r\n", co2Ppm);
+    Serial.printf("CO2 (ppm): %d\r\n", co2Ppm);
   } else {
     getCO2FailCount++;
     Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
@@ -1082,7 +1082,7 @@ void webServerHandler(void *param) {
 static void webServerInit(void) {
   String host = "airgradient_" + getDevId();
   if (!MDNS.begin(host)) {
-    Serial.println("Init MDNS failed");
+    Serial.println("Init mDNS failed");
     return;
   }
 
@@ -1171,9 +1171,9 @@ static void createMqttTask(void) {
             String topic = "airgradient/readings/" + getDevId();
             if (agMqtt.publish(topic.c_str(), syncData.c_str(),
                                syncData.length())) {
-              Serial.println("Mqtt sync success");
+              Serial.println("MQTT sync success");
             } else {
-              Serial.println("Mqtt sync failure");
+              Serial.println("MQTT sync failure");
             }
           }
         }
@@ -1336,7 +1336,7 @@ static void displayShowDashboard(String err) {
         u8g2.drawStr(105, 10, strBuf);
       }
     } else {
-      Serial.println("Disp show error: " + err);
+      Serial.println("Display show error: " + err);
       int strWidth = u8g2.getStrWidth(err.c_str());
       u8g2.drawStr((126 - strWidth) / 2, 10, err.c_str());
 
@@ -1753,7 +1753,7 @@ static void updateServerConfiguration(void) {
       if (hasSensorS8) {
         co2Calibration();
       } else {
-        Serial.println("CO2 S8 not available, calib ignored");
+        Serial.println("CO2 S8 not available, calibration ignored");
       }
     }
 
@@ -1765,13 +1765,13 @@ static void updateServerConfiguration(void) {
         int curHour = ag.s8.getAbcPeriod();
         Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
-          Serial.println("set 'abcDays' ignored");
+          Serial.println("Set 'abcDays' ignored");
         } else {
           if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
               false) {
-            Serial.println("Set S8 abcDays period calib failed");
+            Serial.println("Set S8 abcDays period calibration failed");
           } else {
-            Serial.println("Set S8 abcDays period calib success");
+            Serial.println("Set S8 abcDays period calibration success");
           }
         }
       } else {
@@ -1796,10 +1796,10 @@ static void updateServerConfiguration(void) {
         mqttTask = NULL;
       }
       if (agMqtt.begin(mqttUri)) {
-        Serial.println("Connect to new mqtt broker success");
+        Serial.println("Connect to MQTT broker successful");
         createMqttTask();
       } else {
-        Serial.println("Connect to new mqtt broker failed");
+        Serial.println("Connect to MQTT broker failed");
       }
     }
   }
@@ -2204,10 +2204,10 @@ static void tvocUpdate(void) {
   noxRawIndex = ag.sgp41.getNoxRaw();
 
   Serial.println();
-  Serial.printf("    TVOC index: %d\r\n", tvocIndex);
-  Serial.printf("TVOC raw index: %d\r\n", tvocRawIndex);
-  Serial.printf("     NOx index: %d\r\n", noxIndex);
-  Serial.printf(" NOx raw index: %d\r\n", noxRawIndex);
+  Serial.printf("TVOC index: %d\r\n", tvocIndex);
+  Serial.printf("TVOC raw: %d\r\n", tvocRawIndex);
+  Serial.printf("NOx index: %d\r\n", noxIndex);
+  Serial.printf("NOx raw: %d\r\n", noxRawIndex);
 }
 
 /**
@@ -2222,14 +2222,14 @@ static void pmUpdate(void) {
     pm03PCount = ag.pms5003.getPm03ParticleCount();
 
     Serial.println();
-    Serial.printf("      PMS0.1: %d\r\n", pm01);
-    Serial.printf("      PMS2.5: %d\r\n", pm25);
-    Serial.printf("     PMS10.0: %d\r\n", pm10);
-    Serial.printf("PMS3.0 Count: %d\r\n", pm03PCount);
+    Serial.printf("PM1 ug/m3: %d\r\n", pm01);
+    Serial.printf("PM2.5 ug/m3: %d\r\n", pm25);
+    Serial.printf("PM10 ug/m3: %d\r\n", pm10);
+    Serial.printf("PM0.3 Count: %d\r\n", pm03PCount);
     pmFailCount = 0;
   } else {
     pmFailCount++;
-    Serial.printf("PM read failed: %d\r\n", pmFailCount);
+    Serial.printf("PMS read failed: %d\r\n", pmFailCount);
     if (pmFailCount >= 3) {
       pm01 = -1;
       pm25 = -1;
@@ -2261,10 +2261,10 @@ static void tempHumUpdate(void) {
     temp = ag.sht.getTemperature();
     hum = ag.sht.getRelativeHumidity();
 
-    Serial.printf("Temperature: %0.2f\r\n", temp);
-    Serial.printf("   Humidity: %d\r\n", hum);
+    Serial.printf("Temperature in C: %0.2f\r\n", temp);
+    Serial.printf("Relative Humidity: %d\r\n", hum);
   } else {
-    Serial.println("Measure SHT failed");
+    Serial.println("SHT read failed");
   }
 }
 
