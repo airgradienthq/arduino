@@ -35,6 +35,7 @@ void LedBar::begin(void) {
       this->_bsp->LED.rgbNum, this->_bsp->LED.pin, NEO_GRB + NEO_KHZ800);
   pixel()->begin();
   pixel()->clear();
+  pixel()->show();
 
   this->_isBegin = true;
 
