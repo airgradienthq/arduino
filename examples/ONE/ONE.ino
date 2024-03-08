@@ -740,7 +740,7 @@ void setup() {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
-  displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
+  displayShowText("AirGradient ONE", "FW Version: ", ag.getVersion());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
@@ -1490,7 +1490,7 @@ static void connectToWifi() {
     ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
   });
 
-  displayShowText("Connecting to", "config WiFi", "...");
+  displayShowText("Connecting to", "WiFi", "...");
   wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
       [](void *obj) {
