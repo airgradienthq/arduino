@@ -1056,7 +1056,7 @@ void webServerMetricsGet(void) {
       add_metric("temperature",
                  "The ambient temperature as measured by the AirGradient SHT "
                  "sensor, in degrees Celsius",
-                 "gauge", "degc");
+                 "gauge", "celcius");
       add_metric_point("", String(temp));
     }
     if (hum >= 0) {
