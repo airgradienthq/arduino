@@ -740,7 +740,7 @@ void setup() {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
-  displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
+  displayShowText("AirGradient ONE", "FW Version: ", ag.getVersion());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
@@ -1490,7 +1490,7 @@ static void connectToWifi() {
     ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
   });
 
-  displayShowText("Connecting to", "config WiFi", "...");
+  displayShowText("Connecting to", "WiFi", "...");
   wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
       [](void *obj) {
@@ -1768,18 +1768,18 @@ static void updateServerConfiguration(void) {
     if (agServer.getCo2AbcDaysConfig() > 0) {
       if (hasSensorS8) {
         int newHour = agServer.getCo2AbcDaysConfig() * 24;
-        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+        Serial.printf("Requested abcDays setting: %d days (%d hours)\r\n",
                       agServer.getCo2AbcDaysConfig(), newHour);
         int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", curHour);
+        Serial.printf("Current S8 abcDays setting: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
-          Serial.println("Set 'abcDays' ignored");
+          Serial.println("'abcDays' unchanged");
         } else {
           if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
               false) {
-            Serial.println("Set S8 abcDays period calibration failed");
+            Serial.println("Set S8 abcDays period failed");
           } else {
-            Serial.println("Set S8 abcDays period calibration success");
+            Serial.println("Set S8 abcDays period success");
           }
         }
       } else {
