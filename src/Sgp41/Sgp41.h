@@ -25,6 +25,7 @@ public:
   int getNoxIndex(void);
   int getTvocRaw(void);
   int getNoxRaw(void);
+  void setCompensationTemperatureHumidity(float temp, float hum);
 
 private:
   bool onConditioning = true;

@@ -253,7 +253,20 @@ int Sgp41::getTvocRaw(void) { return tvocRaw; }
 
 /**
  * @brief Get NOX raw value
- * 
- * @return int 
+ *
+ * @return int
  */
 int Sgp41::getNoxRaw(void) { return noxRaw; }
+
+/**
+ * @brief Set compasation temperature and humidity to calculate TVOC and NOx
+ * index
+ *
+ * @param temp Temperature
+ * @param hum Humidity
+ */
+void Sgp41::setCompensationTemperatureHumidity(float temp, float hum) {
+  defaultT = static_cast<uint16_t>((temp + 45) * 65535 / 175);
+  defaultRh = static_cast<uint16_t>(hum * 65535 / 100);
+  AgLog("Update: defaultT: %d, defaultRh: %d", defaultT, defaultRh);
+}

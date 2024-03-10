@@ -112,9 +112,13 @@ void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue) {
 
 /**
  * @brief Call to turn LED on/off base on the setting color
- * 
+ *
  */
 void LedBar::show(void) {
+  // Ignore update the LED if LED bar disabled
+  if (enabled == false) {
+    return;
+  }
   if (pixel()->canShow()) {
     pixel()->show();
   }
@@ -122,6 +126,18 @@ void LedBar::show(void) {
 
 /**
  * @brief Set all LED to off color (r,g,b) = (0,0,0)
- * 
+ *
  */
 void LedBar::clear(void) { pixel()->clear(); }
+
+void LedBar::setEnable(bool enable) {
+  if (this->enabled != enable) {
+    if (enable == false) {
+      pixel()->clear();
+      pixel()->show();
+    }
+  }
+  this->enabled = enable;
+}
+
+bool LedBar::isEnabled(void) { return enabled; }

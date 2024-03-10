@@ -338,6 +338,8 @@ public:
     if ((retCode == 200) || (retCode == 429)) {
       serverFailed = false;
       return true;
+    } else {
+      Serial.printf("Post response failed code: %d\r\n", retCode);
     }
     serverFailed = true;
     return false;
@@ -483,6 +485,7 @@ private:
     if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
       config.inF = false;
       config.inUSAQI = false;
+      config.useRGBLedBar = UseLedBarCO2; // default use LED bar for CO2
       memset(config.models, 0, sizeof(config.models));
       memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
 
@@ -740,14 +743,18 @@ void setup() {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
-  displayShowText("One V9", "FW Ver: " + ag.getVersion(), "");
+  displayShowText("AirGradient ONE", "FW Version: ", ag.getVersion());
+
+  boardInit();
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
-  boardInit();
 
   /** Init AirGradient server */
   agServer.begin();
+  if (agServer.getLedBarMode() == UseLedBarOff) {
+    ag.ledBar.setEnable(false);
+  }
 
   /** Run LED test on start up */
   displayShowText("Press now for", "LED test &", "offline mode");
@@ -797,6 +804,8 @@ void setup() {
       dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+    } else {
+      ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
     }
   }
 
@@ -1484,7 +1493,7 @@ static void connectToWifi() {
     ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
   });
 
-  displayShowText("Connecting to", "config WiFi", "...");
+  displayShowText("Connecting to", "WiFi", "...");
   wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
       [](void *obj) {
@@ -1759,21 +1768,24 @@ static void updateServerConfiguration(void) {
       }
     }
 
+    // Update LED bar
+    ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
+
     if (agServer.getCo2AbcDaysConfig() > 0) {
       if (hasSensorS8) {
         int newHour = agServer.getCo2AbcDaysConfig() * 24;
-        Serial.printf("abcDays config: %d days(%d hours)\r\n",
+        Serial.printf("Requested abcDays setting: %d days (%d hours)\r\n",
                       agServer.getCo2AbcDaysConfig(), newHour);
         int curHour = ag.s8.getAbcPeriod();
-        Serial.printf("Current config: %d (hours)\r\n", curHour);
+        Serial.printf("Current S8 abcDays setting: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
-          Serial.println("Set 'abcDays' ignored");
+          Serial.println("'abcDays' unchanged");
         } else {
           if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
               false) {
-            Serial.println("Set S8 abcDays period calibration failed");
+            Serial.println("Set S8 abcDays period failed");
           } else {
-            Serial.println("Set S8 abcDays period calibration success");
+            Serial.println("Set S8 abcDays period success");
           }
         }
       } else {
@@ -2135,9 +2147,11 @@ static void sensorLedColorHandler(void) {
   case UseLedBarPM:
     setRGBledPMcolor(pm25);
     break;
+  case UseLedBarOff:
+    ag.ledBar.clear();
+    break;
   default:
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.clear();
     break;
   }
 }
@@ -2274,6 +2288,11 @@ static void tempHumUpdate(void) {
 
     Serial.printf("Temperature in C: %0.2f\r\n", temp);
     Serial.printf("Relative Humidity: %d\r\n", hum);
+
+    // Update compensation temperature and humidity for SGP41
+    if (hasSensorSGP) {
+      ag.sgp41.setCompensationTemperatureHumidity(temp, hum);
+    }
   } else {
     Serial.println("SHT read failed");
   }

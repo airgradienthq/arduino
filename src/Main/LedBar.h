@@ -23,8 +23,11 @@ public:
   int getNumberOfLeds(void);
   void show(void);
   void clear(void);
+  void setEnable(bool enable);
+  bool isEnabled(void);
 
 private:
+  bool enabled = true;
   const BoardDef *_bsp;
   bool _isBegin = false;
   uint8_t _ledState = 0;
