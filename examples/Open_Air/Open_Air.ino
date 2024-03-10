@@ -1417,6 +1417,180 @@ void webServerMeasureCurrentGet(void) {
   webServer.send(200, "application/json", getServerSyncData(true));
 }
 
+/**
+ * Sends metrics in Prometheus/OpenMetrics format to the currently connected
+ * webServer client.
+ *
+ * For background, see:
+ * https://prometheus.io/docs/instrumenting/exposition_formats/
+ */
+void webServerMetricsGet(void) {
+  String response;
+  String current_metric_name;
+  const auto add_metric = [&](const String &name, const String &help,
+                              const String &type, const String &unit = "") {
+    current_metric_name = "airgradient_" + name;
+    if (!unit.isEmpty())
+      current_metric_name += "_" + unit;
+    response += "# HELP " + current_metric_name + " " + help + "\n";
+    response += "# TYPE " + current_metric_name + " " + type + "\n";
+    if (!unit.isEmpty())
+      response += "# UNIT " + current_metric_name + " " + unit + "\n";
+  };
+  const auto add_metric_point = [&](const String &labels, const String &value) {
+    response += current_metric_name + "{" + labels + "} " + value + "\n";
+  };
+
+  add_metric("info", "AirGradient device information", "info");
+  add_metric_point("airgradient_serial_number=\"" + getDevId() +
+                       "\",airgradient_device_type=\"" + ag.getBoardName() +
+                       "\",airgradient_library_version=\"" + ag.getVersion() +
+                       "\"",
+                   "1");
+
+  add_metric("config_ok",
+             "1 if the AirGradient device was able to successfully fetch its "
+             "configuration from the server",
+             "gauge");
+  add_metric_point("", agServer.isConfigFailed() ? "0" : "1");
+
+  add_metric(
+      "post_ok",
+      "1 if the AirGradient device was able to successfully send to the server",
+      "gauge");
+  add_metric_point("", agServer.isServerFailed() ? "0" : "1");
+
+  add_metric(
+      "wifi_rssi",
+      "WiFi signal strength from the AirGradient device perspective, in dBm",
+      "gauge", "dbm");
+  add_metric_point("", String(WiFi.RSSI()));
+
+  if (hasSensorS8 && co2Ppm >= 0) {
+    add_metric("co2",
+               "Carbon dioxide concentration as measured by the AirGradient S8 "
+               "sensor, in parts per million",
+               "gauge", "ppm");
+    add_metric_point("", String(co2Ppm));
+  }
+
+  float temp = -1001;
+  float hum = -1;
+  int pm01 = -1;
+  int pm25 = -1;
+  int pm10 = -1;
+  int pm03PCount = -1;
+  if (hasSensorPMS1 && hasSensorPMS2) {
+    temp = (temp_1 + temp_2) / 2.0f;
+    hum = (hum_1 + hum_2) / 2.0f;
+    pm01 = (pm01_1 + pm01_2) / 2;
+    pm25 = (pm25_1 + pm25_2) / 2;
+    pm10 = (pm10_1 + pm10_2) / 2;
+    pm03PCount = (pm03PCount_1 + pm03PCount_2) / 2;
+  } else {
+    if (hasSensorPMS1) {
+      temp = temp_1;
+      hum = hum_1;
+      pm01 = pm01_1;
+      pm25 = pm25_1;
+      pm10 = pm10_1;
+      pm03PCount = pm03PCount_1;
+    }
+    if (hasSensorPMS2) {
+      temp = temp_2;
+      hum = hum_2;
+      pm01 = pm01_2;
+      pm25 = pm25_2;
+      pm10 = pm10_2;
+      pm03PCount = pm03PCount_2;
+    }
+  }
+
+  if (hasSensorPMS1 || hasSensorPMS2) {
+    if (pm01 >= 0) {
+      add_metric("pm1",
+                 "PM1.0 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
+      add_metric_point("", String(pm01));
+    }
+    if (pm25 >= 0) {
+      add_metric("pm2d5",
+                 "PM2.5 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
+      add_metric_point("", String(pm25));
+    }
+    if (pm10 >= 0) {
+      add_metric("pm10",
+                 "PM10 concentration as measured by the AirGradient PMS "
+                 "sensor, in micrograms per cubic meter",
+                 "gauge", "ugm3");
+      add_metric_point("", String(pm10));
+    }
+    if (pm03PCount >= 0) {
+      add_metric("pm0d3",
+                 "PM0.3 concentration as measured by the AirGradient PMS "
+                 "sensor, in number of particules per 100 milliliters",
+                 "gauge", "p100ml");
+      add_metric_point("", String(pm03PCount));
+    }
+  }
+
+  if (hasSensorSGP) {
+    if (tvocIndex >= 0) {
+      add_metric("tvoc_index",
+                 "The processed Total Volatile Organic Compounds (TVOC) index "
+                 "as measured by the AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(tvocIndex));
+    }
+    if (tvocRawIndex >= 0) {
+      add_metric("tvoc_raw",
+                 "The raw input value to the Total Volatile Organic Compounds "
+                 "(TVOC) index as measured by the AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(tvocRawIndex));
+    }
+    if (noxIndex >= 0) {
+      add_metric("nox_index",
+                 "The processed Nitrous Oxide (NOx) index as measured by the "
+                 "AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(noxIndex));
+    }
+    if (noxRawIndex >= 0) {
+      add_metric("nox_raw",
+                 "The raw input value to the Nitrous Oxide (NOx) index as "
+                 "measured by the AirGradient SGP sensor",
+                 "gauge");
+      add_metric_point("", String(noxRawIndex));
+    }
+  }
+
+  if (hasSensorPMS1 || hasSensorPMS2) {
+    if (temp > -1001) {
+      add_metric("temperature",
+                 "The ambient temperature as measured by the AirGradient SHT "
+                 "sensor, in degrees Celsius",
+                 "gauge", "celcius");
+      add_metric_point("", String(temp));
+    }
+    if (hum >= 0) {
+      add_metric(
+          "humidity",
+          "The relative humidity as measured by the AirGradient SHT sensor",
+          "gauge", "percent");
+      add_metric_point("", String(hum));
+    }
+  }
+
+  response += "# EOF\n";
+  webServer.send(200,
+                 "application/openmetrics-text; version=1.0.0; charset=utf-8",
+                 response);
+}
+
 void webServerHandler(void *param) {
   for (;;) {
     webServer.handleClient();
@@ -1431,13 +1605,9 @@ static void webServerInit(void) {
   }
 
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
+  // Make it possible to query this device from Prometheus/OpenMetrics.
+  webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
   webServer.begin();
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "model", mdnsModelName);
-  MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
-  MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
-  MDNS.addServiceTxt("http", "_tcp", "vendor", "AirGradient");
-  MDNS.addService("http", "tcp", 80);
   MDNS.addService("_airgradient", "tcp", 80);
   MDNS.addServiceTxt("airgradient", "_tcp", "model", mdnsModelName);
   MDNS.addServiceTxt("airgradient", "_tcp", "serialno", getDevId());
