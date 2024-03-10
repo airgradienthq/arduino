@@ -485,6 +485,7 @@ private:
     if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
       config.inF = false;
       config.inUSAQI = false;
+      config.useRGBLedBar = UseLedBarCO2; // default use LED bar for CO2
       memset(config.models, 0, sizeof(config.models));
       memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
 
@@ -743,13 +744,17 @@ void setup() {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
   displayShowText("AirGradient ONE", "FW Version: ", ag.getVersion());
+  
+  boardInit();
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   /** Init sensor */
-  boardInit();
 
   /** Init AirGradient server */
   agServer.begin();
+  if (agServer.getLedBarMode() == UseLedBarOff) {
+    ag.ledBar.setEnable(false);
+  }
 
   /** Run LED test on start up */
   displayShowText("Press now for", "LED test &", "offline mode");
@@ -799,6 +804,8 @@ void setup() {
       dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+    } else {
+      ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
     }
   }
 
@@ -1767,6 +1774,9 @@ static void updateServerConfiguration(void) {
       }
     }
 
+    // Update LED bar
+    ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
+
     if (agServer.getCo2AbcDaysConfig() > 0) {
       if (hasSensorS8) {
         int newHour = agServer.getCo2AbcDaysConfig() * 24;
@@ -2143,9 +2153,11 @@ static void sensorLedColorHandler(void) {
   case UseLedBarPM:
     setRGBledPMcolor(pm25);
     break;
+  case UseLedBarOff:
+    ag.ledBar.clear();
+    break;
   default:
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 1);
-    ag.ledBar.setColor(0, 0, 0, ag.ledBar.getNumberOfLeds() - 2);
+    ag.ledBar.clear();
     break;
   }
 }
