@@ -744,7 +744,7 @@ void setup() {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
   displayShowText("AirGradient ONE", "FW Version: ", ag.getVersion());
-  
+
   boardInit();
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
@@ -2288,6 +2288,11 @@ static void tempHumUpdate(void) {
 
     Serial.printf("Temperature in C: %0.2f\r\n", temp);
     Serial.printf("Relative Humidity: %d\r\n", hum);
+
+    // Update compensation temperature and humidity for SGP41
+    if (hasSensorSGP) {
+      ag.sgp41.setCompensationTemperatureHumidity(temp, hum);
+    }
   } else {
     Serial.println("SHT read failed");
   }

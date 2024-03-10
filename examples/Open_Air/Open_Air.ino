@@ -1204,6 +1204,25 @@ static void pmUpdate(void) {
       pm2hum = 0;
     }
   }
+
+  if (hasSensorSGP) {
+    float temp;
+    float hum;
+    if (pmsResult_1 && pmsResult_2) {
+      temp = (temp_1 + temp_2) / 2.0f;
+      hum = (hum_1 + hum_2) / 2.0f;
+    } else {
+      if (pmsResult_1) {
+        temp = temp_1;
+        hum = hum_1;
+      }
+      if (pmsResult_2) {
+        temp = temp_2;
+        hum = hum_2;
+      }
+    }
+    ag.sgp41.setCompensationTemperatureHumidity(temp, hum);
+  }
 }
 
 static void co2Update(void) {
