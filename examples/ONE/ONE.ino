@@ -338,6 +338,8 @@ public:
     if ((retCode == 200) || (retCode == 429)) {
       serverFailed = false;
       return true;
+    } else {
+      Serial.printf("Post response failed code: %d\r\n", retCode);
     }
     serverFailed = true;
     return false;
