@@ -40,6 +40,13 @@ jobs:
           WiFiManager@2.0.16-rc.2
           Arduino_JSON@0.2.0
           U8g2@2.34.22
+      # In some cases, actions/checkout@v4 will check out a detached HEAD; for
+      # example, this happens on pull request events, where an hypothetical
+      # PR merge commit is checked out. This tends to confuse
+      # `arduino-cli lib install --git-url`, making it fail with errors such as:
+      #   Error installing Git Library: Library install failed: object not found
+      # Create and check out a dummy branch to work around this issue.
+      - run: git checkout -b check
       - run: bin/arduino-cli --verbose lib install --git-url .
         env:
           ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: "true"

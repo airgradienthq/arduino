@@ -1065,7 +1065,7 @@ void webServerMetricsGet(void) {
       add_metric("temperature",
                  "The ambient temperature as measured by the AirGradient SHT "
                  "sensor, in degrees Celsius",
-                 "gauge", "degc");
+                 "gauge", "celcius");
       add_metric_point("", String(temp));
     }
     if (hum >= 0) {
@@ -1100,17 +1100,11 @@ static void webServerInit(void) {
   // Make it possible to query this device from Prometheus/OpenMetrics.
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
   webServer.begin();
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "_tcp", "model", mdnsModelName);
-  MDNS.addServiceTxt("http", "_tcp", "serialno", getDevId());
-  MDNS.addServiceTxt("http", "_tcp", "fw_ver", ag.getVersion());
-  MDNS.addServiceTxt("http", "_tcp", "vendor", "AirGradient");
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addService("_airgradient", "tcp", 80);
-  MDNS.addServiceTxt("airgradient", "_tcp", "model", mdnsModelName);
-  MDNS.addServiceTxt("airgradient", "_tcp", "serialno", getDevId());
-  MDNS.addServiceTxt("airgradient", "_tcp", "fw_ver", ag.getVersion());
-  MDNS.addServiceTxt("airgradient", "_tcp", "vendor", "AirGradient");
+  MDNS.addService("_airgradient", "_tcp", 80);
+  MDNS.addServiceTxt("_airgradient", "_tcp", "model", mdnsModelName);
+  MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", getDevId());
+  MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag.getVersion());
+  MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
 
   if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
       pdTRUE) {
