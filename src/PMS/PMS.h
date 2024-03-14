@@ -1,75 +1,43 @@
-#ifndef _PMS_BASE_H_
-#define _PMS_BASE_H_
+#ifndef _PMS5003_BASE_H_
+#define _PMS5003_BASE_H_
 
 #include <Arduino.h>
 
-/**
- * @brief Class define how to handle plantower PMS sensor it's upport for
- * PMS5003 and PMS5003T series. The data @ref AMB_TMP and @ref AMB_HUM only
- * valid on PMS5003T
- */
-class PMS {
+class PMSBase {
 public:
-  static const uint16_t SINGLE_RESPONSE_TIME = 1000;
-  static const uint16_t TOTAL_RESPONSE_TIME = 1000 * 10;
-  static const uint16_t STEADY_RESPONSE_TIME = 1000 * 30;
-
-  // static const uint16_t BAUD_RATE = 9600;
-
-  struct DATA {
-    // Standard Particles, CF=1
-    uint16_t PM_SP_UG_1_0;
-    uint16_t PM_SP_UG_2_5;
-    uint16_t PM_SP_UG_10_0;
-
-    // Atmospheric environment
-    uint16_t PM_AE_UG_1_0;
-    uint16_t PM_AE_UG_2_5;
-    uint16_t PM_AE_UG_10_0;
-
-    // Raw particles count (number of particles in 0.1l of air
-    uint16_t PM_RAW_0_3;
-    uint16_t PM_RAW_0_5;
-    uint16_t PM_RAW_1_0;
-    uint16_t PM_RAW_2_5;
-    uint16_t PM_RAW_5_0;
-    uint16_t PM_RAW_10_0;
-
-    // Formaldehyde (HCHO) concentration in mg/m^3 - PMSxxxxST units only
-    uint16_t AMB_HCHO;
-
-    // Temperature & humidity - PMSxxxxST units only
-    int16_t AMB_TMP;
-    uint16_t AMB_HUM;
-  };
-
   bool begin(Stream *stream);
-  void sleep();
-  void wakeUp();
-  void activeMode();
-  void passiveMode();
+  void handle();
+  bool isFailed(void);
+  uint16_t getRaw0_1(void);
+  uint16_t getRaw2_5(void);
+  uint16_t getRaw10(void);
+  uint16_t getPM0_1(void);
+  uint16_t getPM2_5(void);
+  uint16_t getPM10(void);
+  uint16_t getCount0_3(void);
+  uint16_t getCount0_5(void);
+  uint16_t getCount1_0(void);
+  uint16_t getCount2_5(void);
 
-  void requestRead();
-  bool read(DATA &data);
-  bool readUntil(DATA &data, uint16_t timeout = SINGLE_RESPONSE_TIME);
+  /** For PMS5003 */
+  uint16_t getCount5_0(void);
+  uint16_t getCount10(void);
+
+  /** For PMS5003T*/
+  uint16_t getTemp(void);
+  uint16_t getHum(void);
+
+  int pm25ToAQI(int pm02);
 
 private:
-  enum STATUS { STATUS_WAITING, STATUS_OK };
-  enum MODE { MODE_ACTIVE, MODE_PASSIVE };
+  Stream *stream;
+  char package[32];
+  int packageIndex;
+  bool failed = false;
+  uint32_t lastRead;
 
-  uint8_t _payload[50];
-  Stream *_stream;
-  DATA *_data;
-  STATUS _status;
-  MODE _mode = MODE_ACTIVE;
-
-  uint8_t _index = 0;
-  uint16_t _frameLen;
-  uint16_t _checksum;
-  uint16_t _calculatedChecksum;
-
-  void loop();
-  char Char_PM2[10];
+  uint16_t toValue(char *buf);
+  bool validate(char *buf);
 };
 
-#endif
+#endif /** _PMS5003_BASE_H_ */

@@ -457,6 +457,9 @@ void loop() {
   }
 
   updateWiFiConnect();
+
+  /** Read PMS on loop */
+  ag.pms5003.handle();
 }
 
 static void sendPing() {
@@ -629,7 +632,7 @@ static void co2Update() {
 }
 
 void pmUpdate() {
-  if (ag.pms5003.readData()) {
+  if (ag.pms5003.isFailed() == false) {
     pm25 = ag.pms5003.getPm25Ae();
     Serial.printf("PMS2.5: %d\r\n", pm25);
     pmFailCount = 0;

@@ -1,6 +1,5 @@
 #include "PMS5003.h"
 #include "Arduino.h"
-#include "PMSUtils.h"
 
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
@@ -84,47 +83,32 @@ bool PMS5003::begin(void) {
 }
 
 /**
- * @brief Read all package data then call to @ref getPMxxx to get the target
- * data
- *
- * @return true Success
- * @return false Failure
- */
-bool PMS5003::readData(void) {
-  if (this->isBegin() == false) {
-    return false;
-  }
-
-  return pms.readUntil(pmsData);
-}
-
-/**
  * @brief Read PM1.0 must call this function after @ref readData success
  *
  * @return int PM1.0 index
  */
-int PMS5003::getPm01Ae(void) { return pmsData.PM_AE_UG_1_0; }
+int PMS5003::getPm01Ae(void) { return pms.getPM0_1(); }
 
 /**
  * @brief Read PM2.5 must call this function after @ref readData success
  *
  * @return int PM2.5 index
  */
-int PMS5003::getPm25Ae(void) { return pmsData.PM_AE_UG_2_5; }
+int PMS5003::getPm25Ae(void) { return pms.getPM2_5(); }
 
 /**
  * @brief Read PM10.0 must call this function after @ref readData success
  *
  * @return int PM10.0 index
  */
-int PMS5003::getPm10Ae(void) { return pmsData.PM_AE_UG_10_0; }
+int PMS5003::getPm10Ae(void) { return pms.getPM10(); }
 
 /**
- * @brief Read PM3.0 must call this function after @ref readData success
+ * @brief Read PM0.3 must call this function after @ref readData success
  *
- * @return int PM3.0 index
+ * @return int PM0.3 index
  */
-int PMS5003::getPm03ParticleCount(void) { return pmsData.PM_RAW_0_3; }
+int PMS5003::getPm03ParticleCount(void) { return pms.getCount0_3(); }
 
 /**
  * @brief Convert PM2.5 to US AQI
@@ -132,7 +116,7 @@ int PMS5003::getPm03ParticleCount(void) { return pmsData.PM_RAW_0_3; }
  * @param pm25 PM2.5 index
  * @return int PM2.5 US AQI
  */
-int PMS5003::convertPm25ToUsAqi(int pm25) { return pm25ToAQI(pm25); }
+int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 
 /**
  * @brief Check device initialized or not
@@ -163,3 +147,7 @@ void PMS5003::end(void) {
 #endif
   AgLog("De-initialize");
 }
+
+void PMS5003::handle(void) { pms.handle(); }
+
+bool PMS5003::isFailed(void) { return pms.isFailed(); }

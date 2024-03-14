@@ -845,6 +845,11 @@ void loop() {
 
   /** factory reset handle */
   factoryConfigReset();
+
+  /** Read PMS on loop */
+  if (hasSensorPMS) {
+    ag.pms5003.handle();
+  }
 }
 
 static void setTestColor(char color) {
@@ -2240,7 +2245,7 @@ static void tvocUpdate(void) {
  *
  */
 static void pmUpdate(void) {
-  if (ag.pms5003.readData()) {
+  if (ag.pms5003.isFailed() == false) {
     pm01 = ag.pms5003.getPm01Ae();
     pm25 = ag.pms5003.getPm25Ae();
     pm10 = ag.pms5003.getPm10Ae();

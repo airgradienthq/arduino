@@ -57,7 +57,7 @@ enum {
                                          phone */
   APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
                                         clicked, connection to WiFI network is
-                                        attempted*/
+                                          attempted*/
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
@@ -802,6 +802,13 @@ void loop() {
   updateWiFiConnect();
 
   factoryConfigReset();
+
+  if (hasSensorPMS1) {
+    ag.pms5003t_1.handle();
+  }
+  if (hasSensorPMS2) {
+    ag.pms5003t_2.handle();
+  }
 }
 
 void sendPing() {
@@ -1101,7 +1108,7 @@ static void tvocUpdate(void) {
 static void pmUpdate(void) {
   bool pmsResult_1 = false;
   bool pmsResult_2 = false;
-  if (hasSensorPMS1 && ag.pms5003t_1.readData()) {
+  if (hasSensorPMS1 && (ag.pms5003t_1.isFailed() == false)) {
     pm01_1 = ag.pms5003t_1.getPm01Ae();
     pm25_1 = ag.pms5003t_1.getPm25Ae();
     pm10_1 = ag.pms5003t_1.getPm10Ae();
@@ -1127,7 +1134,7 @@ static void pmUpdate(void) {
     hum_1 = -1;
   }
 
-  if (hasSensorPMS2 && ag.pms5003t_2.readData()) {
+  if (hasSensorPMS2 && (ag.pms5003t_2.isFailed() == false)) {
     pm01_2 = ag.pms5003t_2.getPm01Ae();
     pm25_2 = ag.pms5003t_2.getPm25Ae();
     pm10_2 = ag.pms5003t_2.getPm10Ae();

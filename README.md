@@ -35,7 +35,6 @@ If you have any questions or problems, check out [our forum](https://forum.airgr
 - [Sensirion Core](https://github.com/Sensirion/arduino-core/)
 - [Sensirion I2C SGP41](https://github.com/Sensirion/arduino-i2c-sgp41)
 - [Sensirion I2C SHT](https://github.com/Sensirion/arduino-sht)
-- [PMS](https://github.com/fu-hsi/pms)
 
 ## License
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
