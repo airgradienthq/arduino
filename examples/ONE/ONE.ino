@@ -233,10 +233,12 @@ public:
     }
 
     /** Get "co2CalibrationRequested" */
-    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-      co2Calib = root["co2CalibrationRequested"];
-    } else {
-      co2Calib = false;
+    if (!co2Calib) { // Already requested
+      if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
+        co2Calib = root["co2CalibrationRequested"];
+      } else {
+        co2Calib = false;
+      }
     }
 
     /** Get "ledBarMode" */
@@ -453,10 +455,12 @@ public:
    */
   String getCountry(void) { return country; }
 
+  void triggerCo2Calibration(void) { co2Calib = true; }
+
 private:
   bool configFailed;        /** Flag indicate get server configuration failed */
   bool serverFailed;        /** Flag indicate post data to server failed */
-  bool co2Calib;            /** Is co2Ppmcalibration requset */
+  bool co2Calib;            /** Is co2Ppmcalibration requsted */
   bool ledBarTestRequested; /** */
   int co2AbcCalib = -1;     /** update auto calibration number of day */
   String country;           /***/
@@ -937,6 +941,12 @@ static void co2Update(void) {
 
 static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
 
+void webServerTriggerCalibration(void) {
+  Serial.println("Co2 calibration triggered.");
+  agServer.triggerCo2Calibration();
+  webServer.send(200, "application/json", "");
+}
+
 void webServerMeasureCurrentGet(void) {
   webServer.send(200, "application/json", getServerSyncData(true));
 }
@@ -1099,6 +1109,7 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   // Make it possible to query this device from Prometheus/OpenMetrics.
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
+  webServer.on("/co2/calibration", HTTP_POST, webServerTriggerCalibration);
   webServer.begin();
   MDNS.addService("_airgradient", "_tcp", 80);
   MDNS.addServiceTxt("_airgradient", "_tcp", "model", mdnsModelName);
