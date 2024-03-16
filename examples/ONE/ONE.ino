@@ -201,104 +201,11 @@ public:
     client.end();
     Serial.println("Get server config: " + respContent);
 
-    /** Parse JSON */
-    JSONVar root = JSON.parse(respContent);
-    if (JSON.typeof(root) == "undefined") {
-      /** JSON invalid */
-      return false;
-    }
-
-    /** Get "country" */
-    bool inF = false;
-    if (JSON.typeof_(root["country"]) == "string") {
-      String _country = root["country"];
-      country = _country;
-
-      if (country == "US") {
-        inF = true;
-      } else {
-        inF = false;
-      }
-    }
-
-    /** Get "pmsStandard" */
-    bool inUSAQI = false;
-    if (JSON.typeof_(root["pmStandard"]) == "string") {
-      String standard = root["pmStandard"];
-      if (standard == "ugm3") {
-        inUSAQI = false;
-      } else {
-        inUSAQI = true;
-      }
-    }
-
-    /** Get "co2CalibrationRequested" */
-    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-      co2Calib = root["co2CalibrationRequested"];
-    } else {
-      co2Calib = false;
-    }
-
-    /** Get "ledBarMode" */
-    uint8_t ledBarMode = UseLedBarOff;
-    if (JSON.typeof_(root["ledBarMode"]) == "string") {
-      String mode = root["ledBarMode"];
-      ledBarMode = parseLedBarMode(mode);
-    }
-
-    /** Get model */
-    bool _saveConfig = false;
-    if (JSON.typeof_(root["model"]) == "string") {
-      String model = root["model"];
-      if (model.length()) {
-        int len = model.length() < sizeof(config.models)
-                      ? model.length()
-                      : sizeof(config.models);
-        if (model != String(config.models)) {
-          memset(config.models, 0, sizeof(config.models));
-          memcpy(config.models, model.c_str(), len);
-          _saveConfig = true;
-        }
-      }
-    }
-
-    /** Get "mqttBrokerUrl" */
-    if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
-      String mqtt = root["mqttBrokerUrl"];
-      if (mqtt.length()) {
-        int len = mqtt.length() < sizeof(config.mqttBrokers)
-                      ? mqtt.length()
-                      : sizeof(config.mqttBrokers);
-        if (mqtt != String(config.mqttBrokers)) {
-          memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-          memcpy(config.mqttBrokers, mqtt.c_str(), len);
-          _saveConfig = true;
-        }
-      }
-    }
-
-    /** Get 'abcDays' */
-    if (JSON.typeof_(root["abcDays"]) == "number") {
-      co2AbcCalib = root["abcDays"];
-    } else {
-      co2AbcCalib = -1;
-    }
-
-    /** Get "ledBarTestRequested" */
-    if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
-      ledBarTestRequested = root["ledBarTestRequested"];
-    } else {
-      ledBarTestRequested = false;
-    }
+    bool shouldSaveConfig = parseConfiguration(respContent);
 
     /** Show configuration */
     showServerConfig();
-    if (_saveConfig || (inF != config.inF) || (inUSAQI != config.inUSAQI) ||
-        (ledBarMode != config.useRGBLedBar)) {
-      config.inF = inF;
-      config.inUSAQI = inUSAQI;
-      config.useRGBLedBar = ledBarMode;
-
+    if (shouldSaveConfig) {
       saveConfig();
     }
 
@@ -432,6 +339,130 @@ public:
   }
 
   /**
+   * @brief Returns the device configuration as Json
+   */
+  String getDeviceConfigurationJson(void) {
+    JSONVar root;
+    root["tempFormat"] = config.inF ? "f" : "c";
+    root["pmStandard"] = config.inUSAQI ? "usaqi" : "ugm3";
+    root["ledBarMode"] = getLedBarModeName();
+    root["model"] = config.models;
+    root["mqttBrokers"] = config.mqttBrokers;
+    root["abcDays"] = co2AbcCalib;
+    root["ledBarTestRequested"] = ledBarTestRequested ? "true" : "false";
+    root["co2CalibrationRequested"] = co2Calib ? "true" : "false";
+    return JSON.stringify(root);
+  }
+
+  /**
+   * @brief Parses the configuration Json
+   *
+   * @return String true if the configuration has been updated
+   */
+  bool parseConfiguration(String jsonConfig) {
+    /** Parse JSON */
+    JSONVar root = JSON.parse(jsonConfig);
+    if (JSON.typeof(root) == "undefined") {
+      /** JSON invalid */
+      return false;
+    }
+
+    /** Get "country" */
+    bool inF = false;
+    if (JSON.typeof_(root["country"]) == "string") {
+      String _country = root["country"];
+      country = _country;
+
+      if (country == "US") {
+        inF = true;
+      } else {
+        inF = false;
+      }
+    }
+
+    /** Get "pmsStandard" */
+    bool inUSAQI = false;
+    if (JSON.typeof_(root["pmStandard"]) == "string") {
+      String standard = root["pmStandard"];
+      if (standard == "ugm3") {
+        inUSAQI = false;
+      } else {
+        inUSAQI = true;
+      }
+    }
+
+    /** Get "co2CalibrationRequested" */
+    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
+      co2Calib = root["co2CalibrationRequested"];
+    } else {
+      co2Calib = false;
+    }
+
+    /** Get "ledBarMode" */
+    uint8_t ledBarMode = UseLedBarOff;
+    if (JSON.typeof_(root["ledBarMode"]) == "string") {
+      String mode = root["ledBarMode"];
+      ledBarMode = parseLedBarMode(mode);
+    }
+
+    /** Get model */
+    bool _saveConfig = false;
+    if (JSON.typeof_(root["model"]) == "string") {
+      String model = root["model"];
+      if (model.length()) {
+        int len = model.length() < sizeof(config.models)
+                      ? model.length()
+                      : sizeof(config.models);
+        if (model != String(config.models)) {
+          memset(config.models, 0, sizeof(config.models));
+          memcpy(config.models, model.c_str(), len);
+          _saveConfig = true;
+        }
+      }
+    }
+
+    /** Get "mqttBrokerUrl" */
+    if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
+      String mqtt = root["mqttBrokerUrl"];
+      if (mqtt.length()) {
+        int len = mqtt.length() < sizeof(config.mqttBrokers)
+                      ? mqtt.length()
+                      : sizeof(config.mqttBrokers);
+        if (mqtt != String(config.mqttBrokers)) {
+          memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
+          memcpy(config.mqttBrokers, mqtt.c_str(), len);
+          _saveConfig = true;
+        }
+      }
+    }
+
+    /** Get 'abcDays' */
+    if (JSON.typeof_(root["abcDays"]) == "number") {
+      co2AbcCalib = root["abcDays"];
+    } else {
+      co2AbcCalib = -1;
+    }
+
+    /** Get "ledBarTestRequested" */
+    if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
+      ledBarTestRequested = root["ledBarTestRequested"];
+    } else {
+      ledBarTestRequested = false;
+    }
+
+    if (_saveConfig || (inF != config.inF) || (inUSAQI != config.inUSAQI) ||
+      (ledBarMode != config.useRGBLedBar)) {
+      config.inF = inF;
+      config.inUSAQI = inUSAQI;
+      config.useRGBLedBar = ledBarMode;
+
+      _saveConfig = true;
+    }
+
+    return _saveConfig;
+  }
+
+  /**
    * @brief Get server config led bar mode
    *
    * @return UseLedBar
@@ -462,6 +493,18 @@ public:
    * @return String
    */
   String getCountry(void) { return country; }
+
+  void saveConfig(void) {
+    config.checksum = 0;
+    uint8_t *data = (uint8_t *)&config;
+    for (int i = 0; i < sizeof(config) - 4; i++) {
+      config.checksum += data[i];
+    }
+
+    EEPROM.writeBytes(0, &config, sizeof(config));
+    EEPROM.commit();
+    Serial.println("Save config");
+  }
 
 private:
   bool configFailed;        /** Flag indicate get server configuration failed */
@@ -513,18 +556,6 @@ private:
     }
 
     showServerConfig();
-  }
-
-  void saveConfig(void) {
-    config.checksum = 0;
-    uint8_t *data = (uint8_t *)&config;
-    for (int i = 0; i < sizeof(config) - 4; i++) {
-      config.checksum += data[i];
-    }
-
-    EEPROM.writeBytes(0, &config, sizeof(config));
-    EEPROM.commit();
-    Serial.println("Save config");
   }
 
   UseLedBar parseLedBarMode(String mode) {
@@ -981,6 +1012,14 @@ void webServerMeasureCurrentGet(void) {
   webServer.send(200, "application/json", getServerSyncData(true));
 }
 
+void webServerConfigurationGet(void) {
+  webServer.send(200, "application/json", agServer.getDeviceConfigurationJson());
+}
+
+void webServerConfigurationPatch(void) {
+  webServer.send(200, "application/json", updateDeviceConfigurationJson());
+}
+
 /**
  * Sends metrics in Prometheus/OpenMetrics format to the currently connected
  * webServer client.
@@ -1139,6 +1178,8 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   // Make it possible to query this device from Prometheus/OpenMetrics.
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
+  webServer.on("/configuration", HTTP_GET, webServerConfigurationGet);
+  webServer.on("/configuration", HTTP_PATCH, webServerConfigurationPatch);
   webServer.begin();
   MDNS.addService("_airgradient", "_tcp", 80);
   MDNS.addServiceTxt("_airgradient", "_tcp", "model", mdnsModelName);
@@ -1151,6 +1192,22 @@ static void webServerInit(void) {
     Serial.println("Create task handle webserver failed");
   }
   Serial.printf("Webserver init: %s.local\r\n", host.c_str());
+}
+
+static String updateDeviceConfigurationJson(void) {
+  if (webServer.hasArg("plain") == false) {
+    return String("Error: No Content");
+  }
+
+  String respContent = webServer.arg("plain");
+  Serial.printf("Update device configuration requested: %s\r\n", respContent);
+
+  bool saveConfigRequested = agServer.parseConfiguration(respContent);
+  if (saveConfigRequested) {
+    agServer.saveConfig();
+  }
+
+  return agServer.getDeviceConfigurationJson();
 }
 
 static String getServerSyncData(bool localServer) {
