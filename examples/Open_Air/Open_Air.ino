@@ -723,6 +723,7 @@ static void webServerInit(void);
 static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
 static void factoryConfigReset(void);
+static void wdgFeedUpdate(void);
 
 bool hasSensorS8 = true;
 bool hasSensorPMS1 = true;
@@ -731,12 +732,15 @@ bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "";
 int getCO2FailCount = 0;
+bool offlineMode = false;
+
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
+AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -775,6 +779,8 @@ void setup() {
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     }
+  } else {
+    offlineMode = true;
   }
 
   ledSmHandler(APP_SM_NORMAL);
@@ -808,6 +814,10 @@ void loop() {
   }
   if (hasSensorPMS2) {
     ag.pms5003t_2.handle();
+  }
+
+  if (offlineMode) {
+    wdgFeedSchedule.run();
   }
 }
 
@@ -1817,6 +1827,13 @@ static void factoryConfigReset(void) {
     }
     factoryBtnPressTime = 0;
   }
+}
+
+static void wdgFeedUpdate(void) {
+  ag.watchdog.reset();
+  Serial.println();
+  Serial.println("External watchdog feed");
+  Serial.println();
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,

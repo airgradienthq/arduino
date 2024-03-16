@@ -705,6 +705,7 @@ static void webServerInit(void);
 static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
 static void factoryConfigReset(void);
+static void wdgFeedUpdate(void);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -717,6 +718,8 @@ String mdnsModelName = "I-9PSL";
 int getCO2FailCount = 0;
 uint32_t addToDashboardTime;
 bool isAddToDashboard = true;
+bool offlineMode = false;
+
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
@@ -725,6 +728,7 @@ AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
+AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -807,6 +811,8 @@ void setup() {
     } else {
       ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
     }
+  } else {
+    offlineMode = true;
   }
 
   /** Show display Warning up */
@@ -838,6 +844,10 @@ void loop() {
 
   if (hasSensorSGP) {
     tvocSchedule.run();
+  }
+
+  if (offlineMode) {
+    wdgFeedSchedule.run();
   }
 
   /** Check for handle WiFi reconnect */
@@ -1251,6 +1261,13 @@ static void factoryConfigReset(void) {
     }
     factoryBtnPressTime = 0;
   }
+}
+
+static void wdgFeedUpdate(void) {
+  ag.watchdog.reset();
+  Serial.println();
+  Serial.println("External watchdog feed");
+  Serial.println();
 }
 
 static void sendPing() {
