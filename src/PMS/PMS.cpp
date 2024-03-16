@@ -1,6 +1,13 @@
 #include "PMS.h"
 #include "../Main/BoardDef.h"
 
+/**
+ * @brief Init and check that sensor has connected
+ * 
+ * @param stream UART stream
+ * @return true Sucecss
+ * @return false Failure
+ */
 bool PMSBase::begin(Stream *stream) {
   this->stream = stream;
 
@@ -26,7 +33,8 @@ bool PMSBase::begin(Stream *stream) {
 }
 
 /**
- * @brief Read PMS data as 1.5sec period
+ * @brief Check and read sensor data then update variable.
+ * Check result from method @isFailed before get value
  */
 void PMSBase::handle() {
   uint32_t ms;
@@ -37,8 +45,12 @@ void PMSBase::handle() {
     }
   } else {
     ms = (uint32_t)(millis() - lastRead);
-    /** Ignore read data if two time call less then 1sec. In active mode the
-     * data sync perido is 1sec. Two times read must be large or equal 2.5sec */
+    /**
+     * The PMS in Active mode sends an update data every 1 second. If we read
+     * exactly every 1 sec then we may or may not get an update (depending on
+     * timing tolerances). Hence we read every 2.5 seconds and expect 2 ..3
+     * updates,
+     */
     if (ms < 2500) {
       return;
     }
@@ -109,7 +121,7 @@ void PMSBase::handle() {
 
     // Reduce core panic: delay 1 ms each 32bytes data
     bcount++;
-    if((bcount % 32) == 0){
+    if ((bcount % 32) == 0) {
       delay(1);
     }
   }

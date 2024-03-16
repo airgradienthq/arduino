@@ -148,6 +148,16 @@ void PMS5003::end(void) {
   AgLog("De-initialize");
 }
 
+/**
+ * @brief Check and read PMS sensor data. This method should be callack from
+ * loop process to continoue check sensor data if it's available
+ */
 void PMS5003::handle(void) { pms.handle(); }
 
+/**
+ * @brief Get sensor status
+ * 
+ * @return true No problem
+ * @return false Communication timeout or sensor has removed
+ */
 bool PMS5003::isFailed(void) { return pms.isFailed(); }

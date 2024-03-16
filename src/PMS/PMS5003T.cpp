@@ -198,18 +198,25 @@ void PMS5003T::end(void) {
 }
 
 /**
- * @brief Read PMS on loop
- *
+ * @brief Check and read PMS sensor data. This method should be callack from
+ * loop process to continoue check sensor data if it's available
  */
 void PMS5003T::handle(void) { pms.handle(); }
 
 /**
- * @brief Get PMS status
- * @return true Failed
- * @return false No Problem
+ * @brief Get sensor status
+ *
+ * @return true No problem
+ * @return false Communication timeout or sensor has removed
  */
 bool PMS5003T::isFailed(void) { return pms.isFailed(); }
 
+/**
+ * @brief Correct the PMS5003T relactive humidity
+ *
+ * @param inHum Input humidity
+ * @return float Corrected humidity
+ */
 float PMS5003T::correctionRelativeHumidity(float inHum) {
   float hum = inHum * 1.259 + 7.34;
   if (hum > 100.0f) {
