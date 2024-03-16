@@ -19,7 +19,8 @@ public:
 #endif
   void end(void);
 
-  bool readData(void);
+  void handle(void);
+  bool isFailed(void);
   int getPm01Ae(void);
   int getPm25Ae(void);
   int getPm10Ae(void);
@@ -40,10 +41,8 @@ private:
 #else
   HardwareSerial *_serial;
 #endif
-
+  PMSBase pms;
   bool begin(void);
-  PMS pms;
-  PMS::DATA pmsData;
   bool isBegin(void);
   float correctionTemperature(float inTemp);
   float correctionRelativeHumidity(float inHum);

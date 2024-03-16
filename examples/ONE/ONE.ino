@@ -528,19 +528,19 @@ private:
   }
 
   UseLedBar parseLedBarMode(String mode) {
-     UseLedBar ledBarMode = UseLedBarOff;
-     if (mode == "co2") {
-       ledBarMode = UseLedBarCO2;
-     } else if (mode == "pm") {
-       ledBarMode = UseLedBarPM;
-     } else if (mode == "off") {
-       ledBarMode = UseLedBarOff;
-     } else {
-       ledBarMode = UseLedBarOff;
-     }
+    UseLedBar ledBarMode = UseLedBarOff;
+    if (mode == "co2") {
+      ledBarMode = UseLedBarCO2;
+    } else if (mode == "pm") {
+      ledBarMode = UseLedBarPM;
+    } else if (mode == "off") {
+      ledBarMode = UseLedBarOff;
+    } else {
+      ledBarMode = UseLedBarOff;
+    }
 
-     return ledBarMode;
- }
+    return ledBarMode;
+  }
 };
 AgServer agServer;
 
@@ -730,6 +730,7 @@ static void webServerInit(void);
 static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
 static void factoryConfigReset(void);
+static void wdgFeedUpdate(void);
 
 /** Init schedule */
 bool hasSensorS8 = true;
@@ -742,6 +743,8 @@ String mdnsModelName = "I-9PSL";
 int getCO2FailCount = 0;
 uint32_t addToDashboardTime;
 bool isAddToDashboard = true;
+bool offlineMode = false;
+
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
@@ -750,6 +753,7 @@ AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
+AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -832,6 +836,8 @@ void setup() {
     } else {
       ag.ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
     }
+  } else {
+    offlineMode = true;
   }
 
   /** Show display Warning up */
@@ -865,11 +871,20 @@ void loop() {
     tvocSchedule.run();
   }
 
+  if (offlineMode) {
+    wdgFeedSchedule.run();
+  }
+
   /** Check for handle WiFi reconnect */
   updateWiFiConnect();
 
   /** factory reset handle */
   factoryConfigReset();
+
+  /** Read PMS on loop */
+  if (hasSensorPMS) {
+    ag.pms5003.handle();
+  }
 }
 
 static void setTestColor(char color) {
@@ -1288,6 +1303,13 @@ static void factoryConfigReset(void) {
     }
     factoryBtnPressTime = 0;
   }
+}
+
+static void wdgFeedUpdate(void) {
+  ag.watchdog.reset();
+  Serial.println();
+  Serial.println("External watchdog feed");
+  Serial.println();
 }
 
 static void sendPing() {
@@ -2282,7 +2304,7 @@ static void tvocUpdate(void) {
  *
  */
 static void pmUpdate(void) {
-  if (ag.pms5003.readData()) {
+  if (ag.pms5003.isFailed() == false) {
     pm01 = ag.pms5003.getPm01Ae();
     pm25 = ag.pms5003.getPm25Ae();
     pm10 = ag.pms5003.getPm10Ae();

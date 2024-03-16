@@ -1,6 +1,5 @@
 #include "PMS5003T.h"
 #include "Arduino.h"
-#include "PMSUtils.h"
 
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
@@ -109,47 +108,32 @@ bool PMS5003T::begin(void) {
 }
 
 /**
- * @brief Read all package data then call to @ref getPMxxx to get the target
- * data
- *
- * @return true Success
- * @return false Failure
- */
-bool PMS5003T::readData(void) {
-  if (this->isBegin() == false) {
-    return false;
-  }
-
-  return pms.readUntil(pmsData);
-}
-
-/**
  * @brief Read PM1.0 must call this function after @ref readData success
  *
  * @return int PM1.0 index
  */
-int PMS5003T::getPm01Ae(void) { return pmsData.PM_AE_UG_1_0; }
+int PMS5003T::getPm01Ae(void) { return pms.getPM0_1(); }
 
 /**
  * @brief Read PM2.5 must call this function after @ref readData success
  *
  * @return int PM2.5 index
  */
-int PMS5003T::getPm25Ae(void) { return pmsData.PM_AE_UG_2_5; }
+int PMS5003T::getPm25Ae(void) { return pms.getPM2_5(); }
 
 /**
  * @brief Read PM10.0 must call this function after @ref readData success
  *
  * @return int PM10.0 index
  */
-int PMS5003T::getPm10Ae(void) { return pmsData.PM_AE_UG_10_0; }
+int PMS5003T::getPm10Ae(void) { return pms.getPM10(); }
 
 /**
- * @brief Read PM3.0 must call this function after @ref readData success
+ * @brief Read PM 0.3 Count must call this function after @ref readData success
  *
- * @return int PM3.0 index
+ * @return int PM 0.3 Count index
  */
-int PMS5003T::getPm03ParticleCount(void) { return pmsData.PM_RAW_0_3; }
+int PMS5003T::getPm03ParticleCount(void) { return pms.getCount0_3(); }
 
 /**
  * @brief Convert PM2.5 to US AQI
@@ -157,7 +141,7 @@ int PMS5003T::getPm03ParticleCount(void) { return pmsData.PM_RAW_0_3; }
  * @param pm25 PM2.5 index
  * @return int PM2.5 US AQI
  */
-int PMS5003T::convertPm25ToUsAqi(int pm25) { return pm25ToAQI(pm25); }
+int PMS5003T::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 
 /**
  * @brief Get temperature, Must call this method after @ref readData() success
@@ -165,7 +149,7 @@ int PMS5003T::convertPm25ToUsAqi(int pm25) { return pm25ToAQI(pm25); }
  * @return float Degree Celcius
  */
 float PMS5003T::getTemperature(void) {
-  float temp = pmsData.AMB_TMP;
+  float temp = pms.getTemp();
   return correctionTemperature(temp / 10.0f);
 }
 
@@ -175,7 +159,7 @@ float PMS5003T::getTemperature(void) {
  * @return float Percent (%)
  */
 float PMS5003T::getRelativeHumidity(void) {
-  float hum = pmsData.AMB_HUM;
+  float hum = pms.getHum();
   return correctionRelativeHumidity(hum / 10.0f);
 }
 
@@ -213,6 +197,30 @@ void PMS5003T::end(void) {
   AgLog("De-initialize");
 }
 
+/**
+ * @brief Check and read PMS sensor data. This method should be callack from
+ * loop process to continoue check sensor data if it's available
+ */
+void PMS5003T::handle(void) { pms.handle(); }
+
+/**
+ * @brief Get sensor status
+ *
+ * @return true No problem
+ * @return false Communication timeout or sensor has removed
+ */
+bool PMS5003T::isFailed(void) { return pms.isFailed(); }
+
+/**
+ * @brief Correct the PMS5003T relactive humidity
+ *
+ * @param inHum Input humidity
+ * @return float Corrected humidity
+ */
 float PMS5003T::correctionRelativeHumidity(float inHum) {
-  return inHum * 1.259 + 7.34;
+  float hum = inHum * 1.259 + 7.34;
+  if (hum > 100.0f) {
+    hum = 100.0f;
+  }
+  return hum;
 }

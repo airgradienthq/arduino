@@ -17,8 +17,8 @@ public:
   bool begin(HardwareSerial &serial);
 #endif
   void end(void);
-
-  bool readData(void);
+  void handle(void);
+  bool isFailed(void);
   int getPm01Ae(void);
   int getPm25Ae(void);
   int getPm10Ae(void);
@@ -28,7 +28,7 @@ public:
 private:
   bool _isBegin = false;
   BoardType _boardDef;
-  PMS pms;
+  PMSBase pms;
   const BoardDef *bsp;
 #if defined(ESP8266)
   Stream *_debugStream;
@@ -36,9 +36,6 @@ private:
 #else
   HardwareSerial *_serial;
 #endif
-  // Conplug_PMS5003T *pms;
-  PMS::DATA pmsData;
-
   bool begin(void);
   bool isBegin(void);
 };

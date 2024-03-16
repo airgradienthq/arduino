@@ -57,7 +57,7 @@ enum {
                                          phone */
   APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
                                         clicked, connection to WiFI network is
-                                        attempted*/
+                                          attempted*/
   APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
   APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
                                          reach the server is performed */
@@ -244,15 +244,7 @@ public:
     uint8_t ledBarMode = UseLedBarOff;
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
-      if (mode == "co2") {
-        ledBarMode = UseLedBarCO2;
-      } else if (mode == "pm") {
-        ledBarMode = UseLedBarPM;
-      } else if (mode == "off") {
-        ledBarMode = UseLedBarOff;
-      } else {
-        ledBarMode = UseLedBarOff;
-      }
+      ledBarMode = parseLedBarMode(mode);
     }
 
     /** Get model */
@@ -448,6 +440,24 @@ public:
   UseLedBar getLedBarMode(void) { return (UseLedBar)config.useRGBLedBar; }
 
   /**
+   * @brief Return the name of the led bare mode.
+   *
+   * @return String
+   */
+  String getLedBarModeName(void) {
+    UseLedBar ledBarMode = getLedBarMode();
+    if (ledBarMode == UseLedBarOff) {
+      return String("off");
+    } else if (ledBarMode == UseLedBarPM) {
+      return String("pm");
+    } else if (ledBarMode == UseLedBarCO2) {
+      return String("co2");
+    } else {
+      return String("off");
+    }
+  }
+
+  /**
    * @brief Get the Country
    *
    * @return String
@@ -515,6 +525,20 @@ private:
     EEPROM.writeBytes(0, &config, sizeof(config));
     EEPROM.commit();
     Serial.println("Save config");
+  }
+
+  UseLedBar parseLedBarMode(String mode) {
+    UseLedBar ledBarMode = UseLedBarOff;
+    if (mode == "co2") {
+      ledBarMode = UseLedBarCO2;
+    } else if (mode == "pm") {
+      ledBarMode = UseLedBarPM;
+    } else if (mode == "off") {
+      ledBarMode = UseLedBarOff;
+    } else {
+      ledBarMode = UseLedBarOff;
+    }
+    return ledBarMode;
   }
 };
 AgServer agServer;
@@ -723,6 +747,7 @@ static void webServerInit(void);
 static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
 static void factoryConfigReset(void);
+static void wdgFeedUpdate(void);
 
 bool hasSensorS8 = true;
 bool hasSensorPMS1 = true;
@@ -731,12 +756,15 @@ bool hasSensorSGP = true;
 uint32_t factoryBtnPressTime = 0;
 String mdnsModelName = "";
 int getCO2FailCount = 0;
+bool offlineMode = false;
+
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
+AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
   EEPROM.begin(512);
@@ -775,6 +803,8 @@ void setup() {
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     }
+  } else {
+    offlineMode = true;
   }
 
   ledSmHandler(APP_SM_NORMAL);
@@ -802,6 +832,17 @@ void loop() {
   updateWiFiConnect();
 
   factoryConfigReset();
+
+  if (hasSensorPMS1) {
+    ag.pms5003t_1.handle();
+  }
+  if (hasSensorPMS2) {
+    ag.pms5003t_2.handle();
+  }
+
+  if (offlineMode) {
+    wdgFeedSchedule.run();
+  }
 }
 
 void sendPing() {
@@ -1101,7 +1142,7 @@ static void tvocUpdate(void) {
 static void pmUpdate(void) {
   bool pmsResult_1 = false;
   bool pmsResult_2 = false;
-  if (hasSensorPMS1 && ag.pms5003t_1.readData()) {
+  if (hasSensorPMS1 && (ag.pms5003t_1.isFailed() == false)) {
     pm01_1 = ag.pms5003t_1.getPm01Ae();
     pm25_1 = ag.pms5003t_1.getPm25Ae();
     pm10_1 = ag.pms5003t_1.getPm10Ae();
@@ -1127,7 +1168,7 @@ static void pmUpdate(void) {
     hum_1 = -1;
   }
 
-  if (hasSensorPMS2 && ag.pms5003t_2.readData()) {
+  if (hasSensorPMS2 && (ag.pms5003t_2.isFailed() == false)) {
     pm01_2 = ag.pms5003t_2.getPm01Ae();
     pm25_2 = ag.pms5003t_2.getPm25Ae();
     pm10_2 = ag.pms5003t_2.getPm10Ae();
@@ -1647,7 +1688,11 @@ static String getServerSyncData(bool localServer) {
         root["pm10"] = pm10_1;
       }
       if (pm03PCount_1 >= 0) {
-        root["pm003_count"] = pm03PCount_1;
+        if (localServer) {
+          root["pm003Count"] = pm03PCount_1;
+        } else {
+          root["pm003_count"] = pm03PCount_1;
+        }
       }
       if (temp_1 > -1001) {
         root["atmp"] = ag.round2(temp_1);
@@ -1666,7 +1711,11 @@ static String getServerSyncData(bool localServer) {
         root["pm10"] = pm10_2;
       }
       if (pm03PCount_2 >= 0) {
-        root["pm003_count"] = pm03PCount_2;
+        if (localServer) {
+          root["pm003Count"] = pm03PCount_2;
+        } else {
+          root["pm003_count"] = pm03PCount_2;
+        }
       }
       if (temp_2 > -1001) {
         root["atmp"] = ag.round2(temp_2);
@@ -1680,13 +1729,21 @@ static String getServerSyncData(bool localServer) {
   if ((fw_mode == FW_MODE_PPT) || (fw_mode == FW_MODE_PST)) {
     if (hasSensorSGP) {
       if (tvocIndex >= 0) {
-        root["tvoc_index"] = tvocIndex;
+        if (localServer) {
+          root["tvocIndex"] = tvocIndex;
+        } else {
+          root["tvoc_index"] = tvocIndex;
+        }
       }
       if (tvocRawIndex >= 0) {
         root["tvoc_raw"] = tvocRawIndex;
       }
       if (noxIndex >= 0) {
-        root["nox_index"] = noxIndex;
+        if (localServer) {
+          root["noxIndex"] = noxIndex;
+        } else {
+          root["nox_index"] = noxIndex;
+        }
       }
       if (noxRawIndex >= 0) {
         root["nox_raw"] = noxRawIndex;
@@ -1699,7 +1756,11 @@ static String getServerSyncData(bool localServer) {
       root["pm01"] = ag.round2((pm01_1 + pm01_2) / 2.0);
       root["pm02"] = ag.round2((pm25_1 + pm25_2) / 2.0);
       root["pm10"] = ag.round2((pm10_1 + pm10_2) / 2.0);
-      root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+      if (localServer) {
+        root["pm003Count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+      } else {
+        root["pm003_count"] = ag.round2((pm03PCount_1 + pm03PCount_2) / 2.0);
+      }
       root["atmp"] = ag.round2((temp_1 + temp_2) / 2.0);
       root["rhum"] = ag.round2((hum_1 + hum_2) / 2.0);
     }
@@ -1707,7 +1768,11 @@ static String getServerSyncData(bool localServer) {
       root["channels"]["1"]["pm01"] = pm01_1;
       root["channels"]["1"]["pm02"] = pm25_1;
       root["channels"]["1"]["pm10"] = pm10_1;
-      root["channels"]["1"]["pm003_count"] = pm03PCount_1;
+      if (localServer) {
+        root["channels"]["1"]["pm003Count"] = pm03PCount_1;
+      } else {
+        root["channels"]["1"]["pm003_count"] = pm03PCount_1;
+      }
       root["channels"]["1"]["atmp"] = ag.round2(temp_1);
       root["channels"]["1"]["rhum"] = hum_1;
     }
@@ -1715,10 +1780,19 @@ static String getServerSyncData(bool localServer) {
       root["channels"]["2"]["pm01"] = pm01_2;
       root["channels"]["2"]["pm02"] = pm25_2;
       root["channels"]["2"]["pm10"] = pm10_2;
-      root["channels"]["2"]["pm003_count"] = pm03PCount_2;
+      if (localServer) {
+        root["channels"]["2"]["pm003Count"] = pm03PCount_2;
+      } else {
+        root["channels"]["2"]["pm003_count"] = pm03PCount_2;
+      }
       root["channels"]["2"]["atmp"] = ag.round2(temp_2);
       root["channels"]["2"]["rhum"] = hum_2;
     }
+  }
+
+  if (localServer) {
+    root["ledMode"] = agServer.getLedBarModeName();
+    root["firmwareVersion"] = ag.getVersion();
   }
 
   return JSON.stringify(root);
@@ -1810,6 +1884,13 @@ static void factoryConfigReset(void) {
     }
     factoryBtnPressTime = 0;
   }
+}
+
+static void wdgFeedUpdate(void) {
+  ag.watchdog.reset();
+  Serial.println();
+  Serial.println("External watchdog feed");
+  Serial.println();
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,

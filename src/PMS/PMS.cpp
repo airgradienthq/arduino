@@ -1,164 +1,300 @@
 #include "PMS.h"
+#include "../Main/BoardDef.h"
 
-bool PMS::begin(Stream *stream) {
-  _stream = stream;
+/**
+ * @brief Init and check that sensor has connected
+ * 
+ * @param stream UART stream
+ * @return true Sucecss
+ * @return false Failure
+ */
+bool PMSBase::begin(Stream *stream) {
+  this->stream = stream;
 
-  DATA data;
-  if (readUntil(data, 5000)) {
-    return true;
+  failed = true;
+  lastRead = 0; // To read buffer on handle without wait after 1.5sec
+
+  this->stream->flush();
+
+  // Run and check sensor data for 4sec
+  while (1) {
+    handle();
+    if (failed == false) {
+      return true;
+    }
+
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - lastRead);
+    if (ms >= 4000) {
+      break;
+    }
   }
-
   return false;
 }
 
-// Standby mode. For low power consumption and prolong the life of the sensor.
-void PMS::sleep() {
-  uint8_t command[] = {0x42, 0x4D, 0xE4, 0x00, 0x00, 0x01, 0x73};
-  _stream->write(command, sizeof(command));
-}
-
-// Operating mode. Stable data should be got at least 30 seconds after the
-// sensor wakeup from the sleep mode because of the fan's performance.
-void PMS::wakeUp() {
-  uint8_t command[] = {0x42, 0x4D, 0xE4, 0x00, 0x01, 0x01, 0x74};
-  _stream->write(command, sizeof(command));
-}
-
-// Active mode. Default mode after power up. In this mode sensor would send
-// serial data to the host automatically.
-void PMS::activeMode() {
-  uint8_t command[] = {0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71};
-  _stream->write(command, sizeof(command));
-  _mode = MODE_ACTIVE;
-}
-
-// Passive mode. In this mode sensor would send serial data to the host only for
-// request.
-void PMS::passiveMode() {
-  uint8_t command[] = {0x42, 0x4D, 0xE1, 0x00, 0x00, 0x01, 0x70};
-  _stream->write(command, sizeof(command));
-  _mode = MODE_PASSIVE;
-}
-
-// Request read in Passive Mode.
-void PMS::requestRead() {
-  if (_mode == MODE_PASSIVE) {
-    uint8_t command[] = {0x42, 0x4D, 0xE2, 0x00, 0x00, 0x01, 0x71};
-    _stream->write(command, sizeof(command));
+/**
+ * @brief Check and read sensor data then update variable.
+ * Check result from method @isFailed before get value
+ */
+void PMSBase::handle() {
+  uint32_t ms;
+  if (lastRead == 0) {
+    lastRead = millis();
+    if (lastRead == 0) {
+      lastRead = 1;
+    }
+  } else {
+    ms = (uint32_t)(millis() - lastRead);
+    /**
+     * The PMS in Active mode sends an update data every 1 second. If we read
+     * exactly every 1 sec then we may or may not get an update (depending on
+     * timing tolerances). Hence we read every 2.5 seconds and expect 2 ..3
+     * updates,
+     */
+    if (ms < 2500) {
+      return;
+    }
   }
-}
+  bool result = false;
+  char buf[32];
+  int bufIndex;
+  int step = 0;
+  int len = 0;
+  int bcount = 0;
 
-// Non-blocking function for parse response.
-bool PMS::read(DATA &data) {
-  _data = &data;
-  loop();
-
-  return _status == STATUS_OK;
-}
-
-// Blocking function for parse response. Default timeout is 1s.
-bool PMS::readUntil(DATA &data, uint16_t timeout) {
-  _data = &data;
-  uint32_t start = millis();
-  do {
-    loop();
-    if (_status == STATUS_OK) {
+  while (stream->available()) {
+    char value = stream->read();
+    switch (step) {
+    case 0: {
+      if (value == 0x42) {
+        step = 1;
+        bufIndex = 0;
+        buf[bufIndex++] = value;
+      }
       break;
     }
-
-    /** Relax task to avoid watchdog reset */
-    delay(1);
-  } while (millis() - start < timeout);
-
-  return _status == STATUS_OK;
-}
-
-void PMS::loop() {
-  _status = STATUS_WAITING;
-  if (_stream->available()) {
-    uint8_t ch = _stream->read();
-
-    switch (_index) {
-    case 0:
-      if (ch != 0x42) {
-        return;
-      }
-      _calculatedChecksum = ch;
-      break;
-
-    case 1:
-      if (ch != 0x4D) {
-        _index = 0;
-        return;
-      }
-      _calculatedChecksum += ch;
-      break;
-
-    case 2:
-      _calculatedChecksum += ch;
-      _frameLen = ch << 8;
-      break;
-
-    case 3:
-      _frameLen |= ch;
-      // Unsupported sensor, different frame length, transmission error e.t.c.
-      if (_frameLen != 2 * 9 + 2 && _frameLen != 2 * 13 + 2) {
-        _index = 0;
-        return;
-      }
-      _calculatedChecksum += ch;
-      break;
-
-    default:
-      if (_index == _frameLen + 2) {
-        _checksum = ch << 8;
-      } else if (_index == _frameLen + 2 + 1) {
-        _checksum |= ch;
-
-        if (_calculatedChecksum == _checksum) {
-          _status = STATUS_OK;
-
-          // Standard Particles, CF=1.
-          _data->PM_SP_UG_1_0 = makeWord(_payload[0], _payload[1]);
-          _data->PM_SP_UG_2_5 = makeWord(_payload[2], _payload[3]);
-          _data->PM_SP_UG_10_0 = makeWord(_payload[4], _payload[5]);
-
-          // Atmospheric Environment.
-          _data->PM_AE_UG_1_0 = makeWord(_payload[6], _payload[7]);
-          _data->PM_AE_UG_2_5 = makeWord(_payload[8], _payload[9]);
-          _data->PM_AE_UG_10_0 = makeWord(_payload[10], _payload[11]);
-
-          // Total particles count per 100ml air
-          _data->PM_RAW_0_3 = makeWord(_payload[12], _payload[13]);
-          _data->PM_RAW_0_5 = makeWord(_payload[14], _payload[15]);
-          _data->PM_RAW_1_0 = makeWord(_payload[16], _payload[17]);
-          _data->PM_RAW_2_5 = makeWord(_payload[18], _payload[19]);
-          _data->PM_RAW_5_0 = makeWord(_payload[20], _payload[21]);
-          _data->PM_RAW_10_0 = makeWord(_payload[22], _payload[23]);
-
-          // Formaldehyde concentration (PMSxxxxST units only)
-          _data->AMB_HCHO = makeWord(_payload[24], _payload[25]) / 1000;
-
-          // Temperature & humidity (PMSxxxxST units only)
-          _data->AMB_TMP = makeWord(_payload[20], _payload[21]);
-          _data->AMB_HUM = makeWord(_payload[22], _payload[23]);
-        }
-
-        _index = 0;
-        return;
+    case 1: {
+      if (value == 0x4d) {
+        step = 2;
+        buf[bufIndex++] = value;
+        // Serial.println("Got 0x4d");
       } else {
-        _calculatedChecksum += ch;
-        uint8_t payloadIndex = _index - 4;
-
-        // Payload is common to all sensors (first 2x6 bytes).
-        if (payloadIndex < sizeof(_payload)) {
-          _payload[payloadIndex] = ch;
+        step = 0;
+      }
+      break;
+    }
+    case 2: {
+      buf[bufIndex++] = value;
+      if (bufIndex >= 4) {
+        len = toValue(&buf[2]);
+        if (len != 28) {
+          // Serial.printf("Got good bad len %d\r\n", len);
+          len += 4;
+          step = 3;
+        } else {
+          // Serial.println("Got good len");
+          step = 4;
         }
       }
-
+      break;
+    }
+    case 3: {
+      bufIndex++;
+      if (bufIndex >= len) {
+        step = 0;
+        // Serial.println("Bad lengh read all buffer");
+      }
+      break;
+    }
+    case 4: {
+      buf[bufIndex++] = value;
+      if (bufIndex >= 32) {
+        result |= validate(buf);
+        step = 0;
+        // Serial.println("Got data");
+      }
+      break;
+    }
+    default:
       break;
     }
 
-    _index++;
+    // Reduce core panic: delay 1 ms each 32bytes data
+    bcount++;
+    if ((bcount % 32) == 0) {
+      delay(1);
+    }
   }
+
+  if (result) {
+    lastRead = millis();
+    if (lastRead == 0) {
+      lastRead = 1;
+    }
+    failed = false;
+  } else {
+    if (ms > 5000) {
+      failed = true;
+    }
+  }
+}
+
+/**
+ * @brief Check that PMS send is failed or disconnected
+ *
+ * @return true Failed
+ * @return false No problem
+ */
+bool PMSBase::isFailed(void) { return failed; }
+
+/**
+ * @brief Read PMS 0.1 ug/m3 with CF = 1 PM estimates
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getRaw0_1(void) { return toValue(&package[4]); }
+
+/**
+ * @brief Read PMS 2.5 ug/m3 with CF = 1 PM estimates
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getRaw2_5(void) { return toValue(&package[6]); }
+
+/**
+ * @brief Read PMS 10 ug/m3 with CF = 1 PM estimates
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getRaw10(void) { return toValue(&package[8]); }
+
+/**
+ * @brief Read PMS 0.1 ug/m3
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getPM0_1(void) { return toValue(&package[10]); }
+
+/**
+ * @brief Read PMS 2.5 ug/m3
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getPM2_5(void) { return toValue(&package[12]); }
+
+/**
+ * @brief Read PMS 10 ug/m3
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getPM10(void) { return toValue(&package[14]); }
+
+/**
+ * @brief Get numnber concentrations over 0.3 um/0.1L
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount0_3(void) { return toValue(&package[16]); }
+
+/**
+ * @brief Get numnber concentrations over 0.5 um/0.1L
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount0_5(void) { return toValue(&package[18]); }
+
+/**
+ * @brief Get numnber concentrations over 1.0 um/0.1L
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount1_0(void) { return toValue(&package[20]); }
+
+/**
+ * @brief Get numnber concentrations over 2.5 um/0.1L
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount2_5(void) { return toValue(&package[22]); }
+
+/**
+ * @brief Get numnber concentrations over 5.0 um/0.1L (only PMS5003)
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount5_0(void) { return toValue(&package[24]); }
+
+/**
+ * @brief Get numnber concentrations over 10.0 um/0.1L (only PMS5003)
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getCount10(void) { return toValue(&package[26]); }
+
+/**
+ * @brief Get temperature (only PMS5003T)
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getTemp(void) { return toValue(&package[24]); }
+
+/**
+ * @brief Get humidity (only PMS5003T)
+ *
+ * @return uint16_t
+ */
+uint16_t PMSBase::getHum(void) { return toValue(&package[26]); }
+
+/**
+ * @brief Convert PMS2.5 to US AQI unit
+ *
+ * @param pm02
+ * @return int
+ */
+int PMSBase::pm25ToAQI(int pm02) {
+  if (pm02 <= 12.0)
+    return ((50 - 0) / (12.0 - .0) * (pm02 - .0) + 0);
+  else if (pm02 <= 35.4)
+    return ((100 - 50) / (35.4 - 12.0) * (pm02 - 12.0) + 50);
+  else if (pm02 <= 55.4)
+    return ((150 - 100) / (55.4 - 35.4) * (pm02 - 35.4) + 100);
+  else if (pm02 <= 150.4)
+    return ((200 - 150) / (150.4 - 55.4) * (pm02 - 55.4) + 150);
+  else if (pm02 <= 250.4)
+    return ((300 - 200) / (250.4 - 150.4) * (pm02 - 150.4) + 200);
+  else if (pm02 <= 350.4)
+    return ((400 - 300) / (350.4 - 250.4) * (pm02 - 250.4) + 300);
+  else if (pm02 <= 500.4)
+    return ((500 - 400) / (500.4 - 350.4) * (pm02 - 350.4) + 400);
+  else
+    return 500;
+}
+
+/**
+ * @brief   Convert two byte value to uint16_t value
+ *
+ * @param buf bytes array (must be >= 2)
+ * @return uint16_t
+ */
+uint16_t PMSBase::toValue(char *buf) { return (buf[0] << 8) | buf[1]; }
+
+/**
+ * @brief Validate package data
+ *
+ * @param buf Package buffer
+ * @return true Success
+ * @return false Failed
+ */
+bool PMSBase::validate(char *buf) {
+  uint16_t sum = 0;
+  for (int i = 0; i < 30; i++) {
+    sum += buf[i];
+  }
+  if (sum == toValue(&buf[30])) {
+    for (int i = 0; i < 32; i++) {
+      package[i] = buf[i];
+    }
+    return true;
+  }
+  return false;
 }
