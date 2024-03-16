@@ -243,15 +243,7 @@ public:
     uint8_t ledBarMode = UseLedBarOff;
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
-      if (mode == "co2") {
-        ledBarMode = UseLedBarCO2;
-      } else if (mode == "pm") {
-        ledBarMode = UseLedBarPM;
-      } else if (mode == "off") {
-        ledBarMode = UseLedBarOff;
-      } else {
-        ledBarMode = UseLedBarOff;
-      }
+      ledBarMode = parseLedBarMode(mode);
     }
 
     /** Get model */
@@ -447,6 +439,24 @@ public:
   UseLedBar getLedBarMode(void) { return (UseLedBar)config.useRGBLedBar; }
 
   /**
+   * @brief Return the name of the led bare mode.
+   *
+   * @return String
+   */
+  String getLedBarModeName(void) {
+    UseLedBar ledBarMode = getLedBarMode();
+    if (ledBarMode == UseLedBarOff) {
+      return String("off");
+    } else if (ledBarMode == UseLedBarPM) {
+      return String("pm");
+    } else if (ledBarMode == UseLedBarCO2) {
+      return String("co2");
+    } else {
+      return String("off");
+    }
+  }
+
+  /**
    * @brief Get the Country
    *
    * @return String
@@ -516,6 +526,21 @@ private:
     EEPROM.commit();
     Serial.println("Save config");
   }
+
+  UseLedBar parseLedBarMode(String mode) {
+     UseLedBar ledBarMode = UseLedBarOff;
+     if (mode == "co2") {
+       ledBarMode = UseLedBarCO2;
+     } else if (mode == "pm") {
+       ledBarMode = UseLedBarPM;
+     } else if (mode == "off") {
+       ledBarMode = UseLedBarOff;
+     } else {
+       ledBarMode = UseLedBarOff;
+     }
+
+     return ledBarMode;
+ }
 };
 AgServer agServer;
 
@@ -1135,18 +1160,30 @@ static String getServerSyncData(bool localServer) {
       root["pm10"] = pm10;
     }
     if (pm03PCount >= 0) {
-      root["pm003_count"] = pm03PCount;
+      if (localServer) {
+        root["pm003Count"] = pm03PCount;
+      } else {
+        root["pm003_count"] = pm03PCount;
+      }
     }
   }
   if (hasSensorSGP) {
     if (tvocIndex >= 0) {
-      root["tvoc_index"] = tvocIndex;
+      if (localServer) {
+        root["tvocIndex"] = tvocIndex;
+      } else {
+        root["tvoc_index"] = tvocIndex;
+      }
     }
     if (tvocRawIndex >= 0) {
       root["tvoc_raw"] = tvocRawIndex;
     }
     if (noxIndex >= 0) {
-      root["nox_index"] = noxIndex;
+      if (localServer) {
+        root["noxIndex"] = noxIndex;
+      } else {
+        root["nox_index"] = noxIndex;
+      }
     }
     if (noxRawIndex >= 0) {
       root["nox_raw"] = noxRawIndex;
@@ -1161,6 +1198,11 @@ static String getServerSyncData(bool localServer) {
     }
   }
   root["boot"] = bootCount;
+
+  if (localServer) {
+    root["ledMode"] = agServer.getLedBarModeName();
+    root["firmwareVersion"] = ag.getVersion();
+  }
 
   return JSON.stringify(root);
 }
