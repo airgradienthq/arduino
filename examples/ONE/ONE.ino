@@ -528,19 +528,19 @@ private:
   }
 
   UseLedBar parseLedBarMode(String mode) {
-     UseLedBar ledBarMode = UseLedBarOff;
-     if (mode == "co2") {
-       ledBarMode = UseLedBarCO2;
-     } else if (mode == "pm") {
-       ledBarMode = UseLedBarPM;
-     } else if (mode == "off") {
-       ledBarMode = UseLedBarOff;
-     } else {
-       ledBarMode = UseLedBarOff;
-     }
+    UseLedBar ledBarMode = UseLedBarOff;
+    if (mode == "co2") {
+      ledBarMode = UseLedBarCO2;
+    } else if (mode == "pm") {
+      ledBarMode = UseLedBarPM;
+    } else if (mode == "off") {
+      ledBarMode = UseLedBarOff;
+    } else {
+      ledBarMode = UseLedBarOff;
+    }
 
-     return ledBarMode;
- }
+    return ledBarMode;
+  }
 };
 AgServer agServer;
 
