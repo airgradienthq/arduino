@@ -162,7 +162,7 @@ public:
     config.inUSAQI = false;
     memset(config.models, 0, sizeof(config.models));
     memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-    config.useRGBLedBar = UseLedBarOff;
+    config.useRGBLedBar = UseLedBarCO2;
     saveConfig();
   }
 
