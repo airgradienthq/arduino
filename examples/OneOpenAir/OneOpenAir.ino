@@ -108,6 +108,7 @@ enum {
   "cleanair" /** default WiFi AP password                                      \
               */
 
+/** I2C define */
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
@@ -137,33 +138,41 @@ class AgSchedule {
 public:
   AgSchedule(int period, void (*handler)(void))
       : period(period), handler(handler) {}
+
+  /**
+   * @brief Handle schedule
+   *
+   */
   void run(void) {
     uint32_t ms = (uint32_t)(millis() - count);
     if (ms >= period) {
-      /** Call handler */
       handler();
-
-      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-      //               (unsigned int)handler, period);
-
-      /** Update period time */
       count = millis();
     }
   }
+  /**
+   * @brief Set schedule handle period
+   *
+   * @param period
+   */
   void setPeriod(int period) { this->period = period; }
 
 private:
-  void (*handler)(void);
-  int period;
-  int count;
+  void (*handler)(void); /** Callback handle */
+  int period;            /** Schedule handle period */
+  int count;             /** Schedule time count check */
 };
 
 /**
  * @brief AirGradient server configuration and sync data
- *
  */
 class AgServer {
 public:
+  /**
+   * @brief Initialize airgradient server, it's load the server configuration if
+   * failed load it to default.
+   *
+   */
   void begin(void) {
     configFailed = false;
     serverFailed = false;
@@ -322,10 +331,15 @@ public:
     return true;
   }
 
+  /**
+   * @brief Post data to Airgradient server
+   *
+   * @param id Device Id
+   * @param payload Data payload
+   * @return true Success
+   * @return false Failure
+   */
   bool postToServer(String id, String payload) {
-    /**
-     * @brief Only post data if WiFi is connected
-     */
     if (WiFi.isConnected() == false) {
       return false;
     }
@@ -498,6 +512,9 @@ private:
   };
   struct config_s config;
 
+  /**
+   * @brief Set server configuration default
+   */
   void defaultConfig(void) {
     config.inF = false;
     config.inUSAQI = false;
@@ -508,6 +525,9 @@ private:
     saveConfig();
   }
 
+  /**
+   * @brief Get local server configuration
+   */
   void loadConfig(void) {
     if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
       config.inF = false;
@@ -532,6 +552,9 @@ private:
     showServerConfig();
   }
 
+  /**
+   * @brief Save server configuration
+   */
   void saveConfig(void) {
     config.checksum = 0;
     uint8_t *data = (uint8_t *)&config;
@@ -544,6 +567,12 @@ private:
     Serial.println("Save config");
   }
 
+  /**
+   * @brief Parse LED bar mode
+   *
+   * @param mode LED mode
+   * @return UseLedBar
+   */
   UseLedBar parseLedBarMode(String mode) {
     UseLedBar ledBarMode = UseLedBarOff;
     if (mode == "co2") {
@@ -559,7 +588,6 @@ private:
     return ledBarMode;
   }
 };
-AgServer agServer;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                int32_t event_id, void *event_data);
@@ -616,7 +644,7 @@ public:
 
     /** Register event */
     if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY,
-                                       mqtt_event_handler, NULL) != ESP_OK) {
+                                       mqtt_event_handler, this) != ESP_OK) {
       Serial.println("MQTT client register event failed");
       return false;
     }
@@ -665,6 +693,11 @@ public:
    */
   String getUri(void) { return uri; }
 
+  /**
+   * @brief Update mqtt connection changed
+   *
+   * @param connected
+   */
   void _connectionHandler(bool connected) {
     clientConnected = connected;
     if (clientConnected == false) {
@@ -689,21 +722,15 @@ public:
    */
   int connectionFailedCount(void) { return connectFailedCount; }
 };
-AgMqtt agMqtt;
+
+static AgMqtt agMqtt;
 static TaskHandle_t mqttTask = NULL;
-
-/** Create airgradient instance for 'ONE_INDOOR' board */
-// AirGradient ag(ONE_INDOOR);
+static AgServer agServer;
 static AirGradient *ag;
-
-/** Create u8g2 instance */
-U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
-
-/** wifi manager instance */
-WiFiManager wifiManager;
-
-/** Web server instance */
-WebServer webServer;
+static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
+                                               /* reset=*/U8X8_PIN_NONE);
+static WiFiManager wifiManager;
+static WebServer webServer;
 
 static bool wifiHasConfig = false;      /** */
 static int connectCountDown;            /** wifi configuration countdown */
@@ -711,15 +738,25 @@ static int ledCount;                    /** For LED animation */
 static int ledSmState = APP_SM_NORMAL;  /** Save display SM */
 static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
 
+/** Init schedule */
+static bool hasSensorS8 = true;
+static bool hasSensorPMS1 = true;
+static bool hasSensorPMS2 = true;
+static bool hasSensorSGP = true;
+static bool hasSensorSHT = true;
+static int pmFailCount = 0;
+static uint32_t factoryBtnPressTime = 0;
+static int getCO2FailCount = 0;
+static uint32_t addToDashboardTime;
+static bool isAddToDashboard = true;
+static bool offlineMode = false;
+static int fwMode = FW_MODE_I_1PSL;
+
 static int tvocIndex = -1;
 static int tvocRawIndex = -1;
 static int noxIndex = -1;
 static int noxRawIndex = -1;
 static int co2Ppm = -1;
-// static int pm25 = -1;
-// static int pm01 = -1;
-// static int pm10 = -1;
-// static int pm03PCount = -1;
 static float temp = -1001;
 static int hum = -1;
 static int bootCount;
@@ -778,20 +815,6 @@ static String getServerSyncData(bool localServer);
 static void createMqttTask(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
-
-/** Init schedule */
-bool hasSensorS8 = true;
-bool hasSensorPMS1 = true;
-bool hasSensorPMS2 = true;
-bool hasSensorSGP = true;
-bool hasSensorSHT = true;
-int pmFailCount = 0;
-uint32_t factoryBtnPressTime = 0;
-int getCO2FailCount = 0;
-uint32_t addToDashboardTime;
-bool isAddToDashboard = true;
-bool offlineMode = false;
-int fwMode = FW_MODE_I_1PSL;
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -1742,6 +1765,8 @@ static void connectToWifi() {
 
   if (isOneIndoor()) {
     displayShowText("Connecting to", "WiFi", "...");
+  } else {
+    Serial.println("Connecting to WiFi...");
   }
   wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
   xTaskCreate(
@@ -1955,6 +1980,8 @@ void dispSensorNotFound(String ss) {
 }
 
 static void oneIndoorInit(void) {
+  hasSensorPMS2 = false;
+
   /** Display init */
   u8g2.begin();
 
@@ -2022,6 +2049,8 @@ static void oneIndoorInit(void) {
   }
 }
 static void openAirInit(void) {
+  hasSensorSHT = false;
+
   fwMode = FW_MODE_O_1PST;
   Serial.println("Firmware Version: " + ag->getVersion());
 
@@ -2064,8 +2093,8 @@ static void openAirInit(void) {
     Serial.println("SGP sensor not found");
 
     if (hasSensorS8 == false) {
-      fwMode = FW_MODE_O_1PP;
       Serial.println("Can not detect SGP run mode 'O-1PP'");
+      fwMode = FW_MODE_O_1PP;
     } else {
       Serial.println("Can not detect SGP run mode 'O-1PS'");
       fwMode = FW_MDOE_O_1PS;
@@ -2236,32 +2265,56 @@ static void updateServerConfiguration(void) {
  * the value will be start at 400 if do calib on clean environment
  */
 static void co2Calibration(void) {
+  Serial.println("co2Calibration: Start");
   /** Count down for co2CalibCountdown secs */
   for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-    displayShowText(
-        "Start CO2 calib",
-        "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec", "");
+    if (isOneIndoor()) {
+      displayShowText(
+          "Start CO2 calib",
+          "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec", "");
+    } else {
+      Serial.printf("Start CO2 calib after %d sec\r\n",
+                    SENSOR_CO2_CALIB_COUNTDOWN_MAX - i);
+    }
     delay(1000);
   }
 
   if (ag->s8.setBaselineCalibration()) {
-    displayShowText("Calibration", "success", "");
+    if (isOneIndoor()) {
+      displayShowText("Calibration", "success", "");
+    } else {
+      Serial.println("Calibration success");
+    }
     delay(1000);
-    displayShowText("Wait for", "calib finish", "...");
+    if (isOneIndoor()) {
+      displayShowText("Wait for", "calib finish", "...");
+    } else {
+      Serial.println("Wait for calibration finish...");
+    }
     int count = 0;
     while (ag->s8.isBaseLineCalibrationDone() == false) {
       delay(1000);
       count++;
     }
-    displayShowText("Calib finish", "after " + String(count), "sec");
+    if (isOneIndoor()) {
+      displayShowText("Calib finish", "after " + String(count), "sec");
+    } else {
+      Serial.printf("Calibration finish after %d sec\r\n", count);
+    }
     delay(2000);
   } else {
-    displayShowText("Calibration", "failure!!!", "");
+    if (isOneIndoor()) {
+      displayShowText("Calibration", "failure!!!", "");
+    } else {
+      Serial.println("Calibration failure!!!");
+    }
     delay(2000);
   }
 
   /** Update display */
-  appDispHandler();
+  if (isOneIndoor()) {
+    appDispHandler();
+  }
 }
 
 /**
@@ -2930,6 +2983,8 @@ static void tempHumUpdate(void) {
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                int32_t event_id, void *event_data) {
+  AgMqtt *mqtt = (AgMqtt *)handler_args;
+
   esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
   esp_mqtt_client_handle_t client = event->client;
   int msg_id;
@@ -2938,11 +2993,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     Serial.println("MQTT_EVENT_CONNECTED");
     // msg_id = esp_mqtt_client_subscribe(client, "helloworld", 0);
     // Serial.printf("sent subscribe successful, msg_id=%d\r\n", msg_id);
-    agMqtt._connectionHandler(true);
+    mqtt->_connectionHandler(true);
     break;
   case MQTT_EVENT_DISCONNECTED:
     Serial.println("MQTT_EVENT_DISCONNECTED");
-    agMqtt._connectionHandler(false);
+    mqtt->_connectionHandler(false);
     break;
   case MQTT_EVENT_SUBSCRIBED:
     break;
