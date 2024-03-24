@@ -25,7 +25,7 @@ Important flashing settings:
 - Flash frequency "80Mhz"
 - Flash mode "QIO"
 - Flash size "4MB"
-- Partition scheme "Default 4MB with spiffs (1.2MB APP/1,5MB SPIFFS)"
+- Partition scheme "Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)"
 - JTAG adapter "Disabled"
 
 If you have any questions please visit our forum at
