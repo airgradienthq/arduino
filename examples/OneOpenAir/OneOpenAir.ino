@@ -1656,7 +1656,11 @@ static void displayShowDashboard(String err) {
     /** Show CO2 value */
     u8g2.setFont(u8g2_font_t0_22b_tf);
     if (co2Ppm > 0) {
-      sprintf(strBuf, "%d", co2Ppm);
+      int val = 9999;
+      if(co2Ppm < 10000){
+        val = co2Ppm;
+      }
+      sprintf(strBuf, "%d", val);
     } else {
       sprintf(strBuf, "%s", "-");
     }
