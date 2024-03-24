@@ -518,6 +518,7 @@ private:
   void defaultConfig(void) {
     config.inF = false;
     config.inUSAQI = false;
+    config.useRGBLedBar = UseLedBarCO2;
     memset(config.models, 0, sizeof(config.models));
     memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
 
@@ -530,13 +531,8 @@ private:
    */
   void loadConfig(void) {
     if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
-      config.inF = false;
-      config.inUSAQI = false;
-      config.useRGBLedBar = UseLedBarCO2; // default use LED bar for CO2
-      memset(config.models, 0, sizeof(config.models));
-      memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-
       Serial.println("Load configure failed");
+      defaultConfig();
     } else {
       uint32_t sum = 0;
       uint8_t *data = (uint8_t *)&config;
