@@ -25,7 +25,7 @@ Important flashing settings:
 - Flash frequency "80Mhz"
 - Flash mode "QIO"
 - Flash size "4MB"
-- Partition scheme "Default 4MB with spiffs (1.2MB APP/1,5MB SPIFFS)"
+- Partition scheme "Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)"
 - JTAG adapter "Disabled"
 
 Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
@@ -804,7 +804,7 @@ void setup() {
   /**
    * Send first data to ping server and get server configuration
    */
-  if (WiFi.status() == WL_CONNECTED) {
+  if (WiFi.isConnected()) {
     webServerInit();
 
     /** MQTT init */
