@@ -1,6 +1,6 @@
 /*
-This is the code for the AirGradient ONE open-source hardware indoor Air Quality
-Monitor with an ESP32-C3 Microcontroller.
+This is the combined firmware code for AirGradient ONE and AirGradient Open Air
+open-source hardware Air Quality Monitor with ESP32-C3 Microcontroller.
 
 It is an air quality monitor for PM2.5, CO2, TVOCs, NOx, Temperature and
 Humidity with a small display, an RGB led bar and can send data over Wifi.
@@ -9,7 +9,10 @@ Open source air quality monitors and kits are available:
 Indoor Monitor: https://www.airgradient.com/indoor/
 Outdoor Monitor: https://www.airgradient.com/outdoor/
 
-Build Instructions: https://www.airgradient.com/documentation/one-v9/
+Build Instructions: AirGradient ONE:
+https://www.airgradient.com/documentation/one-v9/ Build Instructions:
+AirGradient Open Air:
+https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
 
 The codes needs the following libraries installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.16-rc.2
@@ -25,7 +28,7 @@ Important flashing settings:
 - Flash frequency "80Mhz"
 - Flash mode "QIO"
 - Flash size "4MB"
-- Partition scheme "Default 4MB with spiffs (1.2MB APP/1,5MB SPIFFS)"
+- Partition scheme "Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)"
 - JTAG adapter "Disabled"
 
 Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
@@ -787,6 +790,8 @@ static int pm2hum;
 static int countPosition;
 const int targetCount = 20;
 
+static bool ledBarButtonTest = false;
+
 static void boardInit(void);
 static void failedHandler(String msg);
 static void updateServerConfiguration(void);
@@ -851,7 +856,19 @@ void setup() {
   boardInit();
 
   /** Connecting wifi */
-  connectToWifi();
+  if (isOneIndoor()) {
+    if (ledBarButtonTest) {
+      ledTest();
+    } else {
+      /** Check LED mode to disabled LED */
+      if (agServer.getLedBarMode() == UseLedBarOff) {
+        ag->ledBar.setEnable(false);
+      }
+      connectToWifi();
+    }
+  } else {
+    connectToWifi();
+  }
 
   /**
    * Send first data to ping server and get server configuration
@@ -1657,7 +1674,7 @@ static void displayShowDashboard(String err) {
     u8g2.setFont(u8g2_font_t0_22b_tf);
     if (co2Ppm > 0) {
       int val = 9999;
-      if(co2Ppm < 10000){
+      if (co2Ppm < 10000) {
         val = co2Ppm;
       }
       sprintf(strBuf, "%d", val);
@@ -2026,11 +2043,11 @@ static void oneIndoorInit(void) {
 
   /** Run LED test on start up */
   displayShowText("Press now for", "LED test &", "offline mode");
-  bool test = false;
+  ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {
     if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
-      test = true;
+      ledBarButtonTest = true;
       break;
     }
     delay(1);
@@ -2038,14 +2055,6 @@ static void oneIndoorInit(void) {
     if (ms >= 3000) {
       break;
     }
-  }
-  if (test) {
-    ledTest();
-  }
-
-  /** Check LED mode to disabled LED */
-  if (agServer.getLedBarMode() == UseLedBarOff) {
-    ag->ledBar.setEnable(false);
   }
 }
 static void openAirInit(void) {
