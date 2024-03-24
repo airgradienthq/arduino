@@ -349,8 +349,8 @@ public:
     root["model"] = config.models;
     root["mqttBrokers"] = config.mqttBrokers;
     root["abcDays"] = co2AbcCalib;
-    root["ledBarTestRequested"] = ledBarTestRequested ? "true" : "false";
-    root["co2CalibrationRequested"] = co2Calib ? "true" : "false";
+    root["ledBarTestRequested"] = (bool) ledBarTestRequested;
+    root["co2CalibrationRequested"] = (bool) co2Calib;
     return JSON.stringify(root);
   }
 
@@ -368,7 +368,7 @@ public:
     }
 
     /** Get "country" */
-    bool inF = false;
+    bool inF = config.inF;
     if (JSON.typeof_(root["country"]) == "string") {
       String _country = root["country"];
       country = _country;
@@ -381,7 +381,7 @@ public:
     }
 
     /** Get "pmsStandard" */
-    bool inUSAQI = false;
+    bool inUSAQI = config.inUSAQI;
     if (JSON.typeof_(root["pmStandard"]) == "string") {
       String standard = root["pmStandard"];
       if (standard == "ugm3") {
@@ -394,12 +394,10 @@ public:
     /** Get "co2CalibrationRequested" */
     if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
       co2Calib = root["co2CalibrationRequested"];
-    } else {
-      co2Calib = false;
     }
 
     /** Get "ledBarMode" */
-    uint8_t ledBarMode = UseLedBarOff;
+    uint8_t ledBarMode = config.useRGBLedBar;
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
       ledBarMode = parseLedBarMode(mode);
@@ -439,8 +437,6 @@ public:
     /** Get 'abcDays' */
     if (JSON.typeof_(root["abcDays"]) == "number") {
       co2AbcCalib = root["abcDays"];
-    } else {
-      co2AbcCalib = -1;
     }
 
     /** Get "ledBarTestRequested" */
