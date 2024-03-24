@@ -11,6 +11,7 @@ jobs:
           - "TestCO2"
           - "TestPM"
           - "TestSht"
+          - "OneOpenAir"
         fqbn:
           - "esp8266:esp8266:d1_mini"
           - "esp32:esp32:esp32c3"
@@ -27,6 +28,8 @@ jobs:
           - example: "ONE"
             fqbn: "esp8266:esp8266:d1_mini"
           - example: "Open_Air"
+            fqbn: "esp8266:esp8266:d1_mini"
+          - example: "OneOpenAir"
             fqbn: "esp8266:esp8266:d1_mini"
     runs-on: ubuntu-latest
     steps:
