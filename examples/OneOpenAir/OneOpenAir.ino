@@ -126,7 +126,7 @@ typedef enum {
 } UseLedBar;
 
 enum {
-  FW_MODE_I_1PSL, /** ONE_INDOOR */
+  FW_MODE_I_9PSL, /** ONE_INDOOR */
   FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
   FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
   FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
@@ -749,7 +749,7 @@ static int getCO2FailCount = 0;
 static uint32_t addToDashboardTime;
 static bool isAddToDashboard = true;
 static bool offlineMode = false;
-static int fwMode = FW_MODE_I_1PSL;
+static int fwMode = FW_MODE_I_9PSL;
 
 static int tvocIndex = -1;
 static int tvocRawIndex = -1;
@@ -2162,8 +2162,8 @@ static void openAirInit(void) {
 
 static String getFirmwareModeName() {
   switch (fwMode) {
-  case FW_MODE_I_1PSL:
-    return "I-1PSL";
+  case FW_MODE_I_9PSL:
+    return "I-9PSL";
   case FW_MODE_O_1PP:
     return "O-1PP";
   case FW_MODE_O_1PPT:
