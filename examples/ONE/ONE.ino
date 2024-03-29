@@ -1235,6 +1235,7 @@ static void createMqttTask(void) {
             if (agMqtt.publish(topic.c_str(), syncData.c_str(),
                                syncData.length())) {
               Serial.println("MQTT sync success");
+              resetWatchdog();
             } else {
               Serial.println("MQTT sync failure");
             }
