@@ -47,6 +47,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <WiFiManager.h>
 
 #include "EEPROM.h"
+#include "LocalConfig.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <ESPmDNS.h>
@@ -116,15 +117,6 @@ enum {
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
 
-/**
- * @brief Use use LED bar state
- */
-typedef enum {
-  UseLedBarOff, /** Don't use LED bar */
-  UseLedBarPM,  /** Use LED bar for PMS */
-  UseLedBarCO2, /** Use LED bar for CO2 */
-} UseLedBar;
-
 enum {
   FW_MODE_I_9PSL, /** ONE_INDOOR */
   FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
@@ -171,6 +163,8 @@ private:
  */
 class AgServer {
 public:
+  AgServer(LocalConfig &localConfig) : config(localConfig) {}
+
   /**
    * @brief Initialize airgradient server, it's load the server configuration if
    * failed load it to default.
@@ -179,20 +173,6 @@ public:
   void begin(void) {
     configFailed = false;
     serverFailed = false;
-    loadConfig();
-  }
-
-  /**
-   * @brief Reset local config into default value.
-   *
-   */
-  void defaultReset(void) {
-    config.inF = false;
-    config.inUSAQI = false;
-    memset(config.models, 0, sizeof(config.models));
-    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-    config.useRGBLedBar = UseLedBarCO2;
-    saveConfig();
   }
 
   /**
@@ -204,6 +184,11 @@ public:
    * @return false Failure
    */
   bool fetchServerConfiguration(String id) {
+    if (config.isLocallyControlled()) {
+      Serial.println("Ignore fetch server configuration");
+      return false;
+    }
+
     String uri =
         "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
 
@@ -230,108 +215,7 @@ public:
     client.end();
     Serial.println("Get server config: " + respContent);
 
-    /** Parse JSON */
-    JSONVar root = JSON.parse(respContent);
-    if (JSON.typeof(root) == "undefined") {
-      /** JSON invalid */
-      return false;
-    }
-
-    /** Get "country" */
-    bool inF = false;
-    if (JSON.typeof_(root["country"]) == "string") {
-      String _country = root["country"];
-      country = _country;
-
-      if (country == "US") {
-        inF = true;
-      } else {
-        inF = false;
-      }
-    }
-
-    /** Get "pmsStandard" */
-    bool inUSAQI = false;
-    if (JSON.typeof_(root["pmStandard"]) == "string") {
-      String standard = root["pmStandard"];
-      if (standard == "ugm3") {
-        inUSAQI = false;
-      } else {
-        inUSAQI = true;
-      }
-    }
-
-    /** Get "co2CalibrationRequested" */
-    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-      co2Calib = root["co2CalibrationRequested"];
-    } else {
-      co2Calib = false;
-    }
-
-    /** Get "ledBarMode" */
-    uint8_t ledBarMode = UseLedBarOff;
-    if (JSON.typeof_(root["ledBarMode"]) == "string") {
-      String mode = root["ledBarMode"];
-      ledBarMode = parseLedBarMode(mode);
-    }
-
-    /** Get model */
-    bool _saveConfig = false;
-    if (JSON.typeof_(root["model"]) == "string") {
-      String model = root["model"];
-      if (model.length()) {
-        int len = model.length() < sizeof(config.models)
-                      ? model.length()
-                      : sizeof(config.models);
-        if (model != String(config.models)) {
-          memset(config.models, 0, sizeof(config.models));
-          memcpy(config.models, model.c_str(), len);
-          _saveConfig = true;
-        }
-      }
-    }
-
-    /** Get "mqttBrokerUrl" */
-    if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
-      String mqtt = root["mqttBrokerUrl"];
-      if (mqtt.length()) {
-        int len = mqtt.length() < sizeof(config.mqttBrokers)
-                      ? mqtt.length()
-                      : sizeof(config.mqttBrokers);
-        if (mqtt != String(config.mqttBrokers)) {
-          memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-          memcpy(config.mqttBrokers, mqtt.c_str(), len);
-          _saveConfig = true;
-        }
-      }
-    }
-
-    /** Get 'abcDays' */
-    if (JSON.typeof_(root["abcDays"]) == "number") {
-      co2AbcCalib = root["abcDays"];
-    } else {
-      co2AbcCalib = -1;
-    }
-
-    /** Get "ledBarTestRequested" */
-    if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
-      ledBarTestRequested = root["ledBarTestRequested"];
-    } else {
-      ledBarTestRequested = false;
-    }
-
-    /** Show configuration */
-    showServerConfig();
-    if (_saveConfig || (inF != config.inF) || (inUSAQI != config.inUSAQI) ||
-        (ledBarMode != config.useRGBLedBar)) {
-      config.inF = inF;
-      config.inUSAQI = inUSAQI;
-      config.useRGBLedBar = ledBarMode;
-
-      saveConfig();
-    }
-
-    return true;
+    return config.parse(respContent, false);
   }
 
   /**
@@ -343,6 +227,11 @@ public:
    * @return false Failure
    */
   bool postToServer(String id, String payload) {
+    if (config.isPostDataToAirGradient() == false) {
+      Serial.println("Ignore post to Airgrdient server");
+      return true;
+    }
+
     if (WiFi.isConnected() == false) {
       return false;
     }
@@ -372,22 +261,6 @@ public:
   }
 
   /**
-   * @brief Get temperature configuration unit
-   *
-   * @return true F unit
-   * @return false C Unit
-   */
-  bool isTemperatureUnitF(void) { return config.inF; }
-
-  /**
-   * @brief Get PMS standard unit
-   *
-   * @return true USAQI
-   * @return false ugm3
-   */
-  bool isPMSinUSAQI(void) { return config.inUSAQI; }
-
-  /**
    * @brief Get status of get server configuration is failed
    *
    * @return true Failed
@@ -403,189 +276,10 @@ public:
    */
   bool isServerFailed(void) { return serverFailed; }
 
-  /**
-   * @brief Get request calibration CO2
-   *
-   * @return true Requested. If result = true, it's clear after function call
-   * @return false Not-requested
-   */
-  bool isCo2Calib(void) {
-    bool ret = co2Calib;
-    if (ret) {
-      co2Calib = false;
-    }
-    return ret;
-  }
-
-  /**
-   * @brief Get request LedBar test
-   *
-   * @return true Requested. If result = true, it's clear after function call
-   * @return false Not-requested
-   */
-  bool isLedBarTestRequested(void) {
-    bool ret = ledBarTestRequested;
-    if (ret) {
-      ledBarTestRequested = false;
-    }
-    return ret;
-  }
-
-  /**
-   * @brief Get the Co2 auto calib period
-   *
-   * @return int  days, -1 if invalid.
-   */
-  int getCo2AbcDaysConfig(void) { return co2AbcCalib; }
-
-  /**
-   * @brief Get device configuration model name
-   *
-   * @return String Model name, empty string if server failed
-   */
-  String getModelName(void) { return String(config.models); }
-
-  /**
-   * @brief Get mqttBroker url
-   *
-   * @return String Broker url, empty if server failed
-   */
-  String getMqttBroker(void) { return String(config.mqttBrokers); }
-
-  /**
-   * @brief Show server configuration parameter
-   */
-  void showServerConfig(void) {
-    Serial.println("Server configuration: ");
-    Serial.printf("inF: %s\r\n", config.inF ? "true" : "false");
-    Serial.printf("inUSAQI: %s\r\n", config.inUSAQI ? "true" : "false");
-    Serial.printf("useRGBLedBar: %d\r\n", (int)config.useRGBLedBar);
-    Serial.printf("Model: %s\r\n", config.models);
-    Serial.printf("MQTT Broker: %s\r\n", config.mqttBrokers);
-    Serial.printf("S8 calibration period: %d\r\n", co2AbcCalib);
-  }
-
-  /**
-   * @brief Get server config led bar mode
-   *
-   * @return UseLedBar
-   */
-  UseLedBar getLedBarMode(void) { return (UseLedBar)config.useRGBLedBar; }
-
-  /**
-   * @brief Return the name of the led bare mode.
-   *
-   * @return String
-   */
-  String getLedBarModeName(void) {
-    UseLedBar ledBarMode = getLedBarMode();
-    if (ledBarMode == UseLedBarOff) {
-      return String("off");
-    } else if (ledBarMode == UseLedBarPM) {
-      return String("pm");
-    } else if (ledBarMode == UseLedBarCO2) {
-      return String("co2");
-    } else {
-      return String("off");
-    }
-  }
-
-  /**
-   * @brief Get the Country
-   *
-   * @return String
-   */
-  String getCountry(void) { return country; }
-
 private:
-  bool configFailed;        /** Flag indicate get server configuration failed */
-  bool serverFailed;        /** Flag indicate post data to server failed */
-  bool co2Calib;            /** Is co2Ppmcalibration requset */
-  bool ledBarTestRequested; /** */
-  int co2AbcCalib = -1;     /** update auto calibration number of day */
-  String country;           /***/
-
-  struct config_s {
-    bool inF;
-    bool inUSAQI;
-    uint8_t useRGBLedBar;
-    char models[20];
-    char mqttBrokers[256];
-    uint32_t checksum;
-  };
-  struct config_s config;
-
-  /**
-   * @brief Set server configuration default
-   */
-  void defaultConfig(void) {
-    config.inF = false;
-    config.inUSAQI = false;
-    config.useRGBLedBar = UseLedBarCO2;
-    memset(config.models, 0, sizeof(config.models));
-    memset(config.mqttBrokers, 0, sizeof(config.mqttBrokers));
-
-    Serial.println("Load config default");
-    saveConfig();
-  }
-
-  /**
-   * @brief Get local server configuration
-   */
-  void loadConfig(void) {
-    if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
-      Serial.println("Load configure failed");
-      defaultConfig();
-    } else {
-      uint32_t sum = 0;
-      uint8_t *data = (uint8_t *)&config;
-      for (int i = 0; i < sizeof(config) - 4; i++) {
-        sum += data[i];
-      }
-      if (sum != config.checksum) {
-        Serial.println("config checksum failed");
-        defaultConfig();
-      }
-    }
-
-    showServerConfig();
-  }
-
-  /**
-   * @brief Save server configuration
-   */
-  void saveConfig(void) {
-    config.checksum = 0;
-    uint8_t *data = (uint8_t *)&config;
-    for (int i = 0; i < sizeof(config) - 4; i++) {
-      config.checksum += data[i];
-    }
-
-    EEPROM.writeBytes(0, &config, sizeof(config));
-    EEPROM.commit();
-    Serial.println("Save config");
-  }
-
-  /**
-   * @brief Parse LED bar mode
-   *
-   * @param mode LED mode
-   * @return UseLedBar
-   */
-  UseLedBar parseLedBarMode(String mode) {
-    UseLedBar ledBarMode = UseLedBarOff;
-    if (mode == "co2") {
-      ledBarMode = UseLedBarCO2;
-    } else if (mode == "pm") {
-      ledBarMode = UseLedBarPM;
-    } else if (mode == "off") {
-      ledBarMode = UseLedBarOff;
-    } else {
-      ledBarMode = UseLedBarOff;
-    }
-
-    return ledBarMode;
-  }
+  bool configFailed; /** Flag indicate get server configuration failed */
+  bool serverFailed; /** Flag indicate post data to server failed */
+  LocalConfig &config;
 };
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
@@ -724,7 +418,9 @@ public:
 
 static AgMqtt agMqtt;
 static TaskHandle_t mqttTask = NULL;
-static AgServer agServer;
+static LocalConfig localConfig(Serial);
+static AgServer agServer(localConfig);
+
 static AirGradient *ag;
 static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
                                                /* reset=*/U8X8_PIN_NONE);
@@ -791,6 +487,7 @@ static int countPosition;
 const int targetCount = 20;
 
 static bool ledBarButtonTest = false;
+static bool localConfigUpdate = false;
 
 static void boardInit(void);
 static void failedHandler(String msg);
@@ -828,12 +525,13 @@ AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
 AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
-  EEPROM.begin(512);
-
   /** Serial for print debug message */
   Serial.begin(115200);
   delay(100); /** For bester show log */
   showNr();
+
+  /** Initialize local configure */
+  localConfig.begin();
 
   /** Init I2C */
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
@@ -861,7 +559,7 @@ void setup() {
       ledTest();
     } else {
       /** Check LED mode to disabled LED */
-      if (agServer.getLedBarMode() == UseLedBarOff) {
+      if (localConfig.getLedBarMode() == UseLedBarOff) {
         ag->ledBar.setEnable(false);
       }
       connectToWifi();
@@ -877,8 +575,8 @@ void setup() {
     webServerInit();
 
     /** MQTT init */
-    if (agServer.getMqttBroker().isEmpty() == false) {
-      if (agMqtt.begin(agServer.getMqttBroker())) {
+    if (localConfig.getMqttBrokerUri().isEmpty() == false) {
+      if (agMqtt.begin(localConfig.getMqttBrokerUri())) {
         createMqttTask();
         Serial.println("MQTT client init success");
       } else {
@@ -900,7 +598,7 @@ void setup() {
       ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     } else {
-      ag->ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
+      ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
     }
   } else {
     offlineMode = true;
@@ -943,7 +641,9 @@ void loop() {
     tvocSchedule.run();
   }
 
-  if (offlineMode) {
+  /** Auto reset external watchdog timer on offline mode and
+   * postDataToAirGradient disabled. */
+  if (offlineMode || (localConfig.isPostDataToAirGradient() == false)) {
     wdgFeedSchedule.run();
   }
 
@@ -965,6 +665,11 @@ void loop() {
     if (hasSensorPMS2) {
       ag->pms5003t_2.handle();
     }
+  }
+
+  if (localConfigUpdate) {
+    localConfigUpdate = false;
+    configUpdateHandle();
   }
 }
 
@@ -1259,6 +964,8 @@ static void webServerInit(void) {
   webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
   // Make it possible to query this device from Prometheus/OpenMetrics.
   webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
+  webServer.on("/config", HTTP_GET, localConfigGet);
+  webServer.on("/config", HTTP_PUT, localConfigPut);
   webServer.begin();
   MDNS.addService("_airgradient", "_tcp", 80);
   MDNS.addServiceTxt("_airgradient", "_tcp", "model", getFirmwareModeName());
@@ -1271,6 +978,21 @@ static void webServerInit(void) {
     Serial.println("Create task handle webserver failed");
   }
   Serial.printf("Webserver init: %s.local\r\n", host.c_str());
+}
+
+static void localConfigGet() {
+  webServer.send(200, "application/json", localConfig.toString());
+}
+static void localConfigPut() {
+  String data = webServer.arg(0);
+  String response = "Failure";
+  if (localConfig.parse(data, true)) {
+    localConfigUpdate = true;
+    response = "Success";
+  } else {
+    Serial.println("PUT data invalid");
+  }
+  webServer.send(200, "text/plain", response);
 }
 
 static String getServerSyncData(bool localServer) {
@@ -1406,7 +1128,7 @@ static String getServerSyncData(bool localServer) {
   root["boot"] = bootCount;
 
   if (localServer) {
-    root["ledMode"] = agServer.getLedBarModeName();
+    root["ledMode"] = localConfig.getLedBarModeName();
     root["firmwareVersion"] = ag->getVersion();
     root["fwMode"] = getFirmwareModeName();
   }
@@ -1438,7 +1160,7 @@ static void createMqttTask(void) {
           }
         }
       },
-      "mqtt-task", 1024 * 3, NULL, 6, &mqttTask);
+      "mqtt-task", 1024 * 2, NULL, 6, &mqttTask);
 
   if (mqttTask == NULL) {
     Serial.println("Creat mqttTask failed");
@@ -1484,7 +1206,7 @@ static void factoryConfigReset(void) {
             wifiManager.resetSettings();
 
             /** Reset local config */
-            agServer.defaultReset();
+            localConfig.reset();
 
             if (isOneIndoor()) {
               displayShowText("Factory reset", "successful", "");
@@ -1597,7 +1319,7 @@ static void displayShowDashboard(String err) {
     if ((err == NULL) || err.isEmpty()) {
 
       /** Show temperature */
-      if (agServer.isTemperatureUnitF()) {
+      if (localConfig.isTemperatureUnitInF()) {
         if (temp > -1001) {
           float tempF = (temp * 9 / 5) + 32;
           sprintf(strBuf, "%.1f°F", tempF);
@@ -1632,7 +1354,7 @@ static void displayShowDashboard(String err) {
 
       if (err == "WiFi N/A") {
         u8g2.setFont(u8g2_font_t0_12_tf);
-        if (agServer.isTemperatureUnitF()) {
+        if (localConfig.isTemperatureUnitInF()) {
           if (temp > -1001) {
             float tempF = (temp * 9 / 5) + 32;
             sprintf(strBuf, "%.1f", tempF);
@@ -1697,7 +1419,7 @@ static void displayShowDashboard(String err) {
 
     /** Draw PM2.5 value */
     u8g2.setFont(u8g2_font_t0_22b_tf);
-    if (agServer.isPMSinUSAQI()) {
+    if (localConfig.isPmStandardInUSAQI()) {
       if (pm25_1 >= 0) {
         sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25_1));
       } else {
@@ -2210,55 +1932,61 @@ static void failedHandler(String msg) {
  */
 static void updateServerConfiguration(void) {
   if (agServer.fetchServerConfiguration(getDevId())) {
-    if (agServer.isCo2Calib()) {
-      if (hasSensorS8) {
-        co2Calibration();
-      } else {
-        Serial.println("CO2 S8 not available, calibration ignored");
-      }
+    configUpdateHandle();
+  }
+}
+
+static void configUpdateHandle() {
+  if (localConfig.isCo2CalibrationRequested()) {
+    if (hasSensorS8) {
+      co2Calibration();
+    } else {
+      Serial.println("CO2 S8 not available, calibration ignored");
     }
+  }
 
-    // Update LED bar
-    ag->ledBar.setEnable(agServer.getLedBarMode() != UseLedBarOff);
+  // Update LED bar
+  ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
 
-    if (agServer.getCo2AbcDaysConfig() > 0) {
-      if (hasSensorS8) {
-        int newHour = agServer.getCo2AbcDaysConfig() * 24;
-        Serial.printf("Requested abcDays setting: %d days (%d hours)\r\n",
-                      agServer.getCo2AbcDaysConfig(), newHour);
-        int curHour = ag->s8.getAbcPeriod();
-        Serial.printf("Current S8 abcDays setting: %d (hours)\r\n", curHour);
-        if (curHour == newHour) {
-          Serial.println("'abcDays' unchanged");
+  if (localConfig.getCO2CalirationAbcDays() > 0) {
+    if (hasSensorS8) {
+      int newHour = localConfig.getCO2CalirationAbcDays() * 24;
+      Serial.printf("Requested abcDays setting: %d days (%d hours)\r\n",
+                    localConfig.getCO2CalirationAbcDays(), newHour);
+      int curHour = ag->s8.getAbcPeriod();
+      Serial.printf("Current S8 abcDays setting: %d (hours)\r\n", curHour);
+      if (curHour == newHour) {
+        Serial.println("'abcDays' unchanged");
+      } else {
+        if (ag->s8.setAbcPeriod(localConfig.getCO2CalirationAbcDays() * 24) ==
+            false) {
+          Serial.println("Set S8 abcDays period failed");
         } else {
-          if (ag->s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
-              false) {
-            Serial.println("Set S8 abcDays period failed");
-          } else {
-            Serial.println("Set S8 abcDays period success");
-          }
+          Serial.println("Set S8 abcDays period success");
         }
-      } else {
-        Serial.println("CO2 S8 not available, set 'abcDays' ignored");
       }
+    } else {
+      Serial.println("CO2 S8 not available, set 'abcDays' ignored");
     }
+  }
 
-    if (agServer.isLedBarTestRequested()) {
-      if (agServer.getCountry() == "TH") {
-        ledTest2Min();
-      } else {
-        ledTest();
-      }
+  if (localConfig.isLedBarTestRequested()) {
+    if (localConfig.getCountry() == "TH") {
+      ledTest2Min();
+    } else {
+      ledTest();
     }
+  }
 
-    String mqttUri = agServer.getMqttBroker();
-    if (mqttUri != agMqtt.getUri()) {
-      agMqtt.end();
+  String mqttUri = localConfig.getMqttBrokerUri();
+  if (mqttUri != agMqtt.getUri()) {
+    agMqtt.end();
 
-      if (mqttTask != NULL) {
-        vTaskDelete(mqttTask);
-        mqttTask = NULL;
-      }
+    if (mqttTask != NULL) {
+      vTaskDelete(mqttTask);
+      mqttTask = NULL;
+    }
+    if (mqttUri.length() > 0) {
       if (agMqtt.begin(mqttUri)) {
         Serial.println("Connect to MQTT broker successful");
         createMqttTask();
@@ -2703,7 +2431,7 @@ static void dispSmHandler(int sm) {
  * @brief Handle change LED color base on sensor value of CO2 and PMS
  */
 static void sensorLedColorHandler(void) {
-  switch (agServer.getLedBarMode()) {
+  switch (localConfig.getLedBarMode()) {
   case UseLedBarCO2:
     setRGBledCO2color(co2Ppm);
     break;

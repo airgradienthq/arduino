@@ -14,6 +14,16 @@
 #include "Sht/Sht.h"
 
 /**
+ * @brief RGB LED bar mode for ONE_INDOOR board
+ * 
+ */
+enum UseLedBar {
+  UseLedBarOff, /** Don't use LED bar */
+  UseLedBarPM,  /** Use LED bar for PMS */
+  UseLedBarCO2, /** Use LED bar for CO2 */
+};
+
+/**
  * @brief Class with define all the sensor has supported by Airgradient. Each
  * sensor usage must be init before use.
  */
@@ -109,16 +119,16 @@ public:
 
   /**
    * @brief Get the Board Name object
-   * 
-   * @return String 
+   *
+   * @return String
    */
   String getBoardName(void);
 
   /**
    * @brief Round double value with for 2 decimal
-   * 
+   *
    * @param valuem Round value
-   * @return double 
+   * @return double
    */
   double round2(double value);
 
