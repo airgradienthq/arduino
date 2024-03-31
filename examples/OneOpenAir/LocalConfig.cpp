@@ -267,12 +267,15 @@ bool LocalConfig::parse(String data, bool isLocal) {
     }
   }
 
-  if (JSON.typeof_(root["locallyControlled"]) == "boolean") {
-    bool locallyControlled = root["locallyControlled"];
-    if (locallyControlled != config.locallyControlled) {
-      changed = true;
-      config.locallyControlled = locallyControlled;
-      printLog("set locallyControlled: " + String(locallyControlled));
+  /** This field only allow on local configure */
+  if (isLocal) {
+    if (JSON.typeof_(root["locallyControlled"]) == "boolean") {
+      bool locallyControlled = root["locallyControlled"];
+      if (locallyControlled != config.locallyControlled) {
+        changed = true;
+        config.locallyControlled = locallyControlled;
+        printLog("set locallyControlled: " + String(locallyControlled));
+      }
     }
   }
 
