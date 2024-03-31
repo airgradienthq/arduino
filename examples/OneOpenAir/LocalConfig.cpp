@@ -376,12 +376,24 @@ bool LocalConfig::isPostDataToAirGradient(void) {
 
 bool LocalConfig::isLocallyControlled(void) { return config.locallyControlled; }
 
+/**
+ * @brief CO2 manual calib request, the request flag will clear after get. Must call this after parse success
+ * 
+ * @return true Requested
+ * @return false Not requested
+ */
 bool LocalConfig::isCo2CalibrationRequested(void) {
   bool requested = co2CalibrationRequested;
   co2CalibrationRequested = false; // clear requested
   return requested;
 }
 
+/**
+ * @brief LED bar test request, the request flag will clear after get. Must call this function after parse success
+ * 
+ * @return true Requested
+ * @return false Not requested
+ */
 bool LocalConfig::isLedBarTestRequested(void) {
   bool requested = ledBarTestRequested;
   ledBarTestRequested = false;
@@ -397,4 +409,9 @@ void LocalConfig::reset(void) {
   printConfig();
 }
 
+/**
+ * @brief Get model name, it's usage for offline mode
+ * 
+ * @return String 
+ */
 String LocalConfig::getModel(void) { return String(config.model); }
