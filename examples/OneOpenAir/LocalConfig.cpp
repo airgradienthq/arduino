@@ -56,13 +56,13 @@ void LocalConfig::defaultConfig(void) {
 
   config.inUSAQI = false; // pmStandard = ugm3
   config.inF = false;
-  config.postDataToAirGradient = false;
+  config.postDataToAirGradient = true;
   config.locallyControlled = true;
   config.displayMode = true;
   config.useRGBLedBar = UseLedBar::UseLedBarCO2;
-  config.abcDays = 1;
-  config.tvocLearningOffset = 720;
-  config.noxLearningOffset = 720;
+  config.abcDays = 7;
+  config.tvocLearningOffset = 12;
+  config.noxLearningOffset = 12;
   config.temperatureUnit = 'c';
 
   saveConfig();
