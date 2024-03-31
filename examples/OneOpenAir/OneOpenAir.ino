@@ -1946,7 +1946,9 @@ static void configUpdateHandle() {
   }
 
   // Update LED bar
-  ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
+  if (isOneIndoor()) {
+    ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
+  }
 
   if (localConfig.getCO2CalirationAbcDays() > 0) {
     if (hasSensorS8) {
