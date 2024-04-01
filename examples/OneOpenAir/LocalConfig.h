@@ -17,7 +17,7 @@ private:
     bool postDataToAirGradient; /** If true, monitor will not POST data to
                                   airgradient server. Make sure no error
                                   message shown on monitor */
-    bool locallyControlled; /** If true, configuration from airgradient server
+    uint8_t configurationControl; /** If true, configuration from airgradient server
                                will be ignored */
     bool displayMode;       /** true if enable display */
     uint8_t useRGBLedBar;
@@ -56,7 +56,7 @@ public:
   bool getDisplayMode(void);
   String getMqttBrokerUri(void);
   bool isPostDataToAirGradient(void);
-  bool isLocallyControlled(void);
+  ConfigurationControl getConfigurationControl(void);
   bool isCo2CalibrationRequested(void);
   bool isLedBarTestRequested(void);
   void reset(void);

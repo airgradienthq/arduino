@@ -168,7 +168,6 @@ public:
   /**
    * @brief Initialize airgradient server, it's load the server configuration if
    * failed load it to default.
-   *
    */
   void begin(void) {
     configFailed = false;
@@ -184,8 +183,12 @@ public:
    * @return false Failure
    */
   bool fetchServerConfiguration(String id) {
-    if (config.isLocallyControlled()) {
+    if (config.getConfigurationControl() == ConfigurationControl::Local) {
       Serial.println("Ignore fetch server configuration");
+
+      // Clear server configuration failed flag, cause it's ignore but not
+      // really failed
+      configFailed = false;
       return false;
     }
 
@@ -985,14 +988,16 @@ static void localConfigGet() {
 }
 static void localConfigPut() {
   String data = webServer.arg(0);
-  String response = "Failure";
+  String response = "";
+  int statusCode = 400; // Status code for data invalid
   if (localConfig.parse(data, true)) {
     localConfigUpdate = true;
+    statusCode = 200;
     response = "Success";
   } else {
-    Serial.println("PUT data invalid");
+    response = "Set for cloud configuration. Local configuration ignored";
   }
-  webServer.send(200, "text/plain", response);
+  webServer.send(statusCode, "text/plain", response);
 }
 
 static String getServerSyncData(bool localServer) {

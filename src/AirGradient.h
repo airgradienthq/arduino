@@ -15,12 +15,18 @@
 
 /**
  * @brief RGB LED bar mode for ONE_INDOOR board
- * 
+ *
  */
 enum UseLedBar {
   UseLedBarOff, /** Don't use LED bar */
   UseLedBarPM,  /** Use LED bar for PMS */
   UseLedBarCO2, /** Use LED bar for CO2 */
+};
+
+enum ConfigurationControl {
+  Local, /** Allow set configuration from local over HTTP server */
+  Cloud, /** Allow set configuration from Airgradient webserver */
+  Both   /** Allow set configuration from Local and Cloud */
 };
 
 /**

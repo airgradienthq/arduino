@@ -1,6 +1,9 @@
 #include "LocalConfig.h"
 #include "EEPROM.h"
 
+const char *CONFIGURATION_CONTROL_NAME[] = {
+    [Local] = "local", [Cloud] = "cloud", [Both] = "both"};
+
 void LocalConfig::printLog(String log) {
   debugLog.printf("[LocalConfig] %s\r\n", log.c_str());
 }
@@ -54,10 +57,10 @@ void LocalConfig::defaultConfig(void) {
   // Default MQTT broker is null.
   memset(config.mqttBroker, 0, sizeof(config.mqttBroker));
 
+  config.configurationControl = ConfigurationControl::Both;
   config.inUSAQI = false; // pmStandard = ugm3
   config.inF = false;
   config.postDataToAirGradient = true;
-  config.locallyControlled = true;
   config.displayMode = true;
   config.useRGBLedBar = UseLedBar::UseLedBarCO2;
   config.abcDays = 7;
@@ -101,6 +104,37 @@ bool LocalConfig::parse(String data, bool isLocal) {
 
   /** Is configuration changed */
   bool changed = false;
+
+  /** Get ConfigurationControl */
+  if (JSON.typeof_(root["configurationControl"]) == "string") {
+    String configurationControl = root["configurationControl"];
+    if (configurationControl ==
+        String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::Local])) {
+      config.configurationControl = (uint8_t)ConfigurationControl::Local;
+      changed = true;
+    } else if (configurationControl ==
+               String(
+                   CONFIGURATION_CONTROL_NAME[ConfigurationControl::Cloud])) {
+      config.configurationControl = (uint8_t)ConfigurationControl::Cloud;
+      changed = true;
+    } else if (configurationControl ==
+               String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::Both])) {
+      config.configurationControl = (uint8_t)ConfigurationControl::Both;
+      changed = true;
+    } else {
+      printLog("'configurationControl' value '" + configurationControl +
+               "' invalid");
+      return false;
+    }
+  } else {
+    return false;
+  }
+
+  if ((config.configurationControl == (byte)ConfigurationControl::Cloud)) {
+    printLog("Ignore, cause ConfigurationControl is " +
+             String(CONFIGURATION_CONTROL_NAME[config.configurationControl]));
+    return false;
+  }
 
   if (JSON.typeof_(root["country"]) == "string") {
     String country = root["country"];
@@ -267,18 +301,6 @@ bool LocalConfig::parse(String data, bool isLocal) {
     }
   }
 
-  /** This field only allow on local configure */
-  if (isLocal) {
-    if (JSON.typeof_(root["locallyControlled"]) == "boolean") {
-      bool locallyControlled = root["locallyControlled"];
-      if (locallyControlled != config.locallyControlled) {
-        changed = true;
-        config.locallyControlled = locallyControlled;
-        printLog("set locallyControlled: " + String(locallyControlled));
-      }
-    }
-  }
-
   /** Parse data only got from AirGradient server */
   if (isLocal == false) {
     if (JSON.typeof_(root["model"]) == "string") {
@@ -339,8 +361,9 @@ String LocalConfig::toString(void) {
   /** "temperatureUnit" */
   root["temperatureUnit"] = String(config.temperatureUnit);
 
-  /** "locallyControlled" */
-  root["locallyControlled"] = config.locallyControlled;
+  /** configurationControl */
+  root["configurationControl"] =
+      String(CONFIGURATION_CONTROL_NAME[config.configurationControl]);
 
   /** "postDataToAirGradient" */
   root["postDataToAirGradient"] = config.postDataToAirGradient;
@@ -374,11 +397,14 @@ bool LocalConfig::isPostDataToAirGradient(void) {
   return config.postDataToAirGradient;
 }
 
-bool LocalConfig::isLocallyControlled(void) { return config.locallyControlled; }
+ConfigurationControl LocalConfig::getConfigurationControl(void) {
+  return (ConfigurationControl)config.configurationControl;
+}
 
 /**
- * @brief CO2 manual calib request, the request flag will clear after get. Must call this after parse success
- * 
+ * @brief CO2 manual calib request, the request flag will clear after get. Must
+ * call this after parse success
+ *
  * @return true Requested
  * @return false Not requested
  */
@@ -389,8 +415,9 @@ bool LocalConfig::isCo2CalibrationRequested(void) {
 }
 
 /**
- * @brief LED bar test request, the request flag will clear after get. Must call this function after parse success
- * 
+ * @brief LED bar test request, the request flag will clear after get. Must call
+ * this function after parse success
+ *
  * @return true Requested
  * @return false Not requested
  */
@@ -411,7 +438,7 @@ void LocalConfig::reset(void) {
 
 /**
  * @brief Get model name, it's usage for offline mode
- * 
- * @return String 
+ *
+ * @return String
  */
 String LocalConfig::getModel(void) { return String(config.model); }
