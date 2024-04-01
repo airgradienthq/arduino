@@ -57,15 +57,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
               */
 
 /**
- * @brief Use use LED bar state
- */
-typedef enum {
-  UseLedBarOff, /** Don't use LED bar */
-  UseLedBarPM,  /** Use LED bar for PMS */
-  UseLedBarCO2, /** Use LED bar for CO2 */
-} UseLedBar;
-
-/**
  * @brief Schedule handle with timing period
  *
  */
