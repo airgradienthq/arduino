@@ -1,60 +1,48 @@
 #ifndef _AG_STATE_MACHINE_H_
 #define _AG_STATE_MACHINE_H_
 
-/**
- * @brief Application state machine state
- *
- */
-enum AgStateMachine {
-  /** In WiFi Manger Mode */
-  AgStateMachineWiFiManagerMode,
+#include "AgOledDisplay.h"
+#include "AgValue.h"
+#include "AgConfigure.h"
+#include "Main/PrintLog.h"
+#include "App/AppDef.h"
 
-  /** WiFi Manager has connected to mobile phone */
-  AgStateMachineWiFiManagerPortalActive,
+class AgStateMachine : public PrintLog {
+private:
+  // AgStateMachineState state;
+  AgStateMachineState ledState;
+  AgStateMachineState dispState;
+  AirGradient &ag;
+  AgOledDisplay &disp;
+  AgValue &value;
+  AgConfigure &config;
 
-  /** After SSID and PW entered and OK clicked, connection to WiFI network is
-     attempted*/
-  AgStateMachineWiFiManagerStaConnecting,
+  bool addToDashBoard = false;
+  uint32_t addToDashboardTime;
+  int wifiConnectCountDown;
+  int ledBarAnimationCount;
 
-  /** Connecting to WiFi worked */
-  AgStateMachineWiFiManagerStaConnected,
+  void ledBarSingleLedAnimation(uint8_t r, uint8_t g, uint8_t b);
+  void ledStatusBlinkDelay(uint32_t delay);
+  void sensorLedHandle(void);
+  void co2LedHandle(void);
+  void pm25LedHandle(void);
 
-  /** Once connected to WiFi an attempt to reach the server is performed */
-  AgStateMachineWiFiOkServerConnecting,
-
-  /** Server is reachable, all ﬁne */
-  AgStateMachineWiFiOkServerConnected,
-
-  /** =================================== *
-   * Exceptions during WIFi Setup         *
-   * =================================== **/
-  /** Cannot connect to WiFi (e.g. wrong password, WPA Enterprise etc.) */
-  AgStateMachineWiFiManagerConnectFailed,
-
-  /** Connected to WiFi but server not reachable, e.g. firewall
-     block/whitelisting needed etc. */
-  AgStateMachineWiFiOkServerConnectFailed,
-
-  /** Server reachable but sensor not configured correctly*/
-  AgStateMachineWiFiOkServerOkSensorConfigFailed,
-
-  /** =================================== *
-   * During Normal Operation              *
-   * =================================== **/
-
-  /** Connection to WiFi network failed credentials incorrect encryption not
-     supported etc. */
-  AgStateMachineWiFiLost,
-
-  /** Connected to WiFi network but the server cannot be reached through the
-     internet, e.g. blocked by firewall */
-  AgStateMachineServerLost,
-
-  /** Server is reachable but there is some conﬁguration issue to be fixed on
-     the server side */
-  AgStateMachineSensorConfigFailed,
-
-  AgStateMachineNormal,
+public:
+  AgStateMachine(AirGradient &ag, AgOledDisplay &disp, Stream &log,
+                 AgValue &value, AgConfigure& config);
+  ~AgStateMachine();
+  void displayHandle(AgStateMachineState state);
+  void displayHandle(void);
+  void displaySetAddToDashBoard(void);
+  void displayClearAddToDashBoard(void);
+  void displayWiFiConnectCountDown(int count);
+  void ledAnimationInit(void);
+  void ledHandle(AgStateMachineState state);
+  void ledHandle(void);
+  void setDisplayState(AgStateMachineState state);
+  // AgStateMachineState getState(void);
+  AgStateMachineState getDisplayState(void);
 };
 
 #endif /** _AG_STATE_MACHINE_H_ */

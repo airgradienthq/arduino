@@ -21,18 +21,4 @@ public:
   void logWarning(const char* warning);
 };
 
-/**
- * @brief Construct a new Print Log:: Print Log object
- *
- * @param log Log stream
- * @param tag Tag name
- */
-PrintLog::PrintLog(Stream &log, String tag) : log(log), tag(tag)
-{
-}
-
-PrintLog::~PrintLog()
-{
-}
-
 #endif /** _PRINT_LOG_H_ */

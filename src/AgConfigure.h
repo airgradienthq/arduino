@@ -1,11 +1,12 @@
 #ifndef _AG_CONFIG_H_
 #define _AG_CONFIG_H_
 
-#include <AirGradient.h>
+#include "App/AppDef.h"
+#include "Main/PrintLog.h"
 #include <Arduino.h>
 #include <Arduino_JSON.h>
 
-class AgConfigure {
+class AgConfigure : public PrintLog {
 private:
   struct Config {
     char model[20];
@@ -14,12 +15,12 @@ private:
     bool inUSAQI; /** If PM standard "ugm3"  inUSAQI = false, otherwise is true
                    */
     bool inF;     /** Temperature unit F */
-    bool postDataToAirGradient; /** If true, monitor will not POST data to
-                                  airgradient server. Make sure no error
-                                  message shown on monitor */
-    uint8_t configurationControl; /** If true, configuration from airgradient server
-                               will be ignored */
-    bool displayMode;       /** true if enable display */
+    bool postDataToAirGradient;   /** If true, monitor will not POST data to
+                                    airgradient server. Make sure no error
+                                    message shown on monitor */
+    uint8_t configurationControl; /** If true, configuration from airgradient
+                               server will be ignored */
+    bool displayMode;             /** true if enable display */
     uint8_t useRGBLedBar;
     uint8_t abcDays;
     int tvocLearningOffset;
@@ -31,9 +32,7 @@ private:
   struct Config config;
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
-  Stream &debugLog;
 
-  void printLog(String log);
   String getLedBarModeName(LedBarMode mode);
   void saveConfig(void);
   void loadConfig(void);

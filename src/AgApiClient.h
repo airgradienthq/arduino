@@ -12,17 +12,18 @@
 #define _AG_API_CLIENT_H_
 
 #include "AgConfigure.h"
+#include "Main/PrintLog.h"
 #include <Arduino.h>
 
-class AgApiClient {
+class AgConfigure;
+class AirGradient;
+
+class AgApiClient : public PrintLog {
 private:
-  Stream &debugLog;
   AgConfigure &config;
 
-  bool getConfigFailed;;
+  bool getConfigFailed;
   bool postToServerFailed;
-
-  void printLog(String log);
 
 public:
   AgApiClient(Stream &stream, AgConfigure &config);

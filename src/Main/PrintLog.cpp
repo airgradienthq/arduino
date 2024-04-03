@@ -1,6 +1,20 @@
 #include "PrintLog.h"
 
 /**
+ * @brief Construct a new Print Log:: Print Log object
+ *
+ * @param log Log stream
+ * @param tag Tag name
+ */
+PrintLog::PrintLog(Stream &log, String tag) : log(log), tag(tag)
+{
+}
+
+PrintLog::~PrintLog()
+{
+}
+
+/**
  * @brief Print log info
  *
  * @param info Log message

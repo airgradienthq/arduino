@@ -3,12 +3,8 @@
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
-    [ConfigurationControlCloud] = "cloud", 
+    [ConfigurationControlCloud] = "cloud",
     [ConfigurationControlBoth] = "both"};
-
-void AgConfigure::printLog(String log) {
-  debugLog.printf("[AgConfigure] %s\r\n", log.c_str());
-}
 
 String AgConfigure::getLedBarModeName(LedBarMode mode) {
   LedBarMode ledBarMode = mode;
@@ -32,12 +28,12 @@ void AgConfigure::saveConfig(void) {
   }
   EEPROM.writeBytes(0, &config, sizeof(config));
   EEPROM.commit();
-  printLog("Save Config");
+  logInfo("Save Config");
 }
 
 void AgConfigure::loadConfig(void) {
   if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
-    printLog("Load configure failed");
+    logError("Load configure failed");
     defaultConfig();
   } else {
     uint32_t sum = 0;
@@ -48,7 +44,7 @@ void AgConfigure::loadConfig(void) {
     }
 
     if (sum != config._check) {
-      printLog("Configure validate invalid");
+      logError("Configure validate invalid");
       defaultConfig();
     }
   }
@@ -73,9 +69,9 @@ void AgConfigure::defaultConfig(void) {
   saveConfig();
 }
 
-void AgConfigure::printConfig(void) { printLog(toString()); }
+void AgConfigure::printConfig(void) { logInfo(toString().c_str()); }
 
-AgConfigure::AgConfigure(Stream &debugLog) : debugLog(debugLog) {}
+AgConfigure::AgConfigure(Stream &debugLog) : PrintLog(debugLog, "Configure") {}
 
 AgConfigure::~AgConfigure() {}
 
@@ -99,10 +95,10 @@ bool AgConfigure::begin(void) {
 bool AgConfigure::parse(String data, bool isLocal) {
   JSONVar root = JSON.parse(data);
   if (JSON.typeof_(root) == "undefined") {
-    printLog("Configuration JSON invalid");
+    logError("Configuration JSON invalid");
     return false;
   }
-  printLog("Parse configure success");
+  logInfo("Parse configure success");
 
   /** Is configuration changed */
   bool changed = false;
@@ -129,7 +125,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
           (uint8_t)ConfigurationControl::ConfigurationControlBoth;
       changed = true;
     } else {
-      printLog("'configurationControl' value '" + configurationControl +
+      logError("'configurationControl' value '" + configurationControl +
                "' invalid");
       return false;
     }
@@ -139,8 +135,8 @@ bool AgConfigure::parse(String data, bool isLocal) {
 
   if ((config.configurationControl ==
        (byte)ConfigurationControl::ConfigurationControlCloud)) {
-    printLog("Ignore, cause ConfigurationControl is " +
-             String(CONFIGURATION_CONTROL_NAME[config.configurationControl]));
+    logWarning("Ignore, cause ConfigurationControl is " +
+               String(CONFIGURATION_CONTROL_NAME[config.configurationControl]));
     return false;
   }
 
@@ -150,7 +146,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
       if (country != String(config.country)) {
         changed = true;
         snprintf(config.country, sizeof(config.country), country.c_str());
-        printLog("Set country: " + country);
+        logInfo("Set country: " + country);
       }
 
       // Update temperature unit if get configuration from server
@@ -168,9 +164,9 @@ bool AgConfigure::parse(String data, bool isLocal) {
         }
       }
     } else {
-      printLog("Country name " + country +
-               " invalid. Find details here (ALPHA-2): "
-               "https://www.iban.com/country-codes");
+      logInfo("Country name " + country +
+              " invalid. Find details here (ALPHA-2): "
+              "https://www.iban.com/country-codes");
     }
   }
 
@@ -184,18 +180,18 @@ bool AgConfigure::parse(String data, bool isLocal) {
     if (inUSAQI != config.inUSAQI) {
       config.inUSAQI = inUSAQI;
       changed = true;
-      printLog("Set PM standard: " + pmStandard);
+      logInfo("Set PM standard: " + pmStandard);
     }
   }
 
   if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
     co2CalibrationRequested = root["co2CalibrationRequested"];
-    printLog("Set co2CalibrationRequested: " + String(co2CalibrationRequested));
+    logInfo("Set co2CalibrationRequested: " + String(co2CalibrationRequested));
   }
 
   if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
     ledBarTestRequested = root["ledBarTestRequested"];
-    printLog("Set ledBarTestRequested: " + String(ledBarTestRequested));
+    logInfo("Set ledBarTestRequested: " + String(ledBarTestRequested));
   }
 
   if (JSON.typeof_(root["ledBarMode"]) == "string") {
@@ -209,13 +205,13 @@ bool AgConfigure::parse(String data, bool isLocal) {
       ledBarMode = LedBarModeOff;
     } else {
       ledBarMode = config.useRGBLedBar;
-      printLog("ledBarMode value '" + mode + "' invalid");
+      logInfo("ledBarMode value '" + mode + "' invalid");
     }
 
     if (ledBarMode != config.useRGBLedBar) {
       config.useRGBLedBar = ledBarMode;
       changed = true;
-      printLog("Set ledBarMode: " + mode);
+      logInfo("Set ledBarMode: " + mode);
     }
   }
 
@@ -228,13 +224,13 @@ bool AgConfigure::parse(String data, bool isLocal) {
       displayMode = false;
     } else {
       displayMode = config.displayMode;
-      printLog("displayMode '" + mode + "' invalid");
+      logInfo("displayMode '" + mode + "' invalid");
     }
 
     if (displayMode != config.displayMode) {
       changed = true;
       config.displayMode = displayMode;
-      printLog("Set displayMode: " + mode);
+      logInfo("Set displayMode: " + mode);
     }
   }
 
@@ -243,7 +239,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
     if (abcDays != config.abcDays) {
       config.abcDays = abcDays;
       changed = true;
-      printLog("Set abcDays: " + String(abcDays));
+      logInfo("Set abcDays: " + String(abcDays));
     }
   }
 
@@ -252,7 +248,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
     if (tvocLearningOffset != config.tvocLearningOffset) {
       changed = true;
       config.tvocLearningOffset = tvocLearningOffset;
-      printLog("Set tvocLearningOffset: " + String(tvocLearningOffset));
+      logInfo("Set tvocLearningOffset: " + String(tvocLearningOffset));
     }
   }
 
@@ -261,7 +257,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
     if (noxLearningOffset != config.noxLearningOffset) {
       changed = true;
       config.noxLearningOffset = noxLearningOffset;
-      printLog("Set noxLearningOffset: " + String(noxLearningOffset));
+      logInfo("Set noxLearningOffset: " + String(noxLearningOffset));
     }
   }
 
@@ -271,10 +267,10 @@ bool AgConfigure::parse(String data, bool isLocal) {
       if (broker != String(config.mqttBroker)) {
         changed = true;
         snprintf(config.mqttBroker, sizeof(config.mqttBroker), broker.c_str());
-        printLog("Set mqttBrokerUrl: " + broker);
+        logInfo("Set mqttBrokerUrl: " + broker);
       }
     } else {
-      printLog("Error: mqttBroker length invalid: " + String(broker.length()));
+      logError("Error: mqttBroker length invalid: " + String(broker.length()));
     }
   }
 
@@ -294,9 +290,9 @@ bool AgConfigure::parse(String data, bool isLocal) {
     changed = true;
     config.temperatureUnit = temperatureUnit;
     if (temperatureUnit == 0) {
-      printLog("set temperatureUnit: null");
+      logInfo("set temperatureUnit: null");
     } else {
-      printLog("set temperatureUnit: " + String(temperatureUnit));
+      logInfo("set temperatureUnit: " + String(temperatureUnit));
     }
   }
 
@@ -305,7 +301,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
     if (post != config.postDataToAirGradient) {
       changed = true;
       config.postDataToAirGradient = post;
-      printLog("Set postDataToAirGradient: " + String(post));
+      logInfo("Set postDataToAirGradient: " + String(post));
     }
   }
 
@@ -319,7 +315,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
           snprintf(config.model, sizeof(config.model), model.c_str());
         }
       } else {
-        printLog("Error: modal name length invalid: " + String(model.length()));
+        logError("Error: modal name length invalid: " + String(model.length()));
       }
     }
   }
@@ -440,7 +436,7 @@ bool AgConfigure::isLedBarTestRequested(void) {
  */
 void AgConfigure::reset(void) {
   defaultConfig();
-  printLog("Reset to default configure");
+  logInfo("Reset to default configure");
   printConfig();
 }
 

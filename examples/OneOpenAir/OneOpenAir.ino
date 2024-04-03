@@ -41,8 +41,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
-#include "mqtt_client.h"
-#include <HTTPClient.h>
 #include <HardwareSerial.h>
 #include <WiFiManager.h>
 

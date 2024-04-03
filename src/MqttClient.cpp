@@ -1,15 +1,15 @@
 #include "MqttClient.h"
 
 static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
-                               int32_t event_id, void *event_data);
+                                 int32_t event_id, void *event_data);
 
-MqttClient::MqttClient(Stream &debugLog) : debugLog(debugLog) {}
+MqttClient::MqttClient(Stream &debugLog) : PrintLog(debugLog, "MqttClient") {}
 
 MqttClient::~MqttClient() {}
 
 bool MqttClient::begin(String uri) {
   if (isBegin) {
-    _printLog("Already begin, calll 'end' and try again");
+    logInfo("Already begin, calll 'end' and try again");
     return true;
   }
   if (uri.isEmpty()) {
@@ -18,7 +18,7 @@ bool MqttClient::begin(String uri) {
   }
 
   this->uri = uri;
-  _printLog("Init uri: " + uri);
+  logInfo("Init uri: " + uri);
 
   /** config esp_mqtt client */
   esp_mqtt_client_config_t config = {
@@ -28,19 +28,19 @@ bool MqttClient::begin(String uri) {
   /** init client */
   client = esp_mqtt_client_init(&config);
   if (client == NULL) {
-    _printLog("Init client failed");
+    logError("Init client failed");
     return false;
   }
 
   /** Register event */
-  if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, __mqtt_event_handler,
-                                     this) != ESP_OK) {
-    _printLog("Register event failed");
+  if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY,
+                                     __mqtt_event_handler, this) != ESP_OK) {
+    logError("Register event failed");
     return false;
   }
 
   if (esp_mqtt_client_start(client) != ESP_OK) {
-    _printLog("Client start failed");
+    logError("Client start failed");
     return false;
   }
 
@@ -51,7 +51,7 @@ bool MqttClient::begin(String uri) {
 
 void MqttClient::end(void) {
   if (!isBegin) {
-    _printLog("Already end, call 'begin' and try again");
+    logWarning("Already end, call 'begin' and try again");
     return;
   }
 
@@ -64,37 +64,33 @@ void MqttClient::end(void) {
   Serial.println("De-init");
 }
 
-void MqttClient::_printLog(String log) {
-  debugLog.println("[MqttClient]" + log);
-}
-
 void MqttClient::_updateConnected(bool connected) {
   this->connected = connected;
   if (connected) {
     connectionFailedCount = 0;
   } else {
     connectionFailedCount++;
-    _printLog("Connection failed count " + String(connectionFailedCount));
+    logWarning("Connection failed count " + String(connectionFailedCount));
   }
 }
 
 bool MqttClient::publish(String &topic, String &payload) {
   if (!isBegin) {
-    _printLog("Error: No-initialized");
+    logError("No-initialized");
     return false;
   }
   if (!connected) {
-    _printLog("Error: Client disconnected");
+    logError("Client disconnected");
     return false;
   }
 
   if (esp_mqtt_client_publish(client, topic.c_str(), payload.c_str(),
                               payload.length(), 0, 0) == ESP_OK) {
-    _printLog("Publish topic: " + topic);
-    _printLog("Publish payload: " + payload);
+    logInfo("Publish topic: " + topic);
+    logInfo("Publish payload: " + payload);
     return true;
   }
-  _printLog("Error: publish");
+  logError("Publish failed");
   return false;
 }
 
@@ -128,7 +124,7 @@ bool MqttClient::isConnected(void) { return connected; }
 int MqttClient::getConnectionFailedCount(void) { return connectionFailedCount; }
 
 static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
-                               int32_t event_id, void *event_data) {
+                                 int32_t event_id, void *event_data) {
   MqttClient *mqtt = (MqttClient *)handler_args;
 
   esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
@@ -137,11 +133,11 @@ static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
   int msg_id;
   switch ((esp_mqtt_event_id_t)event_id) {
   case MQTT_EVENT_CONNECTED:
-    mqtt->_printLog("MQTT_EVENT_CONNECTED");
+    mqtt->logInfo("MQTT_EVENT_CONNECTED");
     mqtt->_updateConnected(true);
     break;
   case MQTT_EVENT_DISCONNECTED:
-    mqtt->_printLog("MQTT_EVENT_DISCONNECTED");
+    mqtt->logInfo("MQTT_EVENT_DISCONNECTED");
     mqtt->_updateConnected(false);
     break;
   case MQTT_EVENT_SUBSCRIBED:
@@ -155,12 +151,12 @@ static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
   case MQTT_EVENT_ERROR:
     Serial.println("MQTT_EVENT_ERROR");
     if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-      mqtt->_printLog("Reported from esp-tls: " +
-                      String(event->error_handle->esp_tls_last_esp_err));
-      mqtt->_printLog("Reported from tls stack: " +
-                      String(event->error_handle->esp_tls_stack_err));
-      mqtt->_printLog("Captured as transport's socket errno: " +
-                      String(event->error_handle->esp_transport_sock_errno));
+      mqtt->logError("Reported from esp-tls: " +
+                     String(event->error_handle->esp_tls_last_esp_err));
+      mqtt->logError("Reported from tls stack: " +
+                     String(event->error_handle->esp_tls_stack_err));
+      mqtt->logError("Captured as transport's socket errno: " +
+                     String(event->error_handle->esp_transport_sock_errno));
     }
     break;
   default:

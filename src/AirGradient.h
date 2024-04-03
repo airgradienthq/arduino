@@ -14,40 +14,6 @@
 #include "Sht/Sht.h"
 
 /**
- * @brief RGB LED bar mode for ONE_INDOOR board
- */
-enum LedBarMode {
-  /** Don't use LED bar */
-  LedBarModeOff,
-
-  /** Use LED bar for show PM2.5 value level */
-  LedBarModePm,
-
-  /** Use LED bar for show CO2 value level */
-  LedBarModeCO2,
-};
-
-enum ConfigurationControl {
-  /** Allow set configuration from local over device HTTP server */
-  ConfigurationControlLocal,
-
-  /** Allow set configuration from Airgradient cloud */
-  ConfigurationControlCloud,
-
-  /** Allow set configuration from Local and Cloud */
-  ConfigurationControlBoth
-};
-
-enum AgFirmwareMode {
-  FW_MODE_I_9PSL, /** ONE_INDOOR */
-  FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
-  FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
-  FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
-  FW_MDOE_O_1PS   /** PMS5003T, S8 */
-};
-const char* AgFirmwareModeName(AgFirmwareMode mode);
-
-/**
  * @brief Class with define all the sensor has supported by Airgradient. Each
  * sensor usage must be init before use.
  */
@@ -156,14 +122,23 @@ public:
    */
   double round2(double value);
 
+  /**
+   * @brief Check that Airgradient object is ONE_INDOOR
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isOneIndoor(void);
+
+  /**
+   * @brief Get device Id
+   *
+   * @return String
+   */
+  String deviceId(void);
+
 private:
   BoardType boardType;
 };
-
-#include "AgConfigure.h"
-#include "AgApiClient.h"
-#include "AgSchedule.h"
-#include "MqttClient.h"
-#include "AgStateMachine.h"
 
 #endif /** _AIR_GRADIENT_H_ */

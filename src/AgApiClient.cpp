@@ -1,13 +1,11 @@
 #include "AgApiClient.h"
+#include "AgConfigure.h"
+#include "AirGradient.h"
 #include <HTTPClient.h>
 
-void AgApiClient::printLog(String log) {
-  debugLog.printf("[AgApiClient] %s\r\n", log.c_str());
-  // Serial.printf("[AgApiClient] %s\r\n", log.c_str());
-}
-
 AgApiClient::AgApiClient(Stream &debug, AgConfigure &config)
-    : debugLog(debug), config(config) {}
+    :PrintLog(debug, "ApiClient"), config(config)  {
+    }
 
 AgApiClient::~AgApiClient() {}
 
@@ -18,7 +16,7 @@ AgApiClient::~AgApiClient() {}
 void AgApiClient::begin(void) {
   getConfigFailed = false;
   postToServerFailed = false;
-  printLog("Begin");
+  logInfo("begin");
 }
 
 /**
@@ -31,7 +29,7 @@ void AgApiClient::begin(void) {
 bool AgApiClient::fetchServerConfiguration(String deviceId) {
   if (config.getConfigurationControl() ==
       ConfigurationControl::ConfigurationControlLocal) {
-    printLog("Ignore fetch server configuratoin");
+    logWarning("Ignore fetch server configuration");
 
     // Clear server configuration failed flag, cause it's ignore but not
     // really failed
@@ -64,7 +62,7 @@ bool AgApiClient::fetchServerConfiguration(String deviceId) {
   String respContent = client.getString();
   client.end();
 
-  printLog("Server configuration: " + respContent);
+  logInfo("Get configuration: " + respContent);
 
   /** Parse configuration and return result */
   return config.parse(respContent, false);
@@ -80,7 +78,7 @@ bool AgApiClient::fetchServerConfiguration(String deviceId) {
  */
 bool AgApiClient::postToServer(String deviceId, String data) {
   if (config.isPostDataToAirGradient() == false) {
-    printLog("Ignore post data to server");
+    logWarning("Ignore post data to server");
     return true;
   }
 
@@ -90,8 +88,8 @@ bool AgApiClient::postToServer(String deviceId, String data) {
 
   String uri =
       "http://hw.airgradient.com/sensors/airgradient:" + deviceId + "/measures";
-  printLog("Post uri: " + uri);
-  printLog("Post data: " + data);
+  logInfo("Post uri: " + uri);
+  logInfo("Post data: " + data);
 
   WiFiClient wifiClient;
   HTTPClient client;
@@ -106,7 +104,7 @@ bool AgApiClient::postToServer(String deviceId, String data) {
     postToServerFailed = false;
     return true;
   } else {
-    printLog("Post response failed code: " + String(retCode));
+    logError("Post response failed code: " + String(retCode));
   }
   postToServerFailed = true;
   return false;
