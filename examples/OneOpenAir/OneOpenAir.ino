@@ -46,49 +46,17 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <HardwareSerial.h>
 #include <WiFiManager.h>
 
+#include "AgApiClient.h"
+#include "AgConfigure.h"
+#include "AgSchedule.h"
+#include "AgStateMachine.h"
 #include "EEPROM.h"
-#include "LocalConfig.h"
+#include "MqttClient.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <ESPmDNS.h>
 #include <U8g2lib.h>
 #include <WebServer.h>
-
-/**
- * @brief Application state machine state
- *
- */
-enum {
-  APP_SM_WIFI_MANAGER_MODE,           /** In WiFi Manger Mode */
-  APP_SM_WIFI_MANAGER_PORTAL_ACTIVE,  /** WiFi Manager has connected to mobile
-                                         phone */
-  APP_SM_WIFI_MANAGER_STA_CONNECTING, /** After SSID and PW entered and OK
-                                        clicked, connection to WiFI network is
-                                        attempted*/
-  APP_SM_WIFI_MANAGER_STA_CONNECTED,  /** Connecting to WiFi worked */
-  APP_SM_WIFI_OK_SERVER_CONNECTING,   /** Once connected to WiFi an attempt to
-                                         reach the server is performed */
-  APP_SM_WIFI_OK_SERVER_CONNECTED,    /** Server is reachable, all ﬁne */
-  /** Exceptions during WIFi Setup */
-  APP_SM_WIFI_MANAGER_CONNECT_FAILED,   /** Cannot connect to WiFi (e.g. wrong
-                                            password, WPA Enterprise etc.) */
-  APP_SM_WIFI_OK_SERVER_CONNECT_FAILED, /** Connected to WiFi but server not
-                                          reachable, e.g. firewall block/
-                                          whitelisting needed etc. */
-  APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED, /** Server reachable but sensor
-                                                   not configured correctly*/
-
-  /** During Normal Operation */
-  APP_SM_WIFI_LOST, /** Connection to WiFi network failed credentials incorrect
-                       encryption not supported etc. */
-  APP_SM_SERVER_LOST, /** Connected to WiFi network but the server cannot be
-                         reached through the internet, e.g. blocked by firewall
-                       */
-  APP_SM_SENSOR_CONFIG_FAILED, /** Server is reachable but there is some
-                                  conﬁguration issue to be fixed on the server
-                                  side */
-  APP_SM_NORMAL,
-};
 
 #define LED_FAST_BLINK_DELAY 250             /** ms */
 #define LED_SLOW_BLINK_DELAY 1000            /** ms */
@@ -108,321 +76,19 @@ enum {
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
-#define WIFI_HOTSPOT_PASSWORD_DEFAULT                                          \
-  "cleanair" /** default WiFi AP password                                      \
-              */
+
+/** Default WiFi AP password */
+#define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
 
 /** I2C define */
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
 
-enum {
-  FW_MODE_I_9PSL, /** ONE_INDOOR */
-  FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
-  FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
-  FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
-  FW_MDOE_O_1PS   /** PMS5003T, S8 */
-};
-
-/**
- * @brief Schedule handle with timing period
- *
- */
-class AgSchedule {
-public:
-  AgSchedule(int period, void (*handler)(void))
-      : period(period), handler(handler) {}
-
-  /**
-   * @brief Handle schedule
-   *
-   */
-  void run(void) {
-    uint32_t ms = (uint32_t)(millis() - count);
-    if (ms >= period) {
-      handler();
-      count = millis();
-    }
-  }
-  /**
-   * @brief Set schedule handle period
-   *
-   * @param period
-   */
-  void setPeriod(int period) { this->period = period; }
-
-private:
-  void (*handler)(void); /** Callback handle */
-  int period;            /** Schedule handle period */
-  int count;             /** Schedule time count check */
-};
-
-/**
- * @brief AirGradient server configuration and sync data
- */
-class AgServer {
-public:
-  AgServer(LocalConfig &localConfig) : config(localConfig) {}
-
-  /**
-   * @brief Initialize airgradient server, it's load the server configuration if
-   * failed load it to default.
-   */
-  void begin(void) {
-    configFailed = false;
-    serverFailed = false;
-  }
-
-  /**
-   * @brief Fetch server configuration, if get sucessed and configuratrion
-   * parameter has changed store into local storage
-   *
-   * @param id Device ID
-   * @return true Success
-   * @return false Failure
-   */
-  bool fetchServerConfiguration(String id) {
-    if (config.getConfigurationControl() == ConfigurationControl::Local) {
-      Serial.println("Ignore fetch server configuration");
-
-      // Clear server configuration failed flag, cause it's ignore but not
-      // really failed
-      configFailed = false;
-      return false;
-    }
-
-    String uri =
-        "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
-
-    /** Init http client */
-    HTTPClient client;
-    if (client.begin(uri) == false) {
-      configFailed = true;
-      return false;
-    }
-
-    /** Get */
-    int retCode = client.GET();
-    if (retCode != 200) {
-      client.end();
-      configFailed = true;
-      return false;
-    }
-
-    /** clear failed */
-    configFailed = false;
-
-    /** Get response string */
-    String respContent = client.getString();
-    client.end();
-    Serial.println("Get server config: " + respContent);
-
-    return config.parse(respContent, false);
-  }
-
-  /**
-   * @brief Post data to Airgradient server
-   *
-   * @param id Device Id
-   * @param payload Data payload
-   * @return true Success
-   * @return false Failure
-   */
-  bool postToServer(String id, String payload) {
-    if (config.isPostDataToAirGradient() == false) {
-      Serial.println("Ignore post to Airgrdient server");
-      return true;
-    }
-
-    if (WiFi.isConnected() == false) {
-      return false;
-    }
-
-    Serial.printf("Post payload: %s\r\n", payload.c_str());
-
-    String uri =
-        "http://hw.airgradient.com/sensors/airgradient:" + id + "/measures";
-
-    WiFiClient wifiClient;
-    HTTPClient client;
-    if (client.begin(wifiClient, uri.c_str()) == false) {
-      return false;
-    }
-    client.addHeader("content-type", "application/json");
-    int retCode = client.POST(payload);
-    client.end();
-
-    if ((retCode == 200) || (retCode == 429)) {
-      serverFailed = false;
-      return true;
-    } else {
-      Serial.printf("Post response failed code: %d\r\n", retCode);
-    }
-    serverFailed = true;
-    return false;
-  }
-
-  /**
-   * @brief Get status of get server configuration is failed
-   *
-   * @return true Failed
-   * @return false Success
-   */
-  bool isConfigFailed(void) { return configFailed; }
-
-  /**
-   * @brief Get status of post server configuration is failed
-   *
-   * @return true Failed
-   * @return false Success
-   */
-  bool isServerFailed(void) { return serverFailed; }
-
-private:
-  bool configFailed; /** Flag indicate get server configuration failed */
-  bool serverFailed; /** Flag indicate post data to server failed */
-  LocalConfig &config;
-};
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
-                               int32_t event_id, void *event_data);
-
-class AgMqtt {
-private:
-  bool _isBegin = false;
-  String uri;
-  String hostname;
-  String user;
-  String pass;
-  int port;
-  esp_mqtt_client_handle_t client;
-  bool clientConnected = false;
-  int connectFailedCount = 0;
-
-public:
-  AgMqtt() {}
-  ~AgMqtt() {}
-
-  /**
-   * @brief Initialize mqtt
-   *
-   * @param uri Complete mqtt uri, ex:
-   * mqtts://username:password@my.broker.com:4711
-   * @return true Success
-   * @return false Failure
-   */
-  bool begin(String uri) {
-    if (_isBegin) {
-      Serial.println("Mqtt already begin, call 'end' and try again");
-      return true;
-    }
-
-    if (uri.isEmpty()) {
-      Serial.println("Mqtt uri is empty");
-      return false;
-    }
-
-    this->uri = uri;
-    Serial.printf("mqtt init '%s'\r\n", uri.c_str());
-
-    /** config esp_mqtt client */
-    esp_mqtt_client_config_t config = {
-        .uri = this->uri.c_str(),
-    };
-
-    /** init client */
-    client = esp_mqtt_client_init(&config);
-    if (client == NULL) {
-      Serial.println("MQTT client init failed");
-      return false;
-    }
-
-    /** Register event */
-    if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY,
-                                       mqtt_event_handler, this) != ESP_OK) {
-      Serial.println("MQTT client register event failed");
-      return false;
-    }
-
-    if (esp_mqtt_client_start(client) != ESP_OK) {
-      Serial.println("MQTT client start failed");
-      return false;
-    }
-
-    _isBegin = true;
-    return true;
-  }
-
-  /**
-   * @brief Deinitialize mqtt
-   *
-   */
-  void end(void) {
-    if (_isBegin == false) {
-      return;
-    }
-
-    esp_mqtt_client_disconnect(client);
-    esp_mqtt_client_stop(client);
-    esp_mqtt_client_destroy(client);
-    _isBegin = false;
-
-    Serial.println("mqtt de-init");
-  }
-
-  bool publish(const char *topic, const char *payload, int len) {
-    if ((_isBegin == false) || (clientConnected == false)) {
-      return false;
-    }
-
-    if (esp_mqtt_client_publish(client, topic, payload, len, 0, 0) == ESP_OK) {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * @brief Get current complete mqtt uri
-   *
-   * @return String
-   */
-  String getUri(void) { return uri; }
-
-  /**
-   * @brief Update mqtt connection changed
-   *
-   * @param connected
-   */
-  void _connectionHandler(bool connected) {
-    clientConnected = connected;
-    if (clientConnected == false) {
-      connectFailedCount++;
-    } else {
-      connectFailedCount = 0;
-    }
-  }
-
-  /**
-   * @brief Mqtt client connect status
-   *
-   * @return true Connected
-   * @return false Disconnected or Not initialize
-   */
-  bool isConnected(void) { return (_isBegin && clientConnected); }
-
-  /**
-   * @brief Get number of times connection failed
-   *
-   * @return int
-   */
-  int connectionFailedCount(void) { return connectFailedCount; }
-};
-
-static AgMqtt agMqtt;
+static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
-static LocalConfig localConfig(Serial);
-static AgServer agServer(localConfig);
+static AgConfigure localConfig(Serial);
+static AgApiClient agServer(Serial, localConfig);
 
 static AirGradient *ag;
 static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
@@ -430,11 +96,11 @@ static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
 static WiFiManager wifiManager;
 static WebServer webServer;
 
-static bool wifiHasConfig = false;      /** */
-static int connectCountDown;            /** wifi configuration countdown */
-static int ledCount;                    /** For LED animation */
-static int ledSmState = APP_SM_NORMAL;  /** Save display SM */
-static int dispSmState = APP_SM_NORMAL; /** Save LED SM */
+static bool wifiHasConfig = false; /** */
+static int connectCountDown;       /** wifi configuration countdown */
+static int ledCount;               /** For LED animation */
+static int ledSmState = AgStateMachineNormal;  /** Save display SM */
+static int dispSmState = AgStateMachineNormal; /** Save LED SM */
 
 /** Init schedule */
 static bool hasSensorS8 = true;
@@ -448,7 +114,7 @@ static int getCO2FailCount = 0;
 static uint32_t addToDashboardTime;
 static bool isAddToDashboard = true;
 static bool offlineMode = false;
-static int fwMode = FW_MODE_I_9PSL;
+static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static int tvocIndex = -1;
 static int tvocRawIndex = -1;
@@ -562,7 +228,7 @@ void setup() {
       ledTest();
     } else {
       /** Check LED mode to disabled LED */
-      if (localConfig.getLedBarMode() == UseLedBarOff) {
+      if (localConfig.getLedBarMode() == LedBarModeOff) {
         ag->ledBar.setEnable(false);
       }
       connectToWifi();
@@ -579,7 +245,7 @@ void setup() {
 
     /** MQTT init */
     if (localConfig.getMqttBrokerUri().isEmpty() == false) {
-      if (agMqtt.begin(localConfig.getMqttBrokerUri())) {
+      if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
         createMqttTask();
         Serial.println("MQTT client init success");
       } else {
@@ -594,14 +260,14 @@ void setup() {
 
     /** Get first connected to wifi */
     agServer.fetchServerConfiguration(getDevId());
-    if (agServer.isConfigFailed()) {
+    if (agServer.isFetchConfigureFailed()) {
       if (isOneIndoor()) {
-        dispSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
+        dispSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
       }
-      ledSmHandler(APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED);
+      ledSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
       delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     } else {
-      ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
+      ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
     }
   } else {
     offlineMode = true;
@@ -805,13 +471,13 @@ void webServerMetricsGet(void) {
              "1 if the AirGradient device was able to successfully fetch its "
              "configuration from the server",
              "gauge");
-  add_metric_point("", agServer.isConfigFailed() ? "0" : "1");
+  add_metric_point("", agServer.isFetchConfigureFailed() ? "0" : "1");
 
   add_metric(
       "post_ok",
       "1 if the AirGradient device was able to successfully send to the server",
       "gauge");
-  add_metric_point("", agServer.isServerFailed() ? "0" : "1");
+  add_metric_point("", agServer.isPostToServerFailed() ? "0" : "1");
 
   add_metric(
       "wifi_rssi",
@@ -971,7 +637,8 @@ static void webServerInit(void) {
   webServer.on("/config", HTTP_PUT, localConfigPut);
   webServer.begin();
   MDNS.addService("_airgradient", "_tcp", 80);
-  MDNS.addServiceTxt("_airgradient", "_tcp", "model", getFirmwareModeName());
+  MDNS.addServiceTxt("_airgradient", "_tcp", "model",
+                     AgFirmwareModeName(fwMode));
   MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", getDevId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag->getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
@@ -1135,7 +802,7 @@ static String getServerSyncData(bool localServer) {
   if (localServer) {
     root["ledMode"] = localConfig.getLedBarModeName();
     root["firmwareVersion"] = ag->getVersion();
-    root["fwMode"] = getFirmwareModeName();
+    root["fwMode"] = AgFirmwareModeName(fwMode);
   }
 
   return JSON.stringify(root);
@@ -1153,11 +820,10 @@ static void createMqttTask(void) {
           delay(MQTT_SYNC_INTERVAL);
 
           /** Send data */
-          if (agMqtt.isConnected()) {
-            String syncData = getServerSyncData(false);
+          if (mqttClient.isConnected()) {
+            String payload = getServerSyncData(false);
             String topic = "airgradient/readings/" + getDevId();
-            if (agMqtt.publish(topic.c_str(), syncData.c_str(),
-                               syncData.length())) {
+            if (mqttClient.publish(topic, payload)) {
               Serial.println("MQTT sync success");
             } else {
               Serial.println("MQTT sync failure");
@@ -1255,16 +921,16 @@ static void sendPing() {
 
   /** Change disp and led state */
   if (isOneIndoor()) {
-    dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTING);
+    dispSmHandler(AgStateMachineWiFiOkServerConnecting);
   }
-  ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTING);
+  ledSmHandler(AgStateMachineWiFiOkServerConnecting);
 
   /** Task handle led connecting animation */
   xTaskCreate(
       [](void *obj) {
         for (;;) {
           ledSmHandler();
-          if (ledSmState != APP_SM_WIFI_OK_SERVER_CONNECTING) {
+          if (ledSmState != AgStateMachineWiFiOkServerConnecting) {
             break;
           }
           delay(LED_BAR_ANIMATION_PERIOD);
@@ -1276,18 +942,18 @@ static void sendPing() {
   delay(1500);
   if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
     if (isOneIndoor()) {
-      dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
+      dispSmHandler(AgStateMachineWiFiOkServerConnected);
     }
-    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECTED);
+    ledSmHandler(AgStateMachineWiFiOkServerConnected);
   } else {
     if (isOneIndoor()) {
-      dispSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
+      dispSmHandler(AgStateMachineWiFiOkServerConnectFailed);
     }
-    ledSmHandler(APP_SM_WIFI_OK_SERVER_CONNECT_FAILED);
+    ledSmHandler(AgStateMachineWiFiOkServerConnectFailed);
   }
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-  ledSmHandler(APP_SM_NORMAL);
+  ledSmHandler(AgStateMachineNormal);
 }
 
 static void displayShowWifiText(String ln1, String ln2, String ln3,
@@ -1489,22 +1155,22 @@ static void connectToWifi() {
     connectCountDown = WIFI_CONNECT_COUNTDOWN_MAX;
     ledCount = LED_BAR_COUNT_INIT_VALUE;
     if (isOneIndoor()) {
-      dispSmState = APP_SM_WIFI_MANAGER_MODE;
+      dispSmState = AgStateMachineWiFiManagerMode;
     }
-    ledSmState = APP_SM_WIFI_MANAGER_MODE;
+    ledSmState = AgStateMachineWiFiManagerMode;
   });
   wifiManager.setSaveConfigCallback([]() {
     /** Wifi connected save the configuration */
-    dispSmState = APP_SM_WIFI_MANAGER_STA_CONNECTED;
-    ledSmHandler(APP_SM_WIFI_MANAGER_STA_CONNECTED);
+    dispSmState = AgStateMachineWiFiManagerStaConnected;
+    ledSmHandler(AgStateMachineWiFiManagerStaConnected);
   });
   wifiManager.setSaveParamsCallback([]() {
     /** Wifi set connect: ssid, password */
     ledCount = LED_BAR_COUNT_INIT_VALUE;
     if (isOneIndoor()) {
-      dispSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
+      dispSmState = AgStateMachineWiFiManagerStaConnecting;
     }
-    ledSmState = APP_SM_WIFI_MANAGER_STA_CONNECTING;
+    ledSmState = AgStateMachineWiFiManagerStaConnecting;
   });
 
   if (isOneIndoor()) {
@@ -1557,12 +1223,12 @@ static void connectToWifi() {
       if (clientConnected != clientConnectChanged) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
-          ledSmHandler(APP_SM_WIFI_MANAGER_PORTAL_ACTIVE);
+          ledSmHandler(AgStateMachineWiFiManagerPortalActive);
         } else {
           ledCount = LED_BAR_COUNT_INIT_VALUE;
-          ledSmHandler(APP_SM_WIFI_MANAGER_MODE);
+          ledSmHandler(AgStateMachineWiFiManagerMode);
           if (isOneIndoor()) {
-            dispSmHandler(APP_SM_WIFI_MANAGER_MODE);
+            dispSmHandler(AgStateMachineWiFiManagerMode);
           }
         }
       }
@@ -1571,9 +1237,9 @@ static void connectToWifi() {
 
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
-    ledSmHandler(APP_SM_WIFI_MANAGER_CONNECT_FAILED);
+    ledSmHandler(AgStateMachineWiFiManagerConnectFailed);
     if (isOneIndoor()) {
-      dispSmHandler(APP_SM_WIFI_MANAGER_CONNECT_FAILED);
+      dispSmHandler(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
   } else {
@@ -1884,25 +1550,7 @@ static void openAirInit(void) {
     }
   }
 
-  Serial.printf("Firmware Mode: %s\r\n", getFirmwareModeName());
-}
-
-static String getFirmwareModeName() {
-  switch (fwMode) {
-  case FW_MODE_I_9PSL:
-    return "I-9PSL";
-  case FW_MODE_O_1PP:
-    return "O-1PP";
-  case FW_MODE_O_1PPT:
-    return "O-1PPT";
-  case FW_MODE_O_1PST:
-    return "O-1PST";
-  case FW_MDOE_O_1PS:
-    return "0-1PS";
-  default:
-    break;
-  }
-  return "UNKNOWN";
+  Serial.printf("Firmware Mode: %s\r\n", AgFirmwareModeName(fwMode));
 }
 
 static bool isOneIndoor(void) {
@@ -1952,7 +1600,7 @@ static void configUpdateHandle() {
 
   // Update LED bar
   if (isOneIndoor()) {
-    ag->ledBar.setEnable(localConfig.getLedBarMode() != UseLedBarOff);
+    ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
   }
 
   if (localConfig.getCO2CalirationAbcDays() > 0) {
@@ -1986,15 +1634,15 @@ static void configUpdateHandle() {
   }
 
   String mqttUri = localConfig.getMqttBrokerUri();
-  if (mqttUri != agMqtt.getUri()) {
-    agMqtt.end();
+  if (mqttClient.isCurrentUri(mqttUri)) {
+    mqttClient.end();
 
     if (mqttTask != NULL) {
       vTaskDelete(mqttTask);
       mqttTask = NULL;
     }
     if (mqttUri.length() > 0) {
-      if (agMqtt.begin(mqttUri)) {
+      if (mqttClient.begin(mqttUri)) {
         Serial.println("Connect to MQTT broker successful");
         createMqttTask();
       } else {
@@ -2163,7 +1811,7 @@ static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
  * @param sm APP state machine
  */
 static void ledSmHandler(int sm) {
-  if (sm > APP_SM_NORMAL) {
+  if (sm > AgStateMachineNormal) {
     return;
   }
 
@@ -2172,7 +1820,7 @@ static void ledSmHandler(int sm) {
     ag->ledBar.clear(); // Set all LED OFF
   }
   switch (sm) {
-  case APP_SM_WIFI_MANAGER_MODE: {
+  case AgStateMachineWiFiManagerMode: {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
     /** Turn midle LED Color */
@@ -2183,7 +1831,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
+  case AgStateMachineWiFiManagerPortalActive: {
     /** WiFi Manager has connected to mobile phone */
     if (isOneIndoor()) {
       ag->ledBar.setColor(0, 0, 255);
@@ -2192,7 +1840,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_MANAGER_STA_CONNECTING: {
+  case AgStateMachineWiFiManagerStaConnecting: {
     /** after SSID and PW entered and OK clicked, connection to WiFI network is
      * attempted */
     if (isOneIndoor()) {
@@ -2202,7 +1850,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_MANAGER_STA_CONNECTED: {
+  case AgStateMachineWiFiManagerStaConnected: {
     /** Connecting to WiFi worked */
     if (isOneIndoor()) {
       ag->ledBar.setColor(255, 255, 255);
@@ -2211,7 +1859,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECTING: {
+  case AgStateMachineWiFiOkServerConnecting: {
     /** once connected to WiFi an attempt to reach the server is performed */
     if (isOneIndoor()) {
       singleLedAnimation(0, 255, 0);
@@ -2220,7 +1868,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
+  case AgStateMachineWiFiOkServerConnected: {
     /** Server is reachable, all ﬁne */
     if (isOneIndoor()) {
       ag->ledBar.setColor(0, 255, 0);
@@ -2236,7 +1884,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_MANAGER_CONNECT_FAILED: {
+  case AgStateMachineWiFiManagerConnectFailed: {
     /** Cannot connect to WiFi (e.g. wrong password, WPA Enterprise etc.) */
     if (isOneIndoor()) {
       ag->ledBar.setColor(255, 0, 0);
@@ -2253,7 +1901,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECT_FAILED: {
+  case AgStateMachineWiFiOkServerConnectFailed: {
     /** Connected to WiFi but server not reachable, e.g. firewall block/
      * whitelisting needed etc. */
     if (isOneIndoor()) {
@@ -2270,7 +1918,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED: {
+  case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
     /** Server reachable but sensor not configured correctly */
     if (isOneIndoor()) {
       ag->ledBar.setColor(139, 24, 248); /** violet */
@@ -2286,7 +1934,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_LOST: {
+  case AgStateMachineWiFiLost: {
     /** Connection to WiFi network failed credentials incorrect encryption not
      * supported etc. */
     if (isOneIndoor()) {
@@ -2299,7 +1947,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_SERVER_LOST: {
+  case AgStateMachineServerLost: {
     /** Connected to WiFi network but the server cannot be reached through the
      * internet, e.g. blocked by firewall */
     if (isOneIndoor()) {
@@ -2312,7 +1960,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_SENSOR_CONFIG_FAILED: {
+  case AgStateMachineSensorConfigFailed: {
     /** Server is reachable but there is some conﬁguration issue to be fixed on
      * the server side */
     if (isOneIndoor()) {
@@ -2325,7 +1973,7 @@ static void ledSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_NORMAL: {
+  case AgStateMachineNormal: {
     if (isOneIndoor()) {
       sensorLedColorHandler();
     } else {
@@ -2360,15 +2008,15 @@ static void ledSmHandler(void) { ledSmHandler(ledSmState); }
  * @param sm APP state machine
  */
 static void dispSmHandler(int sm) {
-  if (sm > APP_SM_NORMAL) {
+  if (sm > AgStateMachineNormal) {
     return;
   }
 
   dispSmState = sm;
 
   switch (sm) {
-  case APP_SM_WIFI_MANAGER_MODE:
-  case APP_SM_WIFI_MANAGER_PORTAL_ACTIVE: {
+  case AgStateMachineWiFiManagerMode:
+  case AgStateMachineWiFiManagerPortalActive: {
     if (connectCountDown >= 0) {
       displayShowWifiText(String(connectCountDown) + "s to connect",
                           "to WiFi hotspot:", "\"airgradient-",
@@ -2377,43 +2025,43 @@ static void dispSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_WIFI_MANAGER_STA_CONNECTING: {
+  case AgStateMachineWiFiManagerStaConnecting: {
     displayShowText("Trying to", "connect to WiFi", "...");
     break;
   }
-  case APP_SM_WIFI_MANAGER_STA_CONNECTED: {
+  case AgStateMachineWiFiManagerStaConnected: {
     displayShowText("WiFi connection", "successful", "");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECTING: {
+  case AgStateMachineWiFiOkServerConnecting: {
     displayShowText("Connecting to", "Server", "...");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECTED: {
+  case AgStateMachineWiFiOkServerConnected: {
     displayShowText("Server", "connection", "successful");
     break;
   }
-  case APP_SM_WIFI_MANAGER_CONNECT_FAILED: {
+  case AgStateMachineWiFiManagerConnectFailed: {
     displayShowText("WiFi not", "connected", "");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_CONNECT_FAILED: {
+  case AgStateMachineWiFiOkServerConnectFailed: {
     // displayShowText("Server not", "reachable", "");
     break;
   }
-  case APP_SM_WIFI_OK_SERVER_OK_SENSOR_CONFIG_FAILED: {
+  case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
     displayShowText("Monitor not", "setup on", "dashboard");
     break;
   }
-  case APP_SM_WIFI_LOST: {
+  case AgStateMachineWiFiLost: {
     displayShowDashboard("WiFi N/A");
     break;
   }
-  case APP_SM_SERVER_LOST: {
+  case AgStateMachineServerLost: {
     displayShowDashboard("Server N/A");
     break;
   }
-  case APP_SM_SENSOR_CONFIG_FAILED: {
+  case AgStateMachineSensorConfigFailed: {
     uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
     if (ms >= 5000) {
       addToDashboardTime = millis();
@@ -2426,7 +2074,7 @@ static void dispSmHandler(int sm) {
     }
     break;
   }
-  case APP_SM_NORMAL: {
+  case AgStateMachineNormal: {
     displayShowDashboard("");
   }
   default:
@@ -2439,13 +2087,13 @@ static void dispSmHandler(int sm) {
  */
 static void sensorLedColorHandler(void) {
   switch (localConfig.getLedBarMode()) {
-  case UseLedBarCO2:
+  case LedBarModeCO2:
     setRGBledCO2color(co2Ppm);
     break;
-  case UseLedBarPM:
+  case LedBarModePm:
     setRGBledPMcolor(pm25_1);
     break;
-  case UseLedBarOff:
+  case LedBarModeOff:
     ag->ledBar.clear();
     break;
   default:
@@ -2458,13 +2106,13 @@ static void sensorLedColorHandler(void) {
  * @brief APP LED color handler
  */
 static void appLedHandler(void) {
-  uint8_t state = APP_SM_NORMAL;
+  uint8_t state = AgStateMachineNormal;
   if (WiFi.isConnected() == false) {
-    state = APP_SM_WIFI_LOST;
-  } else if (agServer.isConfigFailed()) {
-    state = APP_SM_SENSOR_CONFIG_FAILED;
-  } else if (agServer.isServerFailed()) {
-    state = APP_SM_SERVER_LOST;
+    state = AgStateMachineWiFiLost;
+  } else if (agServer.isFetchConfigureFailed()) {
+    state = AgStateMachineSensorConfigFailed;
+  } else if (agServer.isPostToServerFailed()) {
+    state = AgStateMachineServerLost;
   }
   ledSmHandler(state);
 }
@@ -2473,13 +2121,13 @@ static void appLedHandler(void) {
  * @brief APP display content handler
  */
 static void appDispHandler(void) {
-  uint8_t state = APP_SM_NORMAL;
+  uint8_t state = AgStateMachineNormal;
   if (WiFi.isConnected() == false) {
-    state = APP_SM_WIFI_LOST;
-  } else if (agServer.isConfigFailed()) {
-    state = APP_SM_SENSOR_CONFIG_FAILED;
-  } else if (agServer.isServerFailed()) {
-    state = APP_SM_SERVER_LOST;
+    state = AgStateMachineWiFiLost;
+  } else if (agServer.isFetchConfigureFailed()) {
+    state = AgStateMachineSensorConfigFailed;
+  } else if (agServer.isPostToServerFailed()) {
+    state = AgStateMachineServerLost;
   }
   dispSmHandler(state);
 }
@@ -2722,54 +2370,5 @@ static void tempHumUpdate(void) {
     }
   } else {
     Serial.println("SHT read failed");
-  }
-}
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
-                               int32_t event_id, void *event_data) {
-  AgMqtt *mqtt = (AgMqtt *)handler_args;
-
-  esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
-  esp_mqtt_client_handle_t client = event->client;
-  int msg_id;
-  switch ((esp_mqtt_event_id_t)event_id) {
-  case MQTT_EVENT_CONNECTED:
-    Serial.println("MQTT_EVENT_CONNECTED");
-    // msg_id = esp_mqtt_client_subscribe(client, "helloworld", 0);
-    // Serial.printf("sent subscribe successful, msg_id=%d\r\n", msg_id);
-    mqtt->_connectionHandler(true);
-    break;
-  case MQTT_EVENT_DISCONNECTED:
-    Serial.println("MQTT_EVENT_DISCONNECTED");
-    mqtt->_connectionHandler(false);
-    break;
-  case MQTT_EVENT_SUBSCRIBED:
-    break;
-  case MQTT_EVENT_UNSUBSCRIBED:
-    Serial.printf("MQTT_EVENT_UNSUBSCRIBED, msg_id=%d\r\n", event->msg_id);
-    break;
-  case MQTT_EVENT_PUBLISHED:
-    Serial.printf("MQTT_EVENT_PUBLISHED, msg_id=%d\r\n", event->msg_id);
-    break;
-  case MQTT_EVENT_DATA:
-    Serial.println("MQTT_EVENT_DATA");
-    // add null terminal to data
-    // event->data[event->data_len] = 0;
-    // rpc_attritbutes_handler(event->data, event->data_len);
-    break;
-  case MQTT_EVENT_ERROR:
-    Serial.println("MQTT_EVENT_ERROR");
-    if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-      Serial.printf("reported from esp-tls: %d",
-                    event->error_handle->esp_tls_last_esp_err);
-      Serial.printf("reported from tls stack: %d",
-                    event->error_handle->esp_tls_stack_err);
-      Serial.printf("captured as transport's socket errno: %d",
-                    event->error_handle->esp_transport_sock_errno);
-    }
-    break;
-  default:
-    Serial.printf("Other event id:%d\r\n", event->event_id);
-    break;
   }
 }

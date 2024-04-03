@@ -170,13 +170,13 @@ public:
     if (JSON.typeof_(root["ledBarMode"]) == "string") {
       String mode = root["ledBarMode"];
       if (mode == "co2") {
-        ledBarMode = UseLedBarCO2;
+        ledBarMode = LedBarModeCO2;
       } else if (mode == "pm") {
-        ledBarMode = UseLedBarPM;
+        ledBarMode = LedBarModePm;
       } else if (mode == "off") {
-        ledBarMode = UseLedBarOff;
+        ledBarMode = LedBarModeOff;
       } else {
-        ledBarMode = UseLedBarOff;
+        ledBarMode = LedBarModeOff;
       }
     }
 
@@ -330,9 +330,9 @@ public:
   /**
    * @brief Get server config led bar mode
    *
-   * @return UseLedBar
+   * @return LedBarMode
    */
-  UseLedBar getLedBarMode(void) { return ledBarMode; }
+  LedBarMode getLedBarMode(void) { return ledBarMode; }
 
 private:
   bool inF;             /** Temperature unit, true: F, false: C */
@@ -341,7 +341,7 @@ private:
   bool serverFailed;    /** Flag indicate post data to server failed */
   bool co2Calib;        /** Is co2Ppmcalibration requset */
   int co2AbcCalib = -1; /** update auto calibration number of day */
-  UseLedBar ledBarMode = UseLedBarCO2; /** */
+  LedBarMode ledBarMode = LedBarModeCO2; /** */
   char models[20];                     /** */
   char mqttBroker[256];                /** */
 };
