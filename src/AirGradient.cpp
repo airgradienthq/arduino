@@ -2,6 +2,24 @@
 
 #define AG_LIB_VER "3.0.9"
 
+const char *AgFirmwareModeName(AgFirmwareMode mode) {
+  switch (mode) {
+  case FW_MODE_I_9PSL:
+    return "I-9PSL";
+  case FW_MODE_O_1PP:
+    return "O-1PP";
+  case FW_MODE_O_1PPT:
+    return "O-1PPT";
+  case FW_MODE_O_1PST:
+    return "O-1PST";
+  case FW_MDOE_O_1PS:
+    return "0-1PS";
+  default:
+    break;
+  }
+  return "UNKNOWN";
+}
+
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
       display(type), boardType(type), button(type), statusLed(type),

@@ -15,19 +15,37 @@
 
 /**
  * @brief RGB LED bar mode for ONE_INDOOR board
- *
  */
-enum UseLedBar {
-  UseLedBarOff, /** Don't use LED bar */
-  UseLedBarPM,  /** Use LED bar for PMS */
-  UseLedBarCO2, /** Use LED bar for CO2 */
+enum LedBarMode {
+  /** Don't use LED bar */
+  LedBarModeOff,
+
+  /** Use LED bar for show PM2.5 value level */
+  LedBarModePm,
+
+  /** Use LED bar for show CO2 value level */
+  LedBarModeCO2,
 };
 
 enum ConfigurationControl {
-  Local, /** Allow set configuration from local over HTTP server */
-  Cloud, /** Allow set configuration from Airgradient webserver */
-  Both   /** Allow set configuration from Local and Cloud */
+  /** Allow set configuration from local over device HTTP server */
+  ConfigurationControlLocal,
+
+  /** Allow set configuration from Airgradient cloud */
+  ConfigurationControlCloud,
+
+  /** Allow set configuration from Local and Cloud */
+  ConfigurationControlBoth
 };
+
+enum AgFirmwareMode {
+  FW_MODE_I_9PSL, /** ONE_INDOOR */
+  FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
+  FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
+  FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
+  FW_MDOE_O_1PS   /** PMS5003T, S8 */
+};
+const char* AgFirmwareModeName(AgFirmwareMode mode);
 
 /**
  * @brief Class with define all the sensor has supported by Airgradient. Each
