@@ -160,4 +160,10 @@ private:
   BoardType boardType;
 };
 
+#include "AgConfigure.h"
+#include "AgApiClient.h"
+#include "AgSchedule.h"
+#include "MqttClient.h"
+#include "AgStateMachine.h"
+
 #endif /** _AIR_GRADIENT_H_ */
