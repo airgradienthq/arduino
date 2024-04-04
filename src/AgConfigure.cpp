@@ -5,12 +5,19 @@ const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
     [ConfigurationControlCloud] = "cloud",
     [ConfigurationControlBoth] = "both"};
+
 const char *LED_BAR_MODE_NAMES[] = {
     [LedBarModeOff] = "off",
     [LedBarModePm] = "pm",
     [LedBarModeCO2] = "co2",
 };
 
+/**
+ * @brief Get LedBarMode Name
+ * 
+ * @param mode LedBarMode value
+ * @return String
+ */
 String AgConfigure::getLedBarModeName(LedBarMode mode) {
   if (mode == LedBarModeOff) {
     return String(LED_BAR_MODE_NAMES[LedBarModeOff]);
@@ -22,6 +29,10 @@ String AgConfigure::getLedBarModeName(LedBarMode mode) {
   return String("unknown");
 }
 
+/**
+ * @brief Save configure to device storage (EEPROM)
+ * 
+ */
 void AgConfigure::saveConfig(void) {
   config._check = 0;
   int len = sizeof(config) - sizeof(config._check);
@@ -71,6 +82,11 @@ void AgConfigure::loadConfig(void) {
     }
   }
 }
+
+/**
+ * @brief Set configuration default
+ * 
+ */
 void AgConfigure::defaultConfig(void) {
   // Default country is null
   memset(config.country, 0, sizeof(config.country));
@@ -91,12 +107,31 @@ void AgConfigure::defaultConfig(void) {
   saveConfig();
 }
 
+/**
+ * @brief Show configuration as JSON string message over log
+ * 
+ */
 void AgConfigure::printConfig(void) { logInfo(toString().c_str()); }
 
+/**
+ * @brief Construct a new Ag Configure:: Ag Configure object
+ * 
+ * @param debugLog Serial Stream
+ */
 AgConfigure::AgConfigure(Stream &debugLog) : PrintLog(debugLog, "Configure") {}
 
+/**
+ * @brief Destroy the Ag Configure:: Ag Configure object
+ * 
+ */
 AgConfigure::~AgConfigure() {}
 
+/**
+ * @brief Initialize configuration
+ * 
+ * @return true Success
+ * @return false Failure
+ */
 bool AgConfigure::begin(void) {
   EEPROM.begin(512);
   loadConfig();
@@ -360,6 +395,11 @@ bool AgConfigure::parse(String data, bool isLocal) {
   return true;
 }
 
+/**
+ * @brief Get current configuration value as JSON string
+ * 
+ * @return String 
+ */
 String AgConfigure::toString(void) {
   JSONVar root;
 
@@ -407,32 +447,86 @@ String AgConfigure::toString(void) {
   return JSON.stringify(root);
 }
 
+/**
+ * @brief Temperature unit (F or C)
+ * 
+ * @return true F
+ * @return false C
+ */
 bool AgConfigure::isTemperatureUnitInF(void) {
   return (config.temperatureUnit == 'f');
 }
 
+/**
+ * @brief Country name, it's short name ex: TH = Thailand
+ * 
+ * @return String 
+ */
 String AgConfigure::getCountry(void) { return String(config.country); }
 
+/**
+ * @brief PM unit standard (USAQI, ugm3)
+ * 
+ * @return true USAQI
+ * @return false ugm3
+ */
 bool AgConfigure::isPmStandardInUSAQI(void) { return config.inUSAQI; }
 
+/**
+ * @brief Get CO2 calibration ABC time
+ * 
+ * @return int Number of day
+ */
 int AgConfigure::getCO2CalirationAbcDays(void) { return config.abcDays; }
 
+/**
+ * @brief Get Led Bar Mode
+ * 
+ * @return LedBarMode 
+ */
 LedBarMode AgConfigure::getLedBarMode(void) {
   return (LedBarMode)config.useRGBLedBar;
 }
 
+/**
+ * @brief Get LED bar mode name
+ * 
+ * @return String 
+ */
 String AgConfigure::getLedBarModeName(void) {
   return getLedBarModeName((LedBarMode)config.useRGBLedBar);
 }
 
+/**
+ * @brief Get display mode
+ * 
+ * @return true On
+ * @return false Off
+ */
 bool AgConfigure::getDisplayMode(void) { return config.displayMode; }
 
+/**
+ * @brief Get MQTT uri
+ * 
+ * @return String 
+ */
 String AgConfigure::getMqttBrokerUri(void) { return String(config.mqttBroker); }
 
+/**
+ * @brief Get configuratoin post data to AirGradient cloud
+ * 
+ * @return true Post
+ * @return false No-Post
+ */
 bool AgConfigure::isPostDataToAirGradient(void) {
   return config.postDataToAirGradient;
 }
 
+/**
+ * @brief Get current configuration control
+ * 
+ * @return ConfigurationControl 
+ */
 ConfigurationControl AgConfigure::getConfigurationControl(void) {
   return (ConfigurationControl)config.configurationControl;
 }

@@ -5,6 +5,13 @@
 #define LED_SHORT_BLINK_DELAY 500 /** ms */
 #define LED_LONG_BLINK_DELAY 2000 /** ms */
 
+/**
+ * @brief Animation LED bar with color
+ * 
+ * @param r 
+ * @param g 
+ * @param b 
+ */
 void AgStateMachine::ledBarSingleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
   if (ledBarAnimationCount < 0) {
     ledBarAnimationCount = 0;
@@ -18,6 +25,11 @@ void AgStateMachine::ledBarSingleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
   }
 }
 
+/**
+ * @brief LED status blink with delay
+ * 
+ * @param ms Miliseconds
+ */
 void AgStateMachine::ledStatusBlinkDelay(uint32_t ms) {
   ag->statusLed.setOn();
   delay(ms);
@@ -25,6 +37,10 @@ void AgStateMachine::ledStatusBlinkDelay(uint32_t ms) {
   delay(ms);
 }
 
+/**
+ * @brief Led bar show led color status
+ * 
+ */
 void AgStateMachine::sensorLedHandle(void) {
   switch (config.getLedBarMode()) {
   case LedBarMode::LedBarModeCO2:
@@ -39,6 +55,10 @@ void AgStateMachine::sensorLedHandle(void) {
   }
 }
 
+/**
+ * @brief Show CO2 LED status
+ * 
+ */
 void AgStateMachine::co2LedHandle(void) {
   int co2Value = value.CO2;
   if (co2Value <= 400) {
@@ -118,6 +138,10 @@ void AgStateMachine::co2LedHandle(void) {
   }
 }
 
+/**
+ * @brief Show PM2.5 LED status
+ * 
+ */
 void AgStateMachine::pm25LedHandle(void) {
   int pm25Value = value.PM25;
   if (pm25Value <= 5) {
@@ -197,6 +221,14 @@ void AgStateMachine::pm25LedHandle(void) {
   }
 }
 
+/**
+ * @brief Construct a new Ag State Machine:: Ag State Machine object
+ * 
+ * @param disp AgOledDisplay
+ * @param log Serial Stream
+ * @param value AgValue
+ * @param config AgConfigure
+ */
 AgStateMachine::AgStateMachine(AgOledDisplay &disp, Stream &log, AgValue &value,
                                AgConfigure &config)
     : PrintLog(log, "AgStateMachine"), disp(disp), value(value),
@@ -204,6 +236,11 @@ AgStateMachine::AgStateMachine(AgOledDisplay &disp, Stream &log, AgValue &value,
 
 AgStateMachine::~AgStateMachine() {}
 
+/**
+ * @brief OLED display show content from state value
+ * 
+ * @param state 
+ */
 void AgStateMachine::displayHandle(AgStateMachineState state) {
   // Ignore handle if not ONE_INDOOR board
   if (!ag->isOneIndoor()) {
@@ -281,14 +318,23 @@ void AgStateMachine::displayHandle(AgStateMachineState state) {
   }
   case AgStateMachineNormal: {
     disp.showDashboard();
+    break;
   }
   default:
     break;
   }
 }
 
+/**
+ * @brief OLED display show content as previous state updated
+ * 
+ */
 void AgStateMachine::displayHandle(void) { displayHandle(dispState); }
 
+/**
+ * @brief Update status add to dashboard
+ * 
+ */
 void AgStateMachine::displaySetAddToDashBoard(void) {
   addToDashBoard = true;
   addToDashboardTime = millis();
@@ -298,12 +344,26 @@ void AgStateMachine::displayClearAddToDashBoard(void) {
   addToDashBoard = false;
 }
 
+/**
+ * @brief Set WiFi connection coundown on dashboard
+ * 
+ * @param count Seconds
+ */
 void AgStateMachine::displayWiFiConnectCountDown(int count) {
   wifiConnectCountDown = count;
 }
 
+/**
+ * @brief Init before start LED bar animation
+ * 
+ */
 void AgStateMachine::ledAnimationInit(void) { ledBarAnimationCount = -1; }
 
+/**
+ * @brief Handle LED from state
+ * 
+ * @param state 
+ */
 void AgStateMachine::ledHandle(AgStateMachineState state) {
   if (state > AgStateMachineNormal) {
     logError("ledHandle: state invalid");
@@ -488,14 +548,38 @@ void AgStateMachine::ledHandle(AgStateMachineState state) {
   }
 }
 
+/**
+ * @brief Handle LED as previous state updated
+ * 
+ */
 void AgStateMachine::ledHandle(void) { ledHandle(ledState); }
 
+/**
+ * @brief Set display state
+ * 
+ * @param state 
+ */
 void AgStateMachine::setDisplayState(AgStateMachineState state) {
   dispState = state;
 }
 
+/**
+ * @brief Get current display state
+ * 
+ * @return AgStateMachineState 
+ */
 AgStateMachineState AgStateMachine::getDisplayState(void) { return dispState; }
 
+/**
+ * @brief Set AirGradient instance
+ * 
+ * @param ag Point to AirGradient instance
+ */
 void AgStateMachine::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
+/**
+ * @brief Get current LED state
+ * 
+ * @return AgStateMachineState 
+ */
 AgStateMachineState AgStateMachine::getLedState(void) { return ledState; }

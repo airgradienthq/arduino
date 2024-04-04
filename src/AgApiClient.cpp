@@ -51,13 +51,16 @@ bool AgApiClient::fetchServerConfiguration(void) {
   HTTPClient client;
   WiFiClient wifiClient;
   if (client.begin(wifiClient, uri) == false) {
-#else
-  HTTPClient client;
-  if (client.begin(uri) == false) {
-#endif
     getConfigFailed = true;
     return false;
   }
+#else
+  HTTPClient client;
+  if (client.begin(uri) == false) {
+    getConfigFailed = true;
+    return false;
+  }
+#endif
 
   /** Get data */
   int retCode = client.GET();

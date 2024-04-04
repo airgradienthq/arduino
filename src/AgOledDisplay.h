@@ -24,12 +24,8 @@ public:
   void setAirGradient(AirGradient *ag);
   bool begin(void); 
   void end(void);
-  void setStatus(String &status);
-  void setStatus(const char *status);
   void setText(String &line1, String &line2, String &line3);
   void setText(const char *line1, const char *line2, const char *line3);
-  void setText(const char *text);
-  void setText(String &text);
   void setText(String &line1, String &line2, String &line3, String &line4);
   void setText(const char *line1, const char *line2, const char *line3,
                const char *line4);

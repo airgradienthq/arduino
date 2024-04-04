@@ -1,8 +1,14 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
 
+/** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
 
+/**
+ * @brief Show dashboard temperature and humdity
+ * 
+ * @param hasStatus 
+ */
 void AgOledDisplay::showTempHum(bool hasStatus) {
   char buf[10];
   if (value.Temperature > -1001) {
@@ -43,9 +49,21 @@ void AgOledDisplay::showTempHum(bool hasStatus) {
   }
 }
 
+/**
+ * @brief Construct a new Ag Oled Display:: Ag Oled Display object
+ * 
+ * @param config AgConfiguration
+ * @param value AgValue
+ * @param log Serial Stream
+ */
 AgOledDisplay::AgOledDisplay(AgConfigure &config, AgValue &value, Stream &log)
     : PrintLog(log, "AgOledDisplay"), config(config), value(value) {}
 
+/**
+ * @brief Set AirGradient instance
+ * 
+ * @param ag Point to AirGradient instance
+ */
 void AgOledDisplay::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
 AgOledDisplay::~AgOledDisplay() {}
@@ -98,14 +116,24 @@ void AgOledDisplay::end(void) {
   logInfo("end");
 }
 
-void AgOledDisplay::setStatus(String &status) { setStatus(status.c_str()); }
-
-void AgOledDisplay::setStatus(const char *status) {}
-
+/**
+ * @brief Show text on 3 line of display
+ * 
+ * @param line1 
+ * @param line2 
+ * @param line3 
+ */
 void AgOledDisplay::setText(String &line1, String &line2, String &line3) {
   setText(line1.c_str(), line2.c_str(), line3.c_str());
 }
 
+/**
+ * @brief Show text on 3 line of display
+ * 
+ * @param line1 
+ * @param line2 
+ * @param line3 
+ */
 void AgOledDisplay::setText(const char *line1, const char *line2,
                             const char *line3) {
   DISP()->firstPage();
@@ -117,15 +145,27 @@ void AgOledDisplay::setText(const char *line1, const char *line2,
   } while (DISP()->nextPage());
 }
 
-void AgOledDisplay::setText(const char *text) {}
-
-void AgOledDisplay::setText(String &text) {}
-
+/**
+ * @brief Set Text on 4 line
+ * 
+ * @param line1 
+ * @param line2 
+ * @param line3 
+ * @param line4 
+ */
 void AgOledDisplay::setText(String &line1, String &line2, String &line3,
                             String &line4) {
   setText(line1.c_str(), line2.c_str(), line3.c_str(), line4.c_str());
 }
 
+/**
+ * @brief Set Text on 4 line
+ * 
+ * @param line1 
+ * @param line2 
+ * @param line3 
+ * @param line4 
+ */
 void AgOledDisplay::setText(const char *line1, const char *line2,
                             const char *line3, const char *line4) {
   DISP()->firstPage();
@@ -138,8 +178,16 @@ void AgOledDisplay::setText(const char *line1, const char *line2,
   } while (DISP()->nextPage());
 }
 
+/**
+ * @brief Update dashboard content
+ * 
+ */
 void AgOledDisplay::showDashboard(void) { showDashboard(NULL); }
 
+/**
+ * @brief Update dashboard content and error status
+ * 
+ */
 void AgOledDisplay::showDashboard(const char *status) {
   char strBuf[10];
 
