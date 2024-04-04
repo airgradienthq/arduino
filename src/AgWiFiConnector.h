@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #ifndef _AG_WIFI_CONNECTOR_H_
 #define _AG_WIFI_CONNECTOR_H_
 
@@ -26,6 +28,7 @@ public:
 
   void setAirGradient(AirGradient *ag);
   bool connect(void);
+  void disconnect(void);
   void handle(void);
   void _wifiApCallback(void);
   void _wifiSaveConfig(void);
@@ -33,6 +36,12 @@ public:
   bool _wifiConfigPortalActive(void);
   void _wifiProcess();
   bool isConnected(void);
+  void reset(void);
+  int RSSI(void);
+  String localIpStr(void);
 };
 
 #endif /** _AG_WIFI_CONNECTOR_H_ */
+
+
+#endif

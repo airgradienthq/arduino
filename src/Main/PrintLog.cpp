@@ -19,7 +19,7 @@ PrintLog::~PrintLog()
  *
  * @param info Log message
  */
-void PrintLog::logInfo(String &info)
+void PrintLog::logInfo(String info)
 {
   logInfo(info.c_str());
 }
@@ -39,7 +39,7 @@ void PrintLog::logInfo(const char *info)
  *
  * @param err Log message
  */
-void PrintLog::logError(String &err)
+void PrintLog::logError(String err)
 {
   logError(err.c_str());
 }
@@ -59,7 +59,7 @@ void PrintLog::logError(const char *err)
  *
  * @param warning Log message
  */
-void PrintLog::logWarning(String &warning)
+void PrintLog::logWarning(String warning)
 {
   logWarning(warning.c_str());
 }

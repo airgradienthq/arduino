@@ -12,15 +12,14 @@
 #define _AG_API_CLIENT_H_
 
 #include "AgConfigure.h"
+#include "AirGradient.h"
 #include "Main/PrintLog.h"
 #include <Arduino.h>
-
-class AgConfigure;
-class AirGradient;
 
 class AgApiClient : public PrintLog {
 private:
   AgConfigure &config;
+  AirGradient *ag;
 
   bool getConfigFailed;
   bool postToServerFailed;
@@ -30,10 +29,11 @@ public:
   ~AgApiClient();
 
   void begin(void);
-  bool fetchServerConfiguration(String deviceId);
-  bool postToServer(String deviceId, String data);
+  bool fetchServerConfiguration(void);
+  bool postToServer(String data);
   bool isFetchConfigureFailed(void);
   bool isPostToServerFailed(void);
+  void setAirGradient(AirGradient *ag);
 };
 
 #endif /** _AG_API_CLIENT_H_ */

@@ -1,6 +1,8 @@
 #ifndef _AG_MQTT_CLIENT_H_
 #define _AG_MQTT_CLIENT_H_
 
+#ifdef ESP32
+
 #include "mqtt_client.h"
 #include "Main/PrintLog.h"
 #include <Arduino.h>
@@ -20,10 +22,12 @@ public:
   bool begin(String uri);
   void end(void);
   void _updateConnected(bool connected);
-  bool publish(String &topic, String &payload);
+  bool publish(const char* topic, const char* payload, int len);
   bool isCurrentUri(String &uri);
   bool isConnected(void);
   int getConnectionFailedCount(void);
 };
+
+#endif /** ESP32 */
 
 #endif /** _AG_MQTT_CLIENT_H_ */

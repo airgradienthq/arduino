@@ -43,6 +43,7 @@ public:
   void ledHandle(void);
   void setDisplayState(AgStateMachineState state);
   AgStateMachineState getDisplayState(void);
+  AgStateMachineState getLedState(void);
 };
 
 #endif /** _AG_STATE_MACHINE_H_ */

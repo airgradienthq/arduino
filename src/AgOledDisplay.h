@@ -15,8 +15,7 @@ private:
   void *u8g2 = NULL;
   AgValue &value;
 
-  void showTempHum(void);
-
+  void showTempHum(bool hasStatus);
 public:
   AgOledDisplay(AgConfigure &config, AgValue &value,
                 Stream &log);

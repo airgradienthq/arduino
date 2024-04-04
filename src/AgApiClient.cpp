@@ -1,11 +1,16 @@
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
+#ifdef ESP8266
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#else
 #include <HTTPClient.h>
+#endif
 
 AgApiClient::AgApiClient(Stream &debug, AgConfigure &config)
-    :PrintLog(debug, "ApiClient"), config(config)  {
-    }
+    : PrintLog(debug, "ApiClient"), config(config) {}
 
 AgApiClient::~AgApiClient() {}
 
@@ -26,7 +31,7 @@ void AgApiClient::begin(void) {
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::fetchServerConfiguration(String deviceId) {
+bool AgApiClient::fetchServerConfiguration(void) {
   if (config.getConfigurationControl() ==
       ConfigurationControl::ConfigurationControlLocal) {
     logWarning("Ignore fetch server configuration");
@@ -37,12 +42,19 @@ bool AgApiClient::fetchServerConfiguration(String deviceId) {
     return false;
   }
 
-  String uri = "http://hw.airgradient.com/sensors/airgradient:" + deviceId +
-               "/one/config";
+  String uri =
+      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
+      "/one/config";
 
   /** Init http client */
+#ifdef ESP8266
+  HTTPClient client;
+  WiFiClient wifiClient;
+  if (client.begin(wifiClient, uri) == false) {
+#else
   HTTPClient client;
   if (client.begin(uri) == false) {
+#endif
     getConfigFailed = true;
     return false;
   }
@@ -62,7 +74,7 @@ bool AgApiClient::fetchServerConfiguration(String deviceId) {
   String respContent = client.getString();
   client.end();
 
-  logInfo("Get configuration: " + respContent);
+  // logInfo("Get configuration: " + respContent);
 
   /** Parse configuration and return result */
   return config.parse(respContent, false);
@@ -76,7 +88,7 @@ bool AgApiClient::fetchServerConfiguration(String deviceId) {
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::postToServer(String deviceId, String data) {
+bool AgApiClient::postToServer(String data) {
   if (config.isPostDataToAirGradient() == false) {
     logWarning("Ignore post data to server");
     return true;
@@ -87,7 +99,8 @@ bool AgApiClient::postToServer(String deviceId, String data) {
   }
 
   String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + deviceId + "/measures";
+      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
+      "/measures";
   logInfo("Post uri: " + uri);
   logInfo("Post data: " + data);
 
@@ -125,3 +138,5 @@ bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
  * @return false Failure
  */
 bool AgApiClient::isPostToServerFailed(void) { return postToServerFailed; }
+
+void AgApiClient::setAirGradient(AirGradient *ag) { this->ag = ag; }

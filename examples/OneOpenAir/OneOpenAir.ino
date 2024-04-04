@@ -15,9 +15,7 @@ AirGradient Open Air:
 https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
 
 The codes needs the following libraries installed:
-“WifiManager by tzapu, tablatronix” tested with version 2.0.16-rc.2
 "Arduino_JSON" by Arduino version 0.2.0
-"U8g2" by oliver version 2.34.22
 
 Please make sure you have esp32 board manager installed. Tested with
 version 2.0.11.
@@ -42,7 +40,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <HardwareSerial.h>
-#include <WiFiManager.h>
+// #include <WiFiManager.h>
 
 #include "AgApiClient.h"
 #include "AgConfigure.h"
@@ -54,16 +52,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <ESPmDNS.h>
-#include <U8g2lib.h>
 #include <WebServer.h>
 
-#define LED_FAST_BLINK_DELAY 250             /** ms */
-#define LED_SLOW_BLINK_DELAY 1000            /** ms */
-#define LED_SHORT_BLINK_DELAY 500            /** ms */
-#define LED_LONG_BLINK_DELAY 2000            /** ms */
-#define WIFI_CONNECT_COUNTDOWN_MAX 180       /** sec */
-#define WIFI_CONNECT_RETRY_MS 10000          /** ms */
-#define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
 #define SERVER_CONFIG_UPDATE_INTERVAL 15000  /** ms */
@@ -87,23 +77,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static AgConfigure localConfig(Serial);
-static AgApiClient agServer(Serial, localConfig);
+static AgApiClient apiClient(Serial, localConfig);
 static AgValue agValue;
 static AirGradient *ag;
 static AgOledDisplay disp(localConfig, agValue, Serial);
-static AgStateMachine agSm(disp, Serial, agValue, localConfig);
-static AgWiFiConnector wifiConnector(disp, Serial, agSm);
-
-static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
-                                               /* reset=*/U8X8_PIN_NONE);
-static WiFiManager wifiManager;
+static AgStateMachine sm(disp, Serial, agValue, localConfig);
+static AgWiFiConnector wifiConnector(disp, Serial, sm);
 static WebServer webServer;
-
-static bool wifiHasConfig = false; /** */
-static int connectCountDown;       /** wifi configuration countdown */
-static int ledCount;               /** For LED animation */
-static int ledSmState = AgStateMachineNormal;  /** Save display SM */
-static int dispSmState = AgStateMachineNormal; /** Save LED SM */
 
 /** Init schedule */
 static bool hasSensorS8 = true;
@@ -119,15 +99,7 @@ static bool isAddToDashboard = true;
 static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
-static int tvocIndex = -1;
-static int tvocRawIndex = -1;
-static int noxIndex = -1;
-static int noxRawIndex = -1;
-static int co2Ppm = -1;
-static float temp = -1001;
-static int hum = -1;
 static int bootCount;
-static String wifiSSID = "";
 
 static int pm25_1 = -1;
 static int pm01_1 = -1;
@@ -165,11 +137,6 @@ static void boardInit(void);
 static void failedHandler(String msg);
 static void updateServerConfiguration(void);
 static void co2Calibration(void);
-static void setRGBledPMcolor(int pm25Value);
-// static void ledSmHandler(int sm);
-// static void ledSmHandler(void);
-// static void dispSmHandler(int sm);
-// static void sensorLedColorHandler(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
 static void updateWiFiConnect(void);
@@ -218,21 +185,19 @@ void setup() {
     Serial.println("Detect OPEN_AIR");
     ag = new AirGradient(BoardType::OPEN_AIR_OUTDOOR);
   }
-  disp.setAirGradient(ag);
-  agSm.setAirGradient(ag);
-  wifiConnector.setAirGradient(ag);
-
-  /** Init AirGradient server */
-  agServer.begin();
 
   /** Init sensor */
   boardInit();
+
+  disp.setAirGradient(ag);
+  sm.setAirGradient(ag);
+  wifiConnector.setAirGradient(ag);
 
   /** Connecting wifi */
   bool connectWifi = false;
   if (ag->isOneIndoor()) {
     if (ledBarButtonTest) {
-      ledTest();
+      ledBarTest();
     } else {
       /** Check LED mode to disabled LED */
       if (localConfig.getLedBarMode() == LedBarModeOff) {
@@ -245,46 +210,48 @@ void setup() {
   }
 
   if (connectWifi) {
-    if (wifiConnector.connect() == false) {
+    /** Init AirGradient server */
+    apiClient.begin();
+    apiClient.setAirGradient(ag);
+
+    if (wifiConnector.connect()) {
       Serial.println("Connect to wifi failed");
-    }
 
-    /**
-     * Send first data to ping server and get server configuration
-     */
-    if (wifiConnector.isConnected()) {
-      webServerInit();
+      /**
+       * Send first data to ping server and get server configuration
+       */
+      if (wifiConnector.isConnected()) {
+        webServerInit();
 
-      /** MQTT init */
-      if (localConfig.getMqttBrokerUri().isEmpty() == false) {
-        if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
-          createMqttTask();
-          Serial.println("MQTT client init success");
+        /** MQTT init */
+        if (localConfig.getMqttBrokerUri().isEmpty() == false) {
+          if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
+            createMqttTask();
+            Serial.println("MQTT client init success");
+          } else {
+            Serial.println("MQTT client init failure");
+          }
+        }
+
+        sendPing();
+        Serial.println(F("WiFi connected!"));
+        Serial.println("IP address: ");
+        Serial.println(wifiConnector.localIpStr());
+
+        /** Get first connected to wifi */
+        apiClient.fetchServerConfiguration();
+        if (apiClient.isFetchConfigureFailed()) {
+          if (ag->isOneIndoor()) {
+            sm.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          }
+          sm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
         } else {
-          Serial.println("MQTT client init failure");
+          ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
         }
-      }
-
-      sendPing();
-      Serial.println(F("WiFi connected!"));
-      Serial.println("IP address: ");
-      Serial.println(WiFi.localIP());
-
-      /** Get first connected to wifi */
-      agServer.fetchServerConfiguration(ag->deviceId());
-      if (agServer.isFetchConfigureFailed()) {
-        if (ag->isOneIndoor()) {
-          // dispSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-          agSm.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-        }
-        // ledSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-        agSm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-        delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
       } else {
-        ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
+        offlineMode = true;
       }
-    } else {
-      offlineMode = true;
     }
   }
 
@@ -332,7 +299,6 @@ void loop() {
   }
 
   /** Check for handle WiFi reconnect */
-  // updateWiFiConnect();
   wifiConnector.handle();
 
   /** factory reset handle */
@@ -352,13 +318,14 @@ void loop() {
     }
   }
 
+  /** check that local configura changed then do some action */
   if (localConfigUpdate) {
     localConfigUpdate = false;
     configUpdateHandle();
   }
 }
 
-static void setTestColor(char color) {
+static void ledBarTestColor(char color) {
   int r = 0;
   int g = 0;
   int b = 0;
@@ -399,32 +366,31 @@ static void setTestColor(char color) {
   ag->ledBar.setColor(r, g, b);
 }
 
-static void ledTest() {
-  // displayShowText("LED Test", "running", ".....");
+static void ledBarTest() {
   disp.setText("LED Test", "running", ".....");
-  setTestColor('r');
+  ledBarTestColor('r');
   ag->ledBar.show();
   delay(1000);
-  setTestColor('g');
+  ledBarTestColor('g');
   ag->ledBar.show();
   delay(1000);
-  setTestColor('b');
+  ledBarTestColor('b');
   ag->ledBar.show();
   delay(1000);
-  setTestColor('w');
+  ledBarTestColor('w');
   ag->ledBar.show();
   delay(1000);
-  setTestColor('n');
+  ledBarTestColor('n');
   ag->ledBar.show();
   delay(1000);
 }
 
-static void ledTest2Min(void) {
+static void ledBarTest2Min(void) {
   uint32_t tstart = millis();
 
   Serial.println("Start run LED test for 2 min");
   while (1) {
-    ledTest();
+    ledBarTest();
     uint32_t ms = (uint32_t)(millis() - tstart);
     if (ms >= (60 * 1000 * 2)) {
       Serial.println("LED test after 2 min finish");
@@ -436,14 +402,14 @@ static void ledTest2Min(void) {
 static void co2Update(void) {
   int value = ag->s8.getCo2();
   if (value >= 0) {
-    co2Ppm = value;
+    agValue.CO2 = value;
     getCO2FailCount = 0;
-    Serial.printf("CO2 (ppm): %d\r\n", co2Ppm);
+    Serial.printf("CO2 (ppm): %d\r\n", agValue.CO2);
   } else {
     getCO2FailCount++;
     Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
     if (getCO2FailCount >= 3) {
-      co2Ppm = 1;
+      agValue.CO2 = -1;
     }
   }
 }
@@ -489,26 +455,26 @@ void webServerMetricsGet(void) {
              "1 if the AirGradient device was able to successfully fetch its "
              "configuration from the server",
              "gauge");
-  add_metric_point("", agServer.isFetchConfigureFailed() ? "0" : "1");
+  add_metric_point("", apiClient.isFetchConfigureFailed() ? "0" : "1");
 
   add_metric(
       "post_ok",
       "1 if the AirGradient device was able to successfully send to the server",
       "gauge");
-  add_metric_point("", agServer.isPostToServerFailed() ? "0" : "1");
+  add_metric_point("", apiClient.isPostToServerFailed() ? "0" : "1");
 
   add_metric(
       "wifi_rssi",
       "WiFi signal strength from the AirGradient device perspective, in dBm",
       "gauge", "dbm");
-  add_metric_point("", String(WiFi.RSSI()));
+  add_metric_point("", String(wifiConnector.RSSI()));
 
-  if (hasSensorS8 && co2Ppm >= 0) {
+  if (hasSensorS8 && agValue.CO2 >= 0) {
     add_metric("co2",
                "Carbon dioxide concentration as measured by the AirGradient S8 "
                "sensor, in parts per million",
                "gauge", "ppm");
-    add_metric_point("", String(co2Ppm));
+    add_metric_point("", String(agValue.CO2));
   }
 
   float _temp = -1001;
@@ -527,8 +493,8 @@ void webServerMetricsGet(void) {
   } else {
     if (ag->isOneIndoor()) {
       if (hasSensorSHT) {
-        _temp = temp;
-        _hum = hum;
+        _temp = agValue.Temperature;
+        _hum = agValue.Humidity;
       }
     } else {
       if (hasSensorPMS1) {
@@ -582,51 +548,49 @@ void webServerMetricsGet(void) {
   }
 
   if (hasSensorSGP) {
-    if (tvocIndex >= 0) {
+    if (agValue.TVOC >= 0) {
       add_metric("tvoc_index",
                  "The processed Total Volatile Organic Compounds (TVOC) index "
                  "as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(tvocIndex));
+      add_metric_point("", String(agValue.TVOC));
     }
-    if (tvocRawIndex >= 0) {
+    if (agValue.TVOCRaw >= 0) {
       add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(tvocRawIndex));
+      add_metric_point("", String(agValue.TVOCRaw));
     }
-    if (noxIndex >= 0) {
+    if (agValue.NOx >= 0) {
       add_metric("nox_index",
                  "The processed Nitrous Oxide (NOx) index as measured by the "
                  "AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(noxIndex));
+      add_metric_point("", String(agValue.NOx));
     }
-    if (noxRawIndex >= 0) {
+    if (agValue.NOxRaw >= 0) {
       add_metric("nox_raw",
                  "The raw input value to the Nitrous Oxide (NOx) index as "
                  "measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(noxRawIndex));
+      add_metric_point("", String(agValue.NOxRaw));
     }
   }
 
-  {
-    if (_temp > -1001) {
-      add_metric("temperature",
-                 "The ambient temperature as measured by the AirGradient SHT "
-                 "sensor, in degrees Celsius",
-                 "gauge", "celsius");
-      add_metric_point("", String(_temp));
-    }
-    if (_hum >= 0) {
-      add_metric(
-          "humidity",
-          "The relative humidity as measured by the AirGradient SHT sensor",
-          "gauge", "percent");
-      add_metric_point("", String(_hum));
-    }
+  if (_temp > -1001) {
+    add_metric("temperature",
+               "The ambient temperature as measured by the AirGradient SHT "
+               "sensor, in degrees Celsius",
+               "gauge", "celsius");
+    add_metric_point("", String(_temp));
+  }
+  if (_hum >= 0) {
+    add_metric(
+        "humidity",
+        "The relative humidity as measured by the AirGradient SHT sensor",
+        "gauge", "percent");
+    add_metric_point("", String(_hum));
   }
 
   response += "# EOF\n";
@@ -687,13 +651,13 @@ static void localConfigPut() {
 
 static String getServerSyncData(bool localServer) {
   JSONVar root;
-  root["wifi"] = WiFi.RSSI();
+  root["wifi"] = wifiConnector.RSSI();
   if (localServer) {
     root["serialno"] = ag->deviceId();
   }
   if (hasSensorS8) {
-    if (co2Ppm >= 0) {
-      root["rco2"] = co2Ppm;
+    if (agValue.CO2 >= 0) {
+      root["rco2"] = agValue.CO2;
     }
   }
 
@@ -718,11 +682,11 @@ static String getServerSyncData(bool localServer) {
     }
 
     if (hasSensorSHT) {
-      if (temp > -1001) {
-        root["atmp"] = ag->round2(temp);
+      if (agValue.Temperature > -1001) {
+        root["atmp"] = ag->round2(agValue.Temperature);
       }
-      if (hum >= 0) {
-        root["rhum"] = hum;
+      if (agValue.Humidity >= 0) {
+        root["rhum"] = agValue.Humidity;
       }
     }
 
@@ -794,25 +758,25 @@ static String getServerSyncData(bool localServer) {
   }
 
   if (hasSensorSGP) {
-    if (tvocIndex >= 0) {
+    if (agValue.TVOC >= 0) {
       if (localServer) {
-        root["tvocIndex"] = tvocIndex;
+        root["tvocIndex"] = agValue.TVOC;
       } else {
-        root["tvoc_index"] = tvocIndex;
+        root["tvoc_index"] = agValue.TVOC;
       }
     }
-    if (tvocRawIndex >= 0) {
-      root["tvoc_raw"] = tvocRawIndex;
+    if (agValue.TVOCRaw >= 0) {
+      root["tvoc_raw"] = agValue.TVOCRaw;
     }
-    if (noxIndex >= 0) {
+    if (agValue.NOx >= 0) {
       if (localServer) {
-        root["noxIndex"] = noxIndex;
+        root["noxIndex"] = agValue.NOx;
       } else {
-        root["nox_index"] = noxIndex;
+        root["nox_index"] = agValue.NOx;
       }
     }
-    if (noxRawIndex >= 0) {
-      root["nox_raw"] = noxRawIndex;
+    if (agValue.NOxRaw >= 0) {
+      root["nox_raw"] = agValue.NOxRaw;
     }
   }
   root["boot"] = bootCount;
@@ -830,8 +794,10 @@ static void createMqttTask(void) {
   if (mqttTask) {
     vTaskDelete(mqttTask);
     mqttTask = NULL;
+    Serial.println("Delete old MQTT task");
   }
 
+  Serial.println("Create new MQTT task");
   xTaskCreate(
       [](void *param) {
         for (;;) {
@@ -841,7 +807,9 @@ static void createMqttTask(void) {
           if (mqttClient.isConnected()) {
             String payload = getServerSyncData(false);
             String topic = "airgradient/readings/" + ag->deviceId();
-            if (mqttClient.publish(topic, payload)) {
+
+            if (mqttClient.publish(topic.c_str(), payload.c_str(),
+                                   payload.length())) {
               Serial.println("MQTT sync success");
             } else {
               Serial.println("MQTT sync failure");
@@ -849,7 +817,7 @@ static void createMqttTask(void) {
           }
         }
       },
-      "mqtt-task", 1024 * 2, NULL, 6, &mqttTask);
+      "mqtt-task", 1024 * 4, NULL, 6, &mqttTask);
 
   if (mqttTask == NULL) {
     Serial.println("Creat mqttTask failed");
@@ -866,7 +834,6 @@ static void factoryConfigReset(void) {
         // Show display message: For factory keep for x seconds
         // Count display.
         if (ag->isOneIndoor()) {
-          // displayShowText("Factory reset", "keep pressed", "for 8 sec");
           disp.setText("Factory reset", "keep pressed", "for 8 sec");
         } else {
           Serial.println("Factory reset, keep pressed for 8 sec");
@@ -878,14 +845,11 @@ static void factoryConfigReset(void) {
           if (ag->isOneIndoor()) {
 
             String str = "for " + String(count) + " sec";
-            // displayShowText("Factory reset", "keep pressed",
-            //                 "for " + String(count) + " sec");
             disp.setText("Factory reset", "keep pressed", str.c_str());
           } else {
             Serial.printf("Factory reset, keep pressed for %d sec\r\n", count);
           }
           count--;
-          // ms = (uint32_t)(millis() - factoryBtnPressTime);
           if (count == 0) {
             /** Stop MQTT task first */
             if (mqttTask) {
@@ -894,14 +858,13 @@ static void factoryConfigReset(void) {
             }
 
             /** Disconnect WIFI */
-            WiFi.disconnect();
-            wifiManager.resetSettings();
+            wifiConnector.disconnect();
+            wifiConnector.reset();
 
             /** Reset local config */
             localConfig.reset();
 
             if (ag->isOneIndoor()) {
-              // displayShowText("Factory reset", "successful", "");
               disp.setText("Factory reset", "successful", "");
             } else {
               Serial.println("Factory reset successful");
@@ -938,24 +901,22 @@ static void wdgFeedUpdate(void) {
 
 static void sendPing() {
   JSONVar root;
-  root["wifi"] = WiFi.RSSI();
+  root["wifi"] = wifiConnector.RSSI();
   root["boot"] = bootCount;
 
   /** Change disp and led state */
   if (ag->isOneIndoor()) {
-    // dispSmHandler(AgStateMachineWiFiOkServerConnecting);
-    agSm.displayHandle(AgStateMachineWiFiOkServerConnecting);
+    sm.displayHandle(AgStateMachineWiFiOkServerConnecting);
   }
-  // ledSmHandler(AgStateMachineWiFiOkServerConnecting);
-  agSm.ledHandle(AgStateMachineWiFiOkServerConnecting);
+  sm.ledHandle(AgStateMachineWiFiOkServerConnecting);
 
   /** Task handle led connecting animation */
   xTaskCreate(
       [](void *obj) {
         for (;;) {
           // ledSmHandler();
-          agSm.ledHandle();
-          if (ledSmState != AgStateMachineWiFiOkServerConnecting) {
+          sm.ledHandle();
+          if (sm.getLedState() != AgStateMachineWiFiOkServerConnecting) {
             break;
           }
           delay(LED_BAR_ANIMATION_PERIOD);
@@ -965,25 +926,19 @@ static void sendPing() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  if (agServer.postToServer(ag->deviceId(), JSON.stringify(root))) {
+  if (apiClient.postToServer(JSON.stringify(root))) {
     if (ag->isOneIndoor()) {
-      // dispSmHandler(AgStateMachineWiFiOkServerConnected);
-      agSm.displayHandle(AgStateMachineWiFiOkServerConnected);
+      sm.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
-    // ledSmHandler(AgStateMachineWiFiOkServerConnected);
-    agSm.ledHandle(AgStateMachineWiFiOkServerConnected);
+    sm.ledHandle(AgStateMachineWiFiOkServerConnected);
   } else {
     if (ag->isOneIndoor()) {
-      // dispSmHandler(AgStateMachineWiFiOkServerConnectFailed);
-      agSm.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
+      sm.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
     }
-    // ledSmHandler(AgStateMachineWiFiOkServerConnectFailed);
-    agSm.ledHandle(AgStateMachineWiFiOkServerConnectFailed);
+    sm.ledHandle(AgStateMachineWiFiOkServerConnectFailed);
   }
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-
-  // ledSmHandler(AgStateMachineNormal);
-  agSm.ledHandle(AgStateMachineNormal);
+  sm.ledHandle(AgStateMachineNormal);
 }
 
 /**
@@ -991,12 +946,7 @@ static void sendPing() {
  */
 static void resetWatchdog() { ag->watchdog.reset(); }
 
-static bool wifiMangerClientConnected(void) {
-  return WiFi.softAPgetStationNum() ? true : false;
-}
-
 void dispSensorNotFound(String ss) {
-  // displayShowText("Sensor init", "Error:", ss + " not found");
   ss = ss + " not found";
   disp.setText("Sensor init", "Error:", ss.c_str());
   delay(2000);
@@ -1006,7 +956,7 @@ static void oneIndoorInit(void) {
   hasSensorPMS2 = false;
 
   /** Display init */
-  u8g2.begin();
+  disp.begin();
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
@@ -1033,7 +983,6 @@ static void oneIndoorInit(void) {
 
   /** Init S8 CO2 sensor */
   if (ag->s8.begin(Serial1) == false) {
-    // failedHandler("Init SenseAirS8 failed");
     Serial.println("CO2 S8 sensor not found");
     hasSensorS8 = false;
     dispSensorNotFound("S8");
@@ -1193,7 +1142,7 @@ static void failedHandler(String msg) {
  * @brief Send data to server
  */
 static void updateServerConfiguration(void) {
-  if (agServer.fetchServerConfiguration(ag->deviceId())) {
+  if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
 }
@@ -1236,14 +1185,14 @@ static void configUpdateHandle() {
 
   if (localConfig.isLedBarTestRequested()) {
     if (localConfig.getCountry() == "TH") {
-      ledTest2Min();
+      ledBarTest2Min();
     } else {
-      ledTest();
+      ledBarTest();
     }
   }
 
   String mqttUri = localConfig.getMqttBrokerUri();
-  if (mqttClient.isCurrentUri(mqttUri)) {
+  if (mqttClient.isCurrentUri(mqttUri) == false) {
     mqttClient.end();
 
     if (mqttTask != NULL) {
@@ -1320,115 +1269,19 @@ static void co2Calibration(void) {
 }
 
 /**
- * @brief Set LED color for special PMS value
- *
- * @param pm25Value PMS2.5 value
- */
-static void setRGBledPMcolor(int pm25Value) {
-  if (pm25Value <= 5) {
-    /** G; 1 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (pm25Value <= 10) {
-    /** GG; 2 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-  } else if (pm25Value <= 20) {
-    /** YYY; 3 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (pm25Value <= 35) {
-    /** YYYY; 4 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (pm25Value <= 45) {
-    /** YYYYY; 5 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (pm25Value <= 55) {
-    /** RRRRRR; 6 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (pm25Value <= 65) {
-    /** RRRRRRR; 7 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (pm25Value <= 150) {
-    /** RRRRRRRR; 8 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (pm25Value <= 250) {
-    /** RRRRRRRRR; 9 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 9);
-  } else { /** > 250 */
-    /* PRPRPRPRP; 9 */
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 9);
-  }
-}
-
-static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
-  if (ledCount < 0) {
-    ledCount = 0;
-    ag->ledBar.setColor(r, g, b, ledCount);
-  } else {
-    ledCount++;
-    if (ledCount >= ag->ledBar.getNumberOfLeds()) {
-      ledCount = 0;
-    }
-    ag->ledBar.setColor(r, g, b, ledCount);
-  }
-}
-
-/**
  * @brief APP LED color handler
  */
 static void appLedHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
-  if (WiFi.isConnected() == false) {
+  if (wifiConnector.isConnected() == false) {
     state = AgStateMachineWiFiLost;
-  } else if (agServer.isFetchConfigureFailed()) {
+  } else if (apiClient.isFetchConfigureFailed()) {
     state = AgStateMachineSensorConfigFailed;
-  } else if (agServer.isPostToServerFailed()) {
+  } else if (apiClient.isPostToServerFailed()) {
     state = AgStateMachineServerLost;
   }
-  // ledSmHandler(state);
-  agSm.ledHandle(state);
+
+  sm.ledHandle(state);
 }
 
 /**
@@ -1436,15 +1289,15 @@ static void appLedHandler(void) {
  */
 static void appDispHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
-  if (WiFi.isConnected() == false) {
+  if (wifiConnector.isConnected() == false) {
     state = AgStateMachineWiFiLost;
-  } else if (agServer.isFetchConfigureFailed()) {
+  } else if (apiClient.isFetchConfigureFailed()) {
     state = AgStateMachineSensorConfigFailed;
-  } else if (agServer.isPostToServerFailed()) {
+  } else if (apiClient.isPostToServerFailed()) {
     state = AgStateMachineServerLost;
   }
-  // dispSmHandler(state);
-  agSm.displayHandle(state);
+
+  sm.displayHandle(state);
 }
 
 /**
@@ -1465,16 +1318,16 @@ static void displayAndLedUpdate(void) {
  *
  */
 static void tvocUpdate(void) {
-  tvocIndex = ag->sgp41.getTvocIndex();
-  tvocRawIndex = ag->sgp41.getTvocRaw();
-  noxIndex = ag->sgp41.getNoxIndex();
-  noxRawIndex = ag->sgp41.getNoxRaw();
+  agValue.TVOC = ag->sgp41.getTvocIndex();
+  agValue.TVOCRaw = ag->sgp41.getTvocRaw();
+  agValue.NOx = ag->sgp41.getNoxIndex();
+  agValue.NOxRaw = ag->sgp41.getNoxRaw();
 
   Serial.println();
-  Serial.printf("TVOC index: %d\r\n", tvocIndex);
-  Serial.printf("TVOC raw: %d\r\n", tvocRawIndex);
-  Serial.printf("NOx index: %d\r\n", noxIndex);
-  Serial.printf("NOx raw: %d\r\n", noxRawIndex);
+  Serial.printf("TVOC index: %d\r\n", agValue.TVOC);
+  Serial.printf("TVOC raw: %d\r\n", agValue.TVOCRaw);
+  Serial.printf("NOx index: %d\r\n", agValue.NOx);
+  Serial.printf("NOx raw: %d\r\n", agValue.NOxRaw);
 }
 
 /**
@@ -1505,6 +1358,7 @@ static void pmUpdate(void) {
         pm03PCount_1 = -1;
       }
     }
+    agValue.PM25 = pm25_1;
   } else {
     bool pmsResult_1 = false;
     bool pmsResult_2 = false;
@@ -1612,6 +1466,20 @@ static void pmUpdate(void) {
       }
     }
 
+    if (pmsResult_1 && pmsResult_2) {
+      agValue.Temperature = (temp_1 + temp_2) / 2;
+      agValue.Humidity = (hum_1 + hum_2) / 2;
+    } else {
+      if (pmsResult_1) {
+        agValue.Temperature = temp_1;
+        agValue.Humidity = hum_1;
+      }
+      if (pmsResult_2) {
+        agValue.Temperature = temp_2;
+        agValue.Humidity = hum_2;
+      }
+    }
+
     if (hasSensorSGP) {
       float temp;
       float hum;
@@ -1639,7 +1507,7 @@ static void pmUpdate(void) {
  */
 static void sendDataToServer(void) {
   String syncData = getServerSyncData(false);
-  if (agServer.postToServer(ag->deviceId(), syncData)) {
+  if (apiClient.postToServer(syncData)) {
     resetWatchdog();
   }
 
@@ -1651,16 +1519,16 @@ static void sendDataToServer(void) {
  */
 static void tempHumUpdate(void) {
   if (ag->sht.measure()) {
+    agValue.Temperature = ag->sht.getTemperature();
+    agValue.Humidity = ag->sht.getRelativeHumidity();
 
-    temp = ag->sht.getTemperature();
-    hum = ag->sht.getRelativeHumidity();
-
-    Serial.printf("Temperature in C: %0.2f\r\n", temp);
-    Serial.printf("Relative Humidity: %d\r\n", hum);
+    Serial.printf("Temperature in C: %0.2f\r\n", agValue.Temperature);
+    Serial.printf("Relative Humidity: %d\r\n", agValue.Humidity);
 
     // Update compensation temperature and humidity for SGP41
     if (hasSensorSGP) {
-      ag->sgp41.setCompensationTemperatureHumidity(temp, hum);
+      ag->sgp41.setCompensationTemperatureHumidity(agValue.Temperature,
+                                                   agValue.Humidity);
     }
   } else {
     Serial.println("SHT read failed");

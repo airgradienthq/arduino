@@ -33,6 +33,9 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <AirGradient.h>
+#include "AgSchedule.h"
+#include "AgConfigure.h"
+#include "AgApiClient.h"
 #include <Arduino_JSON.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
@@ -56,299 +59,10 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
   "cleanair" /** default WiFi AP password                                      \
               */
 
-/**
- * @brief Schedule handle with timing period
- *
- */
-class AgSchedule {
-public:
-  AgSchedule(int period, void (*handler)(void))
-      : period(period), handler(handler) {}
-  void run(void) {
-    uint32_t ms = (uint32_t)(millis() - count);
-    if (ms >= period) {
-      /** Call handler */
-      handler();
-
-      // Serial.printf("[AgSchedule] handle 0x%08x, period: %d(ms)\r\n",
-      //               (unsigned int)handler, period);
-
-      /** Update period time */
-      count = millis();
-    }
-  }
-
-private:
-  void (*handler)(void);
-  int period;
-  int count;
-};
-
-/**
- * @brief AirGradient server configuration and sync data
- *
- */
-class AgServer {
-public:
-  void begin(void) {
-    inF = false;
-    inUSAQI = false;
-    configFailed = false;
-    serverFailed = false;
-    memset(models, 0, sizeof(models));
-    memset(mqttBroker, 0, sizeof(mqttBroker));
-  }
-
-  /**
-   * @brief Get server configuration
-   *
-   * @param id Device ID
-   * @return true Success
-   * @return false Failure
-   */
-  bool fetchServerConfiguration(String id) {
-    String uri =
-        "http://hw.airgradient.com/sensors/airgradient:" + id + "/one/config";
-
-    /** Init http client */
-    WiFiClient wifiClient;
-    HTTPClient client;
-    if (client.begin(wifiClient, uri) == false) {
-      configFailed = true;
-      return false;
-    }
-
-    /** Get */
-    int retCode = client.GET();
-    if (retCode != 200) {
-      client.end();
-      configFailed = true;
-      return false;
-    }
-
-    /** clear failed */
-    configFailed = false;
-
-    /** Get response string */
-    String respContent = client.getString();
-    client.end();
-    Serial.println("Get server config: " + respContent);
-
-    /** Parse JSON */
-    JSONVar root = JSON.parse(respContent);
-    if (JSON.typeof(root) == "undefined") {
-      /** JSON invalid */
-      return false;
-    }
-
-    /** Get "country" */
-    if (JSON.typeof_(root["country"]) == "string") {
-      String country = root["country"];
-      if (country == "US") {
-        inF = true;
-      } else {
-        inF = false;
-      }
-    }
-
-    /** Get "pmStandard" */
-    if (JSON.typeof_(root["pmStandard"]) == "string") {
-      String standard = root["pmStandard"];
-      if (standard == "ugm3") {
-        inUSAQI = false;
-      } else {
-        inUSAQI = true;
-      }
-    }
-
-    /** Get "co2CalibrationRequested" */
-    if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-      co2Calib = root["co2CalibrationRequested"];
-    }
-
-    /** Get "ledBarMode" */
-    if (JSON.typeof_(root["ledBarMode"]) == "string") {
-      String mode = root["ledBarMode"];
-      if (mode == "co2") {
-        ledBarMode = LedBarModeCO2;
-      } else if (mode == "pm") {
-        ledBarMode = LedBarModePm;
-      } else if (mode == "off") {
-        ledBarMode = LedBarModeOff;
-      } else {
-        ledBarMode = LedBarModeOff;
-      }
-    }
-
-    /** Get model */
-    if (JSON.typeof_(root["model"]) == "string") {
-      String model = root["model"];
-      if (model.length()) {
-        int len =
-            model.length() < sizeof(models) ? model.length() : sizeof(models);
-        memset(models, 0, sizeof(models));
-        memcpy(models, model.c_str(), len);
-      }
-    }
-
-    /** Get "mqttBrokerUrl" */
-    if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
-      String mqtt = root["mqttBrokerUrl"];
-      if (mqtt.length()) {
-        int len = mqtt.length() < sizeof(mqttBroker) ? mqtt.length()
-                                                     : sizeof(mqttBroker);
-        memset(mqttBroker, 0, sizeof(mqttBroker));
-        memcpy(mqttBroker, mqtt.c_str(), len);
-      }
-    }
-
-    /** Get 'abcDays' */
-    if (JSON.typeof_(root["abcDays"]) == "number") {
-      co2AbcCalib = root["abcDays"];
-    } else {
-      co2AbcCalib = -1;
-    }
-
-    /** Show configuration */
-    showServerConfig();
-
-    return true;
-  }
-
-  bool postToServer(String id, String payload) {
-    /**
-     * @brief Only post data if WiFi is connected
-     */
-    if (WiFi.isConnected() == false) {
-      return false;
-    }
-
-    Serial.printf("Post payload: %s\r\n", payload.c_str());
-
-    String uri =
-        "http://hw.airgradient.com/sensors/airgradient:" + id + "/measures";
-
-    WiFiClient wifiClient;
-    HTTPClient client;
-    if (client.begin(wifiClient, uri.c_str()) == false) {
-      return false;
-    }
-    client.addHeader("content-type", "application/json");
-    int retCode = client.POST(payload);
-    client.end();
-
-    if ((retCode == 200) || (retCode == 429)) {
-      serverFailed = false;
-      return true;
-    } else {
-      Serial.printf("Post response failed code: %d\r\n", retCode);
-    }
-    serverFailed = true;
-    return false;
-  }
-
-  /**
-   * @brief Get temperature configuration unit
-   *
-   * @return true F unit
-   * @return false C Unit
-   */
-  bool isTemperatureUnitF(void) { return inF; }
-
-  /**
-   * @brief Get PMS standard unit
-   *
-   * @return true USAQI
-   * @return false ugm3
-   */
-  bool isPMSinUSAQI(void) { return inUSAQI; }
-
-  /**
-   * @brief Get status of get server configuration is failed
-   *
-   * @return true Failed
-   * @return false Success
-   */
-  bool isConfigFailed(void) { return configFailed; }
-
-  /**
-   * @brief Get status of post server configuration is failed
-   *
-   * @return true Failed
-   * @return false Success
-   */
-  bool isServerFailed(void) { return serverFailed; }
-
-  /**
-   * @brief Get request calibration CO2
-   *
-   * @return true Requested. If result = true, it's clear after function call
-   * @return false Not-requested
-   */
-  bool isCo2Calib(void) {
-    bool ret = co2Calib;
-    if (ret) {
-      co2Calib = false;
-    }
-    return ret;
-  }
-
-  /**
-   * @brief Get the Co2 auto calib period
-   *
-   * @return int  days, -1 if invalid.
-   */
-  int getCo2AbcDaysConfig(void) { return co2AbcCalib; }
-
-  /**
-   * @brief Get device configuration model name
-   *
-   * @return String Model name, empty string if server failed
-   */
-  String getModelName(void) { return String(models); }
-
-  /**
-   * @brief Get mqttBroker url
-   *
-   * @return String Broker url, empty if server failed
-   */
-  String getMqttBroker(void) { return String(mqttBroker); }
-
-  /**
-   * @brief Show server configuration parameter
-   */
-  void showServerConfig(void) {
-    Serial.println("Server configuration: ");
-    Serial.printf("             inF: %s\r\n", inF ? "true" : "false");
-    Serial.printf("         inUSAQI: %s\r\n", inUSAQI ? "true" : "false");
-    Serial.printf("    useRGBLedBar: %d\r\n", (int)ledBarMode);
-    Serial.printf("           Model: %s\r\n", models);
-    Serial.printf("     Mqtt Broker: %s\r\n", mqttBroker);
-    Serial.printf(" S8 calib period: %d\r\n", co2AbcCalib);
-  }
-
-  /**
-   * @brief Get server config led bar mode
-   *
-   * @return LedBarMode
-   */
-  LedBarMode getLedBarMode(void) { return ledBarMode; }
-
-private:
-  bool inF;             /** Temperature unit, true: F, false: C */
-  bool inUSAQI;         /** PMS unit, true: USAQI, false: ugm3 */
-  bool configFailed;    /** Flag indicate get server configuration failed */
-  bool serverFailed;    /** Flag indicate post data to server failed */
-  bool co2Calib;        /** Is co2Ppmcalibration requset */
-  int co2AbcCalib = -1; /** update auto calibration number of day */
-  LedBarMode ledBarMode = LedBarModeCO2; /** */
-  char models[20];                     /** */
-  char mqttBroker[256];                /** */
-};
-AgServer agServer;
-
 /** Create airgradient instance for 'DIY_BASIC' board */
-AirGradient ag = AirGradient(DIY_BASIC);
+static AirGradient ag = AirGradient(DIY_BASIC);
+static AgConfigure localConfig(Serial);
+static AgApiClient apiClient(Serial, localConfig);
 
 static int co2Ppm = -1;
 static int pm25 = -1;
@@ -396,7 +110,8 @@ void setup() {
   boardInit();
 
   /** Init AirGradient server */
-  agServer.begin();
+  apiClient.begin();
+  apiClient.setAirGradient(&ag);
 
   /** Show boot display */
   displayShowText("DIY basic", "Lib:" + ag.getVersion(), "");
@@ -408,8 +123,8 @@ void setup() {
     wifiHasConfig = true;
     sendPing();
 
-    agServer.fetchServerConfiguration(getDevId());
-    if (agServer.isCo2Calib()) {
+    apiClient.fetchServerConfiguration();
+    if (localConfig.isCo2CalibrationRequested()) {
       co2Calibration();
     }
   }
@@ -459,7 +174,7 @@ static void sendPing() {
   root["boot"] = 0;
 
   // delay(1500);
-  if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
+  if (apiClient.postToServer(JSON.stringify(root))) {
     // Ping Server succses
   } else {
     // Ping server failed
@@ -575,25 +290,25 @@ static void co2Calibration(void) {
 }
 
 static void updateServerConfiguration(void) {
-  if (agServer.fetchServerConfiguration(getDevId())) {
-    if (agServer.isCo2Calib()) {
+  if (apiClient.fetchServerConfiguration()) {
+    if (localConfig.isCo2CalibrationRequested()) {
       if (hasSensorS8) {
         co2Calibration();
       } else {
         Serial.println("CO2 S8 not available, calib ignored");
       }
     }
-    if (agServer.getCo2AbcDaysConfig() > 0) {
+    if (localConfig.getCO2CalirationAbcDays() > 0) {
       if (hasSensorS8) {
-        int newHour = agServer.getCo2AbcDaysConfig() * 24;
+        int newHour = localConfig.getCO2CalirationAbcDays() * 24;
         Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                      agServer.getCo2AbcDaysConfig(), newHour);
+                      localConfig.getCO2CalirationAbcDays(), newHour);
         int curHour = ag.s8.getAbcPeriod();
         Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
           Serial.println("set 'abcDays' ignored");
         } else {
-          if (ag.s8.setAbcPeriod(agServer.getCo2AbcDaysConfig() * 24) ==
+          if (ag.s8.setAbcPeriod(localConfig.getCO2CalirationAbcDays() * 24) ==
               false) {
             Serial.println("Set S8 abcDays period calib failed");
           } else {
@@ -663,7 +378,7 @@ static void sendDataToServer() {
     root["rhum"] = hum;
   }
 
-  if (agServer.postToServer(getDevId(), JSON.stringify(root)) == false) {
+  if (apiClient.postToServer(JSON.stringify(root)) == false) {
     Serial.println("Post to server failed");
   }
 }
@@ -673,7 +388,7 @@ static void dispHandler() {
   String ln2 = "";
   String ln3 = "";
 
-  if (agServer.isPMSinUSAQI()) {
+  if (localConfig.isPmStandardInUSAQI()) {
     if (pm25 < 0) {
       ln1 = "AQI: -";
     } else {
@@ -700,7 +415,7 @@ static void dispHandler() {
 
   String _temp = "-";
 
-  if (agServer.isTemperatureUnitF()) {
+  if (localConfig.isTemperatureUnitInF()) {
     if (temp > -1001) {
       _temp = String((temp * 9 / 5) + 32).substring(0, 4);
     }

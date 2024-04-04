@@ -1,20 +1,28 @@
 #include "AgOledDisplay.h"
-#include <U8g2lib.h>
+#include "Libraries/U8g2/src/U8g2lib.h"
 
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
 
-void AgOledDisplay::showTempHum(void) {
+void AgOledDisplay::showTempHum(bool hasStatus) {
   char buf[10];
   if (value.Temperature > -1001) {
     if (config.isTemperatureUnitInF()) {
       float tempF = (value.Temperature * 9) / 5 + 32;
-      snprintf(buf, sizeof(buf), "%0.1f", tempF);
+      if (hasStatus) {
+        snprintf(buf, sizeof(buf), "%0.1f", tempF);
+      } else {
+        snprintf(buf, sizeof(buf), "%0.1f°F", tempF);
+      }
     } else {
-      snprintf(buf, sizeof(buf), "-°F");
+      if (hasStatus) {
+        snprintf(buf, sizeof(buf), "%.1f", value.Temperature);
+      } else {
+        snprintf(buf, sizeof(buf), "%.1f°C", value.Temperature);
+      }
     }
   } else {
-    if (value.Temperature > -1001) {
-      snprintf(buf, sizeof(buf), "%.1f°C", value.Temperature);
+    if (config.isTemperatureUnitInF()) {
+      snprintf(buf, sizeof(buf), "-°F");
     } else {
       snprintf(buf, sizeof(buf), "-°C");
     }
@@ -35,13 +43,10 @@ void AgOledDisplay::showTempHum(void) {
   }
 }
 
-AgOledDisplay::AgOledDisplay(AgConfigure &config,
-                             AgValue &value, Stream &log)
+AgOledDisplay::AgOledDisplay(AgConfigure &config, AgValue &value, Stream &log)
     : PrintLog(log, "AgOledDisplay"), config(config), value(value) {}
 
-void AgOledDisplay::setAirGradient(AirGradient *ag) {
-  this->ag = ag;
-}
+void AgOledDisplay::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
 AgOledDisplay::~AgOledDisplay() {}
 
@@ -104,10 +109,12 @@ void AgOledDisplay::setText(String &line1, String &line2, String &line3) {
 void AgOledDisplay::setText(const char *line1, const char *line2,
                             const char *line3) {
   DISP()->firstPage();
-  DISP()->setFont(u8g2_font_t0_16_tf);
-  DISP()->drawStr(1, 10, line1);
-  DISP()->drawStr(1, 30, line2);
-  DISP()->drawStr(1, 50, line3);
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    DISP()->drawStr(1, 10, line1);
+    DISP()->drawStr(1, 30, line2);
+    DISP()->drawStr(1, 50, line3);
+  } while (DISP()->nextPage());
 }
 
 void AgOledDisplay::setText(const char *text) {}
@@ -122,11 +129,13 @@ void AgOledDisplay::setText(String &line1, String &line2, String &line3,
 void AgOledDisplay::setText(const char *line1, const char *line2,
                             const char *line3, const char *line4) {
   DISP()->firstPage();
-  DISP()->setFont(u8g2_font_t0_16_tf);
-  DISP()->drawStr(1, 10, line1);
-  DISP()->drawStr(1, 25, line2);
-  DISP()->drawStr(1, 40, line3);
-  DISP()->drawStr(1, 55, line4);
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    DISP()->drawStr(1, 10, line1);
+    DISP()->drawStr(1, 25, line2);
+    DISP()->drawStr(1, 40, line3);
+    DISP()->drawStr(1, 55, line4);
+  } while (DISP()->nextPage());
 }
 
 void AgOledDisplay::showDashboard(void) { showDashboard(NULL); }
@@ -135,95 +144,96 @@ void AgOledDisplay::showDashboard(const char *status) {
   char strBuf[10];
 
   DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    if ((status == NULL) || (strlen(status) == 0)) {
+      showTempHum(false);
+    } else {
+      String strStatus = "Show status: " + String(status);
+      logInfo(strStatus);
 
-  DISP()->setFont(u8g2_font_t0_16_tf);
-  if ((status == NULL) || (strlen(status) == 0)) {
-    showTempHum();
-  } else {
-    String strStatus = "Show status: " + String(status);
-    logInfo(strStatus);
+      int strWidth = DISP()->getStrWidth(status);
+      DISP()->drawStr((126 - strWidth) / 2, 10, status);
 
-    int strWidth = DISP()->getStrWidth(status);
-    DISP()->drawStr((126 - strWidth) / 2, 10, status);
+      /** Show WiFi NA*/
+      if (strcmp(status, "WiFi N/A") == 0) {
+        DISP()->setFont(u8g2_font_t0_12_tf);
+        showTempHum(true);
+      }
+    }
 
-    /** Show WiFi NA*/
-    if (strcmp(status, "WiFi N/A") == 0) {
+    /** Draw horizonal line */
+    DISP()->drawLine(1, 13, 128, 13);
+
+    /** Show CO2 label */
+    DISP()->setFont(u8g2_font_t0_12_tf);
+    DISP()->drawUTF8(1, 27, "CO2");
+
+    DISP()->setFont(u8g2_font_t0_22b_tf);
+    if (value.CO2 > 0) {
+      int val = 9999;
+      if (value.CO2 < 10000) {
+        val = value.CO2;
+      }
+      sprintf(strBuf, "%d", val);
+    } else {
+      sprintf(strBuf, "%s", "-");
+    }
+    DISP()->drawStr(1, 48, strBuf);
+
+    /** Show CO2 value index */
+    DISP()->setFont(u8g2_font_t0_12_tf);
+    DISP()->drawStr(1, 61, "ppm");
+
+    /** Draw vertical line */
+    DISP()->drawLine(45, 14, 45, 64);
+    DISP()->drawLine(82, 14, 82, 64);
+
+    /** Draw PM2.5 label */
+    DISP()->setFont(u8g2_font_t0_12_tf);
+    DISP()->drawStr(48, 27, "PM2.5");
+
+    /** Draw PM2.5 value */
+    DISP()->setFont(u8g2_font_t0_22b_tf);
+    if (config.isPmStandardInUSAQI()) {
+      if (value.PM25 >= 0) {
+        sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.PM25));
+      } else {
+        sprintf(strBuf, "%s", "-");
+      }
+      DISP()->drawStr(48, 48, strBuf);
       DISP()->setFont(u8g2_font_t0_12_tf);
-      showTempHum();
+      DISP()->drawUTF8(48, 61, "AQI");
+    } else {
+      if (value.PM25 >= 0) {
+        sprintf(strBuf, "%d", value.PM25);
+      } else {
+        sprintf(strBuf, "%s", "-");
+      }
+      DISP()->drawStr(48, 48, strBuf);
+      DISP()->setFont(u8g2_font_t0_12_tf);
+      DISP()->drawUTF8(48, 61, "ug/m³");
     }
-  }
 
-  /** Draw horizonal line */
-  DISP()->drawLine(1, 13, 128, 13);
+    /** Draw tvocIndexlabel */
+    DISP()->setFont(u8g2_font_t0_12_tf);
+    DISP()->drawStr(85, 27, "tvoc:");
 
-  /** Show CO2 label */
-  DISP()->setFont(u8g2_font_t0_12_tf);
-  DISP()->drawUTF8(1, 27, "CO2");
-
-  DISP()->setFont(u8g2_font_t0_22b_tf);
-  if (value.CO2 > 0) {
-    int val = 9999;
-    if (value.CO2 < 10000) {
-      val = value.CO2;
-    }
-    sprintf(strBuf, "%d", val);
-  } else {
-    sprintf(strBuf, "%s", "-");
-  }
-  DISP()->drawStr(1, 48, strBuf);
-
-  /** Show CO2 value index */
-  DISP()->setFont(u8g2_font_t0_12_tf);
-  DISP()->drawStr(1, 61, "ppm");
-
-  /** Draw vertical line */
-  DISP()->drawLine(45, 14, 45, 64);
-  DISP()->drawLine(82, 14, 82, 64);
-
-  /** Draw PM2.5 label */
-  DISP()->setFont(u8g2_font_t0_12_tf);
-  DISP()->drawStr(48, 27, "PM2.5");
-
-  /** Draw PM2.5 value */
-  DISP()->setFont(u8g2_font_t0_22b_tf);
-  if (config.isPmStandardInUSAQI()) {
-    if (value.PM25 >= 0) {
-      sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.PM25));
+    /** Draw tvocIndexvalue */
+    if (value.TVOC >= 0) {
+      sprintf(strBuf, "%d", value.TVOC);
     } else {
       sprintf(strBuf, "%s", "-");
     }
-    DISP()->drawStr(48, 48, strBuf);
-    DISP()->setFont(u8g2_font_t0_12_tf);
-    DISP()->drawUTF8(48, 61, "AQI");
-  } else {
-    if (value.PM25 >= 0) {
-      sprintf(strBuf, "%d", value.PM25);
+    DISP()->drawStr(85, 39, strBuf);
+
+    /** Draw NOx label */
+    DISP()->drawStr(85, 53, "NOx:");
+    if (value.NOx >= 0) {
+      sprintf(strBuf, "%d", value.NOx);
     } else {
       sprintf(strBuf, "%s", "-");
     }
-    DISP()->drawStr(48, 48, strBuf);
-    DISP()->setFont(u8g2_font_t0_12_tf);
-    DISP()->drawUTF8(48, 61, "ug/m³");
-  }
-
-  /** Draw tvocIndexlabel */
-  DISP()->setFont(u8g2_font_t0_12_tf);
-  DISP()->drawStr(85, 27, "tvoc:");
-
-  /** Draw tvocIndexvalue */
-  if (value.TVOC >= 0) {
-    sprintf(strBuf, "%d", value.TVOC);
-  } else {
-    sprintf(strBuf, "%s", "-");
-  }
-  DISP()->drawStr(85, 39, strBuf);
-
-  /** Draw NOx label */
-  DISP()->drawStr(85, 53, "NOx:");
-  if (value.NOx >= 0) {
-    sprintf(strBuf, "%d", value.NOx);
-  } else {
-    sprintf(strBuf, "%s", "-");
-  }
-  DISP()->drawStr(85, 63, strBuf);
+    DISP()->drawStr(85, 63, strBuf);
+  } while (DISP()->nextPage());
 }

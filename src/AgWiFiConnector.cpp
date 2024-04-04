@@ -1,19 +1,39 @@
+#ifdef ESP32
+
 #include "AgWiFiConnector.h"
-#include <WiFiManager.h>
+#include "Libraries/WiFiManager/WiFiManager.h"
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
 
 #define WIFI() ((WiFiManager *)(this->wifi))
 
+/**
+ * @brief Construct a new Ag Wi Fi Connector:: Ag Wi Fi Connector object
+ *
+ * @param disp AgOledDisplay
+ * @param log Stream
+ * @param sm AgStateMachine
+ */
 AgWiFiConnector::AgWiFiConnector(AgOledDisplay &disp, Stream &log,
                                  AgStateMachine &sm)
     : PrintLog(log, "AgWiFiConnector"), disp(disp), sm(sm) {}
 
 AgWiFiConnector::~AgWiFiConnector() {}
 
+/**
+ * @brief Set reference AirGradient instance
+ *
+ * @param ag Point to AirGradient instance
+ */
 void AgWiFiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
+/**
+ * @brief Connection to WIFI AP process. Just call one times
+ *
+ * @return true Success
+ * @return false Failure
+ */
 bool AgWiFiConnector::connect(void) {
   if (wifi == NULL) {
     wifi = new WiFiManager();
@@ -36,6 +56,7 @@ bool AgWiFiConnector::connect(void) {
     logInfo("Connecting to WiFi...");
   }
 
+  ssid = "airgradient-" + ag->deviceId();
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
   // Task handle WiFi connection.
@@ -98,7 +119,6 @@ bool AgWiFiConnector::connect(void) {
 
     delay(1); // avoid watchdog timer reset.
   }
-
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
     sm.ledHandle(AgStateMachineWiFiManagerConnectFailed);
@@ -113,10 +133,31 @@ bool AgWiFiConnector::connect(void) {
   return true;
 }
 
+/**
+ * @brief Disconnect to current connected WiFi AP
+ *
+ */
+void AgWiFiConnector::disconnect(void) {
+  if (WiFi.isConnected()) {
+    logInfo("Disconnect");
+    WiFi.disconnect();
+  }
+}
+
+/**
+ * @brief Has wifi STA connected to WIFI softAP (this device)
+ *
+ * @return true Connected
+ * @return false Not connected
+ */
 bool AgWiFiConnector::wifiClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
+/**
+ * @brief Handle WiFiManage softAP setup completed callback
+ *
+ */
 void AgWiFiConnector::_wifiApCallback(void) {
   sm.displayWiFiConnectCountDown(WIFI_CONNECT_COUNTDOWN_MAX);
   sm.setDisplayState(AgStateMachineWiFiManagerMode);
@@ -124,23 +165,45 @@ void AgWiFiConnector::_wifiApCallback(void) {
   sm.ledHandle(AgStateMachineWiFiManagerMode);
 }
 
+/**
+ * @brief Handle WiFiManager save configuration callback
+ *
+ */
 void AgWiFiConnector::_wifiSaveConfig(void) {
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnected);
   sm.ledHandle(AgStateMachineWiFiManagerStaConnected);
 }
 
+/**
+ * @brief Handle WiFiManager save parameter callback
+ *
+ */
 void AgWiFiConnector::_wifiSaveParamCallback(void) {
   sm.ledAnimationInit();
   sm.ledHandle(AgStateMachineWiFiManagerStaConnecting);
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnecting);
 }
 
+/**
+ * @brief Check that WiFiManager Configure portal active
+ *
+ * @return true Active
+ * @return false Not-Active
+ */
 bool AgWiFiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
 
+/**
+ * @brief Process WiFiManager connection
+ *
+ */
 void AgWiFiConnector::_wifiProcess() { WIFI()->process(); }
 
+/**
+ * @brief Handle and reconnect WiFi
+ *
+ */
 void AgWiFiConnector::handle(void) {
   // Ignore if WiFi is not configured
   if (hasConfig == false) {
@@ -163,4 +226,33 @@ void AgWiFiConnector::handle(void) {
   }
 }
 
+/**
+ * @brief Is WiFi connected
+ *
+ * @return true  Connected
+ * @return false Disconnected
+ */
 bool AgWiFiConnector::isConnected(void) { return WiFi.isConnected(); }
+
+/**
+ * @brief Reset WiFi configuretion and connection, disconnect wifi before call
+ * this method
+ *
+ */
+void AgWiFiConnector::reset(void) { WIFI()->resetSettings(); }
+
+/**
+ * @brief Get wifi RSSI
+ *
+ * @return int
+ */
+int AgWiFiConnector::RSSI(void) { return WiFi.RSSI(); }
+
+/**
+ * @brief Get WIFI IP as string format ex: 192.168.1.1
+ *
+ * @return String
+ */
+String AgWiFiConnector::localIpStr(void) { return WiFi.localIP().toString(); }
+
+#endif

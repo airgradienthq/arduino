@@ -1,5 +1,9 @@
 #include "AirGradient.h"
+#ifdef ESP8266
+#include <ESP8266WiFi.h>
+#else 
 #include "WiFi.h"
+#endif
 
 #define AG_LIB_VER "3.0.9"
 

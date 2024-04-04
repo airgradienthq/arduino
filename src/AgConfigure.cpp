@@ -5,18 +5,21 @@ const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
     [ConfigurationControlCloud] = "cloud",
     [ConfigurationControlBoth] = "both"};
+const char *LED_BAR_MODE_NAMES[] = {
+    [LedBarModeOff] = "off",
+    [LedBarModePm] = "pm",
+    [LedBarModeCO2] = "co2",
+};
 
 String AgConfigure::getLedBarModeName(LedBarMode mode) {
-  LedBarMode ledBarMode = mode;
-  if (ledBarMode == LedBarModeOff) {
-    return String("off");
-  } else if (ledBarMode == LedBarModePm) {
-    return String("pm");
-  } else if (ledBarMode == LedBarModeCO2) {
-    return String("co2");
-  } else {
-    return String("off");
+  if (mode == LedBarModeOff) {
+    return String(LED_BAR_MODE_NAMES[LedBarModeOff]);
+  } else if (mode == LedBarModePm) {
+    return String(LED_BAR_MODE_NAMES[LedBarModePm]);
+  } else if (mode == LedBarModeCO2) {
+    return String(LED_BAR_MODE_NAMES[LedBarModeCO2]);
   }
+  return String("unknown");
 }
 
 void AgConfigure::saveConfig(void) {
@@ -26,13 +29,32 @@ void AgConfigure::saveConfig(void) {
   for (int i = 0; i < len; i++) {
     config._check += data[i];
   }
+#ifdef ESP8266
+  for (int i = 0; i < sizeof(config); i++) {
+    EEPROM.write(i, data[i]);
+  }
+#else
   EEPROM.writeBytes(0, &config, sizeof(config));
+#endif
   EEPROM.commit();
   logInfo("Save Config");
 }
 
 void AgConfigure::loadConfig(void) {
+  bool readSuccess = false;
+#ifdef ESP8266
+  uint8_t *data = (uint8_t *)&config;
+  for (int i = 0; i < sizeof(config); i++) {
+    data[i] = EEPROM.read(i);
+  }
+  readSuccess = true;
+#else
   if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
+    readSuccess = true;
+  }
+#endif
+
+  if (readSuccess) {
     logError("Load configure failed");
     defaultConfig();
   } else {
@@ -104,40 +126,50 @@ bool AgConfigure::parse(String data, bool isLocal) {
   bool changed = false;
 
   /** Get ConfigurationControl */
-  if (JSON.typeof_(root["configurationControl"]) == "string") {
-    String configurationControl = root["configurationControl"];
-    if (configurationControl ==
-        String(CONFIGURATION_CONTROL_NAME
-                   [ConfigurationControl::ConfigurationControlLocal])) {
-      config.configurationControl =
-          (uint8_t)ConfigurationControl::ConfigurationControlLocal;
-      changed = true;
-    } else if (configurationControl ==
-               String(CONFIGURATION_CONTROL_NAME
-                          [ConfigurationControl::ConfigurationControlCloud])) {
-      config.configurationControl =
-          (uint8_t)ConfigurationControl::ConfigurationControlCloud;
-      changed = true;
-    } else if (configurationControl ==
-               String(CONFIGURATION_CONTROL_NAME
-                          [ConfigurationControl::ConfigurationControlBoth])) {
-      config.configurationControl =
-          (uint8_t)ConfigurationControl::ConfigurationControlBoth;
-      changed = true;
+  if (isLocal) {
+    if (JSON.typeof_(root["configurationControl"]) == "string") {
+      String configurationControl = root["configurationControl"];
+      if (configurationControl ==
+          String(CONFIGURATION_CONTROL_NAME
+                     [ConfigurationControl::ConfigurationControlLocal])) {
+        config.configurationControl =
+            (uint8_t)ConfigurationControl::ConfigurationControlLocal;
+        changed = true;
+      } else if (configurationControl ==
+                 String(
+                     CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlCloud])) {
+        config.configurationControl =
+            (uint8_t)ConfigurationControl::ConfigurationControlCloud;
+        changed = true;
+      } else if (configurationControl ==
+                 String(CONFIGURATION_CONTROL_NAME
+                            [ConfigurationControl::ConfigurationControlBoth])) {
+        config.configurationControl =
+            (uint8_t)ConfigurationControl::ConfigurationControlBoth;
+        changed = true;
+      } else {
+
+        logError(String("'configurationControl' value '" +
+                        configurationControl + "' invalid")
+                     .c_str());
+        return false;
+      }
     } else {
-      logError("'configurationControl' value '" + configurationControl +
-               "' invalid");
+      return false;
+    }
+
+    if ((config.configurationControl ==
+         (byte)ConfigurationControl::ConfigurationControlCloud)) {
+      logWarning("Local configure ignored");
       return false;
     }
   } else {
-    return false;
-  }
-
-  if ((config.configurationControl ==
-       (byte)ConfigurationControl::ConfigurationControlCloud)) {
-    logWarning("Ignore, cause ConfigurationControl is " +
-               String(CONFIGURATION_CONTROL_NAME[config.configurationControl]));
-    return false;
+    if (config.configurationControl ==
+        (byte)ConfigurationControl::ConfigurationControlLocal) {
+      logWarning("Cloud configure ignored");
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["country"]) == "string") {
@@ -146,7 +178,7 @@ bool AgConfigure::parse(String data, bool isLocal) {
       if (country != String(config.country)) {
         changed = true;
         snprintf(config.country, sizeof(config.country), country.c_str());
-        logInfo("Set country: " + country);
+        logInfo(String("Set country: " + country).c_str());
       }
 
       // Update temperature unit if get configuration from server
@@ -196,12 +228,12 @@ bool AgConfigure::parse(String data, bool isLocal) {
 
   if (JSON.typeof_(root["ledBarMode"]) == "string") {
     String mode = root["ledBarMode"];
-    uint8_t ledBarMode = config.useRGBLedBar;
-    if (mode == "co2") {
+    uint8_t ledBarMode = LedBarModeOff;
+    if (mode == String(LED_BAR_MODE_NAMES[LedBarModeCO2])) {
       ledBarMode = LedBarModeCO2;
-    } else if (mode == "pm") {
+    } else if (mode == String(LED_BAR_MODE_NAMES[LedBarModePm])) {
       ledBarMode = LedBarModePm;
-    } else if (mode == "off") {
+    } else if (mode == String(LED_BAR_MODE_NAMES[LedBarModeOff])) {
       ledBarMode = LedBarModeOff;
     } else {
       ledBarMode = config.useRGBLedBar;

@@ -13,11 +13,11 @@ public:
   PrintLog(Stream &log, String tag);
   ~PrintLog();
 
-  void logInfo(String &info);
+  void logInfo(String info);
   void logInfo(const char* info);
-  void logError(String &err);
+  void logError(String err);
   void logError(const char* err);
-  void logWarning(String &warning);
+  void logWarning(String warning);
   void logWarning(const char* warning);
 };
 

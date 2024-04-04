@@ -226,35 +226,27 @@ void AgStateMachine::displayHandle(AgStateMachineState state) {
       String line3 = "\"airgradient-";
       String line4 = ag->deviceId() + "\"";
       disp.setText(line1, line2, line3, line4);
-      // displayShowWifiText(String(wifiConnectCountDown) + "s to connect",
-      //                     "to WiFi hotspot:", "\"airgradient-",
-      //                     getDevId() + "\"");
       wifiConnectCountDown--;
     }
     break;
   }
   case AgStateMachineWiFiManagerStaConnecting: {
-    // displayShowText("Trying to", "connect to WiFi", "...");
     disp.setText("Trying to", "connect to WiFi", "...");
     break;
   }
   case AgStateMachineWiFiManagerStaConnected: {
-    // displayShowText("WiFi connection", "successful", "");
     disp.setText("WiFi connection", "successful", "");
     break;
   }
   case AgStateMachineWiFiOkServerConnecting: {
-    // displayShowText("Connecting to", "Server", "...");
     disp.setText("Connecting to", "Server", "...");
     break;
   }
   case AgStateMachineWiFiOkServerConnected: {
-    // displayShowText("Server", "connection", "successful");
     disp.setText("Server", "connection", "successful");
     break;
   }
   case AgStateMachineWiFiManagerConnectFailed: {
-    // displayShowText("WiFi not", "connected", "");
     disp.setText("WiFi not", "connected", "");
     break;
   }
@@ -263,17 +255,14 @@ void AgStateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
-    // displayShowText("Monitor not", "setup on", "dashboard");
     disp.setText("Monitor not", "setup on", "dashboard");
     break;
   }
   case AgStateMachineWiFiLost: {
-    // displayshowDashboard("WiFi N/A");
     disp.showDashboard("WiFi N/A");
     break;
   }
   case AgStateMachineServerLost: {
-    // displayshowDashboard("Server N/A");
     disp.showDashboard("Server N/A");
     break;
   }
@@ -282,10 +271,8 @@ void AgStateMachine::displayHandle(AgStateMachineState state) {
     if (ms >= 5000) {
       addToDashboardTime = millis();
       if (addToDashBoard) {
-        // displayshowDashboard("Add to Dashboard");
         disp.showDashboard("Add to Dashboard");
       } else {
-        // displayshowDashboard(getDevId());
         disp.showDashboard(ag->deviceId().c_str());
       }
       addToDashBoard = !addToDashBoard;
@@ -293,7 +280,6 @@ void AgStateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineNormal: {
-    // displayshowDashboard("");
     disp.showDashboard();
   }
   default:
@@ -511,3 +497,5 @@ void AgStateMachine::setDisplayState(AgStateMachineState state) {
 AgStateMachineState AgStateMachine::getDisplayState(void) { return dispState; }
 
 void AgStateMachine::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+AgStateMachineState AgStateMachine::getLedState(void) { return ledState; }

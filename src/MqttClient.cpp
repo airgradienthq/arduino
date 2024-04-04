@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "MqttClient.h"
 
 static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
@@ -61,7 +63,7 @@ void MqttClient::end(void) {
   client = NULL;
   isBegin = false;
 
-  Serial.println("De-init");
+  logInfo("end");
 }
 
 void MqttClient::_updateConnected(bool connected) {
@@ -74,7 +76,7 @@ void MqttClient::_updateConnected(bool connected) {
   }
 }
 
-bool MqttClient::publish(String &topic, String &payload) {
+bool MqttClient::publish(const char *topic, const char *payload, int len) {
   if (!isBegin) {
     logError("No-initialized");
     return false;
@@ -84,10 +86,8 @@ bool MqttClient::publish(String &topic, String &payload) {
     return false;
   }
 
-  if (esp_mqtt_client_publish(client, topic.c_str(), payload.c_str(),
-                              payload.length(), 0, 0) == ESP_OK) {
-    logInfo("Publish topic: " + topic);
-    logInfo("Publish payload: " + payload);
+  if (esp_mqtt_client_publish(client, topic, payload, len, 0, 0) == ESP_OK) {
+    logInfo("Publish success");
     return true;
   }
   logError("Publish failed");
@@ -164,3 +164,5 @@ static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
     break;
   }
 }
+
+#endif /** ESP32 */
