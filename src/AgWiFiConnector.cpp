@@ -1,5 +1,4 @@
 #include "AgWiFiConnector.h"
-// #include "Libraries/WiFiManager/WiFiManager.h"
 #include <WiFiManager.h>
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180
@@ -7,16 +6,15 @@
 
 #define WIFI() ((WiFiManager *)(this->wifi))
 
-AgWiFiConnector::AgWiFiConnector(AirGradient &ag, AgOledDisplay &disp,
-                                 String ssid, Stream &log, AgStateMachine &sm)
-    : PrintLog(log, "AgWiFiConnector"), ag(ag), disp(disp), ssid(ssid), sm(sm) {
-}
+AgWiFiConnector::AgWiFiConnector(AgOledDisplay &disp, Stream &log,
+                                 AgStateMachine &sm)
+    : PrintLog(log, "AgWiFiConnector"), disp(disp), sm(sm) {}
 
 AgWiFiConnector::~AgWiFiConnector() {}
 
-void AgWiFiConnector::setHotspotSSID(String ssid) { this->ssid = ssid; }
+void AgWiFiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-bool AgWiFiConnector::connect(uint32_t timeout) {
+bool AgWiFiConnector::connect(void) {
   if (wifi == NULL) {
     wifi = new WiFiManager();
     if (wifi == NULL) {
@@ -26,19 +24,21 @@ bool AgWiFiConnector::connect(uint32_t timeout) {
   }
 
   WIFI()->setConfigPortalBlocking(false);
-  WIFI()->setTimeout(timeout);
+  WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
   WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
 
-  if (ag.isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     disp.setText("Connecting to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }
 
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
+
+  // Task handle WiFi connection.
   xTaskCreate(
       [](void *obj) {
         AgWiFiConnector *connector = (AgWiFiConnector *)obj;
@@ -56,11 +56,12 @@ bool AgWiFiConnector::connect(uint32_t timeout) {
 
   AgStateMachineState stateOld = sm.getDisplayState();
   while (WIFI()->getConfigPortalActive()) {
-    /** LED and display animation */
+    /** LED animatoin and display update content */
     if (WiFi.isConnected() == false) {
       /** Display countdown */
-      uint32_t ms = (uint32_t)(millis() - dispPeriod);
-      if (ag.isOneIndoor()) {
+      uint32_t ms;
+      if (ag->isOneIndoor()) {
+        ms = (uint32_t)(millis() - dispPeriod);
         if (ms >= 1000) {
           dispPeriod = millis();
           sm.displayHandle();
@@ -85,36 +86,31 @@ bool AgWiFiConnector::connect(uint32_t timeout) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
           sm.ledHandle(AgStateMachineWiFiManagerPortalActive);
-          // ledSmHandler(AgStateMachineWiFiManagerPortalActive);
         } else {
-          // ledCount = LED_BAR_COUNT_INIT_VALUE;
           sm.ledAnimationInit();
-          // ledSmHandler(AgStateMachineWiFiManagerMode);
           sm.ledHandle(AgStateMachineWiFiManagerMode);
-          if (ag.isOneIndoor()) {
-            // dispSmHandler(AgStateMachineWiFiManagerMode);
+          if (ag->isOneIndoor()) {
             sm.displayHandle(AgStateMachineWiFiManagerMode);
           }
         }
       }
     }
+
+    delay(1); // avoid watchdog timer reset.
   }
 
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
     sm.ledHandle(AgStateMachineWiFiManagerConnectFailed);
-    // ledSmHandler(AgStateMachineWiFiManagerConnectFailed);
-    if (ag.isOneIndoor()) {
-      // dispSmHandler(AgStateMachineWiFiManagerConnectFailed);
+    if (ag->isOneIndoor()) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
   } else {
-    wifiHasConfig = true;
+    hasConfig = true;
   }
 
-  /** Update LED bar color */
-  appLedHandler();
+  return true;
 }
 
 bool AgWiFiConnector::wifiClientConnected(void) {
@@ -123,18 +119,19 @@ bool AgWiFiConnector::wifiClientConnected(void) {
 
 void AgWiFiConnector::_wifiApCallback(void) {
   sm.displayWiFiConnectCountDown(WIFI_CONNECT_COUNTDOWN_MAX);
-  sm.ledAnimationInit();
   sm.setDisplayState(AgStateMachineWiFiManagerMode);
+  sm.ledAnimationInit();
+  sm.ledHandle(AgStateMachineWiFiManagerMode);
 }
 
 void AgWiFiConnector::_wifiSaveConfig(void) {
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnected);
-  sm.ledHandle();
-  // sm.displayHandle();
+  sm.ledHandle(AgStateMachineWiFiManagerStaConnected);
 }
 
 void AgWiFiConnector::_wifiSaveParamCallback(void) {
   sm.ledAnimationInit();
+  sm.ledHandle(AgStateMachineWiFiManagerStaConnecting);
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnecting);
 }
 
@@ -143,3 +140,27 @@ bool AgWiFiConnector::_wifiConfigPortalActive(void) {
 }
 
 void AgWiFiConnector::_wifiProcess() { WIFI()->process(); }
+
+void AgWiFiConnector::handle(void) {
+  // Ignore if WiFi is not configured
+  if (hasConfig == false) {
+    return;
+  }
+
+  if (WiFi.isConnected()) {
+    lastRetry = millis();
+    return;
+  }
+
+  /** Retry connect WiFi each 10sec */
+  uint32_t ms = (uint32_t)(millis() - lastRetry);
+  if (ms >= 10000) {
+    lastRetry = millis();
+    WiFi.reconnect();
+
+    // Serial.printf("Re-Connect WiFi\r\n");
+    logInfo("Re-Connect WiFi");
+  }
+}
+
+bool AgWiFiConnector::isConnected(void) { return WiFi.isConnected(); }

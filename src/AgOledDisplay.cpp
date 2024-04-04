@@ -1,5 +1,4 @@
 #include "AgOledDisplay.h"
-// #include "Libraries/U8g2/src/U8g2lib.h"
 #include <U8g2lib.h>
 
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
@@ -36,9 +35,13 @@ void AgOledDisplay::showTempHum(void) {
   }
 }
 
-AgOledDisplay::AgOledDisplay(AirGradient &ag, AgConfigure &config,
+AgOledDisplay::AgOledDisplay(AgConfigure &config,
                              AgValue &value, Stream &log)
-    : PrintLog(log, "AgOledDisplay"), ag(ag), config(config), value(value) {}
+    : PrintLog(log, "AgOledDisplay"), config(config), value(value) {}
+
+void AgOledDisplay::setAirGradient(AirGradient *ag) {
+  this->ag = ag;
+}
 
 AgOledDisplay::~AgOledDisplay() {}
 
@@ -185,7 +188,7 @@ void AgOledDisplay::showDashboard(const char *status) {
   DISP()->setFont(u8g2_font_t0_22b_tf);
   if (config.isPmStandardInUSAQI()) {
     if (value.PM25 >= 0) {
-      sprintf(strBuf, "%d", ag.pms5003.convertPm25ToUsAqi(value.PM25));
+      sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.PM25));
     } else {
       sprintf(strBuf, "%s", "-");
     }

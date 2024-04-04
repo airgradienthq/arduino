@@ -10,7 +10,7 @@
 class AgOledDisplay : public PrintLog {
 private:
   AgConfigure &config;
-  AirGradient &ag;
+  AirGradient *ag;
   bool isBegin = false;
   void *u8g2 = NULL;
   AgValue &value;
@@ -18,11 +18,12 @@ private:
   void showTempHum(void);
 
 public:
-  AgOledDisplay(AirGradient &ag, AgConfigure &config, AgValue &value,
+  AgOledDisplay(AgConfigure &config, AgValue &value,
                 Stream &log);
   ~AgOledDisplay();
 
-  bool begin(void);
+  void setAirGradient(AirGradient *ag);
+  bool begin(void); 
   void end(void);
   void setStatus(String &status);
   void setStatus(const char *status);

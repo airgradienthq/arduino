@@ -12,7 +12,7 @@ private:
   // AgStateMachineState state;
   AgStateMachineState ledState;
   AgStateMachineState dispState;
-  AirGradient &ag;
+  AirGradient *ag;
   AgOledDisplay &disp;
   AgValue &value;
   AgConfigure &config;
@@ -29,9 +29,10 @@ private:
   void pm25LedHandle(void);
 
 public:
-  AgStateMachine(AirGradient &ag, AgOledDisplay &disp, Stream &log,
+  AgStateMachine(AgOledDisplay &disp, Stream &log,
                  AgValue &value, AgConfigure& config);
   ~AgStateMachine();
+  void setAirGradient(AirGradient* ag);
   void displayHandle(AgStateMachineState state);
   void displayHandle(void);
   void displaySetAddToDashBoard(void);
@@ -41,7 +42,6 @@ public:
   void ledHandle(AgStateMachineState state);
   void ledHandle(void);
   void setDisplayState(AgStateMachineState state);
-  // AgStateMachineState getState(void);
   AgStateMachineState getDisplayState(void);
 };
 

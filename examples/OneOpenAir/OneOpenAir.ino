@@ -48,6 +48,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
+#include "AgWiFiConnector.h"
 #include "EEPROM.h"
 #include "MqttClient.h"
 #include <AirGradient.h>
@@ -87,8 +88,12 @@ static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static AgConfigure localConfig(Serial);
 static AgApiClient agServer(Serial, localConfig);
-
+static AgValue agValue;
 static AirGradient *ag;
+static AgOledDisplay disp(localConfig, agValue, Serial);
+static AgStateMachine agSm(disp, Serial, agValue, localConfig);
+static AgWiFiConnector wifiConnector(disp, Serial, agSm);
+
 static U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0,
                                                /* reset=*/U8X8_PIN_NONE);
 static WiFiManager wifiManager;
@@ -161,14 +166,14 @@ static void failedHandler(String msg);
 static void updateServerConfiguration(void);
 static void co2Calibration(void);
 static void setRGBledPMcolor(int pm25Value);
-static void ledSmHandler(int sm);
-static void ledSmHandler(void);
-static void dispSmHandler(int sm);
-static void sensorLedColorHandler(void);
+// static void ledSmHandler(int sm);
+// static void ledSmHandler(void);
+// static void dispSmHandler(int sm);
+// static void sensorLedColorHandler(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
 static void updateWiFiConnect(void);
-static void displayAndLedBarUpdate(void);
+static void displayAndLedUpdate(void);
 static void tvocUpdate(void);
 static void pmUpdate(void);
 static void sendDataToServer(void);
@@ -181,7 +186,7 @@ static void createMqttTask(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedBarUpdate);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedUpdate);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
                           updateServerConfiguration);
 AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -213,6 +218,9 @@ void setup() {
     Serial.println("Detect OPEN_AIR");
     ag = new AirGradient(BoardType::OPEN_AIR_OUTDOOR);
   }
+  disp.setAirGradient(ag);
+  agSm.setAirGradient(ag);
+  wifiConnector.setAirGradient(ag);
 
   /** Init AirGradient server */
   agServer.begin();
@@ -221,7 +229,8 @@ void setup() {
   boardInit();
 
   /** Connecting wifi */
-  if (isOneIndoor()) {
+  bool connectWifi = false;
+  if (ag->isOneIndoor()) {
     if (ledBarButtonTest) {
       ledTest();
     } else {
@@ -229,56 +238,64 @@ void setup() {
       if (localConfig.getLedBarMode() == LedBarModeOff) {
         ag->ledBar.setEnable(false);
       }
-      connectToWifi();
+      connectWifi = true;
     }
   } else {
-    connectToWifi();
+    connectWifi = true;
   }
 
-  /**
-   * Send first data to ping server and get server configuration
-   */
-  if (WiFi.isConnected()) {
-    webServerInit();
+  if (connectWifi) {
+    if (wifiConnector.connect() == false) {
+      Serial.println("Connect to wifi failed");
+    }
 
-    /** MQTT init */
-    if (localConfig.getMqttBrokerUri().isEmpty() == false) {
-      if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
-        createMqttTask();
-        Serial.println("MQTT client init success");
+    /**
+     * Send first data to ping server and get server configuration
+     */
+    if (wifiConnector.isConnected()) {
+      webServerInit();
+
+      /** MQTT init */
+      if (localConfig.getMqttBrokerUri().isEmpty() == false) {
+        if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
+          createMqttTask();
+          Serial.println("MQTT client init success");
+        } else {
+          Serial.println("MQTT client init failure");
+        }
+      }
+
+      sendPing();
+      Serial.println(F("WiFi connected!"));
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+
+      /** Get first connected to wifi */
+      agServer.fetchServerConfiguration(ag->deviceId());
+      if (agServer.isFetchConfigureFailed()) {
+        if (ag->isOneIndoor()) {
+          // dispSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          agSm.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        }
+        // ledSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        agSm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
       } else {
-        Serial.println("MQTT client init failure");
+        ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
       }
-    }
-
-    sendPing();
-    Serial.println(F("WiFi connected!"));
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    /** Get first connected to wifi */
-    agServer.fetchServerConfiguration(getDevId());
-    if (agServer.isFetchConfigureFailed()) {
-      if (isOneIndoor()) {
-        dispSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-      }
-      ledSmHandler(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-      delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
     } else {
-      ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
+      offlineMode = true;
     }
-  } else {
-    offlineMode = true;
   }
 
   /** Show display Warning up */
-  if (isOneIndoor()) {
-    displayShowText("Warming Up", "Serial Number:", String(getNormalizedMac()));
+  if (ag->isOneIndoor()) {
+    disp.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
   appLedHandler();
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     appDispHandler();
   }
 }
@@ -297,7 +314,7 @@ void loop() {
     pmsSchedule.run();
   }
 
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     if (hasSensorSHT) {
       delay(100);
       tempHumSchedule.run();
@@ -315,13 +332,14 @@ void loop() {
   }
 
   /** Check for handle WiFi reconnect */
-  updateWiFiConnect();
+  // updateWiFiConnect();
+  wifiConnector.handle();
 
   /** factory reset handle */
   factoryConfigReset();
 
   /** Read PMS on loop */
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     if (hasSensorPMS1) {
       ag->pms5003.handle();
     }
@@ -382,7 +400,8 @@ static void setTestColor(char color) {
 }
 
 static void ledTest() {
-  displayShowText("LED Test", "running", ".....");
+  // displayShowText("LED Test", "running", ".....");
+  disp.setText("LED Test", "running", ".....");
   setTestColor('r');
   ag->ledBar.show();
   delay(1000);
@@ -399,6 +418,7 @@ static void ledTest() {
   ag->ledBar.show();
   delay(1000);
 }
+
 static void ledTest2Min(void) {
   uint32_t tstart = millis();
 
@@ -428,7 +448,7 @@ static void co2Update(void) {
   }
 }
 
-static void showNr(void) { Serial.println("Serial nr: " + getDevId()); }
+static void showNr(void) { Serial.println("Serial nr: " + ag->deviceId()); }
 
 void webServerMeasureCurrentGet(void) {
   webServer.send(200, "application/json", getServerSyncData(true));
@@ -459,7 +479,7 @@ void webServerMetricsGet(void) {
   };
 
   add_metric("info", "AirGradient device information", "info");
-  add_metric_point("airgradient_serial_number=\"" + getDevId() +
+  add_metric_point("airgradient_serial_number=\"" + ag->deviceId() +
                        "\",airgradient_device_type=\"" + ag->getBoardName() +
                        "\",airgradient_library_version=\"" + ag->getVersion() +
                        "\"",
@@ -505,7 +525,7 @@ void webServerMetricsGet(void) {
     pm10 = (pm10_1 + pm10_2) / 2;
     pm03PCount = (pm03PCount_1 + pm03PCount_2) / 2;
   } else {
-    if (isOneIndoor()) {
+    if (ag->isOneIndoor()) {
       if (hasSensorSHT) {
         _temp = temp;
         _hum = hum;
@@ -622,8 +642,8 @@ void webServerHandler(void *param) {
 }
 
 static void webServerInit(void) {
-  String host = "airgradient_" + getDevId();
-  if (!MDNS.begin(host)) {
+  String host = "airgradient_" + ag->deviceId();
+  if (!MDNS.begin(host.c_str())) {
     Serial.println("Init mDNS failed");
     return;
   }
@@ -637,7 +657,7 @@ static void webServerInit(void) {
   MDNS.addService("_airgradient", "_tcp", 80);
   MDNS.addServiceTxt("_airgradient", "_tcp", "model",
                      AgFirmwareModeName(fwMode));
-  MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", getDevId());
+  MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", ag->deviceId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag->getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
 
@@ -669,7 +689,7 @@ static String getServerSyncData(bool localServer) {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
   if (localServer) {
-    root["serialno"] = getDevId();
+    root["serialno"] = ag->deviceId();
   }
   if (hasSensorS8) {
     if (co2Ppm >= 0) {
@@ -677,7 +697,7 @@ static String getServerSyncData(bool localServer) {
     }
   }
 
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     if (hasSensorPMS1) {
       if (pm01_1 >= 0) {
         root["pm01"] = pm01_1;
@@ -820,7 +840,7 @@ static void createMqttTask(void) {
           /** Send data */
           if (mqttClient.isConnected()) {
             String payload = getServerSyncData(false);
-            String topic = "airgradient/readings/" + getDevId();
+            String topic = "airgradient/readings/" + ag->deviceId();
             if (mqttClient.publish(topic, payload)) {
               Serial.println("MQTT sync success");
             } else {
@@ -845,8 +865,9 @@ static void factoryConfigReset(void) {
       if (ms >= 2000) {
         // Show display message: For factory keep for x seconds
         // Count display.
-        if (isOneIndoor()) {
-          displayShowText("Factory reset", "keep pressed", "for 8 sec");
+        if (ag->isOneIndoor()) {
+          // displayShowText("Factory reset", "keep pressed", "for 8 sec");
+          disp.setText("Factory reset", "keep pressed", "for 8 sec");
         } else {
           Serial.println("Factory reset, keep pressed for 8 sec");
         }
@@ -854,10 +875,12 @@ static void factoryConfigReset(void) {
         int count = 7;
         while (ag->button.getState() == ag->button.BUTTON_PRESSED) {
           delay(1000);
-          if (isOneIndoor()) {
+          if (ag->isOneIndoor()) {
 
-            displayShowText("Factory reset", "keep pressed",
-                            "for " + String(count) + " sec");
+            String str = "for " + String(count) + " sec";
+            // displayShowText("Factory reset", "keep pressed",
+            //                 "for " + String(count) + " sec");
+            disp.setText("Factory reset", "keep pressed", str.c_str());
           } else {
             Serial.printf("Factory reset, keep pressed for %d sec\r\n", count);
           }
@@ -877,8 +900,9 @@ static void factoryConfigReset(void) {
             /** Reset local config */
             localConfig.reset();
 
-            if (isOneIndoor()) {
-              displayShowText("Factory reset", "successful", "");
+            if (ag->isOneIndoor()) {
+              // displayShowText("Factory reset", "successful", "");
+              disp.setText("Factory reset", "successful", "");
             } else {
               Serial.println("Factory reset successful");
             }
@@ -889,14 +913,14 @@ static void factoryConfigReset(void) {
 
         /** Show current content cause reset ignore */
         factoryBtnPressTime = 0;
-        if (isOneIndoor()) {
+        if (ag->isOneIndoor()) {
           appDispHandler();
         }
       }
     }
   } else {
     if (factoryBtnPressTime != 0) {
-      if (isOneIndoor()) {
+      if (ag->isOneIndoor()) {
         /** Restore last display content */
         appDispHandler();
       }
@@ -918,16 +942,19 @@ static void sendPing() {
   root["boot"] = bootCount;
 
   /** Change disp and led state */
-  if (isOneIndoor()) {
-    dispSmHandler(AgStateMachineWiFiOkServerConnecting);
+  if (ag->isOneIndoor()) {
+    // dispSmHandler(AgStateMachineWiFiOkServerConnecting);
+    agSm.displayHandle(AgStateMachineWiFiOkServerConnecting);
   }
-  ledSmHandler(AgStateMachineWiFiOkServerConnecting);
+  // ledSmHandler(AgStateMachineWiFiOkServerConnecting);
+  agSm.ledHandle(AgStateMachineWiFiOkServerConnecting);
 
   /** Task handle led connecting animation */
   xTaskCreate(
       [](void *obj) {
         for (;;) {
-          ledSmHandler();
+          // ledSmHandler();
+          agSm.ledHandle();
           if (ledSmState != AgStateMachineWiFiOkServerConnecting) {
             break;
           }
@@ -938,197 +965,25 @@ static void sendPing() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  if (agServer.postToServer(getDevId(), JSON.stringify(root))) {
-    if (isOneIndoor()) {
-      dispSmHandler(AgStateMachineWiFiOkServerConnected);
+  if (agServer.postToServer(ag->deviceId(), JSON.stringify(root))) {
+    if (ag->isOneIndoor()) {
+      // dispSmHandler(AgStateMachineWiFiOkServerConnected);
+      agSm.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
-    ledSmHandler(AgStateMachineWiFiOkServerConnected);
+    // ledSmHandler(AgStateMachineWiFiOkServerConnected);
+    agSm.ledHandle(AgStateMachineWiFiOkServerConnected);
   } else {
-    if (isOneIndoor()) {
-      dispSmHandler(AgStateMachineWiFiOkServerConnectFailed);
+    if (ag->isOneIndoor()) {
+      // dispSmHandler(AgStateMachineWiFiOkServerConnectFailed);
+      agSm.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
     }
-    ledSmHandler(AgStateMachineWiFiOkServerConnectFailed);
+    // ledSmHandler(AgStateMachineWiFiOkServerConnectFailed);
+    agSm.ledHandle(AgStateMachineWiFiOkServerConnectFailed);
   }
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-  ledSmHandler(AgStateMachineNormal);
-}
-
-static void displayShowWifiText(String ln1, String ln2, String ln3,
-                                String ln4) {
-  u8g2.firstPage();
-  do {
-    u8g2.setFont(u8g2_font_t0_16_tf);
-    u8g2.drawStr(1, 10, ln1.c_str());
-    u8g2.drawStr(1, 25, ln2.c_str());
-    u8g2.drawStr(1, 40, ln3.c_str());
-    u8g2.drawStr(1, 55, ln4.c_str());
-  } while (u8g2.nextPage());
-}
-
-static void displayShowText(String ln1, String ln2, String ln3) {
-  u8g2.firstPage();
-  do {
-    u8g2.setFont(u8g2_font_t0_16_tf);
-    u8g2.drawStr(1, 10, String(ln1).c_str());
-    u8g2.drawStr(1, 30, String(ln2).c_str());
-    u8g2.drawStr(1, 50, String(ln3).c_str());
-  } while (u8g2.nextPage());
-}
-
-static void displayShowDashboard(String err) {
-  char strBuf[10];
-
-  /** Clear display dashboard */
-  u8g2.firstPage();
-
-  /** Show content to dashboard */
-  do {
-    u8g2.setFont(u8g2_font_t0_16_tf);
-    if ((err == NULL) || err.isEmpty()) {
-
-      /** Show temperature */
-      if (localConfig.isTemperatureUnitInF()) {
-        if (temp > -1001) {
-          float tempF = (temp * 9 / 5) + 32;
-          sprintf(strBuf, "%.1f°F", tempF);
-        } else {
-          sprintf(strBuf, "-°F");
-        }
-        u8g2.drawUTF8(1, 10, strBuf);
-      } else {
-        if (temp > -1001) {
-          sprintf(strBuf, "%.1f°C", temp);
-        } else {
-          sprintf(strBuf, "-°C");
-        }
-        u8g2.drawUTF8(1, 10, strBuf);
-      }
-
-      /** Show humidity */
-      if (hum >= 0) {
-        sprintf(strBuf, "%d%%", hum);
-      } else {
-        sprintf(strBuf, " -%%");
-      }
-      if (hum > 99) {
-        u8g2.drawStr(97, 10, strBuf);
-      } else {
-        u8g2.drawStr(105, 10, strBuf);
-      }
-    } else {
-      Serial.println("Display show error: " + err);
-      int strWidth = u8g2.getStrWidth(err.c_str());
-      u8g2.drawStr((126 - strWidth) / 2, 10, err.c_str());
-
-      if (err == "WiFi N/A") {
-        u8g2.setFont(u8g2_font_t0_12_tf);
-        if (localConfig.isTemperatureUnitInF()) {
-          if (temp > -1001) {
-            float tempF = (temp * 9 / 5) + 32;
-            sprintf(strBuf, "%.1f", tempF);
-          } else {
-            sprintf(strBuf, "-");
-          }
-          u8g2.drawUTF8(1, 10, strBuf);
-        } else {
-          if (temp > -1001) {
-            sprintf(strBuf, "%.1f", temp);
-          } else {
-            sprintf(strBuf, "-");
-          }
-          u8g2.drawUTF8(1, 10, strBuf);
-        }
-
-        /** Show humidity */
-        if (hum >= 0) {
-          sprintf(strBuf, "%d%%", hum);
-        } else {
-          sprintf(strBuf, " -%%");
-        }
-        if (hum > 99) {
-          u8g2.drawStr(97, 10, strBuf);
-        } else {
-          u8g2.drawStr(105, 10, strBuf);
-        }
-      }
-    }
-
-    /** Draw horizontal line */
-    u8g2.drawLine(1, 13, 128, 13);
-
-    /** Show CO2 label */
-    u8g2.setFont(u8g2_font_t0_12_tf);
-    u8g2.drawUTF8(1, 27, "CO2");
-
-    /** Show CO2 value */
-    u8g2.setFont(u8g2_font_t0_22b_tf);
-    if (co2Ppm > 0) {
-      int val = 9999;
-      if (co2Ppm < 10000) {
-        val = co2Ppm;
-      }
-      sprintf(strBuf, "%d", val);
-    } else {
-      sprintf(strBuf, "%s", "-");
-    }
-    u8g2.drawStr(1, 48, strBuf);
-
-    /** Show CO2 value index */
-    u8g2.setFont(u8g2_font_t0_12_tf);
-    u8g2.drawStr(1, 61, "ppm");
-
-    /** Draw vertical line */
-    u8g2.drawLine(45, 14, 45, 64);
-    u8g2.drawLine(82, 14, 82, 64);
-
-    /** Draw PM2.5 label */
-    u8g2.setFont(u8g2_font_t0_12_tf);
-    u8g2.drawStr(48, 27, "PM2.5");
-
-    /** Draw PM2.5 value */
-    u8g2.setFont(u8g2_font_t0_22b_tf);
-    if (localConfig.isPmStandardInUSAQI()) {
-      if (pm25_1 >= 0) {
-        sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25_1));
-      } else {
-        sprintf(strBuf, "%s", "-");
-      }
-      u8g2.drawStr(48, 48, strBuf);
-      u8g2.setFont(u8g2_font_t0_12_tf);
-      u8g2.drawUTF8(48, 61, "AQI");
-    } else {
-      if (pm25_1 >= 0) {
-        sprintf(strBuf, "%d", pm25_1);
-      } else {
-        sprintf(strBuf, "%s", "-");
-      }
-      u8g2.drawStr(48, 48, strBuf);
-      u8g2.setFont(u8g2_font_t0_12_tf);
-      u8g2.drawUTF8(48, 61, "ug/m³");
-    }
-
-    /** Draw tvocIndexlabel */
-    u8g2.setFont(u8g2_font_t0_12_tf);
-    u8g2.drawStr(85, 27, "tvoc:");
-
-    /** Draw tvocIndexvalue */
-    if (tvocIndex >= 0) {
-      sprintf(strBuf, "%d", tvocIndex);
-    } else {
-      sprintf(strBuf, "%s", "-");
-    }
-    u8g2.drawStr(85, 39, strBuf);
-
-    /** Draw NOx label */
-    u8g2.drawStr(85, 53, "NOx:");
-    if (noxIndex >= 0) {
-      sprintf(strBuf, "%d", noxIndex);
-    } else {
-      sprintf(strBuf, "%s", "-");
-    }
-    u8g2.drawStr(85, 63, strBuf);
-  } while (u8g2.nextPage());
+  // ledSmHandler(AgStateMachineNormal);
+  agSm.ledHandle(AgStateMachineNormal);
 }
 
 /**
@@ -1140,250 +995,10 @@ static bool wifiMangerClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
-// Wifi Manager
-static void connectToWifi() {
-  /** get wifi AP ssid */
-  wifiSSID = "airgradient-" + String(getNormalizedMac());
-  wifiManager.setConfigPortalBlocking(false);
-  wifiManager.setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
-
-  wifiManager.setAPCallback([](WiFiManager *obj) {
-    /** This callback if wifi connnected failed and try to start configuration
-     * portal */
-    connectCountDown = WIFI_CONNECT_COUNTDOWN_MAX;
-    ledCount = LED_BAR_COUNT_INIT_VALUE;
-    if (isOneIndoor()) {
-      dispSmState = AgStateMachineWiFiManagerMode;
-    }
-    ledSmState = AgStateMachineWiFiManagerMode;
-  });
-  wifiManager.setSaveConfigCallback([]() {
-    /** Wifi connected save the configuration */
-    dispSmState = AgStateMachineWiFiManagerStaConnected;
-    ledSmHandler(AgStateMachineWiFiManagerStaConnected);
-  });
-  wifiManager.setSaveParamsCallback([]() {
-    /** Wifi set connect: ssid, password */
-    ledCount = LED_BAR_COUNT_INIT_VALUE;
-    if (isOneIndoor()) {
-      dispSmState = AgStateMachineWiFiManagerStaConnecting;
-    }
-    ledSmState = AgStateMachineWiFiManagerStaConnecting;
-  });
-
-  if (isOneIndoor()) {
-    displayShowText("Connecting to", "WiFi", "...");
-  } else {
-    Serial.println("Connecting to WiFi...");
-  }
-  wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
-  xTaskCreate(
-      [](void *obj) {
-        while (wifiManager.getConfigPortalActive()) {
-          wifiManager.process();
-        }
-        vTaskDelete(NULL);
-      },
-      "wifi_cfg", 4096, NULL, 10, NULL);
-
-  /** Wait for WiFi connect and show LED, display status */
-  uint32_t dispPeriod = millis();
-  uint32_t ledPeriod = millis();
-  bool clientConnectChanged = false;
-
-  int dispSmStateOld = dispSmState;
-  while (wifiManager.getConfigPortalActive()) {
-    /** LED and display animation */
-    if (WiFi.isConnected() == false) {
-      /** Display countdown */
-      uint32_t ms = (uint32_t)(millis() - dispPeriod);
-      if (isOneIndoor()) {
-        if (ms >= 1000) {
-          dispPeriod = millis();
-          dispSmHandler(dispSmState);
-        } else {
-          if (dispSmStateOld != dispSmState) {
-            dispSmStateOld = dispSmState;
-            dispSmHandler(dispSmState);
-          }
-        }
-      }
-
-      /** LED animations */
-      ms = (uint32_t)(millis() - ledPeriod);
-      if (ms >= LED_BAR_ANIMATION_PERIOD) {
-        ledPeriod = millis();
-        ledSmHandler();
-      }
-
-      /** Check for client connect to change led color */
-      bool clientConnected = wifiMangerClientConnected();
-      if (clientConnected != clientConnectChanged) {
-        clientConnectChanged = clientConnected;
-        if (clientConnectChanged) {
-          ledSmHandler(AgStateMachineWiFiManagerPortalActive);
-        } else {
-          ledCount = LED_BAR_COUNT_INIT_VALUE;
-          ledSmHandler(AgStateMachineWiFiManagerMode);
-          if (isOneIndoor()) {
-            dispSmHandler(AgStateMachineWiFiManagerMode);
-          }
-        }
-      }
-    }
-  }
-
-  /** Show display wifi connect result failed */
-  if (WiFi.isConnected() == false) {
-    ledSmHandler(AgStateMachineWiFiManagerConnectFailed);
-    if (isOneIndoor()) {
-      dispSmHandler(AgStateMachineWiFiManagerConnectFailed);
-    }
-    delay(6000);
-  } else {
-    wifiHasConfig = true;
-  }
-
-  /** Update LED bar color */
-  appLedHandler();
-}
-
-static String getDevId(void) { return getNormalizedMac(); }
-
-static String getNormalizedMac() {
-  String mac = WiFi.macAddress();
-  mac.replace(":", "");
-  mac.toLowerCase();
-  return mac;
-}
-
-static void setRGBledCO2color(int co2Value) {
-  if (co2Value <= 400) {
-    /** G; 1 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (co2Value <= 700) {
-    /** GG; 2 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-  } else if (co2Value <= 1000) {
-    /** YYY; 3 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (co2Value <= 1333) {
-    /** YYYY; 4 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (co2Value <= 1666) {
-    /** YYYYY; 5 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (co2Value <= 2000) {
-    /** RRRRRR; 6 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (co2Value <= 2666) {
-    /** RRRRRRR; 7 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (co2Value <= 3333) {
-    /** RRRRRRRR; 8 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (co2Value <= 4000) {
-    /** RRRRRRRRR; 9 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 9);
-  } else { /** > 4000 */
-    /* PRPRPRPRP; 9 */
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 9);
-  }
-}
-
-static void setRGBledColor(char color) {
-  int r = 0;
-  int g = 0;
-  int b = 0;
-  switch (color) {
-  case 'g':
-    g = 255;
-    break;
-  case 'y':
-    r = 255;
-    g = 255;
-    break;
-  case 'o':
-    r = 255;
-    g = 128;
-    break;
-  case 'r':
-    r = 255;
-    break;
-  case 'b':
-    b = 255;
-    break;
-  case 'w':
-    r = 255;
-    g = 255;
-    b = 255;
-    break;
-  case 'p':
-    r = 153;
-    b = 153;
-    break;
-  case 'z':
-    r = 102;
-    break;
-  case 'n':
-  default:
-    break;
-  }
-
-  /** Sensor LED indicator has only show status on last 2 LED on LED Bar */
-  int ledNum = ag->ledBar.getNumberOfLeds() - 1;
-  ag->ledBar.setColor(r, g, b, ledNum);
-
-  ledNum = ag->ledBar.getNumberOfLeds() - 2;
-  ag->ledBar.setColor(r, g, b, ledNum);
-}
-
 void dispSensorNotFound(String ss) {
-  displayShowText("Sensor init", "Error:", ss + " not found");
+  // displayShowText("Sensor init", "Error:", ss + " not found");
+  ss = ss + " not found";
+  disp.setText("Sensor init", "Error:", ss.c_str());
   delay(2000);
 }
 
@@ -1395,7 +1010,7 @@ static void oneIndoorInit(void) {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
-  displayShowText("AirGradient ONE", "FW Version: ", ag->getVersion());
+  disp.setText("AirGradient ONE", "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   ag->ledBar.begin();
@@ -1433,7 +1048,7 @@ static void oneIndoorInit(void) {
   }
 
   /** Run LED test on start up */
-  displayShowText("Press now for", "LED test &", "offline mode");
+  disp.setText("Press now for", "LED test &", "offline mode");
   ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {
@@ -1551,15 +1166,11 @@ static void openAirInit(void) {
   Serial.printf("Firmware Mode: %s\r\n", AgFirmwareModeName(fwMode));
 }
 
-static bool isOneIndoor(void) {
-  return ag->getBoardType() == BoardType::ONE_INDOOR;
-}
-
 /**
  * @brief Initialize board
  */
 static void boardInit(void) {
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     oneIndoorInit();
   } else {
     openAirInit();
@@ -1582,7 +1193,7 @@ static void failedHandler(String msg) {
  * @brief Send data to server
  */
 static void updateServerConfiguration(void) {
-  if (agServer.fetchServerConfiguration(getDevId())) {
+  if (agServer.fetchServerConfiguration(ag->deviceId())) {
     configUpdateHandle();
   }
 }
@@ -1597,7 +1208,7 @@ static void configUpdateHandle() {
   }
 
   // Update LED bar
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
   }
 
@@ -1658,10 +1269,10 @@ static void co2Calibration(void) {
   Serial.println("co2Calibration: Start");
   /** Count down for co2CalibCountdown secs */
   for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-    if (isOneIndoor()) {
-      displayShowText(
-          "Start CO2 calib",
-          "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec", "");
+    if (ag->isOneIndoor()) {
+      String str =
+          "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec";
+      disp.setText("Start CO2 calib", str.c_str(), "");
     } else {
       Serial.printf("Start CO2 calib after %d sec\r\n",
                     SENSOR_CO2_CALIB_COUNTDOWN_MAX - i);
@@ -1670,14 +1281,14 @@ static void co2Calibration(void) {
   }
 
   if (ag->s8.setBaselineCalibration()) {
-    if (isOneIndoor()) {
-      displayShowText("Calibration", "success", "");
+    if (ag->isOneIndoor()) {
+      disp.setText("Calibration", "success", "");
     } else {
       Serial.println("Calibration success");
     }
     delay(1000);
-    if (isOneIndoor()) {
-      displayShowText("Wait for", "calib finish", "...");
+    if (ag->isOneIndoor()) {
+      disp.setText("Wait for", "calib finish", "...");
     } else {
       Serial.println("Wait for calibration finish...");
     }
@@ -1686,15 +1297,16 @@ static void co2Calibration(void) {
       delay(1000);
       count++;
     }
-    if (isOneIndoor()) {
-      displayShowText("Calib finish", "after " + String(count), "sec");
+    if (ag->isOneIndoor()) {
+      String str = "after " + String(count);
+      disp.setText("Calib finish", str.c_str(), "sec");
     } else {
       Serial.printf("Calibration finish after %d sec\r\n", count);
     }
     delay(2000);
   } else {
-    if (isOneIndoor()) {
-      displayShowText("Calibration", "failure!!!", "");
+    if (ag->isOneIndoor()) {
+      disp.setText("Calibration", "failure!!!", "");
     } else {
       Serial.println("Calibration failure!!!");
     }
@@ -1702,7 +1314,7 @@ static void co2Calibration(void) {
   }
 
   /** Update display */
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     appDispHandler();
   }
 }
@@ -1804,307 +1416,10 @@ static void singleLedAnimation(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 /**
- * @brief LED state machine handler
- *
- * @param sm APP state machine
- */
-static void ledSmHandler(int sm) {
-  if (sm > AgStateMachineNormal) {
-    return;
-  }
-
-  ledSmState = sm;
-  if (isOneIndoor()) {
-    ag->ledBar.clear(); // Set all LED OFF
-  }
-  switch (sm) {
-  case AgStateMachineWiFiManagerMode: {
-    /** In WiFi Manager Mode */
-    /** Turn LED OFF */
-    /** Turn midle LED Color */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(0, 0, 255, ag->ledBar.getNumberOfLeds() / 2);
-    } else {
-      ag->statusLed.setToggle();
-    }
-    break;
-  }
-  case AgStateMachineWiFiManagerPortalActive: {
-    /** WiFi Manager has connected to mobile phone */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(0, 0, 255);
-    } else {
-      ag->statusLed.setOn();
-    }
-    break;
-  }
-  case AgStateMachineWiFiManagerStaConnecting: {
-    /** after SSID and PW entered and OK clicked, connection to WiFI network is
-     * attempted */
-    if (isOneIndoor()) {
-      singleLedAnimation(255, 255, 255);
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiManagerStaConnected: {
-    /** Connecting to WiFi worked */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(255, 255, 255);
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnecting: {
-    /** once connected to WiFi an attempt to reach the server is performed */
-    if (isOneIndoor()) {
-      singleLedAnimation(0, 255, 0);
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnected: {
-    /** Server is reachable, all ﬁne */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(0, 255, 0);
-    } else {
-      ag->statusLed.setOff();
-
-      /** two time slow blink, then off */
-      for (int i = 0; i < 2; i++) {
-        ledBlinkDelay(LED_SLOW_BLINK_DELAY);
-      }
-
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiManagerConnectFailed: {
-    /** Cannot connect to WiFi (e.g. wrong password, WPA Enterprise etc.) */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(255, 0, 0);
-    } else {
-      ag->statusLed.setOff();
-
-      for (int j = 0; j < 3; j++) {
-        for (int i = 0; i < 3; i++) {
-          ledBlinkDelay(LED_FAST_BLINK_DELAY);
-        }
-        delay(2000);
-      }
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnectFailed: {
-    /** Connected to WiFi but server not reachable, e.g. firewall block/
-     * whitelisting needed etc. */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(233, 183, 54); /** orange */
-    } else {
-      ag->statusLed.setOff();
-      for (int j = 0; j < 3; j++) {
-        for (int i = 0; i < 4; i++) {
-          ledBlinkDelay(LED_FAST_BLINK_DELAY);
-        }
-        delay(2000);
-      }
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
-    /** Server reachable but sensor not configured correctly */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(139, 24, 248); /** violet */
-    } else {
-      ag->statusLed.setOff();
-      for (int j = 0; j < 3; j++) {
-        for (int i = 0; i < 5; i++) {
-          ledBlinkDelay(LED_FAST_BLINK_DELAY);
-        }
-        delay(2000);
-      }
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineWiFiLost: {
-    /** Connection to WiFi network failed credentials incorrect encryption not
-     * supported etc. */
-    if (isOneIndoor()) {
-      /** WIFI failed status LED color */
-      ag->ledBar.setColor(255, 0, 0, 0);
-      /** Show CO2 or PM color status */
-      sensorLedColorHandler();
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineServerLost: {
-    /** Connected to WiFi network but the server cannot be reached through the
-     * internet, e.g. blocked by firewall */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(233, 183, 54, 0);
-
-      /** Show CO2 or PM color status */
-      sensorLedColorHandler();
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineSensorConfigFailed: {
-    /** Server is reachable but there is some conﬁguration issue to be fixed on
-     * the server side */
-    if (isOneIndoor()) {
-      ag->ledBar.setColor(139, 24, 248, 0);
-
-      /** Show CO2 or PM color status */
-      sensorLedColorHandler();
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  case AgStateMachineNormal: {
-    if (isOneIndoor()) {
-      sensorLedColorHandler();
-    } else {
-      ag->statusLed.setOff();
-    }
-    break;
-  }
-  default:
-    break;
-  }
-
-  if (isOneIndoor()) {
-    ag->ledBar.show();
-  }
-}
-
-static void ledBlinkDelay(uint32_t tdelay) {
-  ag->statusLed.setOn();
-  delay(tdelay);
-  ag->statusLed.setOff();
-  delay(tdelay);
-}
-
-/**
- * @brief LED state machine handler
- */
-static void ledSmHandler(void) { ledSmHandler(ledSmState); }
-
-/**
- * @brief Display state machine handler
- *
- * @param sm APP state machine
- */
-static void dispSmHandler(int sm) {
-  if (sm > AgStateMachineNormal) {
-    return;
-  }
-
-  dispSmState = sm;
-
-  switch (sm) {
-  case AgStateMachineWiFiManagerMode:
-  case AgStateMachineWiFiManagerPortalActive: {
-    if (connectCountDown >= 0) {
-      displayShowWifiText(String(connectCountDown) + "s to connect",
-                          "to WiFi hotspot:", "\"airgradient-",
-                          getDevId() + "\"");
-      connectCountDown--;
-    }
-    break;
-  }
-  case AgStateMachineWiFiManagerStaConnecting: {
-    displayShowText("Trying to", "connect to WiFi", "...");
-    break;
-  }
-  case AgStateMachineWiFiManagerStaConnected: {
-    displayShowText("WiFi connection", "successful", "");
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnecting: {
-    displayShowText("Connecting to", "Server", "...");
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnected: {
-    displayShowText("Server", "connection", "successful");
-    break;
-  }
-  case AgStateMachineWiFiManagerConnectFailed: {
-    displayShowText("WiFi not", "connected", "");
-    break;
-  }
-  case AgStateMachineWiFiOkServerConnectFailed: {
-    // displayShowText("Server not", "reachable", "");
-    break;
-  }
-  case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
-    displayShowText("Monitor not", "setup on", "dashboard");
-    break;
-  }
-  case AgStateMachineWiFiLost: {
-    displayShowDashboard("WiFi N/A");
-    break;
-  }
-  case AgStateMachineServerLost: {
-    displayShowDashboard("Server N/A");
-    break;
-  }
-  case AgStateMachineSensorConfigFailed: {
-    uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
-    if (ms >= 5000) {
-      addToDashboardTime = millis();
-      if (isAddToDashboard) {
-        displayShowDashboard("Add to Dashboard");
-      } else {
-        displayShowDashboard(getDevId());
-      }
-      isAddToDashboard = !isAddToDashboard;
-    }
-    break;
-  }
-  case AgStateMachineNormal: {
-    displayShowDashboard("");
-  }
-  default:
-    break;
-  }
-}
-
-/**
- * @brief Handle change LED color base on sensor value of CO2 and PMS
- */
-static void sensorLedColorHandler(void) {
-  switch (localConfig.getLedBarMode()) {
-  case LedBarModeCO2:
-    setRGBledCO2color(co2Ppm);
-    break;
-  case LedBarModePm:
-    setRGBledPMcolor(pm25_1);
-    break;
-  case LedBarModeOff:
-    ag->ledBar.clear();
-    break;
-  default:
-    ag->ledBar.clear();
-    break;
-  }
-}
-
-/**
  * @brief APP LED color handler
  */
 static void appLedHandler(void) {
-  uint8_t state = AgStateMachineNormal;
+  AgStateMachineState state = AgStateMachineNormal;
   if (WiFi.isConnected() == false) {
     state = AgStateMachineWiFiLost;
   } else if (agServer.isFetchConfigureFailed()) {
@@ -2112,14 +1427,15 @@ static void appLedHandler(void) {
   } else if (agServer.isPostToServerFailed()) {
     state = AgStateMachineServerLost;
   }
-  ledSmHandler(state);
+  // ledSmHandler(state);
+  agSm.ledHandle(state);
 }
 
 /**
  * @brief APP display content handler
  */
 static void appDispHandler(void) {
-  uint8_t state = AgStateMachineNormal;
+  AgStateMachineState state = AgStateMachineNormal;
   if (WiFi.isConnected() == false) {
     state = AgStateMachineWiFiLost;
   } else if (agServer.isFetchConfigureFailed()) {
@@ -2127,36 +1443,16 @@ static void appDispHandler(void) {
   } else if (agServer.isPostToServerFailed()) {
     state = AgStateMachineServerLost;
   }
-  dispSmHandler(state);
-}
-
-/**
- * @brief WiFi reconnect handler
- */
-static void updateWiFiConnect(void) {
-  static uint32_t lastRetry;
-  if (wifiHasConfig == false) {
-    return;
-  }
-  if (WiFi.isConnected()) {
-    lastRetry = millis();
-    return;
-  }
-  uint32_t ms = (uint32_t)(millis() - lastRetry);
-  if (ms >= WIFI_CONNECT_RETRY_MS) {
-    lastRetry = millis();
-    WiFi.reconnect();
-
-    Serial.printf("Re-Connect WiFi\r\n");
-  }
+  // dispSmHandler(state);
+  agSm.displayHandle(state);
 }
 
 /**
  * @brief APP display and LED handler
  *
  */
-static void displayAndLedBarUpdate(void) {
-  if (isOneIndoor()) {
+static void displayAndLedUpdate(void) {
+  if (ag->isOneIndoor()) {
     if (factoryBtnPressTime == 0) {
       appDispHandler();
     }
@@ -2186,7 +1482,7 @@ static void tvocUpdate(void) {
  *
  */
 static void pmUpdate(void) {
-  if (isOneIndoor()) {
+  if (ag->isOneIndoor()) {
     if (ag->pms5003.isFailed() == false) {
       pm01_1 = ag->pms5003.getPm01Ae();
       pm25_1 = ag->pms5003.getPm25Ae();
@@ -2343,7 +1639,7 @@ static void pmUpdate(void) {
  */
 static void sendDataToServer(void) {
   String syncData = getServerSyncData(false);
-  if (agServer.postToServer(getDevId(), syncData)) {
+  if (agServer.postToServer(ag->deviceId(), syncData)) {
     resetWatchdog();
   }
 
