@@ -76,13 +76,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
-static AgConfigure localConfig(Serial);
+static AgConfigure localConfig(Serial); // todo: rename class Configuration and variable to configuration
 static AgApiClient apiClient(Serial, localConfig);
-static AgValue agValue;
+static AgValue agValue; // todo: rename class to Measurements and variable to measurements
 static AirGradient *ag;
-static AgOledDisplay disp(localConfig, agValue, Serial);
-static AgStateMachine sm(disp, Serial, agValue, localConfig);
-static AgWiFiConnector wifiConnector(disp, Serial, sm);
+static AgOledDisplay disp(localConfig, agValue, Serial); // todo: rename class to OledDisplay and variable to oledDisplay
+static AgStateMachine sm(disp, Serial, agValue, localConfig); // todo: rename class to StateMachine and variable to stateMachine
+static AgWiFiConnector wifiConnector(disp, Serial, sm); // todo: rename class to WifiConnector and variable to wifiConnector
 static WebServer webServer;
 
 /** Init schedule */
@@ -101,6 +101,7 @@ static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static int bootCount;
 
+// todo: For below use class Measurements (before Values).
 static int pm25_1 = -1;
 static int pm01_1 = -1;
 static int pm10_1 = -1;
@@ -133,6 +134,8 @@ const int targetCount = 20;
 static bool ledBarButtonTest = false;
 static bool localConfigUpdate = false;
 
+// todo: see above comment
+
 static void boardInit(void);
 static void failedHandler(String msg);
 static void updateServerConfiguration(void);
@@ -153,21 +156,21 @@ static void createMqttTask(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedUpdate);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedUpdate); // todo: rename to oledDisplayLedBarSchedule
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
-                          updateServerConfiguration);
-AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
+                          updateServerConfiguration); // todo: rename to configurationUpdateSchedule
+AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer); // todo: rename to agApiPostSchedule
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
-AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate);
+AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate); // todo: rename to watchdogFeedSchedule
 
 void setup() {
   /** Serial for print debug message */
   Serial.begin(115200);
   delay(100); /** For bester show log */
-  showNr();
+  showNr(); // todo: can be inlined?
 
   /** Initialize local configure */
   localConfig.begin();
@@ -189,17 +192,19 @@ void setup() {
   /** Init sensor */
   boardInit();
 
-  disp.setAirGradient(ag);
-  sm.setAirGradient(ag);
-  wifiConnector.setAirGradient(ag);
+
+
+  disp.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
+  sm.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
+  wifiConnector.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
 
   /** Connecting wifi */
   bool connectWifi = false;
-  if (ag->isOneIndoor()) {
+  if (ag->isOneIndoor()) { // todo: rename to isOne()
     if (ledBarButtonTest) {
       ledBarTest();
     } else {
-      /** Check LED mode to disabled LED */
+      /** Check LED mode to disabled LED */ // todo: remove comment
       if (localConfig.getLedBarMode() == LedBarModeOff) {
         ag->ledBar.setEnable(false);
       }
@@ -212,10 +217,10 @@ void setup() {
   if (connectWifi) {
     /** Init AirGradient server */
     apiClient.begin();
-    apiClient.setAirGradient(ag);
+    apiClient.setAirGradient(ag); // todo: can be initiatlized obove?
 
     if (wifiConnector.connect()) {
-      Serial.println("Connect to wifi failed");
+      Serial.println("Connect to wifi failed"); // todo: why failed of connect == true?
 
       /**
        * Send first data to ping server and get server configuration
@@ -233,18 +238,18 @@ void setup() {
           }
         }
 
-        sendPing();
+        sendPing(); // todo: rename to sendDataToAg();
         Serial.println(F("WiFi connected!"));
         Serial.println("IP address: ");
         Serial.println(wifiConnector.localIpStr());
 
-        /** Get first connected to wifi */
+        /** Get first connected to wifi */ // todo: remove comment
         apiClient.fetchServerConfiguration();
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOneIndoor()) {
             sm.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
           }
-          sm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          sm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed); // todo: rename to "handleLeds"
           delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
         } else {
           ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
@@ -325,7 +330,9 @@ void loop() {
   }
 }
 
-static void ledBarTestColor(char color) {
+
+// todo: Move into library
+static void ledBarTestColor(char color) { // todo: rename to runLedTest()
   int r = 0;
   int g = 0;
   int b = 0;
@@ -366,6 +373,8 @@ static void ledBarTestColor(char color) {
   ag->ledBar.setColor(r, g, b);
 }
 
+
+// todo: same as above
 static void ledBarTest() {
   disp.setText("LED Test", "running", ".....");
   ledBarTestColor('r');
@@ -385,6 +394,7 @@ static void ledBarTest() {
   delay(1000);
 }
 
+// todo: same as above
 static void ledBarTest2Min(void) {
   uint32_t tstart = millis();
 
@@ -420,6 +430,9 @@ void webServerMeasureCurrentGet(void) {
   webServer.send(200, "application/json", getServerSyncData(true));
 }
 
+
+// todo: extract into seperate class called OpenMetrics
+
 /**
  * Sends metrics in Prometheus/OpenMetrics format to the currently connected
  * webServer client.
@@ -427,7 +440,7 @@ void webServerMeasureCurrentGet(void) {
  * For background, see:
  * https://prometheus.io/docs/instrumenting/exposition_formats/
  */
-void webServerMetricsGet(void) {
+void webServerMetricsGet(void) { // todo: rename to onWebServerMetricsGet
   String response;
   String current_metric_name;
   const auto add_metric = [&](const String &name, const String &help,
@@ -598,6 +611,9 @@ void webServerMetricsGet(void) {
                  "application/openmetrics-text; version=1.0.0; charset=utf-8",
                  response);
 }
+
+
+// todo: extract all webServer code into separate classes (but not into library)
 
 void webServerHandler(void *param) {
   for (;;) {
@@ -1115,6 +1131,7 @@ static void openAirInit(void) {
   Serial.printf("Firmware Mode: %s\r\n", AgFirmwareModeName(fwMode));
 }
 
+// todo: remove below comment
 /**
  * @brief Initialize board
  */
@@ -1126,6 +1143,7 @@ static void boardInit(void) {
   }
 }
 
+// todo: remove below comment
 /**
  * @brief Failed handler
  *
@@ -1138,6 +1156,7 @@ static void failedHandler(String msg) {
   }
 }
 
+// todo: remove below comment
 /**
  * @brief Send data to server
  */
@@ -1161,6 +1180,8 @@ static void configUpdateHandle() {
     ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
   }
 
+// todo: rename to "getCO2CalibrationAbcDays"
+// todo: move code into library
   if (localConfig.getCO2CalirationAbcDays() > 0) {
     if (hasSensorS8) {
       int newHour = localConfig.getCO2CalirationAbcDays() * 24;
@@ -1210,10 +1231,16 @@ static void configUpdateHandle() {
   }
 }
 
+
+// todo: remove comment
+
 /**
  * @brief Calibration CO2 sensor, it's base calibration, after calib complete
  * the value will be start at 400 if do calib on clean environment
  */
+
+ // todo: move method into library
+ // todo: rename into executeCo2Calibration()
 static void co2Calibration(void) {
   Serial.println("co2Calibration: Start");
   /** Count down for co2CalibCountdown secs */
@@ -1268,9 +1295,13 @@ static void co2Calibration(void) {
   }
 }
 
+
+// todo: remove comment
 /**
  * @brief APP LED color handler
  */
+
+
 static void appLedHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
   if (wifiConnector.isConnected() == false) {
@@ -1313,10 +1344,13 @@ static void displayAndLedUpdate(void) {
   appLedHandler();
 }
 
+// todo: remove comment
 /**
  * @brief Update tvocIndexindex
  *
  */
+
+ // todo: rename to "updateTvoc"
 static void tvocUpdate(void) {
   agValue.TVOC = ag->sgp41.getTvocIndex();
   agValue.TVOCRaw = ag->sgp41.getTvocRaw();
@@ -1330,10 +1364,13 @@ static void tvocUpdate(void) {
   Serial.printf("NOx raw: %d\r\n", agValue.NOxRaw);
 }
 
+// todo: remove comment
 /**
  * @brief Update PMS data
  *
  */
+
+ // todo: rename to "updatePm"
 static void pmUpdate(void) {
   if (ag->isOneIndoor()) {
     if (ag->pms5003.isFailed() == false) {
@@ -1501,6 +1538,7 @@ static void pmUpdate(void) {
   }
 }
 
+// todo: remove comment
 /**
  * @brief Send data to server
  *
@@ -1514,6 +1552,7 @@ static void sendDataToServer(void) {
   bootCount++;
 }
 
+// todo: remove comment
 /**
  * @brief Update temperature and humidity value
  */
