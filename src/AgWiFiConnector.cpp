@@ -233,7 +233,7 @@ void WifiConnector::_wifiProcess() {
   displayShowText(String(WIFI_CONNECT_COUNTDOWN_MAX) + " sec", "SSID:", ssid);
   while (WIFI()->getConfigPortalActive()) {
     WIFI()->process();
-    
+
     uint32_t lastTime = millis();
     uint32_t ms = (uint32_t)(millis() - lastTime);
     if (ms >= 1000) {
@@ -254,6 +254,8 @@ void WifiConnector::_wifiProcess() {
     displayShowText("Booting", "offline", "mode");
     Serial.println("failed to connect and hit timeout");
     delay(2500);
+  } else {
+    hasConfig = true;
   }
 #endif
 }
