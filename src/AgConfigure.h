@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <Arduino_JSON.h>
 
-class AgConfigure : public PrintLog {
+class Configuration : public PrintLog {
 private:
   struct Config {
     char model[20];
@@ -32,6 +32,7 @@ private:
   struct Config config;
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
+  bool udpated;
 
   String getLedBarModeName(LedBarMode mode);
   void saveConfig(void);
@@ -40,8 +41,14 @@ private:
   void printConfig(void);
 
 public:
-  AgConfigure(Stream &debugLog);
-  ~AgConfigure();
+  Configuration(Stream &debugLog);
+  ~Configuration();
+
+  bool hasSensorS8 = true;
+  bool hasSensorPMS1 = true;
+  bool hasSensorPMS2 = true;
+  bool hasSensorSGP = true;
+  bool hasSensorSHT = true;
 
   bool begin(void);
   bool parse(String data, bool isLocal);
@@ -49,7 +56,7 @@ public:
   bool isTemperatureUnitInF(void);
   String getCountry(void);
   bool isPmStandardInUSAQI(void);
-  int getCO2CalirationAbcDays(void);
+  int getCO2CalibrationAbcDays(void);
   LedBarMode getLedBarMode(void);
   String getLedBarModeName(void);
   bool getDisplayMode(void);
@@ -60,6 +67,7 @@ public:
   bool isLedBarTestRequested(void);
   void reset(void);
   String getModel(void);
+  bool isUpdated(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

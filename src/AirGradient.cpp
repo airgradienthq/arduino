@@ -50,7 +50,13 @@ String AirGradient::getBoardName(void) {
   return String(getBoardDefName(boardType));
 }
 
-bool AirGradient::isOneIndoor(void) {
+/**
+ * @brief Board Type is ONE_INDOOR
+ * 
+ * @return true ONE_INDOOR
+ * @return false Other
+ */
+bool AirGradient::isOne(void) {
   return boardType == BoardType::ONE_INDOOR;
 }
 

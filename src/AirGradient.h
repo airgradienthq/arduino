@@ -128,7 +128,7 @@ public:
    * @return true Yes
    * @return false No
    */
-  bool isOneIndoor(void);
+  bool isOne(void);
 
   /**
    * @brief Get device Id

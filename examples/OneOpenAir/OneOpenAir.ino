@@ -40,7 +40,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <HardwareSerial.h>
-// #include <WiFiManager.h>
 
 #include "AgApiClient.h"
 #include "AgConfigure.h"
@@ -48,10 +47,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "AgStateMachine.h"
 #include "AgWiFiConnector.h"
 #include "EEPROM.h"
+#include "ESPmDNS.h"
+#include "LocalServer.h"
 #include "MqttClient.h"
+#include "OpenMetrics.h"
+#include "WebServer.h"
 #include <AirGradient.h>
 #include <Arduino_JSON.h>
-#include <ESPmDNS.h>
 #include <WebServer.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
@@ -66,9 +68,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 
-/** Default WiFi AP password */
-#define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
-
 /** I2C define */
 #define I2C_SDA_PIN 7
 #define I2C_SCL_PIN 6
@@ -76,183 +75,127 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
-static AgConfigure localConfig(Serial); // todo: rename class Configuration and variable to configuration
-static AgApiClient apiClient(Serial, localConfig);
-static AgValue agValue; // todo: rename class to Measurements and variable to measurements
+static Configuration configuration(Serial);
+static AgApiClient apiClient(Serial, configuration);
+static Measurements measurements;
 static AirGradient *ag;
-static AgOledDisplay disp(localConfig, agValue, Serial); // todo: rename class to OledDisplay and variable to oledDisplay
-static AgStateMachine sm(disp, Serial, agValue, localConfig); // todo: rename class to StateMachine and variable to stateMachine
-static AgWiFiConnector wifiConnector(disp, Serial, sm); // todo: rename class to WifiConnector and variable to wifiConnector
-static WebServer webServer;
+static OledDisplay oledDisplay(configuration, measurements, Serial);
+static StateMachine stateMachine(oledDisplay, Serial, measurements,
+                                 configuration);
+static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine);
+static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
+                               apiClient);
+static LocalServer localServer(Serial, openMetrics, measurements, configuration,
+                               wifiConnector);
 
-/** Init schedule */
-static bool hasSensorS8 = true;
-static bool hasSensorPMS1 = true;
-static bool hasSensorPMS2 = true;
-static bool hasSensorSGP = true;
-static bool hasSensorSHT = true;
 static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
-static uint32_t addToDashboardTime;
-static bool isAddToDashboard = true;
 static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
-static int bootCount;
-
-// todo: For below use class Measurements (before Values).
-static int pm25_1 = -1;
-static int pm01_1 = -1;
-static int pm10_1 = -1;
-static int pm03PCount_1 = -1;
-static float temp_1 = -1001;
-static int hum_1 = -1;
-
-static int pm25_2 = -1;
-static int pm01_2 = -1;
-static int pm10_2 = -1;
-static int pm03PCount_2 = -1;
-static float temp_2 = -1001;
-static int hum_2 = -1;
-
-static int pm1Value01;
-static int pm1Value25;
-static int pm1Value10;
-static int pm1PCount;
-static int pm1temp;
-static int pm1hum;
-static int pm2Value01;
-static int pm2Value25;
-static int pm2Value10;
-static int pm2PCount;
-static int pm2temp;
-static int pm2hum;
-static int countPosition;
-const int targetCount = 20;
-
 static bool ledBarButtonTest = false;
-static bool localConfigUpdate = false;
-
-// todo: see above comment
 
 static void boardInit(void);
 static void failedHandler(String msg);
-static void updateServerConfiguration(void);
-static void co2Calibration(void);
+static void configurationUpdateSchedule(void);
+static void executeCo2Calibration(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
 static void updateWiFiConnect(void);
-static void displayAndLedUpdate(void);
-static void tvocUpdate(void);
-static void pmUpdate(void);
+static void oledDisplayLedBarSchedule(void);
+static void updateTvoc(void);
+static void updatePm(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
 static void showNr(void);
-static void webServerInit(void);
-static String getServerSyncData(bool localServer);
+static void mdnsInit(void);
 static void createMqttTask(void);
+static void initMqtt(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
+static void ledBarEnabledUpdate(void);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, displayAndLedUpdate); // todo: rename to oledDisplayLedBarSchedule
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
-                          updateServerConfiguration); // todo: rename to configurationUpdateSchedule
-AgSchedule serverSchedule(SERVER_SYNC_INTERVAL, sendDataToServer); // todo: rename to agApiPostSchedule
+                          configurationUpdateSchedule);
+AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
-AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, pmUpdate);
+AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
-AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, tvocUpdate);
-AgSchedule wdgFeedSchedule(60000, wdgFeedUpdate); // todo: rename to watchdogFeedSchedule
+AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
+AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 
 void setup() {
   /** Serial for print debug message */
   Serial.begin(115200);
   delay(100); /** For bester show log */
-  showNr(); // todo: can be inlined?
+
+  /** Print device ID into log */
+  Serial.println("Serial nr: " + ag->deviceId());
 
   /** Initialize local configure */
-  localConfig.begin();
+  configuration.begin();
 
   /** Init I2C */
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   delay(1000);
 
-  /** Detect board type */
+  /** Detect board type: ONE_INDOOR has OLED display, Scan the I2C address to
+   * identify board type */
   Wire.beginTransmission(OLED_I2C_ADDR);
   if (Wire.endTransmission() == 0x00) {
-    Serial.println("Detect ONE_INDOOR");
     ag = new AirGradient(BoardType::ONE_INDOOR);
   } else {
-    Serial.println("Detect OPEN_AIR");
     ag = new AirGradient(BoardType::OPEN_AIR_OUTDOOR);
   }
+  Serial.println("Detected " + ag->getBoardName());
 
   /** Init sensor */
   boardInit();
 
-
-
-  disp.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
-  sm.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
-  wifiConnector.setAirGradient(ag); // todo: Can ag be passed in constructor in intitalisation above?
+  oledDisplay.setAirGradient(ag);
+  stateMachine.setAirGradient(ag);
+  wifiConnector.setAirGradient(ag);
+  apiClient.setAirGradient(ag);
+  openMetrics.setAirGradient(ag);
+  localServer.setAirGraident(ag);
 
   /** Connecting wifi */
-  bool connectWifi = false;
-  if (ag->isOneIndoor()) { // todo: rename to isOne()
+  bool connectToWifi = false;
+  if (ag->isOne()) {
     if (ledBarButtonTest) {
-      ledBarTest();
+      stateMachine.executeLedBarTest();
     } else {
-      /** Check LED mode to disabled LED */ // todo: remove comment
-      if (localConfig.getLedBarMode() == LedBarModeOff) {
-        ag->ledBar.setEnable(false);
-      }
-      connectWifi = true;
+      ledBarEnabledUpdate();
+      connectToWifi = true;
     }
   } else {
-    connectWifi = true;
+    connectToWifi = true;
   }
 
-  if (connectWifi) {
-    /** Init AirGradient server */
+  if (connectToWifi) {
     apiClient.begin();
-    apiClient.setAirGradient(ag); // todo: can be initiatlized obove?
 
     if (wifiConnector.connect()) {
-      Serial.println("Connect to wifi failed"); // todo: why failed of connect == true?
-
-      /**
-       * Send first data to ping server and get server configuration
-       */
       if (wifiConnector.isConnected()) {
-        webServerInit();
+        mdnsInit();
+        localServer.begin();
+        initMqtt();
+        sendDataToAg();
 
-        /** MQTT init */
-        if (localConfig.getMqttBrokerUri().isEmpty() == false) {
-          if (mqttClient.begin(localConfig.getMqttBrokerUri())) {
-            createMqttTask();
-            Serial.println("MQTT client init success");
-          } else {
-            Serial.println("MQTT client init failure");
-          }
-        }
-
-        sendPing(); // todo: rename to sendDataToAg();
-        Serial.println(F("WiFi connected!"));
-        Serial.println("IP address: ");
-        Serial.println(wifiConnector.localIpStr());
-
-        /** Get first connected to wifi */ // todo: remove comment
         apiClient.fetchServerConfiguration();
         if (apiClient.isFetchConfigureFailed()) {
-          if (ag->isOneIndoor()) {
-            sm.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          if (ag->isOne()) {
+            stateMachine.displayHandle(
+                AgStateMachineWiFiOkServerOkSensorConfigFailed);
           }
-          sm.ledHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed); // todo: rename to "handleLeds"
+          stateMachine.handleLeds(
+              AgStateMachineWiFiOkServerOkSensorConfigFailed);
           delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
         } else {
-          ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
+          ledBarEnabledUpdate();
         }
       } else {
         offlineMode = true;
@@ -261,46 +204,52 @@ void setup() {
   }
 
   /** Show display Warning up */
-  if (ag->isOneIndoor()) {
-    disp.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
+  if (ag->isOne()) {
+    oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
   appLedHandler();
-  if (ag->isOneIndoor()) {
-    appDispHandler();
-  }
+  appDispHandler();
 }
 
 void loop() {
   /** Handle schedule */
   dispLedSchedule.run();
   configSchedule.run();
-  serverSchedule.run();
+  agApiPostSchedule.run();
 
-  if (hasSensorS8) {
+  if (configuration.hasSensorS8) {
     co2Schedule.run();
   }
-
-  if (hasSensorPMS1 || hasSensorPMS2) {
+  if (configuration.hasSensorPMS1 || configuration.hasSensorPMS2) {
     pmsSchedule.run();
   }
-
-  if (ag->isOneIndoor()) {
-    if (hasSensorSHT) {
-      delay(100);
+  if (ag->isOne()) {
+    if (configuration.hasSensorSHT) {
       tempHumSchedule.run();
     }
   }
-
-  if (hasSensorSGP) {
+  if (configuration.hasSensorSGP) {
     tvocSchedule.run();
+  }
+  if (ag->isOne()) {
+    if (configuration.hasSensorPMS1) {
+      ag->pms5003.handle();
+    }
+  } else {
+    if (configuration.hasSensorPMS1) {
+      ag->pms5003t_1.handle();
+    }
+    if (configuration.hasSensorPMS2) {
+      ag->pms5003t_2.handle();
+    }
   }
 
   /** Auto reset external watchdog timer on offline mode and
    * postDataToAirGradient disabled. */
-  if (offlineMode || (localConfig.isPostDataToAirGradient() == false)) {
-    wdgFeedSchedule.run();
+  if (offlineMode || (configuration.isPostDataToAirGradient() == false)) {
+    watchdogFeedSchedule.run();
   }
 
   /** Check for handle WiFi reconnect */
@@ -309,501 +258,37 @@ void loop() {
   /** factory reset handle */
   factoryConfigReset();
 
-  /** Read PMS on loop */
-  if (ag->isOneIndoor()) {
-    if (hasSensorPMS1) {
-      ag->pms5003.handle();
-    }
-  } else {
-    if (hasSensorPMS1) {
-      ag->pms5003t_1.handle();
-    }
-    if (hasSensorPMS2) {
-      ag->pms5003t_2.handle();
-    }
-  }
-
   /** check that local configura changed then do some action */
-  if (localConfigUpdate) {
-    localConfigUpdate = false;
-    configUpdateHandle();
-  }
-}
-
-
-// todo: Move into library
-static void ledBarTestColor(char color) { // todo: rename to runLedTest()
-  int r = 0;
-  int g = 0;
-  int b = 0;
-  switch (color) {
-  case 'g':
-    g = 255;
-    break;
-  case 'y':
-    r = 255;
-    g = 255;
-    break;
-  case 'o':
-    r = 255;
-    g = 128;
-    break;
-  case 'r':
-    r = 255;
-    break;
-  case 'b':
-    b = 255;
-    break;
-  case 'w':
-    r = 255;
-    g = 255;
-    b = 255;
-    break;
-  case 'p':
-    r = 153;
-    b = 153;
-    break;
-  case 'z':
-    r = 102;
-    break;
-  case 'n':
-  default:
-    break;
-  }
-  ag->ledBar.setColor(r, g, b);
-}
-
-
-// todo: same as above
-static void ledBarTest() {
-  disp.setText("LED Test", "running", ".....");
-  ledBarTestColor('r');
-  ag->ledBar.show();
-  delay(1000);
-  ledBarTestColor('g');
-  ag->ledBar.show();
-  delay(1000);
-  ledBarTestColor('b');
-  ag->ledBar.show();
-  delay(1000);
-  ledBarTestColor('w');
-  ag->ledBar.show();
-  delay(1000);
-  ledBarTestColor('n');
-  ag->ledBar.show();
-  delay(1000);
-}
-
-// todo: same as above
-static void ledBarTest2Min(void) {
-  uint32_t tstart = millis();
-
-  Serial.println("Start run LED test for 2 min");
-  while (1) {
-    ledBarTest();
-    uint32_t ms = (uint32_t)(millis() - tstart);
-    if (ms >= (60 * 1000 * 2)) {
-      Serial.println("LED test after 2 min finish");
-      break;
-    }
-  }
+  configUpdateHandle();
 }
 
 static void co2Update(void) {
   int value = ag->s8.getCo2();
   if (value >= 0) {
-    agValue.CO2 = value;
+    measurements.CO2 = value;
     getCO2FailCount = 0;
-    Serial.printf("CO2 (ppm): %d\r\n", agValue.CO2);
+    Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
   } else {
     getCO2FailCount++;
     Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
     if (getCO2FailCount >= 3) {
-      agValue.CO2 = -1;
+      measurements.CO2 = -1;
     }
   }
 }
 
-static void showNr(void) { Serial.println("Serial nr: " + ag->deviceId()); }
-
-void webServerMeasureCurrentGet(void) {
-  webServer.send(200, "application/json", getServerSyncData(true));
-}
-
-
-// todo: extract into seperate class called OpenMetrics
-
-/**
- * Sends metrics in Prometheus/OpenMetrics format to the currently connected
- * webServer client.
- *
- * For background, see:
- * https://prometheus.io/docs/instrumenting/exposition_formats/
- */
-void webServerMetricsGet(void) { // todo: rename to onWebServerMetricsGet
-  String response;
-  String current_metric_name;
-  const auto add_metric = [&](const String &name, const String &help,
-                              const String &type, const String &unit = "") {
-    current_metric_name = "airgradient_" + name;
-    if (!unit.isEmpty())
-      current_metric_name += "_" + unit;
-    response += "# HELP " + current_metric_name + " " + help + "\n";
-    response += "# TYPE " + current_metric_name + " " + type + "\n";
-    if (!unit.isEmpty())
-      response += "# UNIT " + current_metric_name + " " + unit + "\n";
-  };
-  const auto add_metric_point = [&](const String &labels, const String &value) {
-    response += current_metric_name + "{" + labels + "} " + value + "\n";
-  };
-
-  add_metric("info", "AirGradient device information", "info");
-  add_metric_point("airgradient_serial_number=\"" + ag->deviceId() +
-                       "\",airgradient_device_type=\"" + ag->getBoardName() +
-                       "\",airgradient_library_version=\"" + ag->getVersion() +
-                       "\"",
-                   "1");
-
-  add_metric("config_ok",
-             "1 if the AirGradient device was able to successfully fetch its "
-             "configuration from the server",
-             "gauge");
-  add_metric_point("", apiClient.isFetchConfigureFailed() ? "0" : "1");
-
-  add_metric(
-      "post_ok",
-      "1 if the AirGradient device was able to successfully send to the server",
-      "gauge");
-  add_metric_point("", apiClient.isPostToServerFailed() ? "0" : "1");
-
-  add_metric(
-      "wifi_rssi",
-      "WiFi signal strength from the AirGradient device perspective, in dBm",
-      "gauge", "dbm");
-  add_metric_point("", String(wifiConnector.RSSI()));
-
-  if (hasSensorS8 && agValue.CO2 >= 0) {
-    add_metric("co2",
-               "Carbon dioxide concentration as measured by the AirGradient S8 "
-               "sensor, in parts per million",
-               "gauge", "ppm");
-    add_metric_point("", String(agValue.CO2));
-  }
-
-  float _temp = -1001;
-  float _hum = -1;
-  int pm01 = -1;
-  int pm25 = -1;
-  int pm10 = -1;
-  int pm03PCount = -1;
-  if (hasSensorPMS1 && hasSensorPMS2) {
-    _temp = (temp_1 + temp_2) / 2.0f;
-    _hum = (hum_1 + hum_2) / 2.0f;
-    pm01 = (pm01_1 + pm01_2) / 2;
-    pm25 = (pm25_1 + pm25_2) / 2;
-    pm10 = (pm10_1 + pm10_2) / 2;
-    pm03PCount = (pm03PCount_1 + pm03PCount_2) / 2;
-  } else {
-    if (ag->isOneIndoor()) {
-      if (hasSensorSHT) {
-        _temp = agValue.Temperature;
-        _hum = agValue.Humidity;
-      }
-    } else {
-      if (hasSensorPMS1) {
-        _temp = temp_1;
-        _hum = hum_1;
-        pm01 = pm01_1;
-        pm25 = pm25_1;
-        pm10 = pm10_1;
-        pm03PCount = pm03PCount_1;
-      }
-      if (hasSensorPMS2) {
-        _temp = temp_2;
-        _hum = hum_2;
-        pm01 = pm01_2;
-        pm25 = pm25_2;
-        pm10 = pm10_2;
-        pm03PCount = pm03PCount_2;
-      }
-    }
-  }
-
-  if (hasSensorPMS1 || hasSensorPMS2) {
-    if (pm01 >= 0) {
-      add_metric("pm1",
-                 "PM1.0 concentration as measured by the AirGradient PMS "
-                 "sensor, in micrograms per cubic meter",
-                 "gauge", "ugm3");
-      add_metric_point("", String(pm01));
-    }
-    if (pm25 >= 0) {
-      add_metric("pm2d5",
-                 "PM2.5 concentration as measured by the AirGradient PMS "
-                 "sensor, in micrograms per cubic meter",
-                 "gauge", "ugm3");
-      add_metric_point("", String(pm25));
-    }
-    if (pm10 >= 0) {
-      add_metric("pm10",
-                 "PM10 concentration as measured by the AirGradient PMS "
-                 "sensor, in micrograms per cubic meter",
-                 "gauge", "ugm3");
-      add_metric_point("", String(pm10));
-    }
-    if (pm03PCount >= 0) {
-      add_metric("pm0d3",
-                 "PM0.3 concentration as measured by the AirGradient PMS "
-                 "sensor, in number of particules per 100 milliliters",
-                 "gauge", "p100ml");
-      add_metric_point("", String(pm03PCount));
-    }
-  }
-
-  if (hasSensorSGP) {
-    if (agValue.TVOC >= 0) {
-      add_metric("tvoc_index",
-                 "The processed Total Volatile Organic Compounds (TVOC) index "
-                 "as measured by the AirGradient SGP sensor",
-                 "gauge");
-      add_metric_point("", String(agValue.TVOC));
-    }
-    if (agValue.TVOCRaw >= 0) {
-      add_metric("tvoc_raw",
-                 "The raw input value to the Total Volatile Organic Compounds "
-                 "(TVOC) index as measured by the AirGradient SGP sensor",
-                 "gauge");
-      add_metric_point("", String(agValue.TVOCRaw));
-    }
-    if (agValue.NOx >= 0) {
-      add_metric("nox_index",
-                 "The processed Nitrous Oxide (NOx) index as measured by the "
-                 "AirGradient SGP sensor",
-                 "gauge");
-      add_metric_point("", String(agValue.NOx));
-    }
-    if (agValue.NOxRaw >= 0) {
-      add_metric("nox_raw",
-                 "The raw input value to the Nitrous Oxide (NOx) index as "
-                 "measured by the AirGradient SGP sensor",
-                 "gauge");
-      add_metric_point("", String(agValue.NOxRaw));
-    }
-  }
-
-  if (_temp > -1001) {
-    add_metric("temperature",
-               "The ambient temperature as measured by the AirGradient SHT "
-               "sensor, in degrees Celsius",
-               "gauge", "celsius");
-    add_metric_point("", String(_temp));
-  }
-  if (_hum >= 0) {
-    add_metric(
-        "humidity",
-        "The relative humidity as measured by the AirGradient SHT sensor",
-        "gauge", "percent");
-    add_metric_point("", String(_hum));
-  }
-
-  response += "# EOF\n";
-  webServer.send(200,
-                 "application/openmetrics-text; version=1.0.0; charset=utf-8",
-                 response);
-}
-
-
-// todo: extract all webServer code into separate classes (but not into library)
-
-void webServerHandler(void *param) {
-  for (;;) {
-    webServer.handleClient();
-  }
-}
-
-static void webServerInit(void) {
-  String host = "airgradient_" + ag->deviceId();
-  if (!MDNS.begin(host.c_str())) {
+static void mdnsInit(void) {
+  if (!MDNS.begin(localServer.getHostname().c_str())) {
     Serial.println("Init mDNS failed");
     return;
   }
 
-  webServer.on("/measures/current", HTTP_GET, webServerMeasureCurrentGet);
-  // Make it possible to query this device from Prometheus/OpenMetrics.
-  webServer.on("/metrics", HTTP_GET, webServerMetricsGet);
-  webServer.on("/config", HTTP_GET, localConfigGet);
-  webServer.on("/config", HTTP_PUT, localConfigPut);
-  webServer.begin();
   MDNS.addService("_airgradient", "_tcp", 80);
   MDNS.addServiceTxt("_airgradient", "_tcp", "model",
                      AgFirmwareModeName(fwMode));
   MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", ag->deviceId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag->getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
-
-  if (xTaskCreate(webServerHandler, "webserver", 1024 * 4, NULL, 5, NULL) !=
-      pdTRUE) {
-    Serial.println("Create task handle webserver failed");
-  }
-  Serial.printf("Webserver init: %s.local\r\n", host.c_str());
-}
-
-static void localConfigGet() {
-  webServer.send(200, "application/json", localConfig.toString());
-}
-static void localConfigPut() {
-  String data = webServer.arg(0);
-  String response = "";
-  int statusCode = 400; // Status code for data invalid
-  if (localConfig.parse(data, true)) {
-    localConfigUpdate = true;
-    statusCode = 200;
-    response = "Success";
-  } else {
-    response = "Set for cloud configuration. Local configuration ignored";
-  }
-  webServer.send(statusCode, "text/plain", response);
-}
-
-static String getServerSyncData(bool localServer) {
-  JSONVar root;
-  root["wifi"] = wifiConnector.RSSI();
-  if (localServer) {
-    root["serialno"] = ag->deviceId();
-  }
-  if (hasSensorS8) {
-    if (agValue.CO2 >= 0) {
-      root["rco2"] = agValue.CO2;
-    }
-  }
-
-  if (ag->isOneIndoor()) {
-    if (hasSensorPMS1) {
-      if (pm01_1 >= 0) {
-        root["pm01"] = pm01_1;
-      }
-      if (pm25_1 >= 0) {
-        root["pm02"] = pm25_1;
-      }
-      if (pm10_1 >= 0) {
-        root["pm10"] = pm10_1;
-      }
-      if (pm03PCount_1 >= 0) {
-        if (localServer) {
-          root["pm003Count"] = pm03PCount_1;
-        } else {
-          root["pm003_count"] = pm03PCount_1;
-        }
-      }
-    }
-
-    if (hasSensorSHT) {
-      if (agValue.Temperature > -1001) {
-        root["atmp"] = ag->round2(agValue.Temperature);
-      }
-      if (agValue.Humidity >= 0) {
-        root["rhum"] = agValue.Humidity;
-      }
-    }
-
-  } else {
-    if (hasSensorPMS1 && hasSensorPMS2) {
-      root["pm01"] = ag->round2((pm01_1 + pm01_2) / 2.0);
-      root["pm02"] = ag->round2((pm25_1 + pm25_2) / 2.0);
-      root["pm10"] = ag->round2((pm10_1 + pm10_2) / 2.0);
-      if (localServer) {
-        root["pm003Count"] = ag->round2((pm03PCount_1 + pm03PCount_2) / 2.0);
-      } else {
-        root["pm003_count"] = ag->round2((pm03PCount_1 + pm03PCount_2) / 2.0);
-      }
-      root["atmp"] = ag->round2((temp_1 + temp_2) / 2.0);
-      root["rhum"] = ag->round2((hum_1 + hum_2) / 2.0);
-    }
-
-    if (fwMode == FW_MDOE_O_1PS || fwMode == FW_MODE_O_1PST) {
-      if (hasSensorPMS1) {
-        root["pm01"] = pm01_1;
-        root["pm02"] = pm25_1;
-        root["pm10"] = pm10_1;
-        if (localServer) {
-          root["pm003Count"] = pm03PCount_1;
-        } else {
-          root["pm003_count"] = pm03PCount_1;
-        }
-        root["atmp"] = ag->round2(temp_1);
-        root["rhum"] = hum_1;
-      }
-      if (hasSensorPMS2) {
-        root["pm01"] = pm01_2;
-        root["pm02"] = pm25_2;
-        root["pm10"] = pm10_2;
-        if (localServer) {
-          root["pm003Count"] = pm03PCount_2;
-        } else {
-          root["pm003_count"] = pm03PCount_2;
-        }
-        root["atmp"] = ag->round2(temp_2);
-        root["rhum"] = hum_2;
-      }
-    } else {
-      if (hasSensorPMS1) {
-        root["channels"]["1"]["pm01"] = pm01_1;
-        root["channels"]["1"]["pm02"] = pm25_1;
-        root["channels"]["1"]["pm10"] = pm10_1;
-        if (localServer) {
-          root["channels"]["1"]["pm003Count"] = pm03PCount_1;
-        } else {
-          root["channels"]["1"]["pm003_count"] = pm03PCount_1;
-        }
-        root["channels"]["1"]["atmp"] = ag->round2(temp_1);
-        root["channels"]["1"]["rhum"] = hum_1;
-      }
-      if (hasSensorPMS2) {
-        root["channels"]["2"]["pm01"] = pm01_2;
-        root["channels"]["2"]["pm02"] = pm25_2;
-        root["channels"]["2"]["pm10"] = pm10_2;
-        if (localServer) {
-          root["channels"]["2"]["pm003Count"] = pm03PCount_2;
-        } else {
-          root["channels"]["2"]["pm003_count"] = pm03PCount_2;
-        }
-        root["channels"]["2"]["atmp"] = ag->round2(temp_2);
-        root["channels"]["2"]["rhum"] = hum_2;
-      }
-    }
-  }
-
-  if (hasSensorSGP) {
-    if (agValue.TVOC >= 0) {
-      if (localServer) {
-        root["tvocIndex"] = agValue.TVOC;
-      } else {
-        root["tvoc_index"] = agValue.TVOC;
-      }
-    }
-    if (agValue.TVOCRaw >= 0) {
-      root["tvoc_raw"] = agValue.TVOCRaw;
-    }
-    if (agValue.NOx >= 0) {
-      if (localServer) {
-        root["noxIndex"] = agValue.NOx;
-      } else {
-        root["nox_index"] = agValue.NOx;
-      }
-    }
-    if (agValue.NOxRaw >= 0) {
-      root["nox_raw"] = agValue.NOxRaw;
-    }
-  }
-  root["boot"] = bootCount;
-
-  if (localServer) {
-    root["ledMode"] = localConfig.getLedBarModeName();
-    root["firmwareVersion"] = ag->getVersion();
-    root["fwMode"] = AgFirmwareModeName(fwMode);
-  }
-
-  return JSON.stringify(root);
 }
 
 static void createMqttTask(void) {
@@ -821,7 +306,8 @@ static void createMqttTask(void) {
 
           /** Send data */
           if (mqttClient.isConnected()) {
-            String payload = getServerSyncData(false);
+            String payload = measurements.toString(
+                false, fwMode, wifiConnector.RSSI(), ag, &configuration);
             String topic = "airgradient/readings/" + ag->deviceId();
 
             if (mqttClient.publish(topic.c_str(), payload.c_str(),
@@ -840,6 +326,15 @@ static void createMqttTask(void) {
   }
 }
 
+static void initMqtt(void) {
+  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
+    Serial.println("Connect to MQTT broker successful");
+    createMqttTask();
+  } else {
+    Serial.println("Connect to MQTT broker failed");
+  }
+}
+
 static void factoryConfigReset(void) {
   if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
     if (factoryBtnPressTime == 0) {
@@ -848,9 +343,8 @@ static void factoryConfigReset(void) {
       uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
       if (ms >= 2000) {
         // Show display message: For factory keep for x seconds
-        // Count display.
-        if (ag->isOneIndoor()) {
-          disp.setText("Factory reset", "keep pressed", "for 8 sec");
+        if (ag->isOne()) {
+          oledDisplay.setText("Factory reset", "keep pressed", "for 8 sec");
         } else {
           Serial.println("Factory reset, keep pressed for 8 sec");
         }
@@ -858,10 +352,10 @@ static void factoryConfigReset(void) {
         int count = 7;
         while (ag->button.getState() == ag->button.BUTTON_PRESSED) {
           delay(1000);
-          if (ag->isOneIndoor()) {
+          if (ag->isOne()) {
 
             String str = "for " + String(count) + " sec";
-            disp.setText("Factory reset", "keep pressed", str.c_str());
+            oledDisplay.setText("Factory reset", "keep pressed", str.c_str());
           } else {
             Serial.printf("Factory reset, keep pressed for %d sec\r\n", count);
           }
@@ -878,10 +372,10 @@ static void factoryConfigReset(void) {
             wifiConnector.reset();
 
             /** Reset local config */
-            localConfig.reset();
+            configuration.reset();
 
-            if (ag->isOneIndoor()) {
-              disp.setText("Factory reset", "successful", "");
+            if (ag->isOne()) {
+              oledDisplay.setText("Factory reset", "successful", "");
             } else {
               Serial.println("Factory reset successful");
             }
@@ -892,14 +386,14 @@ static void factoryConfigReset(void) {
 
         /** Show current content cause reset ignore */
         factoryBtnPressTime = 0;
-        if (ag->isOneIndoor()) {
+        if (ag->isOne()) {
           appDispHandler();
         }
       }
     }
   } else {
     if (factoryBtnPressTime != 0) {
-      if (ag->isOneIndoor()) {
+      if (ag->isOne()) {
         /** Restore last display content */
         appDispHandler();
       }
@@ -915,24 +409,31 @@ static void wdgFeedUpdate(void) {
   Serial.println();
 }
 
-static void sendPing() {
+static void ledBarEnabledUpdate(void) {
+  if (ag->isOne()) {
+    ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+  }
+}
+
+static void sendDataToAg() {
   JSONVar root;
   root["wifi"] = wifiConnector.RSSI();
-  root["boot"] = bootCount;
+  root["boot"] = measurements.bootCount;
 
-  /** Change disp and led state */
-  if (ag->isOneIndoor()) {
-    sm.displayHandle(AgStateMachineWiFiOkServerConnecting);
+  /** Change oledDisplay and led state */
+  if (ag->isOne()) {
+    stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
   }
-  sm.ledHandle(AgStateMachineWiFiOkServerConnecting);
+  stateMachine.handleLeds(AgStateMachineWiFiOkServerConnecting);
 
   /** Task handle led connecting animation */
   xTaskCreate(
       [](void *obj) {
         for (;;) {
           // ledSmHandler();
-          sm.ledHandle();
-          if (sm.getLedState() != AgStateMachineWiFiOkServerConnecting) {
+          stateMachine.handleLeds();
+          if (stateMachine.getLedState() !=
+              AgStateMachineWiFiOkServerConnecting) {
             break;
           }
           delay(LED_BAR_ANIMATION_PERIOD);
@@ -943,18 +444,18 @@ static void sendPing() {
 
   delay(1500);
   if (apiClient.postToServer(JSON.stringify(root))) {
-    if (ag->isOneIndoor()) {
-      sm.displayHandle(AgStateMachineWiFiOkServerConnected);
+    if (ag->isOne()) {
+      stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
-    sm.ledHandle(AgStateMachineWiFiOkServerConnected);
+    stateMachine.handleLeds(AgStateMachineWiFiOkServerConnected);
   } else {
-    if (ag->isOneIndoor()) {
-      sm.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
+    if (ag->isOne()) {
+      stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
     }
-    sm.ledHandle(AgStateMachineWiFiOkServerConnectFailed);
+    stateMachine.handleLeds(AgStateMachineWiFiOkServerConnectFailed);
   }
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-  sm.ledHandle(AgStateMachineNormal);
+  stateMachine.handleLeds(AgStateMachineNormal);
 }
 
 /**
@@ -964,19 +465,20 @@ static void resetWatchdog() { ag->watchdog.reset(); }
 
 void dispSensorNotFound(String ss) {
   ss = ss + " not found";
-  disp.setText("Sensor init", "Error:", ss.c_str());
+  oledDisplay.setText("Sensor init", "Error:", ss.c_str());
   delay(2000);
 }
 
 static void oneIndoorInit(void) {
-  hasSensorPMS2 = false;
+  configuration.hasSensorPMS2 = false;
 
   /** Display init */
-  disp.begin();
+  oledDisplay.begin();
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
-  disp.setText("AirGradient ONE", "FW Version: ", ag->getVersion().c_str());
+  oledDisplay.setText("AirGradient ONE",
+                      "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   ag->ledBar.begin();
@@ -986,34 +488,34 @@ static void oneIndoorInit(void) {
   /** Init sensor SGP41 */
   if (ag->sgp41.begin(Wire) == false) {
     Serial.println("SGP41 sensor not found");
-    hasSensorSGP = false;
+    configuration.hasSensorSGP = false;
     dispSensorNotFound("SGP41");
   }
 
   /** INit SHT */
   if (ag->sht.begin(Wire) == false) {
     Serial.println("SHTx sensor not found");
-    hasSensorSHT = false;
+    configuration.hasSensorSHT = false;
     dispSensorNotFound("SHT");
   }
 
   /** Init S8 CO2 sensor */
   if (ag->s8.begin(Serial1) == false) {
     Serial.println("CO2 S8 sensor not found");
-    hasSensorS8 = false;
+    configuration.hasSensorS8 = false;
     dispSensorNotFound("S8");
   }
 
   /** Init PMS5003 */
   if (ag->pms5003.begin(Serial0) == false) {
     Serial.println("PMS sensor not found");
-    hasSensorPMS1 = false;
+    configuration.hasSensorPMS1 = false;
 
     dispSensorNotFound("PMS");
   }
 
   /** Run LED test on start up */
-  disp.setText("Press now for", "LED test &", "offline mode");
+  oledDisplay.setText("Press now for", "LED test &", "offline mode");
   ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {
@@ -1029,7 +531,7 @@ static void oneIndoorInit(void) {
   }
 }
 static void openAirInit(void) {
-  hasSensorSHT = false;
+  configuration.hasSensorSHT = false;
 
   fwMode = FW_MODE_O_1PST;
   Serial.println("Firmware Version: " + ag->getVersion());
@@ -1051,7 +553,7 @@ static void openAirInit(void) {
     Serial.println("Can not detect S8 on Serial1, try on Serial0");
     /** Check on other port */
     if (ag->s8.begin(Serial0) == false) {
-      hasSensorS8 = false;
+      configuration.hasSensorS8 = false;
 
       Serial.println("CO2 S8 sensor not found");
       Serial.println("Can not detect S8 run mode 'PPT'");
@@ -1069,10 +571,10 @@ static void openAirInit(void) {
   }
 
   if (ag->sgp41.begin(Wire) == false) {
-    hasSensorSGP = false;
+    configuration.hasSensorSGP = false;
     Serial.println("SGP sensor not found");
 
-    if (hasSensorS8 == false) {
+    if (configuration.hasSensorS8 == false) {
       Serial.println("Can not detect SGP run mode 'O-1PP'");
       fwMode = FW_MODE_O_1PP;
     } else {
@@ -1086,7 +588,7 @@ static void openAirInit(void) {
     bool pmInitSuccess = false;
     if (serial0Available) {
       if (ag->pms5003t_1.begin(Serial0) == false) {
-        hasSensorPMS1 = false;
+        configuration.hasSensorPMS1 = false;
         Serial.println("PMS1 sensor not found");
       } else {
         serial0Available = false;
@@ -1097,7 +599,7 @@ static void openAirInit(void) {
     if (pmInitSuccess == false) {
       if (serial1Available) {
         if (ag->pms5003t_1.begin(Serial1) == false) {
-          hasSensorPMS1 = false;
+          configuration.hasSensorPMS1 = false;
           Serial.println("PMS1 sensor not found");
         } else {
           serial1Available = false;
@@ -1105,16 +607,16 @@ static void openAirInit(void) {
         }
       }
     }
-    hasSensorPMS2 = false; // Disable PM2
+    configuration.hasSensorPMS2 = false; // Disable PM2
   } else {
     if (ag->pms5003t_1.begin(Serial0) == false) {
-      hasSensorPMS1 = false;
+      configuration.hasSensorPMS1 = false;
       Serial.println("PMS1 sensor not found");
     } else {
       Serial.println("Found PMS 1 on Serial0");
     }
     if (ag->pms5003t_2.begin(Serial1) == false) {
-      hasSensorPMS2 = false;
+      configuration.hasSensorPMS2 = false;
       Serial.println("PMS2 sensor not found");
     } else {
       Serial.println("Found PMS 2 on Serial1");
@@ -1123,7 +625,7 @@ static void openAirInit(void) {
 
   /** update the PMS poll period base on fw mode and sensor available */
   if (fwMode != FW_MODE_O_1PST) {
-    if (hasSensorPMS1 && hasSensorPMS2) {
+    if (configuration.hasSensorPMS1 && configuration.hasSensorPMS2) {
       pmsSchedule.setPeriod(2000);
     }
   }
@@ -1131,24 +633,14 @@ static void openAirInit(void) {
   Serial.printf("Firmware Mode: %s\r\n", AgFirmwareModeName(fwMode));
 }
 
-// todo: remove below comment
-/**
- * @brief Initialize board
- */
 static void boardInit(void) {
-  if (ag->isOneIndoor()) {
+  if (ag->isOne()) {
     oneIndoorInit();
   } else {
     openAirInit();
   }
 }
 
-// todo: remove below comment
-/**
- * @brief Failed handler
- *
- * @param msg Failure message
- */
 static void failedHandler(String msg) {
   while (true) {
     Serial.println(msg);
@@ -1156,187 +648,62 @@ static void failedHandler(String msg) {
   }
 }
 
-// todo: remove below comment
-/**
- * @brief Send data to server
- */
-static void updateServerConfiguration(void) {
+static void configurationUpdateSchedule(void) {
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
 }
 
 static void configUpdateHandle() {
-  if (localConfig.isCo2CalibrationRequested()) {
-    if (hasSensorS8) {
-      co2Calibration();
-    } else {
-      Serial.println("CO2 S8 not available, calibration ignored");
-    }
+  if (configuration.isUpdated() == false) {
+    return;
   }
 
-  // Update LED bar
-  if (ag->isOneIndoor()) {
-    ag->ledBar.setEnable(localConfig.getLedBarMode() != LedBarModeOff);
-  }
+  ledBarEnabledUpdate();
+  stateMachine.executeCo2Calibration();
+  stateMachine.executeLedBarTest();
 
-// todo: rename to "getCO2CalibrationAbcDays"
-// todo: move code into library
-  if (localConfig.getCO2CalirationAbcDays() > 0) {
-    if (hasSensorS8) {
-      int newHour = localConfig.getCO2CalirationAbcDays() * 24;
-      Serial.printf("Requested abcDays setting: %d days (%d hours)\r\n",
-                    localConfig.getCO2CalirationAbcDays(), newHour);
-      int curHour = ag->s8.getAbcPeriod();
-      Serial.printf("Current S8 abcDays setting: %d (hours)\r\n", curHour);
-      if (curHour == newHour) {
-        Serial.println("'abcDays' unchanged");
-      } else {
-        if (ag->s8.setAbcPeriod(localConfig.getCO2CalirationAbcDays() * 24) ==
-            false) {
-          Serial.println("Set S8 abcDays period failed");
-        } else {
-          Serial.println("Set S8 abcDays period success");
-        }
-      }
-    } else {
-      Serial.println("CO2 S8 not available, set 'abcDays' ignored");
-    }
-  }
-
-  if (localConfig.isLedBarTestRequested()) {
-    if (localConfig.getCountry() == "TH") {
-      ledBarTest2Min();
-    } else {
-      ledBarTest();
-    }
-  }
-
-  String mqttUri = localConfig.getMqttBrokerUri();
+  String mqttUri = configuration.getMqttBrokerUri();
   if (mqttClient.isCurrentUri(mqttUri) == false) {
     mqttClient.end();
-
-    if (mqttTask != NULL) {
-      vTaskDelete(mqttTask);
-      mqttTask = NULL;
-    }
-    if (mqttUri.length() > 0) {
-      if (mqttClient.begin(mqttUri)) {
-        Serial.println("Connect to MQTT broker successful");
-        createMqttTask();
-      } else {
-        Serial.println("Connect to MQTT broker failed");
-      }
-    }
+    initMqtt();
   }
+
+  appDispHandler();
+  appLedHandler();
 }
-
-
-// todo: remove comment
-
-/**
- * @brief Calibration CO2 sensor, it's base calibration, after calib complete
- * the value will be start at 400 if do calib on clean environment
- */
-
- // todo: move method into library
- // todo: rename into executeCo2Calibration()
-static void co2Calibration(void) {
-  Serial.println("co2Calibration: Start");
-  /** Count down for co2CalibCountdown secs */
-  for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-    if (ag->isOneIndoor()) {
-      String str =
-          "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec";
-      disp.setText("Start CO2 calib", str.c_str(), "");
-    } else {
-      Serial.printf("Start CO2 calib after %d sec\r\n",
-                    SENSOR_CO2_CALIB_COUNTDOWN_MAX - i);
-    }
-    delay(1000);
-  }
-
-  if (ag->s8.setBaselineCalibration()) {
-    if (ag->isOneIndoor()) {
-      disp.setText("Calibration", "success", "");
-    } else {
-      Serial.println("Calibration success");
-    }
-    delay(1000);
-    if (ag->isOneIndoor()) {
-      disp.setText("Wait for", "calib finish", "...");
-    } else {
-      Serial.println("Wait for calibration finish...");
-    }
-    int count = 0;
-    while (ag->s8.isBaseLineCalibrationDone() == false) {
-      delay(1000);
-      count++;
-    }
-    if (ag->isOneIndoor()) {
-      String str = "after " + String(count);
-      disp.setText("Calib finish", str.c_str(), "sec");
-    } else {
-      Serial.printf("Calibration finish after %d sec\r\n", count);
-    }
-    delay(2000);
-  } else {
-    if (ag->isOneIndoor()) {
-      disp.setText("Calibration", "failure!!!", "");
-    } else {
-      Serial.println("Calibration failure!!!");
-    }
-    delay(2000);
-  }
-
-  /** Update display */
-  if (ag->isOneIndoor()) {
-    appDispHandler();
-  }
-}
-
-
-// todo: remove comment
-/**
- * @brief APP LED color handler
- */
-
 
 static void appLedHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
   if (wifiConnector.isConnected() == false) {
     state = AgStateMachineWiFiLost;
   } else if (apiClient.isFetchConfigureFailed()) {
+    stateMachine.displaySetAddToDashBoard();
     state = AgStateMachineSensorConfigFailed;
   } else if (apiClient.isPostToServerFailed()) {
     state = AgStateMachineServerLost;
   }
 
-  sm.ledHandle(state);
+  stateMachine.handleLeds(state);
 }
 
-/**
- * @brief APP display content handler
- */
 static void appDispHandler(void) {
-  AgStateMachineState state = AgStateMachineNormal;
-  if (wifiConnector.isConnected() == false) {
-    state = AgStateMachineWiFiLost;
-  } else if (apiClient.isFetchConfigureFailed()) {
-    state = AgStateMachineSensorConfigFailed;
-  } else if (apiClient.isPostToServerFailed()) {
-    state = AgStateMachineServerLost;
-  }
+  if (ag->isOne()) {
+    AgStateMachineState state = AgStateMachineNormal;
+    if (wifiConnector.isConnected() == false) {
+      state = AgStateMachineWiFiLost;
+    } else if (apiClient.isFetchConfigureFailed()) {
+      state = AgStateMachineSensorConfigFailed;
+    } else if (apiClient.isPostToServerFailed()) {
+      state = AgStateMachineServerLost;
+    }
 
-  sm.displayHandle(state);
+    stateMachine.displayHandle(state);
+  }
 }
 
-/**
- * @brief APP display and LED handler
- *
- */
-static void displayAndLedUpdate(void) {
-  if (ag->isOneIndoor()) {
+static void oledDisplayLedBarSchedule(void) {
+  if (ag->isOne()) {
     if (factoryBtnPressTime == 0) {
       appDispHandler();
     }
@@ -1344,193 +711,190 @@ static void displayAndLedUpdate(void) {
   appLedHandler();
 }
 
-// todo: remove comment
-/**
- * @brief Update tvocIndexindex
- *
- */
-
- // todo: rename to "updateTvoc"
-static void tvocUpdate(void) {
-  agValue.TVOC = ag->sgp41.getTvocIndex();
-  agValue.TVOCRaw = ag->sgp41.getTvocRaw();
-  agValue.NOx = ag->sgp41.getNoxIndex();
-  agValue.NOxRaw = ag->sgp41.getNoxRaw();
+static void updateTvoc(void) {
+  measurements.TVOC = ag->sgp41.getTvocIndex();
+  measurements.TVOCRaw = ag->sgp41.getTvocRaw();
+  measurements.NOx = ag->sgp41.getNoxIndex();
+  measurements.NOxRaw = ag->sgp41.getNoxRaw();
 
   Serial.println();
-  Serial.printf("TVOC index: %d\r\n", agValue.TVOC);
-  Serial.printf("TVOC raw: %d\r\n", agValue.TVOCRaw);
-  Serial.printf("NOx index: %d\r\n", agValue.NOx);
-  Serial.printf("NOx raw: %d\r\n", agValue.NOxRaw);
+  Serial.printf("TVOC index: %d\r\n", measurements.TVOC);
+  Serial.printf("TVOC raw: %d\r\n", measurements.TVOCRaw);
+  Serial.printf("NOx index: %d\r\n", measurements.NOx);
+  Serial.printf("NOx raw: %d\r\n", measurements.NOxRaw);
 }
 
-// todo: remove comment
-/**
- * @brief Update PMS data
- *
- */
-
- // todo: rename to "updatePm"
-static void pmUpdate(void) {
-  if (ag->isOneIndoor()) {
+static void updatePm(void) {
+  if (ag->isOne()) {
     if (ag->pms5003.isFailed() == false) {
-      pm01_1 = ag->pms5003.getPm01Ae();
-      pm25_1 = ag->pms5003.getPm25Ae();
-      pm10_1 = ag->pms5003.getPm10Ae();
-      pm03PCount_1 = ag->pms5003.getPm03ParticleCount();
+      measurements.pm01_1 = ag->pms5003.getPm01Ae();
+      measurements.pm25_1 = ag->pms5003.getPm25Ae();
+      measurements.pm10_1 = ag->pms5003.getPm10Ae();
+      measurements.pm03PCount_1 = ag->pms5003.getPm03ParticleCount();
 
       Serial.println();
-      Serial.printf("PM1 ug/m3: %d\r\n", pm01_1);
-      Serial.printf("PM2.5 ug/m3: %d\r\n", pm25_1);
-      Serial.printf("PM10 ug/m3: %d\r\n", pm10_1);
-      Serial.printf("PM0.3 Count: %d\r\n", pm03PCount_1);
+      Serial.printf("PM1 ug/m3: %d\r\n", measurements.pm01_1);
+      Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
+      Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
+      Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
       pmFailCount = 0;
     } else {
       pmFailCount++;
       Serial.printf("PMS read failed: %d\r\n", pmFailCount);
       if (pmFailCount >= 3) {
-        pm01_1 = -1;
-        pm25_1 = -1;
-        pm10_1 = -1;
-        pm03PCount_1 = -1;
+        measurements.pm01_1 = -1;
+        measurements.pm25_1 = -1;
+        measurements.pm10_1 = -1;
+        measurements.pm03PCount_1 = -1;
       }
     }
-    agValue.PM25 = pm25_1;
   } else {
     bool pmsResult_1 = false;
     bool pmsResult_2 = false;
-    if (hasSensorPMS1 && (ag->pms5003t_1.isFailed() == false)) {
-      pm01_1 = ag->pms5003t_1.getPm01Ae();
-      pm25_1 = ag->pms5003t_1.getPm25Ae();
-      pm10_1 = ag->pms5003t_1.getPm10Ae();
-      pm03PCount_1 = ag->pms5003t_1.getPm03ParticleCount();
-      temp_1 = ag->pms5003t_1.getTemperature();
-      hum_1 = ag->pms5003t_1.getRelativeHumidity();
+    if (configuration.hasSensorPMS1 && (ag->pms5003t_1.isFailed() == false)) {
+      measurements.pm01_1 = ag->pms5003t_1.getPm01Ae();
+      measurements.pm25_1 = ag->pms5003t_1.getPm25Ae();
+      measurements.pm10_1 = ag->pms5003t_1.getPm10Ae();
+      measurements.pm03PCount_1 = ag->pms5003t_1.getPm03ParticleCount();
+      measurements.temp_1 = ag->pms5003t_1.getTemperature();
+      measurements.hum_1 = ag->pms5003t_1.getRelativeHumidity();
 
       pmsResult_1 = true;
 
       Serial.println();
-      Serial.printf("[1] PM1 ug/m3: %d\r\n", pm01_1);
-      Serial.printf("[1] PM2.5 ug/m3: %d\r\n", pm25_1);
-      Serial.printf("[1] PM10 ug/m3: %d\r\n", pm10_1);
-      Serial.printf("[1] PM3.0 Count: %d\r\n", pm03PCount_1);
-      Serial.printf("[1] Temperature in C: %0.2f\r\n", temp_1);
-      Serial.printf("[1] Relative Humidity: %d\r\n", hum_1);
+      Serial.printf("[1] PM1 ug/m3: %d\r\n", measurements.pm01_1);
+      Serial.printf("[1] PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
+      Serial.printf("[1] PM10 ug/m3: %d\r\n", measurements.pm10_1);
+      Serial.printf("[1] PM3.0 Count: %d\r\n", measurements.pm03PCount_1);
+      Serial.printf("[1] Temperature in C: %0.2f\r\n", measurements.temp_1);
+      Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
     } else {
-      pm01_1 = -1;
-      pm25_1 = -1;
-      pm10_1 = -1;
-      pm03PCount_1 = -1;
-      temp_1 = -1001;
-      hum_1 = -1;
+      measurements.pm01_1 = -1;
+      measurements.pm25_1 = -1;
+      measurements.pm10_1 = -1;
+      measurements.pm03PCount_1 = -1;
+      measurements.temp_1 = -1001;
+      measurements.hum_1 = -1;
     }
 
-    if (hasSensorPMS2 && (ag->pms5003t_2.isFailed() == false)) {
-      pm01_2 = ag->pms5003t_2.getPm01Ae();
-      pm25_2 = ag->pms5003t_2.getPm25Ae();
-      pm10_2 = ag->pms5003t_2.getPm10Ae();
-      pm03PCount_2 = ag->pms5003t_2.getPm03ParticleCount();
-      temp_2 = ag->pms5003t_2.getTemperature();
-      hum_2 = ag->pms5003t_2.getRelativeHumidity();
+    if (configuration.hasSensorPMS2 && (ag->pms5003t_2.isFailed() == false)) {
+      measurements.pm01_2 = ag->pms5003t_2.getPm01Ae();
+      measurements.pm25_2 = ag->pms5003t_2.getPm25Ae();
+      measurements.pm10_2 = ag->pms5003t_2.getPm10Ae();
+      measurements.pm03PCount_2 = ag->pms5003t_2.getPm03ParticleCount();
+      measurements.temp_2 = ag->pms5003t_2.getTemperature();
+      measurements.hum_2 = ag->pms5003t_2.getRelativeHumidity();
 
       pmsResult_2 = true;
 
       Serial.println();
-      Serial.printf("[2] PM1 ug/m3: %d\r\n", pm01_2);
-      Serial.printf("[2] PM2.5 ug/m3: %d\r\n", pm25_2);
-      Serial.printf("[2] PM10 ug/m3: %d\r\n", pm10_2);
-      Serial.printf("[2] PM3.0 Count: %d\r\n", pm03PCount_2);
-      Serial.printf("[2] Temperature in C: %0.2f\r\n", temp_2);
-      Serial.printf("[2] Relative Humidity: %d\r\n", hum_2);
+      Serial.printf("[2] PM1 ug/m3: %d\r\n", measurements.pm01_2);
+      Serial.printf("[2] PM2.5 ug/m3: %d\r\n", measurements.pm25_2);
+      Serial.printf("[2] PM10 ug/m3: %d\r\n", measurements.pm10_2);
+      Serial.printf("[2] PM3.0 Count: %d\r\n", measurements.pm03PCount_2);
+      Serial.printf("[2] Temperature in C: %0.2f\r\n", measurements.temp_2);
+      Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
     } else {
-      pm01_2 = -1;
-      pm25_2 = -1;
-      pm10_2 = -1;
-      pm03PCount_2 = -1;
-      temp_2 = -1001;
-      hum_2 = -1;
+      measurements.pm01_2 = -1;
+      measurements.pm25_2 = -1;
+      measurements.pm10_2 = -1;
+      measurements.pm03PCount_2 = -1;
+      measurements.temp_2 = -1001;
+      measurements.hum_2 = -1;
     }
 
-    if (hasSensorPMS1 && hasSensorPMS2 && pmsResult_1 && pmsResult_2) {
+    if (configuration.hasSensorPMS1 && configuration.hasSensorPMS2 &&
+        pmsResult_1 && pmsResult_2) {
       /** Get total of PMS1*/
-      pm1Value01 = pm1Value01 + pm01_1;
-      pm1Value25 = pm1Value25 + pm25_1;
-      pm1Value10 = pm1Value10 + pm10_1;
-      pm1PCount = pm1PCount + pm03PCount_1;
-      pm1temp = pm1temp + temp_1;
-      pm1hum = pm1hum + hum_1;
+      measurements.pm1Value01 = measurements.pm1Value01 + measurements.pm01_1;
+      measurements.pm1Value25 = measurements.pm1Value25 + measurements.pm25_1;
+      measurements.pm1Value10 = measurements.pm1Value10 + measurements.pm10_1;
+      measurements.pm1PCount =
+          measurements.pm1PCount + measurements.pm03PCount_1;
+      measurements.pm1temp = measurements.pm1temp + measurements.temp_1;
+      measurements.pm1hum = measurements.pm1hum + measurements.hum_1;
 
       /** Get total of PMS2 */
-      pm2Value01 = pm2Value01 + pm01_2;
-      pm2Value25 = pm2Value25 + pm25_2;
-      pm2Value10 = pm2Value10 + pm10_2;
-      pm2PCount = pm2PCount + pm03PCount_2;
-      pm2temp = pm2temp + temp_2;
-      pm2hum = pm2hum + hum_2;
+      measurements.pm2Value01 = measurements.pm2Value01 + measurements.pm01_2;
+      measurements.pm2Value25 = measurements.pm2Value25 + measurements.pm25_2;
+      measurements.pm2Value10 = measurements.pm2Value10 + measurements.pm10_2;
+      measurements.pm2PCount =
+          measurements.pm2PCount + measurements.pm03PCount_2;
+      measurements.pm2temp = measurements.pm2temp + measurements.temp_2;
+      measurements.pm2hum = measurements.pm2hum + measurements.hum_2;
 
-      countPosition++;
+      measurements.countPosition++;
 
       /** Get average */
-      if (countPosition == targetCount) {
-        pm01_1 = pm1Value01 / targetCount;
-        pm25_1 = pm1Value25 / targetCount;
-        pm10_1 = pm1Value10 / targetCount;
-        pm03PCount_1 = pm1PCount / targetCount;
-        temp_1 = pm1temp / targetCount;
-        hum_1 = pm1hum / targetCount;
+      if (measurements.countPosition == measurements.targetCount) {
+        measurements.pm01_1 =
+            measurements.pm1Value01 / measurements.targetCount;
+        measurements.pm25_1 =
+            measurements.pm1Value25 / measurements.targetCount;
+        measurements.pm10_1 =
+            measurements.pm1Value10 / measurements.targetCount;
+        measurements.pm03PCount_1 =
+            measurements.pm1PCount / measurements.targetCount;
+        measurements.temp_1 = measurements.pm1temp / measurements.targetCount;
+        measurements.hum_1 = measurements.pm1hum / measurements.targetCount;
 
-        pm01_2 = pm2Value01 / targetCount;
-        pm25_2 = pm2Value25 / targetCount;
-        pm10_2 = pm2Value10 / targetCount;
-        pm03PCount_2 = pm2PCount / targetCount;
-        temp_2 = pm2temp / targetCount;
-        hum_2 = pm2hum / targetCount;
+        measurements.pm01_2 =
+            measurements.pm2Value01 / measurements.targetCount;
+        measurements.pm25_2 =
+            measurements.pm2Value25 / measurements.targetCount;
+        measurements.pm10_2 =
+            measurements.pm2Value10 / measurements.targetCount;
+        measurements.pm03PCount_2 =
+            measurements.pm2PCount / measurements.targetCount;
+        measurements.temp_2 = measurements.pm2temp / measurements.targetCount;
+        measurements.hum_2 = measurements.pm2hum / measurements.targetCount;
 
-        countPosition = 0;
+        measurements.countPosition = 0;
 
-        pm1Value01 = 0;
-        pm1Value25 = 0;
-        pm1Value10 = 0;
-        pm1PCount = 0;
-        pm1temp = 0;
-        pm1hum = 0;
-        pm2Value01 = 0;
-        pm2Value25 = 0;
-        pm2Value10 = 0;
-        pm2PCount = 0;
-        pm2temp = 0;
-        pm2hum = 0;
+        measurements.pm1Value01 = 0;
+        measurements.pm1Value25 = 0;
+        measurements.pm1Value10 = 0;
+        measurements.pm1PCount = 0;
+        measurements.pm1temp = 0;
+        measurements.pm1hum = 0;
+        measurements.pm2Value01 = 0;
+        measurements.pm2Value25 = 0;
+        measurements.pm2Value10 = 0;
+        measurements.pm2PCount = 0;
+        measurements.pm2temp = 0;
+        measurements.pm2hum = 0;
       }
     }
 
     if (pmsResult_1 && pmsResult_2) {
-      agValue.Temperature = (temp_1 + temp_2) / 2;
-      agValue.Humidity = (hum_1 + hum_2) / 2;
+      measurements.Temperature =
+          (measurements.temp_1 + measurements.temp_2) / 2;
+      measurements.Humidity = (measurements.hum_1 + measurements.hum_2) / 2;
     } else {
       if (pmsResult_1) {
-        agValue.Temperature = temp_1;
-        agValue.Humidity = hum_1;
+        measurements.Temperature = measurements.temp_1;
+        measurements.Humidity = measurements.hum_1;
       }
       if (pmsResult_2) {
-        agValue.Temperature = temp_2;
-        agValue.Humidity = hum_2;
+        measurements.Temperature = measurements.temp_2;
+        measurements.Humidity = measurements.hum_2;
       }
     }
 
-    if (hasSensorSGP) {
+    if (configuration.hasSensorSGP) {
       float temp;
       float hum;
       if (pmsResult_1 && pmsResult_2) {
-        temp = (temp_1 + temp_2) / 2.0f;
-        hum = (hum_1 + hum_2) / 2.0f;
+        temp = (measurements.temp_1 + measurements.temp_2) / 2.0f;
+        hum = (measurements.hum_1 + measurements.hum_2) / 2.0f;
       } else {
         if (pmsResult_1) {
-          temp = temp_1;
-          hum = hum_1;
+          temp = measurements.temp_1;
+          hum = measurements.hum_1;
         }
         if (pmsResult_2) {
-          temp = temp_2;
-          hum = hum_2;
+          temp = measurements.temp_2;
+          hum = measurements.hum_2;
         }
       }
       ag->sgp41.setCompensationTemperatureHumidity(temp, hum);
@@ -1538,36 +902,28 @@ static void pmUpdate(void) {
   }
 }
 
-// todo: remove comment
-/**
- * @brief Send data to server
- *
- */
 static void sendDataToServer(void) {
-  String syncData = getServerSyncData(false);
+  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
+                                          ag, &configuration);
   if (apiClient.postToServer(syncData)) {
     resetWatchdog();
   }
 
-  bootCount++;
+  measurements.bootCount++;
 }
 
-// todo: remove comment
-/**
- * @brief Update temperature and humidity value
- */
 static void tempHumUpdate(void) {
   if (ag->sht.measure()) {
-    agValue.Temperature = ag->sht.getTemperature();
-    agValue.Humidity = ag->sht.getRelativeHumidity();
+    measurements.Temperature = ag->sht.getTemperature();
+    measurements.Humidity = ag->sht.getRelativeHumidity();
 
-    Serial.printf("Temperature in C: %0.2f\r\n", agValue.Temperature);
-    Serial.printf("Relative Humidity: %d\r\n", agValue.Humidity);
+    Serial.printf("Temperature in C: %0.2f\r\n", measurements.Temperature);
+    Serial.printf("Relative Humidity: %d\r\n", measurements.Humidity);
 
     // Update compensation temperature and humidity for SGP41
-    if (hasSensorSGP) {
-      ag->sgp41.setCompensationTemperatureHumidity(agValue.Temperature,
-                                                   agValue.Humidity);
+    if (configuration.hasSensorSGP) {
+      ag->sgp41.setCompensationTemperatureHumidity(measurements.Temperature,
+                                                   measurements.Humidity);
     }
   } else {
     Serial.println("SHT read failed");

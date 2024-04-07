@@ -9,7 +9,7 @@
 #include <HTTPClient.h>
 #endif
 
-AgApiClient::AgApiClient(Stream &debug, AgConfigure &config)
+AgApiClient::AgApiClient(Stream &debug, Configuration &config)
     : PrintLog(debug, "ApiClient"), config(config) {}
 
 AgApiClient::~AgApiClient() {}

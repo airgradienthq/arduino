@@ -7,19 +7,19 @@
 #include "Main/PrintLog.h"
 #include <Arduino.h>
 
-class AgOledDisplay : public PrintLog {
+class OledDisplay : public PrintLog {
 private:
-  AgConfigure &config;
+  Configuration &config;
   AirGradient *ag;
   bool isBegin = false;
   void *u8g2 = NULL;
-  AgValue &value;
+  Measurements &value;
 
   void showTempHum(bool hasStatus);
 public:
-  AgOledDisplay(AgConfigure &config, AgValue &value,
+  OledDisplay(Configuration &config, Measurements &value,
                 Stream &log);
-  ~AgOledDisplay();
+  ~OledDisplay();
 
   void setAirGradient(AirGradient *ag);
   bool begin(void); 

@@ -18,14 +18,14 @@
 
 class AgApiClient : public PrintLog {
 private:
-  AgConfigure &config;
+  Configuration &config;
   AirGradient *ag;
 
   bool getConfigFailed;
   bool postToServerFailed;
 
 public:
-  AgApiClient(Stream &stream, AgConfigure &config);
+  AgApiClient(Stream &stream, Configuration &config);
   ~AgApiClient();
 
   void begin(void);

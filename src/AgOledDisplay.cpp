@@ -9,7 +9,7 @@
  * 
  * @param hasStatus 
  */
-void AgOledDisplay::showTempHum(bool hasStatus) {
+void OledDisplay::showTempHum(bool hasStatus) {
   char buf[10];
   if (value.Temperature > -1001) {
     if (config.isTemperatureUnitInF()) {
@@ -53,20 +53,20 @@ void AgOledDisplay::showTempHum(bool hasStatus) {
  * @brief Construct a new Ag Oled Display:: Ag Oled Display object
  * 
  * @param config AgConfiguration
- * @param value AgValue
+ * @param value Measurements
  * @param log Serial Stream
  */
-AgOledDisplay::AgOledDisplay(AgConfigure &config, AgValue &value, Stream &log)
-    : PrintLog(log, "AgOledDisplay"), config(config), value(value) {}
+OledDisplay::OledDisplay(Configuration &config, Measurements &value, Stream &log)
+    : PrintLog(log, "OledDisplay"), config(config), value(value) {}
 
 /**
  * @brief Set AirGradient instance
  * 
  * @param ag Point to AirGradient instance
  */
-void AgOledDisplay::setAirGradient(AirGradient *ag) { this->ag = ag; }
+void OledDisplay::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-AgOledDisplay::~AgOledDisplay() {}
+OledDisplay::~OledDisplay() {}
 
 /**
  * @brief Initialize display
@@ -74,7 +74,7 @@ AgOledDisplay::~AgOledDisplay() {}
  * @return true Success
  * @return false Failure
  */
-bool AgOledDisplay::begin(void) {
+bool OledDisplay::begin(void) {
   if (isBegin) {
     logWarning("Already begin, call 'end' and try again");
     return true;
@@ -102,14 +102,14 @@ bool AgOledDisplay::begin(void) {
  * @brief De-Initialize display
  *
  */
-void AgOledDisplay::end(void) {
+void OledDisplay::end(void) {
   if (!isBegin) {
     logWarning("Already end, call 'begin' and try again");
     return;
   }
 
   /** Free u8g2 */
-  delete u8g2;
+  delete DISP();
   u8g2 = NULL;
 
   isBegin = false;
@@ -123,7 +123,7 @@ void AgOledDisplay::end(void) {
  * @param line2 
  * @param line3 
  */
-void AgOledDisplay::setText(String &line1, String &line2, String &line3) {
+void OledDisplay::setText(String &line1, String &line2, String &line3) {
   setText(line1.c_str(), line2.c_str(), line3.c_str());
 }
 
@@ -134,7 +134,7 @@ void AgOledDisplay::setText(String &line1, String &line2, String &line3) {
  * @param line2 
  * @param line3 
  */
-void AgOledDisplay::setText(const char *line1, const char *line2,
+void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3) {
   DISP()->firstPage();
   do {
@@ -153,7 +153,7 @@ void AgOledDisplay::setText(const char *line1, const char *line2,
  * @param line3 
  * @param line4 
  */
-void AgOledDisplay::setText(String &line1, String &line2, String &line3,
+void OledDisplay::setText(String &line1, String &line2, String &line3,
                             String &line4) {
   setText(line1.c_str(), line2.c_str(), line3.c_str(), line4.c_str());
 }
@@ -166,7 +166,7 @@ void AgOledDisplay::setText(String &line1, String &line2, String &line3,
  * @param line3 
  * @param line4 
  */
-void AgOledDisplay::setText(const char *line1, const char *line2,
+void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3, const char *line4) {
   DISP()->firstPage();
   do {
@@ -182,13 +182,13 @@ void AgOledDisplay::setText(const char *line1, const char *line2,
  * @brief Update dashboard content
  * 
  */
-void AgOledDisplay::showDashboard(void) { showDashboard(NULL); }
+void OledDisplay::showDashboard(void) { showDashboard(NULL); }
 
 /**
  * @brief Update dashboard content and error status
  * 
  */
-void AgOledDisplay::showDashboard(const char *status) {
+void OledDisplay::showDashboard(const char *status) {
   char strBuf[10];
 
   DISP()->firstPage();
@@ -244,8 +244,8 @@ void AgOledDisplay::showDashboard(const char *status) {
     /** Draw PM2.5 value */
     DISP()->setFont(u8g2_font_t0_22b_tf);
     if (config.isPmStandardInUSAQI()) {
-      if (value.PM25 >= 0) {
-        sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.PM25));
+      if (value.pm25_1 >= 0) {
+        sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.pm25_1));
       } else {
         sprintf(strBuf, "%s", "-");
       }
@@ -253,8 +253,8 @@ void AgOledDisplay::showDashboard(const char *status) {
       DISP()->setFont(u8g2_font_t0_12_tf);
       DISP()->drawUTF8(48, 61, "AQI");
     } else {
-      if (value.PM25 >= 0) {
-        sprintf(strBuf, "%d", value.PM25);
+      if (value.pm25_1 >= 0) {
+        sprintf(strBuf, "%d", value.pm25_1);
       } else {
         sprintf(strBuf, "%s", "-");
       }

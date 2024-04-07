@@ -54,6 +54,14 @@ enum AgStateMachineState {
      the server side */
   AgStateMachineSensorConfigFailed,
 
+  /** CO2 calibration */
+  AgStateMachineCo2Calibration,
+
+  /* LED bar testing */
+  AgStateMachineLedBarTest,
+
+  /** LED: Show working state.
+   * Display: Show dashboard */
   AgStateMachineNormal,
 };
 

@@ -1,5 +1,3 @@
-#ifdef ESP32
-
 #include "AgWiFiConnector.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 
@@ -9,24 +7,27 @@
 #define WIFI() ((WiFiManager *)(this->wifi))
 
 /**
- * @brief Construct a new Ag Wi Fi Connector:: Ag Wi Fi Connector object
- *
- * @param disp AgOledDisplay
- * @param log Stream
- * @param sm AgStateMachine
- */
-AgWiFiConnector::AgWiFiConnector(AgOledDisplay &disp, Stream &log,
-                                 AgStateMachine &sm)
-    : PrintLog(log, "AgWiFiConnector"), disp(disp), sm(sm) {}
-
-AgWiFiConnector::~AgWiFiConnector() {}
-
-/**
  * @brief Set reference AirGradient instance
  *
  * @param ag Point to AirGradient instance
  */
-void AgWiFiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
+void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+#ifdef ESP32
+/**
+ * @brief Construct a new Ag Wi Fi Connector:: Ag Wi Fi Connector object
+ *
+ * @param disp OledDisplay
+ * @param log Stream
+ * @param sm StateMachine
+ */
+WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm)
+    : PrintLog(log, "WifiConnector"), disp(disp), sm(sm) {}
+#else
+WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
+#endif
+
+WifiConnector::~WifiConnector() {}
 
 /**
  * @brief Connection to WIFI AP process. Just call one times
@@ -34,7 +35,7 @@ void AgWiFiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
  * @return true Success
  * @return false Failure
  */
-bool AgWiFiConnector::connect(void) {
+bool WifiConnector::connect(void) {
   if (wifi == NULL) {
     wifi = new WiFiManager();
     if (wifi == NULL) {
@@ -46,23 +47,27 @@ bool AgWiFiConnector::connect(void) {
   WIFI()->setConfigPortalBlocking(false);
   WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
+#ifdef ESP32
   WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
-
-  if (ag->isOneIndoor()) {
+  if (ag->isOne()) {
     disp.setText("Connecting to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }
-
   ssid = "airgradient-" + ag->deviceId();
+#else
+  ssid = "AG-" + String(ESP.getChipId(), HEX);
+#endif
+  WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
+#ifdef ESP32
   // Task handle WiFi connection.
   xTaskCreate(
       [](void *obj) {
-        AgWiFiConnector *connector = (AgWiFiConnector *)obj;
+        WifiConnector *connector = (WifiConnector *)obj;
         while (connector->_wifiConfigPortalActive()) {
           connector->_wifiProcess();
         }
@@ -81,7 +86,7 @@ bool AgWiFiConnector::connect(void) {
     if (WiFi.isConnected() == false) {
       /** Display countdown */
       uint32_t ms;
-      if (ag->isOneIndoor()) {
+      if (ag->isOne()) {
         ms = (uint32_t)(millis() - dispPeriod);
         if (ms >= 1000) {
           dispPeriod = millis();
@@ -98,7 +103,7 @@ bool AgWiFiConnector::connect(void) {
       ms = (uint32_t)(millis() - ledPeriod);
       if (ms >= 100) {
         ledPeriod = millis();
-        sm.ledHandle();
+        sm.handleLeds();
       }
 
       /** Check for client connect to change led color */
@@ -106,11 +111,11 @@ bool AgWiFiConnector::connect(void) {
       if (clientConnected != clientConnectChanged) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
-          sm.ledHandle(AgStateMachineWiFiManagerPortalActive);
+          sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
         } else {
           sm.ledAnimationInit();
-          sm.ledHandle(AgStateMachineWiFiManagerMode);
-          if (ag->isOneIndoor()) {
+          sm.handleLeds(AgStateMachineWiFiManagerMode);
+          if (ag->isOne()) {
             sm.displayHandle(AgStateMachineWiFiManagerMode);
           }
         }
@@ -121,15 +126,18 @@ bool AgWiFiConnector::connect(void) {
   }
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
-    sm.ledHandle(AgStateMachineWiFiManagerConnectFailed);
-    if (ag->isOneIndoor()) {
+    sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
+    if (ag->isOne()) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
   } else {
     hasConfig = true;
+    logInfo("WiFi Connected: " + WiFi.SSID() + " IP: " + localIpStr());
   }
-
+#else
+  _wifiProcess();
+#endif
   return true;
 }
 
@@ -137,12 +145,30 @@ bool AgWiFiConnector::connect(void) {
  * @brief Disconnect to current connected WiFi AP
  *
  */
-void AgWiFiConnector::disconnect(void) {
+void WifiConnector::disconnect(void) {
   if (WiFi.isConnected()) {
     logInfo("Disconnect");
     WiFi.disconnect();
   }
 }
+
+#ifdef ESP32
+#else
+void WifiConnector::displayShowText(String ln1, String ln2, String ln3) {
+  char buf[9];
+  ag->display.clear();
+
+  ag->display.setCursor(1, 1);
+  ag->display.setText(ln1);
+  ag->display.setCursor(1, 19);
+  ag->display.setText(ln2);
+  ag->display.setCursor(1, 37);
+  ag->display.setText(ln3);
+
+  ag->display.show();
+  delay(100);
+}
+#endif
 
 /**
  * @brief Has wifi STA connected to WIFI softAP (this device)
@@ -150,37 +176,38 @@ void AgWiFiConnector::disconnect(void) {
  * @return true Connected
  * @return false Not connected
  */
-bool AgWiFiConnector::wifiClientConnected(void) {
+bool WifiConnector::wifiClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
+#ifdef ESP32
 /**
  * @brief Handle WiFiManage softAP setup completed callback
  *
  */
-void AgWiFiConnector::_wifiApCallback(void) {
+void WifiConnector::_wifiApCallback(void) {
   sm.displayWiFiConnectCountDown(WIFI_CONNECT_COUNTDOWN_MAX);
   sm.setDisplayState(AgStateMachineWiFiManagerMode);
   sm.ledAnimationInit();
-  sm.ledHandle(AgStateMachineWiFiManagerMode);
+  sm.handleLeds(AgStateMachineWiFiManagerMode);
 }
 
 /**
  * @brief Handle WiFiManager save configuration callback
  *
  */
-void AgWiFiConnector::_wifiSaveConfig(void) {
+void WifiConnector::_wifiSaveConfig(void) {
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnected);
-  sm.ledHandle(AgStateMachineWiFiManagerStaConnected);
+  sm.handleLeds(AgStateMachineWiFiManagerStaConnected);
 }
 
 /**
  * @brief Handle WiFiManager save parameter callback
  *
  */
-void AgWiFiConnector::_wifiSaveParamCallback(void) {
+void WifiConnector::_wifiSaveParamCallback(void) {
   sm.ledAnimationInit();
-  sm.ledHandle(AgStateMachineWiFiManagerStaConnecting);
+  sm.handleLeds(AgStateMachineWiFiManagerStaConnecting);
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnecting);
 }
 
@@ -190,21 +217,52 @@ void AgWiFiConnector::_wifiSaveParamCallback(void) {
  * @return true Active
  * @return false Not-Active
  */
-bool AgWiFiConnector::_wifiConfigPortalActive(void) {
+bool WifiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
-
+#endif
 /**
  * @brief Process WiFiManager connection
  *
  */
-void AgWiFiConnector::_wifiProcess() { WIFI()->process(); }
+void WifiConnector::_wifiProcess() {
+#ifdef ESP32
+  WIFI()->process();
+#else
+  int count = WIFI_CONNECT_COUNTDOWN_MAX;
+  displayShowText(String(WIFI_CONNECT_COUNTDOWN_MAX) + " sec", "SSID:", ssid);
+  while (WIFI()->getConfigPortalActive()) {
+    WIFI()->process();
+    
+    uint32_t lastTime = millis();
+    uint32_t ms = (uint32_t)(millis() - lastTime);
+    if (ms >= 1000) {
+      lastTime = millis();
+
+      displayShowText(String(count) + " sec", "SSID:", ssid);
+
+      count--;
+
+      // Timeout
+      if (count == 0) {
+        break;
+      }
+    }
+  }
+
+  if (!WiFi.isConnected()) {
+    displayShowText("Booting", "offline", "mode");
+    Serial.println("failed to connect and hit timeout");
+    delay(2500);
+  }
+#endif
+}
 
 /**
  * @brief Handle and reconnect WiFi
  *
  */
-void AgWiFiConnector::handle(void) {
+void WifiConnector::handle(void) {
   // Ignore if WiFi is not configured
   if (hasConfig == false) {
     return;
@@ -232,27 +290,25 @@ void AgWiFiConnector::handle(void) {
  * @return true  Connected
  * @return false Disconnected
  */
-bool AgWiFiConnector::isConnected(void) { return WiFi.isConnected(); }
+bool WifiConnector::isConnected(void) { return WiFi.isConnected(); }
 
 /**
  * @brief Reset WiFi configuretion and connection, disconnect wifi before call
  * this method
  *
  */
-void AgWiFiConnector::reset(void) { WIFI()->resetSettings(); }
+void WifiConnector::reset(void) { WIFI()->resetSettings(); }
 
 /**
  * @brief Get wifi RSSI
  *
  * @return int
  */
-int AgWiFiConnector::RSSI(void) { return WiFi.RSSI(); }
+int WifiConnector::RSSI(void) { return WiFi.RSSI(); }
 
 /**
  * @brief Get WIFI IP as string format ex: 192.168.1.1
  *
  * @return String
  */
-String AgWiFiConnector::localIpStr(void) { return WiFi.localIP().toString(); }
-
-#endif
+String WifiConnector::localIpStr(void) { return WiFi.localIP().toString(); }

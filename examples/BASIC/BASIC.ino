@@ -15,7 +15,6 @@ https://www.airgradient.com/documentation/diy-v4/
 Following libraries need to be installed:
 “WifiManager by tzapu, tablatronix” tested with version 2.0.16-rc.2
 "Arduino_JSON" by Arduino version 0.2.0
-"U8g2" by oliver version 2.34.22
 
 Please make sure you have esp8266 board manager installed. Tested with
 version 3.1.2.
@@ -32,15 +31,15 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
-#include <AirGradient.h>
-#include "AgSchedule.h"
-#include "AgConfigure.h"
 #include "AgApiClient.h"
+#include "AgConfigure.h"
+#include "AgSchedule.h"
+#include "AgWiFiConnector.h"
+#include <AirGradient.h>
 #include <Arduino_JSON.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <WiFiManager.h>
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180       /** sec */
 #define WIFI_CONNECT_RETRY_MS 10000          /** ms */
@@ -61,20 +60,19 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 /** Create airgradient instance for 'DIY_BASIC' board */
 static AirGradient ag = AirGradient(DIY_BASIC);
-static AgConfigure localConfig(Serial);
-static AgApiClient apiClient(Serial, localConfig);
+static Configuration configuration(Serial);
+static AgApiClient apiClient(Serial, configuration);
+static WifiConnector wifiConnector(Serial);
 
 static int co2Ppm = -1;
 static int pm25 = -1;
 static float temp = -1001;
 static int hum = -1;
 static long val;
-static String wifiSSID = "";
-static bool wifiHasConfig = false; /** */
 
 static void boardInit(void);
 static void failedHandler(String msg);
-static void co2Calibration(void);
+static void executeCo2Calibration(void);
 static void updateServerConfiguration(void);
 static void co2Update(void);
 static void pmUpdate(void);
@@ -82,7 +80,6 @@ static void tempHumUpdate(void);
 static void sendDataToServer(void);
 static void dispHandler(void);
 static String getDevId(void);
-static void updateWiFiConnect(void);
 static void showNr(void);
 
 bool hasSensorS8 = true;
@@ -112,23 +109,24 @@ void setup() {
   /** Init AirGradient server */
   apiClient.begin();
   apiClient.setAirGradient(&ag);
+  wifiConnector.setAirGradient(&ag);
 
   /** Show boot display */
   displayShowText("DIY basic", "Lib:" + ag.getVersion(), "");
   delay(2000);
 
   /** WiFi connect */
-  connectToWifi();
-  if (WiFi.status() == WL_CONNECTED) {
-    wifiHasConfig = true;
-    sendPing();
+  // connectToWifi();
+  if (wifiConnector.connect()) {
+    if (WiFi.status() == WL_CONNECTED) {
+      sendDataToAg();
 
-    apiClient.fetchServerConfiguration();
-    if (localConfig.isCo2CalibrationRequested()) {
-      co2Calibration();
+      apiClient.fetchServerConfiguration();
+      if (configuration.isCo2CalibrationRequested()) {
+        executeCo2Calibration();
+      }
     }
   }
-
   /** Show serial number display */
   ag.display.clear();
   ag.display.setCursor(1, 1);
@@ -162,13 +160,13 @@ void loop() {
     tempHumSchedule.run();
   }
 
-  updateWiFiConnect();
+  wifiConnector.handle();
 
   /** Read PMS on loop */
   ag.pms5003.handle();
 }
 
-static void sendPing() {
+static void sendDataToAg() {
   JSONVar root;
   root["wifi"] = WiFi.RSSI();
   root["boot"] = 0;
@@ -195,39 +193,6 @@ void displayShowText(String ln1, String ln2, String ln3) {
 
   ag.display.show();
   delay(100);
-}
-
-// Wifi Manager
-void connectToWifi() {
-  WiFiManager wifiManager;
-  wifiSSID = "AG-" + String(ESP.getChipId(), HEX);
-  wifiManager.setConfigPortalBlocking(false);
-  wifiManager.setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
-  wifiManager.autoConnect(wifiSSID.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
-
-  uint32_t lastTime = millis();
-  int count = WIFI_CONNECT_COUNTDOWN_MAX;
-  displayShowText(String(WIFI_CONNECT_COUNTDOWN_MAX) + " sec",
-                  "SSID:", wifiSSID);
-  while (wifiManager.getConfigPortalActive()) {
-    wifiManager.process();
-    uint32_t ms = (uint32_t)(millis() - lastTime);
-    if (ms >= 1000) {
-      lastTime = millis();
-      displayShowText(String(count) + " sec", "SSID:", wifiSSID);
-      count--;
-
-      // Timeout
-      if (count == 0) {
-        break;
-      }
-    }
-  }
-  if (!WiFi.isConnected()) {
-    displayShowText("Booting", "offline", "mode");
-    Serial.println("failed to connect and hit timeout");
-    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-  }
 }
 
 static void boardInit(void) {
@@ -264,7 +229,7 @@ static void failedHandler(String msg) {
   }
 }
 
-static void co2Calibration(void) {
+static void executeCo2Calibration(void) {
   /** Count down for co2CalibCountdown secs */
   for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
     displayShowText("CO2 calib", "after",
@@ -291,25 +256,25 @@ static void co2Calibration(void) {
 
 static void updateServerConfiguration(void) {
   if (apiClient.fetchServerConfiguration()) {
-    if (localConfig.isCo2CalibrationRequested()) {
+    if (configuration.isCo2CalibrationRequested()) {
       if (hasSensorS8) {
-        co2Calibration();
+        executeCo2Calibration();
       } else {
         Serial.println("CO2 S8 not available, calib ignored");
       }
     }
-    if (localConfig.getCO2CalirationAbcDays() > 0) {
+    if (configuration.getCO2CalibrationAbcDays() > 0) {
       if (hasSensorS8) {
-        int newHour = localConfig.getCO2CalirationAbcDays() * 24;
+        int newHour = configuration.getCO2CalibrationAbcDays() * 24;
         Serial.printf("abcDays config: %d days(%d hours)\r\n",
-                      localConfig.getCO2CalirationAbcDays(), newHour);
+                      configuration.getCO2CalibrationAbcDays(), newHour);
         int curHour = ag.s8.getAbcPeriod();
         Serial.printf("Current config: %d (hours)\r\n", curHour);
         if (curHour == newHour) {
           Serial.println("set 'abcDays' ignored");
         } else {
-          if (ag.s8.setAbcPeriod(localConfig.getCO2CalirationAbcDays() * 24) ==
-              false) {
+          if (ag.s8.setAbcPeriod(configuration.getCO2CalibrationAbcDays() *
+                                 24) == false) {
             Serial.println("Set S8 abcDays period calib failed");
           } else {
             Serial.println("Set S8 abcDays period calib success");
@@ -388,7 +353,7 @@ static void dispHandler() {
   String ln2 = "";
   String ln3 = "";
 
-  if (localConfig.isPmStandardInUSAQI()) {
+  if (configuration.isPmStandardInUSAQI()) {
     if (pm25 < 0) {
       ln1 = "AQI: -";
     } else {
@@ -415,7 +380,7 @@ static void dispHandler() {
 
   String _temp = "-";
 
-  if (localConfig.isTemperatureUnitInF()) {
+  if (configuration.isTemperatureUnitInF()) {
     if (temp > -1001) {
       _temp = String((temp * 9 / 5) + 32).substring(0, 4);
     }
@@ -430,27 +395,6 @@ static void dispHandler() {
 }
 
 static String getDevId(void) { return getNormalizedMac(); }
-
-/**
- * @brief WiFi reconnect handler
- */
-static void updateWiFiConnect(void) {
-  static uint32_t lastRetry;
-  if (wifiHasConfig == false) {
-    return;
-  }
-  if (WiFi.isConnected()) {
-    lastRetry = millis();
-    return;
-  }
-  uint32_t ms = (uint32_t)(millis() - lastRetry);
-  if (ms >= WIFI_CONNECT_RETRY_MS) {
-    lastRetry = millis();
-    WiFi.reconnect();
-
-    Serial.printf("Re-Connect WiFi\r\n");
-  }
-}
 
 static void showNr(void) {
   Serial.println();

@@ -7,15 +7,15 @@
 #include "Main/PrintLog.h"
 #include "App/AppDef.h"
 
-class AgStateMachine : public PrintLog {
+class StateMachine : public PrintLog {
 private:
   // AgStateMachineState state;
   AgStateMachineState ledState;
   AgStateMachineState dispState;
   AirGradient *ag;
-  AgOledDisplay &disp;
-  AgValue &value;
-  AgConfigure &config;
+  OledDisplay &disp;
+  Measurements &value;
+  Configuration &config;
 
   bool addToDashBoard = false;
   uint32_t addToDashboardTime;
@@ -24,14 +24,18 @@ private:
 
   void ledBarSingleLedAnimation(uint8_t r, uint8_t g, uint8_t b);
   void ledStatusBlinkDelay(uint32_t delay);
-  void sensorLedHandle(void);
-  void co2LedHandle(void);
-  void pm25LedHandle(void);
+  void sensorhandleLeds(void);
+  void co2handleLeds(void);
+  void pm25handleLeds(void);
+  void co2Calibration(void);
+  void ledBarTest(void);
+  void ledBarRunTest(void);
+  void runLedTest(char color);
 
 public:
-  AgStateMachine(AgOledDisplay &disp, Stream &log,
-                 AgValue &value, AgConfigure& config);
-  ~AgStateMachine();
+  StateMachine(OledDisplay &disp, Stream &log,
+                 Measurements &value, Configuration& config);
+  ~StateMachine();
   void setAirGradient(AirGradient* ag);
   void displayHandle(AgStateMachineState state);
   void displayHandle(void);
@@ -39,11 +43,13 @@ public:
   void displayClearAddToDashBoard(void);
   void displayWiFiConnectCountDown(int count);
   void ledAnimationInit(void);
-  void ledHandle(AgStateMachineState state);
-  void ledHandle(void);
+  void handleLeds(AgStateMachineState state);
+  void handleLeds(void);
   void setDisplayState(AgStateMachineState state);
   AgStateMachineState getDisplayState(void);
   AgStateMachineState getLedState(void);
+  void executeCo2Calibration(void);
+  void executeLedBarTest(void);
 };
 
 #endif /** _AG_STATE_MACHINE_H_ */
