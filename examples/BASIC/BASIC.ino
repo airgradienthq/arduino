@@ -13,7 +13,6 @@ Build Instructions:
 https://www.airgradient.com/documentation/diy-v4/
 
 Following libraries need to be installed:
-“WifiManager by tzapu, tablatronix” tested with version 2.0.16-rc.2
 "Arduino_JSON" by Arduino version 0.2.0
 
 Please make sure you have esp8266 board manager installed. Tested with
