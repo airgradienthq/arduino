@@ -1457,7 +1457,7 @@ static void displayShowDashboard(String err) {
       if (co2Ppm < 10000) {
         val = co2Ppm;
       }
-      sprintf(strBuf, "%d", co2Ppm);
+      sprintf(strBuf, "%d", val);
     } else {
       sprintf(strBuf, "%s", "-");
     }
