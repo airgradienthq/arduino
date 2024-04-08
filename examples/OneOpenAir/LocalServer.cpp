@@ -50,7 +50,7 @@ void LocalServer::_PUT_config(void) {
     statusCode = 200;
     response = "Success";
   } else {
-    response = "Set for cloud configuration. Local configuration ignored";
+    response = config.getFailedMesage();
   }
   server.send(statusCode, "text/plain", response);
 }

@@ -60,12 +60,12 @@ void Configuration::loadConfig(void) {
   }
   readSuccess = true;
 #else
-  if (EEPROM.readBytes(0, &config, sizeof(config)) != sizeof(config)) {
+  if (EEPROM.readBytes(0, &config, sizeof(config)) == sizeof(config)) {
     readSuccess = true;
   }
 #endif
 
-  if (readSuccess) {
+  if (!readSuccess) {
     logError("Load configure failed");
     defaultConfig();
   } else {
@@ -79,6 +79,23 @@ void Configuration::loadConfig(void) {
     if (sum != config._check) {
       logError("Configure validate invalid");
       defaultConfig();
+    } else {
+      bool changed = false;
+      if ((config.temperatureUnit != 'c') && (config.temperatureUnit != 'f')) {
+        config.temperatureUnit = 'c';
+        changed = true;
+        logError("Temperture unit invalid, set default 'c'");
+      }
+      if ((config.useRGBLedBar != (uint8_t)LedBarModeCO2) &&
+          (config.useRGBLedBar != (uint8_t)LedBarModePm) &&
+          (config.useRGBLedBar != (uint8_t)LedBarModeOff)) {
+        config.useRGBLedBar = (uint8_t)LedBarModeCO2;
+        changed = true;
+        logError("LedBarMode invalid, set default: co2");
+      }
+      if (changed) {
+        saveConfig();
+      }
     }
   }
 }
@@ -152,8 +169,10 @@ bool Configuration::begin(void) {
  */
 bool Configuration::parse(String data, bool isLocal) {
   JSONVar root = JSON.parse(data);
+  failedMessage = "";
   if (JSON.typeof_(root) == "undefined") {
-    logError("Configuration JSON invalid");
+    failedMessage = "JSON invalid";
+    logError(failedMessage);
     return false;
   }
   logInfo("Parse configure success");
@@ -185,29 +204,36 @@ bool Configuration::parse(String data, bool isLocal) {
             (uint8_t)ConfigurationControl::ConfigurationControlBoth;
         changed = true;
       } else {
-
-        logError(String("'configurationControl' value '" +
-                        configurationControl + "' invalid")
-                     .c_str());
+        failedMessage = jsonValueInvalidMessage("configurationControl",
+                                                configurationControl);
+        jsonInvalid();
         return false;
       }
     } else {
-      return false;
+      if (jsonTypeInvalid(root["configurationControl"], "string")) {
+        failedMessage =
+            jsonTypeInvalidMessage("configurationControl", "string");
+        jsonInvalid();
+        return false;
+      }
     }
 
     if ((config.configurationControl ==
          (byte)ConfigurationControl::ConfigurationControlCloud)) {
-      logWarning("Local configure ignored");
+      failedMessage = "Local configure ignored";
+      jsonInvalid();
       return false;
     }
   } else {
     if (config.configurationControl ==
         (byte)ConfigurationControl::ConfigurationControlLocal) {
-      logWarning("Cloud configure ignored");
+      failedMessage = "Cloud configure ignored";
+      jsonInvalid();
       return false;
     }
   }
 
+  char temperatureUnit = 0;
   if (JSON.typeof_(root["country"]) == "string") {
     String country = root["country"];
     if (country.length() == 2) {
@@ -220,21 +246,23 @@ bool Configuration::parse(String data, bool isLocal) {
       // Update temperature unit if get configuration from server
       if (isLocal == false) {
         if (country == "US") {
-          if (config.temperatureUnit == 'c') {
-            changed = true;
-            config.temperatureUnit = 'f';
-          }
+          temperatureUnit = 'f';
         } else {
-          if (config.temperatureUnit == 'f') {
-            changed = true;
-            config.temperatureUnit = 'c';
-          }
+          temperatureUnit = 'c';
         }
       }
     } else {
-      logInfo("Country name " + country +
-              " invalid. Find details here (ALPHA-2): "
-              "https://www.iban.com/country-codes");
+      failedMessage = "Country name " + country +
+                      " invalid. Find details here (ALPHA-2): "
+                      "https://www.iban.com/country-codes";
+      jsonInvalid();
+      return false;
+    }
+  } else {
+    if (jsonTypeInvalid(root["country"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("country", "string");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -243,6 +271,12 @@ bool Configuration::parse(String data, bool isLocal) {
     bool inUSAQI = true;
     if (pmStandard == "ugm3") {
       inUSAQI = false;
+    } else if (pmStandard == "USAQI") {
+      inUSAQI = true;
+    } else {
+      failedMessage = jsonValueInvalidMessage("pmStandard", pmStandard);
+      jsonInvalid();
+      return false;
     }
 
     if (inUSAQI != config.inUSAQI) {
@@ -250,16 +284,35 @@ bool Configuration::parse(String data, bool isLocal) {
       changed = true;
       logInfo("Set PM standard: " + pmStandard);
     }
+  } else {
+    if (jsonTypeInvalid(root["pmStandard"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("pmStandard", "string");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
     co2CalibrationRequested = root["co2CalibrationRequested"];
     logInfo("Set co2CalibrationRequested: " + String(co2CalibrationRequested));
+  } else {
+    if (jsonTypeInvalid(root["co2CalibrationRequested"], "boolean")) {
+      failedMessage =
+          jsonTypeInvalidMessage("co2CalibrationRequested", "boolean");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
     ledBarTestRequested = root["ledBarTestRequested"];
     logInfo("Set ledBarTestRequested: " + String(ledBarTestRequested));
+  } else {
+    if (jsonTypeInvalid(root["ledBarTestRequested"], "boolean")) {
+      failedMessage = jsonTypeInvalidMessage("ledBarTestRequested", "boolean");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["ledBarMode"]) == "string") {
@@ -272,14 +325,21 @@ bool Configuration::parse(String data, bool isLocal) {
     } else if (mode == String(LED_BAR_MODE_NAMES[LedBarModeOff])) {
       ledBarMode = LedBarModeOff;
     } else {
-      ledBarMode = config.useRGBLedBar;
-      logInfo("ledBarMode value '" + mode + "' invalid");
+      failedMessage = jsonValueInvalidMessage("ledBarMode", mode);
+      jsonInvalid();
+      return false;
     }
 
     if (ledBarMode != config.useRGBLedBar) {
       config.useRGBLedBar = ledBarMode;
       changed = true;
       logInfo("Set ledBarMode: " + mode);
+    }
+  } else {
+    if (jsonTypeInvalid(root["ledBarMode"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("ledBarMode", "string");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -291,8 +351,9 @@ bool Configuration::parse(String data, bool isLocal) {
     } else if (mode == "off") {
       displayMode = false;
     } else {
-      displayMode = config.displayMode;
-      logInfo("displayMode '" + mode + "' invalid");
+      failedMessage = jsonTypeInvalidMessage("displayMode", mode);
+      jsonInvalid();
+      return false;
     }
 
     if (displayMode != config.displayMode) {
@@ -300,14 +361,31 @@ bool Configuration::parse(String data, bool isLocal) {
       config.displayMode = displayMode;
       logInfo("Set displayMode: " + mode);
     }
+  } else {
+    if (jsonTypeInvalid(root["displayMode"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("displayMode", "string");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["abcDays"]) == "number") {
     int abcDays = root["abcDays"];
+    if (abcDays <= 0) {
+      failedMessage = jsonTypeInvalidMessage("abcDaysabcDays", String(abcDays));
+      jsonInvalid();
+      return false;
+    }
     if (abcDays != config.abcDays) {
       config.abcDays = abcDays;
       changed = true;
       logInfo("Set abcDays: " + String(abcDays));
+    }
+  } else {
+    if (jsonTypeInvalid(root["abcDays"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("abcDays", "number");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -318,6 +396,12 @@ bool Configuration::parse(String data, bool isLocal) {
       config.tvocLearningOffset = tvocLearningOffset;
       logInfo("Set tvocLearningOffset: " + String(tvocLearningOffset));
     }
+  } else {
+    if (jsonTypeInvalid(root["tvocLearningOffset"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("tvocLearningOffset", "number");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (JSON.typeof_(root["noxLearningOffset"]) == "number") {
@@ -326,6 +410,12 @@ bool Configuration::parse(String data, bool isLocal) {
       changed = true;
       config.noxLearningOffset = noxLearningOffset;
       logInfo("Set noxLearningOffset: " + String(noxLearningOffset));
+    }
+  } else {
+    if (jsonTypeInvalid(root["noxLearningOffset"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("noxLearningOffset", "number");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -338,30 +428,43 @@ bool Configuration::parse(String data, bool isLocal) {
         logInfo("Set mqttBrokerUrl: " + broker);
       }
     } else {
-      logError("Error: mqttBroker length invalid: " + String(broker.length()));
+      failedMessage =
+          "'mqttBroker' value length invalid: " + String(broker.length());
+      jsonInvalid();
+      return false;
+    }
+  } else {
+    if (jsonTypeInvalid(root["mqttBrokerUrl"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("mqttBrokerUrl", "string");
+      jsonInvalid();
+      return false;
     }
   }
 
-  char temperatureUnit = 0;
   if (JSON.typeof_(root["temperatureUnit"]) == "string") {
     String unit = root["temperatureUnit"];
-    if (unit == "c" || unit == "C") {
+    unit.toLowerCase();
+    if (unit == "c") {
       temperatureUnit = 'c';
-    } else if (unit == "f" || unit == "F") {
+    } else if (unit == "f") {
       temperatureUnit = 'f';
     } else {
-      temperatureUnit = 0;
+      failedMessage = "'temperatureUnit' value '" + unit + "' invalid";
+      logError(failedMessage);
+      return false;
+    }
+  } else {
+    if (jsonTypeInvalid(root["temperatureUnit"], "string")) {
+      failedMessage = jsonTypeInvalidMessage("temperatureUnit", "string");
+      jsonInvalid();
+      return false;
     }
   }
 
-  if (temperatureUnit != config.temperatureUnit) {
+  if (temperatureUnit != 0 && temperatureUnit != config.temperatureUnit) {
     changed = true;
     config.temperatureUnit = temperatureUnit;
-    if (temperatureUnit == 0) {
-      logInfo("set temperatureUnit: null");
-    } else {
-      logInfo("set temperatureUnit: " + String(temperatureUnit));
-    }
+    logInfo("set temperatureUnit: " + String(temperatureUnit));
   }
 
   if (JSON.typeof_(root["postDataToAirGradient"]) == "boolean") {
@@ -370,6 +473,13 @@ bool Configuration::parse(String data, bool isLocal) {
       changed = true;
       config.postDataToAirGradient = post;
       logInfo("Set postDataToAirGradient: " + String(post));
+    }
+  } else {
+    if (jsonTypeInvalid(root["postDataToAirGradient"], "boolean")) {
+      failedMessage =
+          jsonTypeInvalidMessage("postDataToAirGradient", "boolean");
+      jsonInvalid();
+      return false;
     }
   }
 
@@ -383,7 +493,16 @@ bool Configuration::parse(String data, bool isLocal) {
           snprintf(config.model, sizeof(config.model), model.c_str());
         }
       } else {
-        logError("Error: modal name length invalid: " + String(model.length()));
+        failedMessage =
+            "'modal' value length invalid: " + String(model.length());
+        jsonInvalid();
+        return false;
+      }
+    } else {
+      if (jsonTypeInvalid(root["model"], "string")) {
+        failedMessage = jsonTypeInvalidMessage("model", "string");
+        jsonInvalid();
+        return false;
       }
     }
   }
@@ -406,7 +525,7 @@ String Configuration::toString(void) {
   JSONVar root;
 
   /** "country" */
-  root["Country"] = String(config.country);
+  root["country"] = String(config.country);
 
   /** "pmStandard" */
   if (config.inUSAQI) {
@@ -422,7 +541,11 @@ String Configuration::toString(void) {
   root["ledBarMode"] = getLedBarModeName();
 
   /** "displayMode" */
-  root["displayMode"] = config.displayMode;
+  if (config.displayMode) {
+    root["displayMode"] = "on";
+  } else {
+    root["displayMode"] = "off";
+  }
 
   /** "abcDays" */
   root["abcDays"] = config.abcDays;
@@ -582,3 +705,26 @@ bool Configuration::isUpdated(void) {
   this->udpated = false;
   return updated;
 }
+
+bool Configuration::jsonTypeInvalid(JSONVar root, String validType) {
+  String type = JSON.typeof_(root);
+  if (type == validType || type == "undefined" || type == "unknown" || type == "null") {
+    return false;
+  }
+  return true;
+}
+
+String Configuration::jsonTypeInvalidMessage(String name, String type) {
+  return "'" + name + "' type invalid, it's should '" + type + "'";
+}
+
+String Configuration::jsonValueInvalidMessage(String name, String value) {
+  return "'" + name + "' value '" + value + "' invalid";
+}
+
+void Configuration::jsonInvalid(void) {
+  loadConfig();
+  logError(failedMessage);
+}
+
+String Configuration::getFailedMesage(void) { return failedMessage; }

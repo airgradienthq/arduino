@@ -15,7 +15,12 @@ void AgSchedule::run(void) {
 
 /**
  * @brief Set schedule period
- * 
+ *
  * @param period Period in ms
  */
 void AgSchedule::setPeriod(int period) { this->period = period; }
+
+/**
+ * @brief Update period
+ */
+void AgSchedule::update(void) { count = millis(); }

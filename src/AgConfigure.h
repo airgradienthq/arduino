@@ -33,12 +33,17 @@ private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
   bool udpated;
+  String failedMessage;
 
   String getLedBarModeName(LedBarMode mode);
   void saveConfig(void);
   void loadConfig(void);
   void defaultConfig(void);
   void printConfig(void);
+  bool jsonTypeInvalid(JSONVar root, String validType);
+  String jsonTypeInvalidMessage(String name, String type);
+  String jsonValueInvalidMessage(String name, String value);
+  void jsonInvalid(void);
 
 public:
   Configuration(Stream &debugLog);
@@ -68,6 +73,7 @@ public:
   void reset(void);
   String getModel(void);
   bool isUpdated(void);
+  String getFailedMesage(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

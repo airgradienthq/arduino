@@ -102,7 +102,6 @@ static void configurationUpdateSchedule(void);
 static void executeCo2Calibration(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
-static void updateWiFiConnect(void);
 static void oledDisplayLedBarSchedule(void);
 static void updateTvoc(void);
 static void updatePm(void);
@@ -186,6 +185,7 @@ void setup() {
         sendDataToAg();
 
         apiClient.fetchServerConfiguration();
+        configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOne()) {
             stateMachine.displayHandle(

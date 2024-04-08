@@ -13,6 +13,7 @@ public:
   AgSchedule(int period, void (*handler)(void));
   ~AgSchedule();
   void run(void);
+  void update(void);
   void setPeriod(int period);
 };
 
