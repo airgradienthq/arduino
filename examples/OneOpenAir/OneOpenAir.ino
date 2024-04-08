@@ -913,6 +913,7 @@ static void sendDataToServer(void) {
 }
 
 static void tempHumUpdate(void) {
+  delay(100);
   if (ag->sht.measure()) {
     measurements.Temperature = ag->sht.getTemperature();
     measurements.Humidity = ag->sht.getRelativeHumidity();
