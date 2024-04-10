@@ -62,10 +62,9 @@ bool WifiConnector::connect(void) {
 #endif
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
-  WiFiManagerParameter lineBreak("<p>Check to enabled post data to AirGradient cloud</p>");
-  WIFI()->addParameter(&lineBreak);
   WiFiManagerParameter postToAg("chbPostToAg", "Post To AirGradient", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
   WIFI()->addParameter(&postToAg);
+  
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
 #ifdef ESP32
