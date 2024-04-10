@@ -74,6 +74,7 @@ public:
   String getModel(void);
   bool isUpdated(void);
   String getFailedMesage(void);
+  void setPostToAirGradient(bool enable);
 };
 
 #endif /** _AG_CONFIG_H_ */

@@ -728,3 +728,13 @@ void Configuration::jsonInvalid(void) {
 }
 
 String Configuration::getFailedMesage(void) { return failedMessage; }
+
+void Configuration::setPostToAirGradient(bool enable) {
+  if (enable != config.postDataToAirGradient) {
+    config.postDataToAirGradient = enable;
+    logInfo("postDataToAirGradient set to: " + String(enable));
+    saveConfig();
+  } else {
+    logInfo("postDataToAirGradient: Ignored set to " + String(enable));
+  }
+}

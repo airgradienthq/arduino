@@ -82,7 +82,7 @@ static AirGradient *ag;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
 static StateMachine stateMachine(oledDisplay, Serial, measurements,
                                  configuration);
-static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine);
+static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,

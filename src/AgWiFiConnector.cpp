@@ -21,8 +21,8 @@ void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
  * @param log Stream
  * @param sm StateMachine
  */
-WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm)
-    : PrintLog(log, "WifiConnector"), disp(disp), sm(sm) {}
+WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,Configuration& config)
+    : PrintLog(log, "WifiConnector"), disp(disp), sm(sm), config(config) {}
 #else
 WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
 #endif
@@ -61,6 +61,11 @@ bool WifiConnector::connect(void) {
   ssid = "AG-" + String(ESP.getChipId(), HEX);
 #endif
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+
+  WiFiManagerParameter lineBreak("<p>Check to enabled post data to AirGradient cloud</p>");
+  WIFI()->addParameter(&lineBreak);
+  WiFiManagerParameter postToAg("chbPostToAg", "Post To AirGradient", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
+  WIFI()->addParameter(&postToAg);
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
 #ifdef ESP32
@@ -134,6 +139,10 @@ bool WifiConnector::connect(void) {
   } else {
     hasConfig = true;
     logInfo("WiFi Connected: " + WiFi.SSID() + " IP: " + localIpStr());
+
+    String result = String(postToAg.getValue());
+    logInfo("Post to AirGradient Configure: " + result);
+    config.setPostToAirGradient(result == "T");
   }
 #else
   _wifiProcess();

@@ -4,6 +4,7 @@
 #include "AgOledDisplay.h"
 #include "AgStateMachine.h"
 #include "AirGradient.h"
+#include "AgConfigure.h"
 #include "Main/PrintLog.h"
 
 #include <Arduino.h>
@@ -14,6 +15,7 @@ private:
 #ifdef ESP32
   OledDisplay &disp;
   StateMachine &sm;
+  Configuration &config;
 #else
   void displayShowText(String ln1, String ln2, String ln3);
 #endif
@@ -27,7 +29,7 @@ private:
 public:
   void setAirGradient(AirGradient *ag);
 #ifdef ESP32
-  WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm);
+  WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm, Configuration& config);
 #else
   WifiConnector(Stream &log);
 #endif
