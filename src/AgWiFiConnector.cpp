@@ -21,7 +21,8 @@ void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
  * @param log Stream
  * @param sm StateMachine
  */
-WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,Configuration& config)
+WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,
+                             Configuration &config)
     : PrintLog(log, "WifiConnector"), disp(disp), sm(sm), config(config) {}
 #else
 WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
@@ -62,9 +63,16 @@ bool WifiConnector::connect(void) {
 #endif
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
-  WiFiManagerParameter postToAg("chbPostToAg", "Post To AirGradient", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
+  WiFiManagerParameter postToAg("chbPostToAg", "Post To AirGradient", "T", 2,
+                                "type=\"checkbox\" checked", WFM_LABEL_AFTER);
   WIFI()->addParameter(&postToAg);
-  
+  WiFiManagerParameter postToAgInfo(
+      "<p>Connect to AirGradient Cloud. Important: Only disable if you are "
+      "sure you don't want to use any AirGradient cloud features. Your data "
+      "will not be available for the AirGradient map and no automatic updates "
+      "will be received). </p>");
+  WIFI()->addParameter(&postToAgInfo);
+
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
 #ifdef ESP32
