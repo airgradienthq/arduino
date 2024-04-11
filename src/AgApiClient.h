@@ -34,6 +34,7 @@ public:
   bool isFetchConfigureFailed(void);
   bool isPostToServerFailed(void);
   void setAirGradient(AirGradient *ag);
+  bool sendPing(int rssi, int bootCount);
 };
 
 #endif /** _AG_API_CLIENT_H_ */

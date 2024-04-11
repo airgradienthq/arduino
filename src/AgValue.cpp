@@ -1,7 +1,7 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
-#include <Arduino_JSON.h>
+#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
                               void *_ag, void *_config) {
