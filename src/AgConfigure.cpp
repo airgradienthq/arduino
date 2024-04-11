@@ -1,5 +1,6 @@
 #include "AgConfigure.h"
 #include "EEPROM.h"
+#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
@@ -11,6 +12,15 @@ const char *LED_BAR_MODE_NAMES[] = {
     [LedBarModePm] = "pm",
     [LedBarModeCO2] = "co2",
 };
+
+static bool jsonTypeInvalid(JSONVar root, String validType) {
+  String type = JSON.typeof_(root);
+  if (type == validType || type == "undefined" || type == "unknown" ||
+      type == "null") {
+    return false;
+  }
+  return true;
+}
 
 /**
  * @brief Get LedBarMode Name
@@ -704,14 +714,6 @@ bool Configuration::isUpdated(void) {
   bool updated = this->udpated;
   this->udpated = false;
   return updated;
-}
-
-bool Configuration::jsonTypeInvalid(JSONVar root, String validType) {
-  String type = JSON.typeof_(root);
-  if (type == validType || type == "undefined" || type == "unknown" || type == "null") {
-    return false;
-  }
-  return true;
 }
 
 String Configuration::jsonTypeInvalidMessage(String name, String type) {

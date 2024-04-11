@@ -14,9 +14,6 @@ https://www.airgradient.com/documentation/one-v9/ Build Instructions:
 AirGradient Open Air:
 https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
 
-The codes needs the following libraries installed:
-"Arduino_JSON" by Arduino version 0.2.0
-
 Please make sure you have esp32 board manager installed. Tested with
 version 2.0.11.
 
@@ -53,7 +50,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "OpenMetrics.h"
 #include "WebServer.h"
 #include <AirGradient.h>
-#include <Arduino_JSON.h>
 #include <WebServer.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
@@ -416,10 +412,6 @@ static void ledBarEnabledUpdate(void) {
 }
 
 static void sendDataToAg() {
-  JSONVar root;
-  root["wifi"] = wifiConnector.RSSI();
-  root["boot"] = measurements.bootCount;
-
   /** Change oledDisplay and led state */
   if (ag->isOne()) {
     stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
@@ -443,7 +435,7 @@ static void sendDataToAg() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  if (apiClient.postToServer(JSON.stringify(root))) {
+  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount)) {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }

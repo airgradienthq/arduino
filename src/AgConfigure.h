@@ -4,7 +4,6 @@
 #include "App/AppDef.h"
 #include "Main/PrintLog.h"
 #include <Arduino.h>
-#include <Arduino_JSON.h>
 
 class Configuration : public PrintLog {
 private:
@@ -40,7 +39,6 @@ private:
   void loadConfig(void);
   void defaultConfig(void);
   void printConfig(void);
-  bool jsonTypeInvalid(JSONVar root, String validType);
   String jsonTypeInvalidMessage(String name, String type);
   String jsonValueInvalidMessage(String name, String value);
   void jsonInvalid(void);

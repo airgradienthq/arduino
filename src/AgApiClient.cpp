@@ -1,6 +1,7 @@
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
+#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 #ifdef ESP8266
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
@@ -143,3 +144,18 @@ bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
 bool AgApiClient::isPostToServerFailed(void) { return postToServerFailed; }
 
 void AgApiClient::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+/**
+ * @brief Send the package to check the connection with cloud
+ * 
+ * @param rssi WiFi RSSI
+ * @param bootCount Boot count
+ * @return true Success
+ * @return false Failure
+ */
+bool AgApiClient::sendPing(int rssi, int bootCount) { 
+  JSONVar root;
+  root["wifi"] = rssi;
+  root["boot"] = bootCount;
+  return postToServer(JSON.stringify(root));
+}

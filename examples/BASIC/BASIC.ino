@@ -12,9 +12,6 @@ Outdoor Monitor: https://www.airgradient.com/outdoor/
 Build Instructions:
 https://www.airgradient.com/documentation/diy-v4/
 
-Following libraries need to be installed:
-"Arduino_JSON" by Arduino version 0.2.0
-
 Please make sure you have esp8266 board manager installed. Tested with
 version 3.1.2.
 
@@ -35,7 +32,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "AgSchedule.h"
 #include "AgWiFiConnector.h"
 #include <AirGradient.h>
-#include <Arduino_JSON.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -166,12 +162,8 @@ void loop() {
 }
 
 static void sendDataToAg() {
-  JSONVar root;
-  root["wifi"] = WiFi.RSSI();
-  root["boot"] = 0;
-
   // delay(1500);
-  if (apiClient.postToServer(JSON.stringify(root))) {
+  if (apiClient.sendPing(wifiConnector.RSSI(), 0)) {
     // Ping Server succses
   } else {
     // Ping server failed
@@ -327,22 +319,22 @@ static void tempHumUpdate() {
 }
 
 static void sendDataToServer() {
-  JSONVar root;
-  root["wifi"] = WiFi.RSSI();
-  if (co2Ppm >= 0) {
-    root["rco2"] = co2Ppm;
+  String wifi = "\"wifi\":" + String(WiFi.RSSI());
+  String rco2 = "";
+  if(co2Ppm >= 0){
+    rco2 = ",\"rco2\":" + String(co2Ppm);
   }
-  if (pm25 >= 0) {
-    root["pm02"] = pm25;
+  String pm02 = "";
+  if(pm25) {
+    pm02 = ",\"pm02\":" + String(pm25);
   }
-  if (temp > -1001) {
-    root["atmp"] = ag.round2(temp);
+  String rhum = "";
+  if(hum >= 0){
+    rhum = ",\"rhum\":" + String(rhum);
   }
-  if (hum >= 0) {
-    root["rhum"] = hum;
-  }
+  String payload = "{" + wifi + rco2 + pm02 + rhum + "}";
 
-  if (apiClient.postToServer(JSON.stringify(root)) == false) {
+  if (apiClient.postToServer(payload) == false) {
     Serial.println("Post to server failed");
   }
 }
