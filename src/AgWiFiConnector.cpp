@@ -63,14 +63,15 @@ bool WifiConnector::connect(void) {
 #endif
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
-  WiFiManagerParameter postToAg("chbPostToAg", "Post To AirGradient", "T", 2,
-                                "type=\"checkbox\" checked", WFM_LABEL_AFTER);
+  WiFiManagerParameter postToAg("chbPostToAg",
+                                "Prevent Connection to AirGradient Server", "T",
+                                2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
   WIFI()->addParameter(&postToAg);
   WiFiManagerParameter postToAgInfo(
-      "<p>Connect to AirGradient Cloud. Important: Only disable if you are "
-      "sure you don't want to use any AirGradient cloud features. Your data "
-      "will not be available for the AirGradient map and no automatic updates "
-      "will be received). </p>");
+      "<p>Prevent connection to the AirGradient Server. Important: Only enable "
+      "it if you are sure you don't want to use any AirGradient cloud "
+      "features. As a result you will not receive automatic firmware updates "
+      "and your data will not reach the AirGradient dashboard.</p>");
   WIFI()->addParameter(&postToAgInfo);
 
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
@@ -149,7 +150,7 @@ bool WifiConnector::connect(void) {
 
     String result = String(postToAg.getValue());
     logInfo("Post to AirGradient Configure: " + result);
-    config.setPostToAirGradient(result == "T");
+    config.setPostToAirGradient(result != "T");
   }
 #else
   _wifiProcess();
