@@ -613,6 +613,14 @@ static void openAirInit(void) {
     } else {
       Serial.println("Found PMS 2 on Serial1");
     }
+
+    if (fwMode == FW_MODE_O_1PP) {
+      int count = (configuration.hasSensorPMS1 ? 1 : 0) +
+                  (configuration.hasSensorPMS2 ? 1 : 0);
+      if (count == 1) {
+        fwMode = FW_MODE_O_1P;
+      }
+    }
   }
 
   /** update the PMS poll period base on fw mode and sensor available */
@@ -621,7 +629,6 @@ static void openAirInit(void) {
       pmsSchedule.setPeriod(2000);
     }
   }
-
   Serial.printf("Firmware Mode: %s\r\n", AgFirmwareModeName(fwMode));
 }
 
