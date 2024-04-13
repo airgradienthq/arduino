@@ -28,6 +28,8 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
+  float temperatureCompensated(float temp);
+  float humidityCompensated(float hum);
 
 private:
   bool _isBegin = false;

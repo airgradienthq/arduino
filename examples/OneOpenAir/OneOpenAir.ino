@@ -631,6 +631,7 @@ static void boardInit(void) {
   } else {
     openAirInit();
   }
+  localServer.setFwMode(fwMode);
 }
 
 static void failedHandler(String msg) {

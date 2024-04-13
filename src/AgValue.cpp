@@ -42,9 +42,11 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     if (config->hasSensorSHT) {
       if (this->Temperature > -1001) {
         root["atmp"] = ag->round2(this->Temperature);
+        root["atmp_compensated"] = ag->round2(this->Temperature);
       }
       if (this->Humidity >= 0) {
         root["rhum"] = this->Humidity;
+        root["rhum_compensated"] = this->Humidity;
       }
     }
 
@@ -60,8 +62,13 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         root["pm003_count"] =
             ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0);
       }
-      root["atmp"] = ag->round2((this->temp_1 + this->temp_2) / 2.0);
-      root["rhum"] = ag->round2((this->hum_1 + this->hum_2) / 2.0);
+      root["atmp"] = ag->round2((this->temp_1 + this->temp_2) / 2.0f);
+      root["rhum"] = ag->round2((this->hum_1 + this->hum_2) / 2.0f);
+      root["atmp_compensated"] =
+          ag->round2(ag->pms5003t_2.temperatureCompensated(
+              (this->temp_1 + this->temp_2) / 2.0f));
+      root["rhum_compensated"] = (int)ag->pms5003t_2.humidityCompensated(
+          (this->hum_1 + this->hum_2) / 2.0f);
     }
 
     if (fwMode == FW_MDOE_O_1PS || fwMode == FW_MODE_O_1PST) {
@@ -76,6 +83,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
         root["atmp"] = ag->round2(this->temp_1);
         root["rhum"] = this->hum_1;
+        root["atmp_compensated"] =
+            ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_1));
+        root["rhum_compensated"] =
+            (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
       }
       if (config->hasSensorPMS2) {
         root["pm01"] = this->pm01_2;
@@ -88,6 +99,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
         root["atmp"] = ag->round2(this->temp_2);
         root["rhum"] = this->hum_2;
+        root["atmp_compensated"] =
+            ag->round2(ag->pms5003t_2.temperatureCompensated(this->temp_2));
+        root["rhum_compensated"] =
+            (int)ag->pms5003t_2.humidityCompensated(this->hum_2);
       }
     } else {
       if (config->hasSensorPMS1) {
@@ -101,6 +116,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
         root["channels"]["1"]["atmp"] = ag->round2(this->temp_1);
         root["channels"]["1"]["rhum"] = this->hum_1;
+        root["channels"]["1"]["atmp_compensated"] =
+            ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_1));
+        root["channels"]["1"]["rhum_compensated"] =
+            (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
       }
       if (config->hasSensorPMS2) {
         root["channels"]["2"]["pm01"] = this->pm01_2;
@@ -113,6 +132,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
         root["channels"]["2"]["atmp"] = ag->round2(this->temp_2);
         root["channels"]["2"]["rhum"] = this->hum_2;
+        root["channels"]["2"]["atmp_compensated"] =
+            ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_2));
+        root["channels"]["2"]["rhum_compensated"] =
+            (int)ag->pms5003t_1.humidityCompensated(this->hum_2);
       }
     }
   }
