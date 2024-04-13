@@ -10,8 +10,10 @@ const char *AgFirmwareModeName(AgFirmwareMode mode) {
     return "O-1PPT";
   case FW_MODE_O_1PST:
     return "O-1PST";
-  case FW_MDOE_O_1PS:
+  case FW_MODE_O_1PS:
     return "0-1PS";
+  case FW_MODE_O_1P:
+    return "O-1P";
   default:
     break;
   }

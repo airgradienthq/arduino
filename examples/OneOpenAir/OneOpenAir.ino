@@ -571,7 +571,7 @@ static void openAirInit(void) {
       fwMode = FW_MODE_O_1PP;
     } else {
       Serial.println("Can not detect SGP run mode 'O-1PS'");
-      fwMode = FW_MDOE_O_1PS;
+      fwMode = FW_MODE_O_1PS;
     }
   }
 

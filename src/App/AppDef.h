@@ -95,7 +95,8 @@ enum AgFirmwareMode {
   FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
   FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
   FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
-  FW_MDOE_O_1PS   /** PMS5003T, S8 */
+  FW_MODE_O_1PS,  /** PMS5003T, S8 */
+  FW_MODE_O_1P,   /** PMS5003T */
 };
 const char *AgFirmwareModeName(AgFirmwareMode mode);
 

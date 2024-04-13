@@ -71,7 +71,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           (this->hum_1 + this->hum_2) / 2.0f);
     }
 
-    if (fwMode == FW_MDOE_O_1PS || fwMode == FW_MODE_O_1PST) {
+    if (fwMode == FW_MODE_O_1PS || fwMode == FW_MODE_O_1PST) {
       if (config->hasSensorPMS1) {
         root["pm01"] = this->pm01_1;
         root["pm02"] = this->pm25_1;
