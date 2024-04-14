@@ -540,7 +540,7 @@ String Configuration::toString(void) {
 
   /** "pmStandard" */
   if (config.inUSAQI) {
-    root["pmStandard"] = "USAQI";
+    root["pmStandard"] = "us-aqi";
   } else {
     root["pmStandard"] = "ugm3";
   }
