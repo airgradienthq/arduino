@@ -31,22 +31,18 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         root["pm10"] = this->pm10_1;
       }
       if (this->pm03PCount_1 >= 0) {
-        if (localServer) {
-          root["pm003Count"] = this->pm03PCount_1;
-        } else {
-          root["pm003_count"] = this->pm03PCount_1;
-        }
+        root["pm003Count"] = this->pm03PCount_1;
       }
     }
 
     if (config->hasSensorSHT) {
       if (this->Temperature > -1001) {
         root["atmp"] = ag->round2(this->Temperature);
-        root["atmp_compensated"] = ag->round2(this->Temperature);
+        root["atmpCompensated"] = ag->round2(this->Temperature);
       }
       if (this->Humidity >= 0) {
         root["rhum"] = this->Humidity;
-        root["rhum_compensated"] = this->Humidity;
+        root["rhumCompensated"] = this->Humidity;
       }
     }
 
@@ -55,19 +51,14 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       root["pm01"] = ag->round2((this->pm01_1 + this->pm01_2) / 2.0);
       root["pm02"] = ag->round2((this->pm25_1 + this->pm25_2) / 2.0);
       root["pm10"] = ag->round2((this->pm10_1 + this->pm10_2) / 2.0);
-      if (localServer) {
-        root["pm003Count"] =
-            ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0);
-      } else {
-        root["pm003_count"] =
-            ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0);
-      }
+      root["pm003Count"] =
+          ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0);
       root["atmp"] = ag->round2((this->temp_1 + this->temp_2) / 2.0f);
       root["rhum"] = ag->round2((this->hum_1 + this->hum_2) / 2.0f);
-      root["atmp_compensated"] =
+      root["atmpCompensated"] =
           ag->round2(ag->pms5003t_2.temperatureCompensated(
               (this->temp_1 + this->temp_2) / 2.0f));
-      root["rhum_compensated"] = (int)ag->pms5003t_2.humidityCompensated(
+      root["rhumCompensated"] = (int)ag->pms5003t_2.humidityCompensated(
           (this->hum_1 + this->hum_2) / 2.0f);
     }
 
@@ -76,32 +67,24 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         root["pm01"] = this->pm01_1;
         root["pm02"] = this->pm25_1;
         root["pm10"] = this->pm10_1;
-        if (localServer) {
-          root["pm003Count"] = this->pm03PCount_1;
-        } else {
-          root["pm003_count"] = this->pm03PCount_1;
-        }
+        root["pm003Count"] = this->pm03PCount_1;
         root["atmp"] = ag->round2(this->temp_1);
         root["rhum"] = this->hum_1;
-        root["atmp_compensated"] =
+        root["atmpCompensated"] =
             ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_1));
-        root["rhum_compensated"] =
+        root["rhumCompensated"] =
             (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
       }
       if (config->hasSensorPMS2) {
         root["pm01"] = this->pm01_2;
         root["pm02"] = this->pm25_2;
         root["pm10"] = this->pm10_2;
-        if (localServer) {
-          root["pm003Count"] = this->pm03PCount_2;
-        } else {
-          root["pm003_count"] = this->pm03PCount_2;
-        }
+        root["pm003Count"] = this->pm03PCount_2;
         root["atmp"] = ag->round2(this->temp_2);
         root["rhum"] = this->hum_2;
-        root["atmp_compensated"] =
+        root["atmpCompensated"] =
             ag->round2(ag->pms5003t_2.temperatureCompensated(this->temp_2));
-        root["rhum_compensated"] =
+        root["rhumCompensated"] =
             (int)ag->pms5003t_2.humidityCompensated(this->hum_2);
       }
     } else {
@@ -110,31 +93,23 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["pm01"] = this->pm01_1;
           root["pm02"] = this->pm25_1;
           root["pm10"] = this->pm10_1;
-          if (localServer) {
-            root["pm003Count"] = this->pm03PCount_1;
-          } else {
-            root["pm003_count"] = this->pm03PCount_1;
-          }
+          root["pm003Count"] = this->pm03PCount_1;
           root["atmp"] = ag->round2(this->temp_1);
           root["rhum"] = this->hum_1;
-          root["atmp_compensated"] =
+          root["atmpCompensated"] =
               ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_1));
-          root["rhum_compensated"] =
+          root["rhumCompensated"] =
               (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
         } else if (config->hasSensorPMS2) {
           root["pm01"] = this->pm01_2;
           root["pm02"] = this->pm25_2;
           root["pm10"] = this->pm10_2;
-          if (localServer) {
-            root["pm003Count"] = this->pm03PCount_2;
-          } else {
-            root["pm003_count"] = this->pm03PCount_2;
-          }
+          root["pm003Count"] = this->pm03PCount_2;
           root["atmp"] = ag->round2(this->temp_2);
           root["rhum"] = this->hum_2;
-          root["atmp_compensated"] =
+          root["atmpCompensated"] =
               ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_2));
-          root["rhum_compensated"] =
+          root["rhumCompensated"] =
               (int)ag->pms5003t_1.humidityCompensated(this->hum_2);
         }
       } else {
@@ -142,31 +117,23 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["channels"]["1"]["pm01"] = this->pm01_1;
           root["channels"]["1"]["pm02"] = this->pm25_1;
           root["channels"]["1"]["pm10"] = this->pm10_1;
-          if (localServer) {
-            root["channels"]["1"]["pm003Count"] = this->pm03PCount_1;
-          } else {
-            root["channels"]["1"]["pm003_count"] = this->pm03PCount_1;
-          }
+          root["channels"]["1"]["pm003Count"] = this->pm03PCount_1;
           root["channels"]["1"]["atmp"] = ag->round2(this->temp_1);
           root["channels"]["1"]["rhum"] = this->hum_1;
-          root["channels"]["1"]["atmp_compensated"] =
+          root["channels"]["1"]["atmpCompensated"] =
               ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_1));
-          root["channels"]["1"]["rhum_compensated"] =
+          root["channels"]["1"]["rhumCompensated"] =
               (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
         } else if (config->hasSensorPMS2) {
           root["channels"]["2"]["pm01"] = this->pm01_2;
           root["channels"]["2"]["pm02"] = this->pm25_2;
           root["channels"]["2"]["pm10"] = this->pm10_2;
-          if (localServer) {
-            root["channels"]["2"]["pm003Count"] = this->pm03PCount_2;
-          } else {
-            root["channels"]["2"]["pm003_count"] = this->pm03PCount_2;
-          }
+          root["channels"]["2"]["pm003Count"] = this->pm03PCount_2;
           root["channels"]["2"]["atmp"] = ag->round2(this->temp_2);
           root["channels"]["2"]["rhum"] = this->hum_2;
-          root["channels"]["2"]["atmp_compensated"] =
+          root["channels"]["2"]["atmpCompensated"] =
               ag->round2(ag->pms5003t_1.temperatureCompensated(this->temp_2));
-          root["channels"]["2"]["rhum_compensated"] =
+          root["channels"]["2"]["rhumCompensated"] =
               (int)ag->pms5003t_1.humidityCompensated(this->hum_2);
         }
       }
@@ -175,24 +142,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   if (config->hasSensorSGP) {
     if (this->TVOC >= 0) {
-      if (localServer) {
-        root["tvocIndex"] = this->TVOC;
-      } else {
-        root["tvoc_index"] = this->TVOC;
-      }
+      root["tvocIndex"] = this->TVOC;
     }
     if (this->TVOCRaw >= 0) {
-      root["tvoc_raw"] = this->TVOCRaw;
+      root["tvocRaw"] = this->TVOCRaw;
     }
     if (this->NOx >= 0) {
-      if (localServer) {
-        root["noxIndex"] = this->NOx;
-      } else {
-        root["nox_index"] = this->NOx;
-      }
+      root["noxIndex"] = this->NOx;
     }
     if (this->NOxRaw >= 0) {
-      root["nox_raw"] = this->NOxRaw;
+      root["noxRaw"] = this->NOxRaw;
     }
   }
   root["boot"] = bootCount;
