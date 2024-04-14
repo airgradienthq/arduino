@@ -281,7 +281,7 @@ bool Configuration::parse(String data, bool isLocal) {
     bool inUSAQI = true;
     if (pmStandard == "ugm3") {
       inUSAQI = false;
-    } else if (pmStandard == "USAQI") {
+    } else if (pmStandard == "us-aqi") {
       inUSAQI = true;
     } else {
       failedMessage = jsonValueInvalidMessage("pmStandard", pmStandard);
