@@ -403,6 +403,7 @@ bool Configuration::parse(String data, bool isLocal) {
     int tvocLearningOffset = root["tvocLearningOffset"];
     if (tvocLearningOffset != config.tvocLearningOffset) {
       changed = true;
+      _tvocLearningOffsetChanged = true;
       config.tvocLearningOffset = tvocLearningOffset;
       logInfo("Set tvocLearningOffset: " + String(tvocLearningOffset));
     }
@@ -418,6 +419,7 @@ bool Configuration::parse(String data, bool isLocal) {
     int noxLearningOffset = root["noxLearningOffset"];
     if (noxLearningOffset != config.noxLearningOffset) {
       changed = true;
+      _noxLearnOffsetChanged = true;
       config.noxLearningOffset = noxLearningOffset;
       logInfo("Set noxLearningOffset: " + String(noxLearningOffset));
     }
@@ -518,11 +520,10 @@ bool Configuration::parse(String data, bool isLocal) {
   }
 
   if (changed) {
+    udpated = true;
     saveConfig();
   }
   printConfig();
-
-  udpated = true;
   return true;
 }
 
@@ -739,4 +740,24 @@ void Configuration::setPostToAirGradient(bool enable) {
   } else {
     logInfo("postDataToAirGradient: Ignored set to " + String(enable));
   }
+}
+
+bool Configuration::noxLearnOffsetChanged(void) {
+  bool changed = _noxLearnOffsetChanged;
+  _noxLearnOffsetChanged = false;
+  return changed;
+}
+
+bool Configuration::tvocLearnOffsetChanged(void) {
+  bool changed = _tvocLearningOffsetChanged;
+  _tvocLearningOffsetChanged = false;
+  return changed;
+}
+
+int Configuration::getTvocLearningOffset(void) {
+  return config.tvocLearningOffset;
+}
+
+int Configuration::getNoxLearningOffset(void) {
+  return config.noxLearningOffset;
 }

@@ -33,6 +33,8 @@ private:
   bool ledBarTestRequested;
   bool udpated;
   String failedMessage;
+  bool _noxLearnOffsetChanged;
+  bool _tvocLearningOffsetChanged;
 
   String getLedBarModeName(LedBarMode mode);
   void saveConfig(void);
@@ -73,6 +75,10 @@ public:
   bool isUpdated(void);
   String getFailedMesage(void);
   void setPostToAirGradient(bool enable);
+  bool noxLearnOffsetChanged(void);
+  bool tvocLearnOffsetChanged(void);
+  int getTvocLearningOffset(void);
+  int getNoxLearningOffset(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

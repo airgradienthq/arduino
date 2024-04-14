@@ -26,6 +26,8 @@ public:
   int getTvocRaw(void);
   int getNoxRaw(void);
   void setCompensationTemperatureHumidity(float temp, float hum);
+  void setNoxLearningOffset(int offset);
+  void setTvocLearningOffset(int offset);
 
 private:
   bool onConditioning = true;
@@ -42,6 +44,10 @@ private:
   int tvocRaw;
   int nox = 0;
   int noxRaw;
+
+  int noxLearnOffset;
+  int tvocLearnOffset;
+
 #if defined(ESP8266)
   uint32_t conditioningPeriod;
   uint8_t conditioningCount;

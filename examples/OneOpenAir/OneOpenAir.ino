@@ -95,7 +95,6 @@ static bool ledBarButtonTest = false;
 static void boardInit(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
-static void executeCo2Calibration(void);
 static void appLedHandler(void);
 static void appDispHandler(void);
 static void oledDisplayLedBarSchedule(void);
@@ -104,7 +103,6 @@ static void updatePm(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
-static void showNr(void);
 static void mdnsInit(void);
 static void createMqttTask(void);
 static void initMqtt(void);
@@ -478,6 +476,8 @@ static void oneIndoorInit(void) {
   ag->watchdog.begin();
 
   /** Init sensor SGP41 */
+  ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
+  ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
   if (ag->sgp41.begin(Wire) == false) {
     Serial.println("SGP41 sensor not found");
     configuration.hasSensorSGP = false;
@@ -562,6 +562,8 @@ static void openAirInit(void) {
     serial1Available = false;
   }
 
+  ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
+  ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
   if (ag->sgp41.begin(Wire) == false) {
     configuration.hasSensorSGP = false;
     Serial.println("SGP sensor not found");
@@ -667,6 +669,23 @@ static void configUpdateHandle() {
   if (mqttClient.isCurrentUri(mqttUri) == false) {
     mqttClient.end();
     initMqtt();
+  }
+
+  if (configuration.noxLearnOffsetChanged() ||
+      configuration.tvocLearnOffsetChanged()) {
+    ag->sgp41.end();
+    Serial.println("nox/tvoc learning offset changed");
+    Serial.println("noxLearningOffset: " + String(configuration.getNoxLearningOffset()));
+    Serial.println("tvocLearningOffset: " + String(configuration.getTvocLearningOffset()));
+    ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
+    ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
+    if (ag->sgp41.begin(Wire)) {
+      Serial.println("Init SGP41 success");
+      configuration.hasSensorSGP = true;
+    } else {
+      Serial.println("Init SGP41 failuire");
+      configuration.hasSensorSGP = false;
+    }
   }
 
   appDispHandler();
