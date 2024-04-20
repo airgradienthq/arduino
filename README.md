@@ -24,6 +24,10 @@ If you have an older version of the AirGradient PCB not mentioned in the example
 
 If you have any questions or problems, check out [our forum](https://forum.airgradient.com/). 
 
+## Documentation
+
+Local server API documentation is available in [/docs/local-server.md](/docs/local-server.md) and AirGradient server API on [https://api.airgradient.com/public/docs/api/v1/](https://api.airgradient.com/public/docs/api/v1/).
+
 ## The following libraries have been integrated into this library for ease of use
 
 - [Adafruit BusIO](https://github.com/adafruit/Adafruit_BusIO)
