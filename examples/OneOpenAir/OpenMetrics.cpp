@@ -71,6 +71,8 @@ String OpenMetrics::getPayload(void) {
   int pm25 = -1;
   int pm10 = -1;
   int pm03PCount = -1;
+  int atmpCompensated = -1;
+  int ahumCompensated = -1;
   if (config.hasSensorPMS1 && config.hasSensorPMS2) {
     _temp = (measure.temp_1 + measure.temp_2) / 2.0f;
     _hum = (measure.hum_1 + measure.hum_2) / 2.0f;
@@ -102,6 +104,15 @@ String OpenMetrics::getPayload(void) {
         pm03PCount = measure.pm03PCount_2;
       }
     }
+  }
+
+  /** Get temperature and humidity compensated */
+  if (ag->isOne()) {
+    atmpCompensated = _temp;
+    ahumCompensated = _hum;
+  } else {
+    atmpCompensated = ag->pms5003t_1.temperatureCompensated(_temp);
+    ahumCompensated = ag->pms5003t_1.humidityCompensated(_hum);
   }
 
   if (config.hasSensorPMS1 || config.hasSensorPMS2) {
@@ -173,12 +184,26 @@ String OpenMetrics::getPayload(void) {
                "gauge", "celsius");
     add_metric_point("", String(_temp));
   }
+  if (atmpCompensated > -1001) {
+    add_metric(
+        "temperature_compensated",
+        "The ambient temperature as measured by the AirGradient SHT / PMS",
+        "gauge", "celsius");
+    add_metric_point("", String(atmpCompensated));
+  }
   if (_hum >= 0) {
     add_metric(
         "humidity",
         "The relative humidity as measured by the AirGradient SHT sensor",
         "gauge", "percent");
     add_metric_point("", String(_hum));
+  }
+  if (ahumCompensated >= 0) {
+    add_metric(
+        "humidity_compensated",
+        "The relative humidity as measured by the AirGradient SHT / PMS sensor",
+        "gauge", "percent");
+    add_metric_point("", String(ahumCompensated));
   }
 
   response += "# EOF\n";
