@@ -301,7 +301,7 @@ static void createMqttTask(void) {
           /** Send data */
           if (mqttClient.isConnected()) {
             String payload = measurements.toString(
-                false, fwMode, wifiConnector.RSSI(), ag, &configuration);
+                true, fwMode, wifiConnector.RSSI(), ag, &configuration);
             String topic = "airgradient/readings/" + ag->deviceId();
 
             if (mqttClient.publish(topic.c_str(), payload.c_str(),
