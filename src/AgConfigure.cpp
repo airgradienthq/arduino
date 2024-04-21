@@ -126,7 +126,7 @@ void Configuration::defaultConfig(void) {
   config.postDataToAirGradient = true;
   config.displayMode = true;
   config.useRGBLedBar = LedBarMode::LedBarModeCO2;
-  config.abcDays = 7;
+  config.abcDays = 8;
   config.tvocLearningOffset = 12;
   config.noxLearningOffset = 12;
   config.temperatureUnit = 'c';
@@ -382,9 +382,7 @@ bool Configuration::parse(String data, bool isLocal) {
   if (JSON.typeof_(root["abcDays"]) == "number") {
     int abcDays = root["abcDays"];
     if (abcDays <= 0) {
-      failedMessage = jsonTypeInvalidMessage("abcDaysabcDays", String(abcDays));
-      jsonInvalid();
-      return false;
+      abcDays = 0;
     }
     if (abcDays != config.abcDays) {
       config.abcDays = abcDays;

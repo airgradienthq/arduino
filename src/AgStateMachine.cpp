@@ -276,7 +276,7 @@ void StateMachine::co2Calibration(void) {
     }
   }
 
-  if (config.getCO2CalibrationAbcDays() > 0 && config.hasSensorS8) {
+  if (config.getCO2CalibrationAbcDays() >= 0 && config.hasSensorS8) {
     int newHour = config.getCO2CalibrationAbcDays() * 24;
     logInfo("Requested abcDays setting: " +
             String(config.getCO2CalibrationAbcDays()) + "days (" +
