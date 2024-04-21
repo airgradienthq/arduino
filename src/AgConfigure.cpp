@@ -178,6 +178,8 @@ bool Configuration::begin(void) {
  * @return false Failure
  */
 bool Configuration::parse(String data, bool isLocal) {
+  logInfo("Parse configure: " + data);
+
   JSONVar root = JSON.parse(data);
   failedMessage = "";
   if (JSON.typeof_(root) == "undefined") {
@@ -477,19 +479,21 @@ bool Configuration::parse(String data, bool isLocal) {
     logInfo("set temperatureUnit: " + String(temperatureUnit));
   }
 
-  if (JSON.typeof_(root["postDataToAirGradient"]) == "boolean") {
-    bool post = root["postDataToAirGradient"];
-    if (post != config.postDataToAirGradient) {
-      changed = true;
-      config.postDataToAirGradient = post;
-      logInfo("Set postDataToAirGradient: " + String(post));
-    }
-  } else {
-    if (jsonTypeInvalid(root["postDataToAirGradient"], "boolean")) {
-      failedMessage =
-          jsonTypeInvalidMessage("postDataToAirGradient", "boolean");
-      jsonInvalid();
-      return false;
+  if (isLocal) {
+    if (JSON.typeof_(root["postDataToAirGradient"]) == "boolean") {
+      bool post = root["postDataToAirGradient"];
+      if (post != config.postDataToAirGradient) {
+        changed = true;
+        config.postDataToAirGradient = post;
+        logInfo("Set postDataToAirGradient: " + String(post));
+      }
+    } else {
+      if (jsonTypeInvalid(root["postDataToAirGradient"], "boolean")) {
+        failedMessage =
+            jsonTypeInvalidMessage("postDataToAirGradient", "boolean");
+        jsonInvalid();
+        return false;
+      }
     }
   }
 
@@ -520,6 +524,10 @@ bool Configuration::parse(String data, bool isLocal) {
   if (changed) {
     udpated = true;
     saveConfig();
+  } else {
+    if (ledBarTestRequested || co2CalibrationRequested) {
+      udpated = true;
+    }
   }
   printConfig();
   return true;
