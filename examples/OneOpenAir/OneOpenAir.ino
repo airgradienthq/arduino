@@ -787,6 +787,10 @@ static void updatePm(void) {
       Serial.printf("[1] PM3.0 Count: %d\r\n", measurements.pm03PCount_1);
       Serial.printf("[1] Temperature in C: %0.2f\r\n", measurements.temp_1);
       Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
+      Serial.printf("[1] Temperature compensated in C: %0.2f\r\n",
+                    ag->pms5003t_1.temperatureCompensated(measurements.temp_1));
+      Serial.printf("[1] Relative Humidity compensated: %d\r\n",
+                    ag->pms5003t_1.humidityCompensated(measurements.hum_1));
     } else {
       measurements.pm01_1 = -1;
       measurements.pm25_1 = -1;
@@ -813,6 +817,10 @@ static void updatePm(void) {
       Serial.printf("[2] PM3.0 Count: %d\r\n", measurements.pm03PCount_2);
       Serial.printf("[2] Temperature in C: %0.2f\r\n", measurements.temp_2);
       Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
+            Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
+                    ag->pms5003t_1.temperatureCompensated(measurements.temp_2));
+      Serial.printf("[2] Relative Humidity compensated: %d\r\n",
+                    ag->pms5003t_1.humidityCompensated(measurements.hum_2));
     } else {
       measurements.pm01_2 = -1;
       measurements.pm25_2 = -1;
@@ -939,6 +947,10 @@ static void tempHumUpdate(void) {
 
     Serial.printf("Temperature in C: %0.2f\r\n", measurements.Temperature);
     Serial.printf("Relative Humidity: %d\r\n", measurements.Humidity);
+    Serial.printf("Temperature compensated in C: %0.2f\r\n",
+                  ag->pms5003t_1.temperatureCompensated(measurements.Temperature));
+    Serial.printf("Relative Humidity compensated: %d\r\n",
+                  ag->pms5003t_1.humidityCompensated(measurements.Temperature));
 
     // Update compensation temperature and humidity for SGP41
     if (configuration.hasSensorSGP) {
