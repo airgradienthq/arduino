@@ -293,3 +293,7 @@ void Sgp41::setNoxLearningOffset(int offset) {
 void Sgp41::setTvocLearningOffset(int offset) {
   tvocLearnOffset = offset;
 }
+
+int Sgp41::getNoxLearningOffset(void) { return noxLearnOffset; }
+
+int Sgp41::getTvocLearningOffset(void) { return tvocLearnOffset; }
