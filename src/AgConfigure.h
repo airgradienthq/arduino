@@ -44,6 +44,10 @@ private:
   String jsonTypeInvalidMessage(String name, String type);
   String jsonValueInvalidMessage(String name, String value);
   void jsonInvalid(void);
+  void configLogInfo(String name, String fromValue, String toValue);
+  String getPMStandardString(bool usaqi);
+  String getDisplayModeString(bool dispMode);
+  String getAbcDayString(int value);
 
 public:
   Configuration(Stream &debugLog);
