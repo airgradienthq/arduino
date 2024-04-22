@@ -467,6 +467,8 @@ static void oneIndoorInit(void) {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
+  Serial.printf("Firmware version: %s\n", GIT_VERSION);
+
   oledDisplay.setText("AirGradient ONE",
                       "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
