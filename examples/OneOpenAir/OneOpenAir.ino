@@ -78,7 +78,8 @@ static AirGradient *ag;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
 static StateMachine stateMachine(oledDisplay, Serial, measurements,
                                  configuration);
-static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
+static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
+                                   configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
@@ -109,6 +110,7 @@ static void initMqtt(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
+static bool sgp41Init(void);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -409,6 +411,20 @@ static void ledBarEnabledUpdate(void) {
   }
 }
 
+static bool sgp41Init(void) {
+  ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
+  ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
+  if (ag->sgp41.begin(Wire)) {
+    Serial.println("Init SGP41 success");
+    configuration.hasSensorSGP = true;
+    return true;
+  } else {
+    Serial.println("Init SGP41 failuire");
+    configuration.hasSensorSGP = false;
+  }
+  return false;
+}
+
 static void sendDataToAg() {
   /** Change oledDisplay and led state */
   if (ag->isOne()) {
@@ -476,11 +492,7 @@ static void oneIndoorInit(void) {
   ag->watchdog.begin();
 
   /** Init sensor SGP41 */
-  ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
-  ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
-  if (ag->sgp41.begin(Wire) == false) {
-    Serial.println("SGP41 sensor not found");
-    configuration.hasSensorSGP = false;
+  if (sgp41Init() == false) {
     dispSensorNotFound("SGP41");
   }
 
@@ -562,10 +574,7 @@ static void openAirInit(void) {
     serial1Available = false;
   }
 
-  ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
-  ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
-  if (ag->sgp41.begin(Wire) == false) {
-    configuration.hasSensorSGP = false;
+  if (sgp41Init() == false) {
     Serial.println("SGP sensor not found");
 
     if (configuration.hasSensorS8 == false) {
@@ -640,6 +649,16 @@ static void boardInit(void) {
   } else {
     openAirInit();
   }
+
+  /** Set S8 CO2 abc days period */
+  if (configuration.hasSensorS8) {
+    if (ag->s8.setAbcPeriod(configuration.getCO2CalibrationAbcDays() * 24)) {
+      Serial.println("Set S8 AbcDays successful");
+    } else {
+      Serial.println("Set S8 AbcDays failure");
+    }
+  }
+
   localServer.setFwMode(fwMode);
 }
 
@@ -674,17 +693,23 @@ static void configUpdateHandle() {
   if (configuration.noxLearnOffsetChanged() ||
       configuration.tvocLearnOffsetChanged()) {
     ag->sgp41.end();
-    Serial.println("nox/tvoc learning offset changed");
-    Serial.println("noxLearningOffset: " + String(configuration.getNoxLearningOffset()));
-    Serial.println("tvocLearningOffset: " + String(configuration.getTvocLearningOffset()));
-    ag->sgp41.setNoxLearningOffset(configuration.getNoxLearningOffset());
-    ag->sgp41.setTvocLearningOffset(configuration.getTvocLearningOffset());
-    if (ag->sgp41.begin(Wire)) {
-      Serial.println("Init SGP41 success");
-      configuration.hasSensorSGP = true;
-    } else {
-      Serial.println("Init SGP41 failuire");
-      configuration.hasSensorSGP = false;
+
+    int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
+    int oldNoxOffset = ag->sgp41.getNoxLearningOffset();
+    bool result = sgp41Init();
+    const char *resultStr = "successful";
+    if (!result) {
+      resultStr = "failure";
+    }
+    if (oldTvocOffset != configuration.getTvocLearningOffset()) {
+      Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
+                    oldTvocOffset, configuration.getTvocLearningOffset(),
+                    resultStr);
+    }
+    if (oldNoxOffset != configuration.getNoxLearningOffset()) {
+      Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
+                    oldNoxOffset, configuration.getNoxLearningOffset(),
+                    resultStr);
     }
   }
 
@@ -817,7 +842,7 @@ static void updatePm(void) {
       Serial.printf("[2] PM3.0 Count: %d\r\n", measurements.pm03PCount_2);
       Serial.printf("[2] Temperature in C: %0.2f\r\n", measurements.temp_2);
       Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
-            Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
+      Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
                     ag->pms5003t_1.temperatureCompensated(measurements.temp_2));
       Serial.printf("[2] Relative Humidity compensated: %d\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_2));
@@ -948,9 +973,9 @@ static void tempHumUpdate(void) {
     Serial.printf("Temperature in C: %0.2f\r\n", measurements.Temperature);
     Serial.printf("Relative Humidity: %d\r\n", measurements.Humidity);
     Serial.printf("Temperature compensated in C: %0.2f\r\n",
-                  ag->pms5003t_1.temperatureCompensated(measurements.Temperature));
+                  measurements.Temperature);
     Serial.printf("Relative Humidity compensated: %d\r\n",
-                  ag->pms5003t_1.humidityCompensated(measurements.Temperature));
+                  measurements.Humidity);
 
     // Update compensation temperature and humidity for SGP41
     if (configuration.hasSensorSGP) {
