@@ -23,6 +23,7 @@ private:
   void *wifi = NULL;
   bool hasConfig;
   uint32_t lastRetry;
+  bool hasPortalConfig = false;
 
   bool wifiClientConnected(void);
 
