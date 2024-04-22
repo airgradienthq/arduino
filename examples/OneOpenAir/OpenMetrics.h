@@ -7,7 +7,7 @@
 #include "AirGradient.h"
 #include "AgApiClient.h"
 
-class OpenMetrics{
+class OpenMetrics {
 private:
   AirGradient *ag;
   Measurements &measure;

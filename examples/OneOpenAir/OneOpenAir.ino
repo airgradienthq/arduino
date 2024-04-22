@@ -37,7 +37,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <HardwareSerial.h>
-
+#include "OtaHandler.h"
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
@@ -81,6 +81,7 @@ static StateMachine stateMachine(oledDisplay, Serial, measurements,
 static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
+static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
@@ -177,6 +178,12 @@ void setup() {
         localServer.begin();
         initMqtt();
         sendDataToAg();
+
+        #ifdef ESP8266
+          // ota not supported
+        #else
+          otaHandler.updateFirmwareIfOutdated();
+        #endif
 
         apiClient.fetchServerConfiguration();
         configSchedule.update();
@@ -467,7 +474,6 @@ static void oneIndoorInit(void) {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
-  Serial.printf("Firmware version: %s\n", GIT_VERSION);
 
   oledDisplay.setText("AirGradient ONE",
                       "FW Version: ", ag->getVersion().c_str());
