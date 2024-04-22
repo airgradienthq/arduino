@@ -3,13 +3,14 @@
 
 #include "../Main/BoardDef.h"
 #include "PMS.h"
+#include "PMS5003TBase.h"
 #include "Stream.h"
 #include <HardwareSerial.h>
 
 /**
  * @brief The class define how to handle PMS5003T sensor bas on @ref PMS class
  */
-class PMS5003T {
+class PMS5003T: public PMS5003TBase  {
 public:
   PMS5003T(BoardType def);
 #if defined(ESP8266)
@@ -28,8 +29,6 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
-  float temperatureCompensated(float temp);
-  float humidityCompensated(float hum);
 
 private:
   bool _isBegin = false;
