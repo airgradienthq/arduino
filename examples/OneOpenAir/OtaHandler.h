@@ -6,18 +6,24 @@
 #include <esp_err.h>
 #include <Arduino.h>
 
-#define OTA_BUF_SIZE 256
+#define OTA_BUF_SIZE 512
+#define URL_BUF_SIZE 256
 
 
 class OtaHandler {
 public:
-    void updateFirmwareIfOutdated() {
+    void updateFirmwareIfOutdated(String deviceId) {
 
-        char url[] = "http://todo";
-        Serial.printf("checking for new ota @ %s\n", url );
+        String url = "http://hw.airgradient.com/sensors/airgradient:" 
+        + deviceId + "/generic/os/firmware.bin";
+        url += "?current_firmware=";
+        url += GIT_VERSION;
+        char urlAsChar[URL_BUF_SIZE];
+        url.toCharArray(urlAsChar, URL_BUF_SIZE);
+        Serial.printf("checking for new ota @ %s\n", urlAsChar);
 
         esp_http_client_config_t config = {};
-        config.url = url;
+        config.url = urlAsChar;
         esp_err_t ret = attemptToPerformOta(&config);
         Serial.println(ret);
         if (ret == 0) {
@@ -30,9 +36,7 @@ public:
 
 private:
 
-    // TODO: return some enum?
     int attemptToPerformOta(const esp_http_client_config_t *config) {
-
         esp_http_client_handle_t client = esp_http_client_init(config);
         if (client == NULL) {
             Serial.println("Failed to initialize HTTP connection");
@@ -49,7 +53,7 @@ private:
 
         esp_ota_handle_t update_handle = 0;
         const esp_partition_t *update_partition = NULL;
-        Serial.println("Starting ota ...");
+        Serial.println("Starting OTA ...");
         update_partition = esp_ota_get_next_update_partition(NULL);
         if (update_partition == NULL) {
             Serial.println("Passive OTA partition not found");
@@ -66,22 +70,22 @@ private:
             return err;
         }
   
-
         esp_err_t ota_write_err = ESP_OK;
         char *upgrade_data_buf = (char *)malloc(OTA_BUF_SIZE);
         if (!upgrade_data_buf) {
-            Serial.println("Couldn't allocate memory to upgrade data buffer");
+            Serial.println("Couldn't allocate memory for data buffer");
             return ESP_ERR_NO_MEM;
         }
+
         int binary_file_len = 0;
         while (1) {
             int data_read = esp_http_client_read(client, upgrade_data_buf, OTA_BUF_SIZE);
             if (data_read == 0) {
-                Serial.println("Connection closed,all data received");
+                Serial.println("Connection closed, all data received");
                 break;
             }
             if (data_read < 0) {
-                Serial.println("Error: SSL data read error");
+                Serial.println("Data read error");
                 break;
             }
             if (data_read > 0) {
@@ -90,12 +94,12 @@ private:
                     break;
                 }
                 binary_file_len += data_read;
-                Serial.printf("Written image length %d\n", binary_file_len);
+                // Serial.printf("Written image length %d\n", binary_file_len);
             }
         }
         free(upgrade_data_buf);
         cleanupHttp(client); 
-        Serial.printf("Total binary data length writen: %d\n", binary_file_len);
+        Serial.printf("# of bytes written: %d\n", binary_file_len);
         
         esp_err_t ota_end_err = esp_ota_end(update_handle);
         if (ota_write_err != ESP_OK) {
@@ -111,9 +115,7 @@ private:
             Serial.printf("esp_ota_set_boot_partition failed! err=0x%d\n", err);
             return err;
         }
-       
         return 0;
-
     }
 
     void cleanupHttp(esp_http_client_handle_t client) {

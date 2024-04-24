@@ -5,6 +5,10 @@
 #include "WiFi.h"
 #endif
 
+#ifndef GIT_VERSION
+#define GIT_VERSION "snapshot"
+#endif
+
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
       display(type), boardType(type), button(type), statusLed(type),
