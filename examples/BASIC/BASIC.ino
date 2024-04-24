@@ -104,6 +104,7 @@ void setup() {
   /** Init AirGradient server */
   apiClient.begin();
   apiClient.setAirGradient(&ag);
+  configuration.setAirGradient(&ag);
   wifiConnector.setAirGradient(&ag);
 
   /** Show boot display */

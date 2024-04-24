@@ -31,6 +31,7 @@ public:
                const char *line4);
   void showDashboard(void);
   void showDashboard(const char *status);
+  void showWiFiQrCode(String content, String label);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */

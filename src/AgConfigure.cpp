@@ -815,3 +815,11 @@ int Configuration::getTvocLearningOffset(void) {
 int Configuration::getNoxLearningOffset(void) {
   return config.noxLearningOffset;
 }
+
+String Configuration::wifiSSID(void) {
+  return "airgradient-" + ag->deviceId();
+}
+
+String Configuration::wifiPass(void) { return String("cleanair"); }
+
+void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag;}

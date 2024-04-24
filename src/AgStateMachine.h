@@ -16,7 +16,6 @@ private:
   OledDisplay &disp;
   Measurements &value;
   Configuration &config;
-
   bool addToDashBoard = false;
   uint32_t addToDashboardTime;
   int wifiConnectCountDown;
