@@ -37,7 +37,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <HardwareSerial.h>
-
+#include "AirGradient.h"
+#include "OtaHandler.h"
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
@@ -49,7 +50,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "MqttClient.h"
 #include "OpenMetrics.h"
 #include "WebServer.h"
-#include <AirGradient.h>
 #include <WebServer.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
@@ -82,6 +82,7 @@ static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
                                    configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
+static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
@@ -179,6 +180,12 @@ void setup() {
         localServer.begin();
         initMqtt();
         sendDataToAg();
+
+        #ifdef ESP8266
+          // ota not supported
+        #else
+          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+        #endif
 
         apiClient.fetchServerConfiguration();
         configSchedule.update();
@@ -483,6 +490,7 @@ static void oneIndoorInit(void) {
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
+
   oledDisplay.setText("AirGradient ONE",
                       "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);

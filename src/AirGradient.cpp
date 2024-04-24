@@ -5,8 +5,6 @@
 #include "WiFi.h"
 #endif
 
-#define AG_LIB_VER "3.0.10beta2"
-
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
       display(type), boardType(type), button(type), statusLed(type),
@@ -38,7 +36,7 @@ int AirGradient::getI2cSclPin(void) {
   return bsp->I2C.scl_pin;
 }
 
-String AirGradient::getVersion(void) { return AG_LIB_VER; }
+String AirGradient::getVersion(void) { return GIT_VERSION; }
 
 BoardType AirGradient::getBoardType(void) { return boardType; }
 
