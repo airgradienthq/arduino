@@ -6,8 +6,6 @@ jobs:
       matrix:
         example:
           - "BASIC"
-          - "ONE"
-          - "Open_Air"
           - "TestCO2"
           - "TestPM"
           - "TestSht"
@@ -25,10 +23,6 @@ jobs:
         exclude:
           - example: "BASIC"
             fqbn: "esp32:esp32:esp32c3"
-          - example: "ONE"
-            fqbn: "esp8266:esp8266:d1_mini"
-          - example: "Open_Air"
-            fqbn: "esp8266:esp8266:d1_mini"
           - example: "OneOpenAir"
             fqbn: "esp8266:esp8266:d1_mini"
     runs-on: ubuntu-latest

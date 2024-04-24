@@ -24,6 +24,10 @@ If you have an older version of the AirGradient PCB not mentioned in the example
 
 If you have any questions or problems, check out [our forum](https://forum.airgradient.com/). 
 
+## Documentation
+
+Local server API documentation is available in [/docs/local-server.md](/docs/local-server.md) and AirGradient server API on [https://api.airgradient.com/public/docs/api/v1/](https://api.airgradient.com/public/docs/api/v1/).
+
 ## The following libraries have been integrated into this library for ease of use
 
 - [Adafruit BusIO](https://github.com/adafruit/Adafruit_BusIO)
@@ -35,6 +39,8 @@ If you have any questions or problems, check out [our forum](https://forum.airgr
 - [Sensirion Core](https://github.com/Sensirion/arduino-core/)
 - [Sensirion I2C SGP41](https://github.com/Sensirion/arduino-i2c-sgp41)
 - [Sensirion I2C SHT](https://github.com/Sensirion/arduino-sht)
+- [WiFiManager](https://github.com/tzapu/WiFiManager)
+- [Arduino_JSON](https://github.com/arduino-libraries/Arduino_JSON)
 
 ## License
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License

@@ -3,13 +3,14 @@
 
 #include "../Main/BoardDef.h"
 #include "PMS.h"
+#include "PMS5003TBase.h"
 #include "Stream.h"
 #include <HardwareSerial.h>
 
 /**
  * @brief The class define how to handle PMS5003T sensor bas on @ref PMS class
  */
-class PMS5003T {
+class PMS5003T: public PMS5003TBase  {
 public:
   PMS5003T(BoardType def);
 #if defined(ESP8266)
@@ -44,8 +45,6 @@ private:
   PMSBase pms;
   bool begin(void);
   bool isBegin(void);
-  float correctionTemperature(float inTemp);
-  float correctionRelativeHumidity(float inHum);
 };
 
 #endif /** _PMS5003T_H_ */

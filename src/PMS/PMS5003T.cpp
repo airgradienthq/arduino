@@ -149,8 +149,7 @@ int PMS5003T::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
  * @return float Degree Celcius
  */
 float PMS5003T::getTemperature(void) {
-  float temp = pms.getTemp();
-  return correctionTemperature(temp / 10.0f);
+  return pms.getTemp()/10.0f;
 }
 
 /**
@@ -159,8 +158,7 @@ float PMS5003T::getTemperature(void) {
  * @return float Percent (%)
  */
 float PMS5003T::getRelativeHumidity(void) {
-  float hum = pms.getHum();
-  return correctionRelativeHumidity(hum / 10.0f);
+  return pms.getHum()/10.0f;
 }
 
 /**
@@ -175,13 +173,6 @@ bool PMS5003T::isBegin(void) {
     return false;
   }
   return true;
-}
-
-float PMS5003T::correctionTemperature(float inTemp) {
-  if (inTemp < 10.0f) {
-    return inTemp * 1.327f - 6.738f;
-  }
-  return inTemp * 1.181f - 5.113f;
 }
 
 void PMS5003T::end(void) {
@@ -211,16 +202,3 @@ void PMS5003T::handle(void) { pms.handle(); }
  */
 bool PMS5003T::isFailed(void) { return pms.isFailed(); }
 
-/**
- * @brief Correct the PMS5003T relactive humidity
- *
- * @param inHum Input humidity
- * @return float Corrected humidity
- */
-float PMS5003T::correctionRelativeHumidity(float inHum) {
-  float hum = inHum * 1.259 + 7.34;
-  if (hum > 100.0f) {
-    hum = 100.0f;
-  }
-  return hum;
-}

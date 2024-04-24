@@ -38,6 +38,20 @@ bool Sgp41::begin(TwoWire &wire) {
   _vocAlgorithm = new VOCGasIndexAlgorithm();
   _noxAlgorithm = new NOxGasIndexAlgorithm();
 
+  int32_t indexOffset;
+  int32_t learningTimeOffsetHours;
+  int32_t learningTimeGainHours;
+  int32_t gatingMaxDurationMin;
+  int32_t stdInitial;
+  int32_t gainFactor;
+  noxAlgorithm()->get_tuning_parameters(indexOffset, learningTimeOffsetHours, learningTimeGainHours, gatingMaxDurationMin, stdInitial, gainFactor);
+  learningTimeOffsetHours = noxLearnOffset;
+  noxAlgorithm()->set_tuning_parameters(indexOffset, learningTimeOffsetHours, learningTimeGainHours, gatingMaxDurationMin, stdInitial, gainFactor);
+
+  vocAlgorithm()->get_tuning_parameters(indexOffset, learningTimeOffsetHours, learningTimeGainHours, gatingMaxDurationMin, stdInitial, gainFactor);
+  learningTimeOffsetHours = tvocLearnOffset;
+  vocAlgorithm()->set_tuning_parameters(indexOffset, learningTimeOffsetHours, learningTimeGainHours, gatingMaxDurationMin, stdInitial, gainFactor);
+
   /** Init sensor */
   this->_sensor = new SensirionI2CSgp41();
   sgpSensor()->begin(wire);
@@ -51,6 +65,7 @@ bool Sgp41::begin(TwoWire &wire) {
     return false;
   }
 
+  onConditioning = true;
 #ifdef ESP32
   /** Create task */
   xTaskCreate(
@@ -270,3 +285,15 @@ void Sgp41::setCompensationTemperatureHumidity(float temp, float hum) {
   defaultRh = static_cast<uint16_t>(hum * 65535 / 100);
   AgLog("Update: defaultT: %d, defaultRh: %d", defaultT, defaultRh);
 }
+
+void Sgp41::setNoxLearningOffset(int offset) {
+  noxLearnOffset = offset;
+}
+
+void Sgp41::setTvocLearningOffset(int offset) {
+  tvocLearnOffset = offset;
+}
+
+int Sgp41::getNoxLearningOffset(void) { return noxLearnOffset; }
+
+int Sgp41::getTvocLearningOffset(void) { return tvocLearnOffset; }

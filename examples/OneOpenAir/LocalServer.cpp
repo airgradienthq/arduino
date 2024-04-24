@@ -1,0 +1,68 @@
+#include "LocalServer.h"
+
+LocalServer::LocalServer(Stream &log, OpenMetrics &openMetrics,
+                         Measurements &measure, Configuration &config,
+                         WifiConnector &wifiConnector)
+    : PrintLog(log, "LocalServer"), openMetrics(openMetrics), measure(measure),
+      config(config), wifiConnector(wifiConnector) {}
+
+LocalServer::~LocalServer() {}
+
+bool LocalServer::begin(void) {
+  server.on("/measures/current", HTTP_GET, [this]() { _GET_measure(); });
+  server.on(openMetrics.getApi(), HTTP_GET, [this]() { _GET_metrics(); });
+  server.on("/config", HTTP_GET, [this]() { _GET_config(); });
+  server.on("/config", HTTP_PUT, [this]() { _PUT_config(); });
+  server.begin();
+
+  if (xTaskCreate(
+          [](void *param) {
+            LocalServer *localServer = (LocalServer *)param;
+            for (;;) {
+              localServer->_handle();
+            }
+          },
+          "webserver", 1024 * 4, this, 5, NULL) != pdTRUE) {
+    Serial.println("Create task handle webserver failed");
+  }
+  logInfo("Init: " + getHostname() + ".local");
+
+  return true;
+}
+
+void LocalServer::setAirGraident(AirGradient *ag) { this->ag = ag; }
+
+String LocalServer::getHostname(void) {
+  return "airgradient_" + ag->deviceId();
+}
+
+void LocalServer::_handle(void) { server.handleClient(); }
+
+void LocalServer::_GET_config(void) {
+  server.send(200, "application/json", config.toString());
+}
+
+void LocalServer::_PUT_config(void) {
+  String data = server.arg(0);
+  String response = "";
+  int statusCode = 400; // Status code for data invalid
+  if (config.parse(data, true)) {
+    statusCode = 200;
+    response = "Success";
+  } else {
+    response = config.getFailedMesage();
+  }
+  server.send(statusCode, "text/plain", response);
+}
+
+void LocalServer::_GET_metrics(void) {
+  server.send(200, openMetrics.getApiContentType(), openMetrics.getPayload());
+}
+
+void LocalServer::_GET_measure(void) {
+  server.send(
+      200, "application/json",
+      measure.toString(true, fwMode, wifiConnector.RSSI(), ag, &config));
+}
+
+void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }

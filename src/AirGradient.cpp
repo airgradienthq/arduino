@@ -1,6 +1,9 @@
 #include "AirGradient.h"
-
-#define AG_LIB_VER "3.0.9"
+#ifdef ESP8266
+#include <ESP8266WiFi.h>
+#else 
+#include "WiFi.h"
+#endif
 
 AirGradient::AirGradient(BoardType type)
     : pms5003(type), pms5003t_1(type), pms5003t_2(type), s8(type), sgp41(type),
@@ -33,7 +36,7 @@ int AirGradient::getI2cSclPin(void) {
   return bsp->I2C.scl_pin;
 }
 
-String AirGradient::getVersion(void) { return AG_LIB_VER; }
+String AirGradient::getVersion(void) { return GIT_VERSION; }
 
 BoardType AirGradient::getBoardType(void) { return boardType; }
 
@@ -43,4 +46,21 @@ double AirGradient::round2(double value) {
 
 String AirGradient::getBoardName(void) {
   return String(getBoardDefName(boardType));
+}
+
+/**
+ * @brief Board Type is ONE_INDOOR
+ * 
+ * @return true ONE_INDOOR
+ * @return false Other
+ */
+bool AirGradient::isOne(void) {
+  return boardType == BoardType::ONE_INDOOR;
+}
+
+String AirGradient::deviceId(void) {
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  mac.toLowerCase();
+  return mac;
 }
