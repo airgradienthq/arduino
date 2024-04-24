@@ -37,6 +37,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 */
 
 #include <HardwareSerial.h>
+#include "AirGradient.h"
 #include "OtaHandler.h"
 #include "AgApiClient.h"
 #include "AgConfigure.h"
@@ -49,7 +50,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "MqttClient.h"
 #include "OpenMetrics.h"
 #include "WebServer.h"
-#include <AirGradient.h>
 #include <WebServer.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */

@@ -13,6 +13,10 @@
 #include "Sgp41/Sgp41.h"
 #include "Sht/Sht.h"
 
+#ifndef GIT_VERSION
+#define GIT_VERSION "snapshot"
+#endif
+
 /**
  * @brief Class with define all the sensor has supported by Airgradient. Each
  * sensor usage must be init before use.
