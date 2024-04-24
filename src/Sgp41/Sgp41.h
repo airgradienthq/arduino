@@ -28,6 +28,8 @@ public:
   void setCompensationTemperatureHumidity(float temp, float hum);
   void setNoxLearningOffset(int offset);
   void setTvocLearningOffset(int offset);
+  int getNoxLearningOffset(void);
+  int getTvocLearningOffset(void);
 
 private:
   bool onConditioning = true;
