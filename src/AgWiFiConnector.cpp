@@ -46,6 +46,7 @@ bool WifiConnector::connect(void) {
   }
 
   WIFI()->setConfigPortalBlocking(false);
+  WIFI()->setConnectTimeout(15);
   WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
 #ifdef ESP32
@@ -148,9 +149,15 @@ bool WifiConnector::connect(void) {
     hasConfig = true;
     logInfo("WiFi Connected: " + WiFi.SSID() + " IP: " + localIpStr());
 
-    String result = String(postToAg.getValue());
-    logInfo("Post to AirGradient Configure: " + result);
-    config.setPostToAirGradient(result != "T");
+    if (hasPortalConfig) {
+      String result = String(postToAg.getValue());
+      logInfo("Setting postToAirGradient set from " +
+              String(config.isPostDataToAirGradient() ? "True" : "False") +
+              String(" to ") + String(result != "T" ? "True" : "False") +
+              String(" successful"));
+      config.setPostToAirGradient(result != "T");
+    }
+    hasPortalConfig = false;
   }
 #else
   _wifiProcess();
@@ -226,6 +233,7 @@ void WifiConnector::_wifiSaveParamCallback(void) {
   sm.ledAnimationInit();
   sm.handleLeds(AgStateMachineWiFiManagerStaConnecting);
   sm.setDisplayState(AgStateMachineWiFiManagerStaConnecting);
+  hasPortalConfig = true;
 }
 
 /**

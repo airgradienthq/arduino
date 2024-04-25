@@ -276,22 +276,24 @@ void StateMachine::co2Calibration(void) {
     }
   }
 
-  if (config.getCO2CalibrationAbcDays() > 0 && config.hasSensorS8) {
+  if (config.getCO2CalibrationAbcDays() >= 0 && config.hasSensorS8) {
     int newHour = config.getCO2CalibrationAbcDays() * 24;
-    logInfo("Requested abcDays setting: " +
-            String(config.getCO2CalibrationAbcDays()) + "days (" +
-            String(newHour) + "hours)");
     int curHour = ag->s8.getAbcPeriod();
-    logInfo("Current S8 abcDays setting: " + String(curHour) + "(hours)");
-    if (curHour == newHour) {
-      logInfo("'abcDays' unchanged");
-    } else {
-      if (ag->s8.setAbcPeriod(config.getCO2CalibrationAbcDays() * 24) ==
-          false) {
-        logError("Set S8 abcDays period failed");
-      } else {
-        logInfo("Set S8 abcDays period success");
+    if (curHour != newHour) {
+      String resultStr = "failure";
+      if (ag->s8.setAbcPeriod(config.getCO2CalibrationAbcDays() * 24)) {
+        resultStr = "successful";
       }
+      String fromStr = String(curHour/24) + " days";
+      if(curHour == 0){
+        fromStr = "off";
+      }
+      String toStr = String(config.getCO2CalibrationAbcDays()) + " days";
+      if(config.getCO2CalibrationAbcDays() == 0) {
+        toStr = "off";
+      }
+      String msg = "Setting S8 from " + fromStr + " to " + toStr + " " +  resultStr;
+      logInfo(msg);
     }
   } else {
     logWarning("CO2 S8 not available, set 'abcDays' ignored");

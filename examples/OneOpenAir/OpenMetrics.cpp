@@ -179,7 +179,7 @@ String OpenMetrics::getPayload(void) {
 
   if (_temp > -1001) {
     add_metric("temperature",
-               "The ambient temperature as measured by the AirGradient SHT "
+               "The ambient temperature as measured by the AirGradient SHT / PMS "
                "sensor, in degrees Celsius",
                "gauge", "celsius");
     add_metric_point("", String(_temp));
@@ -187,21 +187,22 @@ String OpenMetrics::getPayload(void) {
   if (atmpCompensated > -1001) {
     add_metric(
         "temperature_compensated",
-        "The ambient temperature as measured by the AirGradient SHT / PMS",
+        "The compensated ambient temperature as measured by the AirGradient SHT / PMS "
+        "sensor, in degrees Celsius",
         "gauge", "celsius");
     add_metric_point("", String(atmpCompensated));
   }
   if (_hum >= 0) {
     add_metric(
         "humidity",
-        "The relative humidity as measured by the AirGradient SHT sensor",
+        "The relative humidity as measured by the AirGradient SHT sensor"
         "gauge", "percent");
     add_metric_point("", String(_hum));
   }
   if (ahumCompensated >= 0) {
     add_metric(
         "humidity_compensated",
-        "The relative humidity as measured by the AirGradient SHT / PMS sensor",
+        "The compensated relative humidity as measured by the AirGradient SHT / PMS sensor",
         "gauge", "percent");
     add_metric_point("", String(ahumCompensated));
   }
