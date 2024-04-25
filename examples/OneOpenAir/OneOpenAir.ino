@@ -150,7 +150,7 @@ void setup() {
 
   /** Init sensor */
   boardInit();
-
+  configuration.setAirGradient(ag);
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
   wifiConnector.setAirGradient(ag);

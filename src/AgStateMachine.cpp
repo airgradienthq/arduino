@@ -414,12 +414,19 @@ void StateMachine::displayHandle(AgStateMachineState state) {
   switch (state) {
   case AgStateMachineWiFiManagerMode:
   case AgStateMachineWiFiManagerPortalActive: {
+    // if (wifiConnectCountDown >= 0) {
+    //   String line1 = String(wifiConnectCountDown) + "s to connect";
+    //   String line2 = "to WiFi hotspot:";
+    //   String line3 = "\"airgradient-";
+    //   String line4 = ag->deviceId() + "\"";
+    //   disp.setText(line1, line2, line3, line4);
+    //   wifiConnectCountDown--;
+    // }
     if (wifiConnectCountDown >= 0) {
-      String line1 = String(wifiConnectCountDown) + "s to connect";
-      String line2 = "to WiFi hotspot:";
-      String line3 = "\"airgradient-";
-      String line4 = ag->deviceId() + "\"";
-      disp.setText(line1, line2, line3, line4);
+      String qrContent = "WIFI:S:" + config.wifiSSID() +
+                         ";T:WPA;P:" + config.wifiPass() + ";;";
+      String label = "Scan me (" + String(wifiConnectCountDown) + String(")");
+      disp.showWiFiQrCode(qrContent, label);
       wifiConnectCountDown--;
     }
     break;

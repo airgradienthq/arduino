@@ -3,6 +3,7 @@
 
 #include "App/AppDef.h"
 #include "Main/PrintLog.h"
+#include "AirGradient.h"
 #include <Arduino.h>
 
 class Configuration : public PrintLog {
@@ -35,6 +36,8 @@ private:
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
+
+  AirGradient* ag;
 
   String getLedBarModeName(LedBarMode mode);
   void saveConfig(void);
@@ -83,6 +86,9 @@ public:
   bool tvocLearnOffsetChanged(void);
   int getTvocLearningOffset(void);
   int getNoxLearningOffset(void);
+  String wifiSSID(void);
+  String wifiPass(void);
+  void setAirGradient(AirGradient *ag);
 };
 
 #endif /** _AG_CONFIG_H_ */
