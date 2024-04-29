@@ -202,7 +202,7 @@ String OpenMetrics::getPayload(void) {
   if (_hum >= 0) {
     add_metric(
         "humidity",
-        "The relative humidity as measured by the AirGradient SHT sensor"
+        "The relative humidity as measured by the AirGradient SHT sensor",
         "gauge", "percent");
     add_metric_point("", String(_hum));
   }
