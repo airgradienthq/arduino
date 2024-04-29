@@ -86,6 +86,13 @@ String OpenMetrics::getPayload(void) {
         _temp = measure.Temperature;
         _hum = measure.Humidity;
       }
+
+      if (config.hasSensorPMS1) {
+        pm01 = measure.pm01_1;
+        pm25 = measure.pm25_1;
+        pm10 = measure.pm10_1;
+        pm03PCount = measure.pm03PCount_1;
+      }
     } else {
       if (config.hasSensorPMS1) {
         _temp = measure.temp_1;
