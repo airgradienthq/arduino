@@ -476,9 +476,9 @@ bool Configuration::parse(String data, bool isLocal) {
   if (JSON.typeof_(root["temperatureUnit"]) == "string") {
     String unit = root["temperatureUnit"];
     unit.toLowerCase();
-    if ((unit == "c") || (unit == "celsius")) {
+    if (unit == "c") {
       temperatureUnit = 'c';
-    } else if ((unit == "f") || (unit == "fahrenheit")) {
+    } else if (unit == "f") {
       temperatureUnit = 'f';
     } else {
       failedMessage = "'temperatureUnit' value '" + unit + "' invalid";
