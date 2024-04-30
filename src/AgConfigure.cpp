@@ -1,6 +1,14 @@
 #include "AgConfigure.h"
-#include "EEPROM.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+#if ESP32
+#include "FS.h"
+#include "SPIFFS.h"
+#else
+#include "EEPROM.h"
+#endif
+
+#define EEPROM_CONFIG_SIZE 512
+#define CONFIG_FILE_NAME "/cfg.bin"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
@@ -54,10 +62,19 @@ void Configuration::saveConfig(void) {
   for (int i = 0; i < sizeof(config); i++) {
     EEPROM.write(i, data[i]);
   }
-#else
-  EEPROM.writeBytes(0, &config, sizeof(config));
-#endif
   EEPROM.commit();
+#else
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "w", true);
+  if (file && !file.isDirectory()) {
+    if (file.write((const uint8_t *)&config, sizeof(config)) !=
+        sizeof(config)) {
+      logError("Write SPIFFS file failed");
+    }
+    file.close();
+  } else {
+    logError("Open SPIFFS file to write failed");
+  }
+#endif
   logInfo("Save Config");
 }
 
@@ -70,8 +87,12 @@ void Configuration::loadConfig(void) {
   }
   readSuccess = true;
 #else
-  if (EEPROM.readBytes(0, &config, sizeof(config)) == sizeof(config)) {
-    readSuccess = true;
+  File file = SPIFFS.open(CONFIG_FILE_NAME);
+  if (file && !file.isDirectory()) {
+    if (file.readBytes((char *)&config, sizeof(config)) == sizeof(config)) {
+      readSuccess = true;
+    }
+    file.close();
   }
 #endif
 
@@ -162,7 +183,20 @@ Configuration::~Configuration() {}
  * @return false Failure
  */
 bool Configuration::begin(void) {
-  EEPROM.begin(512);
+  if (sizeof(config) > EEPROM_CONFIG_SIZE) {
+    logError("Configuration over EEPROM_CONFIG_SIZE");
+    return false;
+  }
+
+#ifdef ESP32
+  if (!SPIFFS.begin(true)) {
+    logError("Init SPIFFS failed");
+    return false;
+  }
+#else
+  EEPROM.begin(EEPROM_CONFIG_SIZE);
+#endif
+
   loadConfig();
   printConfig();
 
@@ -298,7 +332,8 @@ bool Configuration::parse(String data, bool isLocal) {
     }
 
     if (inUSAQI != config.inUSAQI) {
-      configLogInfo("pmStandard", getPMStandardString(config.inUSAQI), pmStandard);
+      configLogInfo("pmStandard", getPMStandardString(config.inUSAQI),
+                    pmStandard);
       config.inUSAQI = inUSAQI;
       changed = true;
     }
@@ -312,7 +347,7 @@ bool Configuration::parse(String data, bool isLocal) {
 
   if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
     co2CalibrationRequested = root["co2CalibrationRequested"];
-    if(co2CalibrationRequested) {
+    if (co2CalibrationRequested) {
       logInfo("co2CalibrationRequested: " +
               String(co2CalibrationRequested ? "True" : "False"));
     }
@@ -327,7 +362,7 @@ bool Configuration::parse(String data, bool isLocal) {
 
   if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
     ledBarTestRequested = root["ledBarTestRequested"];
-    if(ledBarTestRequested){
+    if (ledBarTestRequested) {
       logInfo("ledBarTestRequested: " +
               String(ledBarTestRequested ? "True" : "False"));
     }
@@ -384,7 +419,8 @@ bool Configuration::parse(String data, bool isLocal) {
 
     if (displayMode != config.displayMode) {
       changed = true;
-      configLogInfo("displayMode", getDisplayModeString(config.displayMode), mode);
+      configLogInfo("displayMode", getDisplayModeString(config.displayMode),
+                    mode);
       config.displayMode = displayMode;
     }
   } else {
@@ -770,15 +806,15 @@ String Configuration::getPMStandardString(bool usaqi) {
   return "ugm3";
 }
 
-String Configuration::getDisplayModeString(bool dispMode) { 
-  if(dispMode){
+String Configuration::getDisplayModeString(bool dispMode) {
+  if (dispMode) {
     return String("on");
   }
   return String("off");
 }
 
-String Configuration::getAbcDayString(int value) { 
-  if(value <= 0){
+String Configuration::getAbcDayString(int value) {
+  if (value <= 0) {
     return String("off");
   }
   return String(value);
@@ -816,10 +852,8 @@ int Configuration::getNoxLearningOffset(void) {
   return config.noxLearningOffset;
 }
 
-String Configuration::wifiSSID(void) {
-  return "airgradient-" + ag->deviceId();
-}
+String Configuration::wifiSSID(void) { return "airgradient-" + ag->deviceId(); }
 
 String Configuration::wifiPass(void) { return String("cleanair"); }
 
-void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag;}
+void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag; }
