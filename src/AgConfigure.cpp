@@ -700,10 +700,10 @@ String Configuration::toString(void) {
   /** "postDataToAirGradient" */
   root["postDataToAirGradient"] = config.postDataToAirGradient;
 
-  /** Led bar brighness */
+  /** Led bar brightness */
   root["ledbarBrightness"] = config.ledBarBrightness;
 
-  /** Display brighness */
+  /** Display brightness */
   root["displayBrightness"] = config.displayBrightness;
 
   return JSON.stringify(root);
