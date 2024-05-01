@@ -94,6 +94,8 @@ bool OledDisplay::begin(void) {
     return false;
   }
 
+  setBrightness(config.getDisplayBrightness());
+
   isBegin = true;
   logInfo("begin");
   return true;
@@ -307,4 +309,8 @@ void OledDisplay::showWiFiQrCode(String content, String label) {
     x_start = (DISP()->getWidth() - DISP()->getStrWidth(label.c_str()))/2;
     DISP()->drawStr(x_start, 60, label.c_str());
   } while (DISP()->nextPage());
+}
+
+void OledDisplay::setBrightness(int percent) {
+  DISP()->setContrast((127 * percent) / 100);
 }

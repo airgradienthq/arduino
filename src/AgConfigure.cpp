@@ -125,6 +125,15 @@ void Configuration::loadConfig(void) {
         changed = true;
         logError("LedBarMode invalid, set default: co2");
       }
+      if (config.ledBarBrightness > 100) {
+        config.ledBarBrightness = 100;
+        changed = true;
+      }
+      if (config.displayBrightness > 100) {
+        config.displayBrightness = 100;
+        changed = true;
+      }
+
       if (changed) {
         saveConfig();
       }
@@ -152,6 +161,8 @@ void Configuration::defaultConfig(void) {
   config.tvocLearningOffset = 12;
   config.noxLearningOffset = 12;
   config.temperatureUnit = 'c';
+  config.ledBarBrightness = 100;
+  config.displayBrightness = 100;
 
   saveConfig();
 }
@@ -581,6 +592,52 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  if (JSON.typeof_(root["ledbarBrightness"]) == "number") {
+    int brightnress = root["ledbarBrightness"];
+    if (brightnress != config.ledBarBrightness) {
+      if (brightnress <= 100) {
+        changed = true;
+        configLogInfo("ledbarBrightness", String(config.ledBarBrightness),
+                      String(brightnress));
+        ledBarBrightnessChanged = true;
+        config.ledBarBrightness = (uint8_t)brightnress;
+      } else {
+        failedMessage =
+            "\"ledbarBrightness\" value invalid: " + String(brightnress);
+        return false;
+      }
+    }
+  } else {
+    if (jsonTypeInvalid(root["ledbarBrightness"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("ledbarBrightness", "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  if (JSON.typeof_(root["displayBrightness"]) == "number") {
+    int brightness = root["displayBrightness"];
+    if (brightness != config.displayBrightness) {
+      if (brightness <= 100) {
+        changed = true;
+        displayBrightnessChanged = true;
+        configLogInfo("displayBrightness", String(config.displayBrightness),
+                      String(brightness));
+        config.displayBrightness = (uint8_t)brightness;
+      } else {
+        failedMessage =
+            "\"displayBrightness\" value invalid: " + String(brightness);
+        return false;
+      }
+    }
+  } else {
+    if (jsonTypeInvalid(root["displayBrightness"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("displayBrightness", "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
   if (changed) {
     udpated = true;
     saveConfig();
@@ -642,6 +699,12 @@ String Configuration::toString(void) {
 
   /** "postDataToAirGradient" */
   root["postDataToAirGradient"] = config.postDataToAirGradient;
+
+  /** Led bar brighness */
+  root["ledbarBrightness"] = config.ledBarBrightness;
+
+  /** Display brighness */
+  root["displayBrightness"] = config.displayBrightness;
 
   return JSON.stringify(root);
 }
@@ -857,3 +920,21 @@ String Configuration::wifiSSID(void) { return "airgradient-" + ag->deviceId(); }
 String Configuration::wifiPass(void) { return String("cleanair"); }
 
 void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+int Configuration::getLedBarBrightness(void) { return config.ledBarBrightness; }
+
+bool Configuration::isLedBarBrightnessChanged(void) {
+  bool changed = ledBarBrightnessChanged;
+  ledBarBrightnessChanged = false;
+  return changed;
+}
+
+int Configuration::getDisplayBrightness(void) {
+  return config.displayBrightness;
+}
+
+bool Configuration::isDisplayBrightnessChanged(void) {
+  bool changed = displayBrightnessChanged;
+  displayBrightnessChanged = false;
+  return changed;
+}
