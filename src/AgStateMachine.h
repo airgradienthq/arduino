@@ -28,6 +28,7 @@ private:
   void pm25handleLeds(void);
   void co2Calibration(void);
   void ledBarTest(void);
+  void ledBarPowerUpTest(void);
   void ledBarRunTest(void);
   void runLedTest(char color);
 
@@ -49,6 +50,7 @@ public:
   AgStateMachineState getLedState(void);
   void executeCo2Calibration(void);
   void executeLedBarTest(void);
+  void executeLedBarPowerUpTest(void);
 };
 
 #endif /** _AG_STATE_MACHINE_H_ */

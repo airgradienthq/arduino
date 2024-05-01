@@ -59,6 +59,7 @@ enum AgStateMachineState {
 
   /* LED bar testing */
   AgStateMachineLedBarTest,
+  AgStateMachineLedBarPowerUpTest,
 
   /** LED: Show working state.
    * Display: Show dashboard */
