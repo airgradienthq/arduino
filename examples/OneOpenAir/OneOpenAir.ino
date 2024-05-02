@@ -414,6 +414,7 @@ static void wdgFeedUpdate(void) {
 
 static void ledBarEnabledUpdate(void) {
   if (ag->isOne()) {
+    ag->ledBar.setBrighness(configuration.getLedBarBrightness());
     ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
   }
 }
@@ -719,6 +720,17 @@ static void configUpdateHandle() {
                     oldNoxOffset, configuration.getNoxLearningOffset(),
                     resultStr);
     }
+  }
+
+  if (configuration.isLedBarBrightnessChanged()) {
+    ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+    Serial.println("Set 'LedBarBrightness' brightness: " +
+                   String(configuration.getLedBarBrightness()));
+  }
+  if (configuration.isDisplayBrightnessChanged()) {
+    oledDisplay.setBrightness(configuration.getDisplayBrightness());
+    Serial.println("Set 'DisplayBrightness' brightness: " +
+                   String(configuration.getDisplayBrightness()));
   }
 
   appDispHandler();

@@ -31,6 +31,7 @@ public:
                const char *line4);
   void showDashboard(void);
   void showDashboard(const char *status);
+  void setBrightness(int percent);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */

@@ -1,6 +1,14 @@
 #include "AgConfigure.h"
-#include "EEPROM.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+#if ESP32
+#include "FS.h"
+#include "SPIFFS.h"
+#else
+#include "EEPROM.h"
+#endif
+
+#define EEPROM_CONFIG_SIZE 512
+#define CONFIG_FILE_NAME "/cfg.bin"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
@@ -54,10 +62,19 @@ void Configuration::saveConfig(void) {
   for (int i = 0; i < sizeof(config); i++) {
     EEPROM.write(i, data[i]);
   }
-#else
-  EEPROM.writeBytes(0, &config, sizeof(config));
-#endif
   EEPROM.commit();
+#else
+  File file = SPIFFS.open(CONFIG_FILE_NAME, "w", true);
+  if (file && !file.isDirectory()) {
+    if (file.write((const uint8_t *)&config, sizeof(config)) !=
+        sizeof(config)) {
+      logError("Write SPIFFS file failed");
+    }
+    file.close();
+  } else {
+    logError("Open SPIFFS file to write failed");
+  }
+#endif
   logInfo("Save Config");
 }
 
@@ -70,8 +87,12 @@ void Configuration::loadConfig(void) {
   }
   readSuccess = true;
 #else
-  if (EEPROM.readBytes(0, &config, sizeof(config)) == sizeof(config)) {
-    readSuccess = true;
+  File file = SPIFFS.open(CONFIG_FILE_NAME);
+  if (file && !file.isDirectory()) {
+    if (file.readBytes((char *)&config, sizeof(config)) == sizeof(config)) {
+      readSuccess = true;
+    }
+    file.close();
   }
 #endif
 
@@ -104,6 +125,15 @@ void Configuration::loadConfig(void) {
         changed = true;
         logError("LedBarMode invalid, set default: co2");
       }
+      if (config.ledBarBrightness > 100) {
+        config.ledBarBrightness = 100;
+        changed = true;
+      }
+      if (config.displayBrightness > 100) {
+        config.displayBrightness = 100;
+        changed = true;
+      }
+
       if (changed) {
         saveConfig();
       }
@@ -131,6 +161,8 @@ void Configuration::defaultConfig(void) {
   config.tvocLearningOffset = 12;
   config.noxLearningOffset = 12;
   config.temperatureUnit = 'c';
+  config.ledBarBrightness = 100;
+  config.displayBrightness = 100;
 
   saveConfig();
 }
@@ -162,7 +194,20 @@ Configuration::~Configuration() {}
  * @return false Failure
  */
 bool Configuration::begin(void) {
-  EEPROM.begin(512);
+  if (sizeof(config) > EEPROM_CONFIG_SIZE) {
+    logError("Configuration over EEPROM_CONFIG_SIZE");
+    return false;
+  }
+
+#ifdef ESP32
+  if (!SPIFFS.begin(true)) {
+    logError("Init SPIFFS failed");
+    return false;
+  }
+#else
+  EEPROM.begin(EEPROM_CONFIG_SIZE);
+#endif
+
   loadConfig();
   printConfig();
 
@@ -298,7 +343,8 @@ bool Configuration::parse(String data, bool isLocal) {
     }
 
     if (inUSAQI != config.inUSAQI) {
-      configLogInfo("pmStandard", getPMStandardString(config.inUSAQI), pmStandard);
+      configLogInfo("pmStandard", getPMStandardString(config.inUSAQI),
+                    pmStandard);
       config.inUSAQI = inUSAQI;
       changed = true;
     }
@@ -312,7 +358,7 @@ bool Configuration::parse(String data, bool isLocal) {
 
   if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
     co2CalibrationRequested = root["co2CalibrationRequested"];
-    if(co2CalibrationRequested) {
+    if (co2CalibrationRequested) {
       logInfo("co2CalibrationRequested: " +
               String(co2CalibrationRequested ? "True" : "False"));
     }
@@ -327,7 +373,7 @@ bool Configuration::parse(String data, bool isLocal) {
 
   if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
     ledBarTestRequested = root["ledBarTestRequested"];
-    if(ledBarTestRequested){
+    if (ledBarTestRequested) {
       logInfo("ledBarTestRequested: " +
               String(ledBarTestRequested ? "True" : "False"));
     }
@@ -384,7 +430,8 @@ bool Configuration::parse(String data, bool isLocal) {
 
     if (displayMode != config.displayMode) {
       changed = true;
-      configLogInfo("displayMode", getDisplayModeString(config.displayMode), mode);
+      configLogInfo("displayMode", getDisplayModeString(config.displayMode),
+                    mode);
       config.displayMode = displayMode;
     }
   } else {
@@ -476,9 +523,9 @@ bool Configuration::parse(String data, bool isLocal) {
   if (JSON.typeof_(root["temperatureUnit"]) == "string") {
     String unit = root["temperatureUnit"];
     unit.toLowerCase();
-    if ((unit == "c") || (unit == "celsius")) {
+    if (unit == "c") {
       temperatureUnit = 'c';
-    } else if ((unit == "f") || (unit == "fahrenheit")) {
+    } else if (unit == "f") {
       temperatureUnit = 'f';
     } else {
       failedMessage = "'temperatureUnit' value '" + unit + "' invalid";
@@ -545,6 +592,52 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  if (JSON.typeof_(root["ledbarBrightness"]) == "number") {
+    int brightnress = root["ledbarBrightness"];
+    if (brightnress != config.ledBarBrightness) {
+      if (brightnress <= 100) {
+        changed = true;
+        configLogInfo("ledbarBrightness", String(config.ledBarBrightness),
+                      String(brightnress));
+        ledBarBrightnessChanged = true;
+        config.ledBarBrightness = (uint8_t)brightnress;
+      } else {
+        failedMessage =
+            "\"ledbarBrightness\" value invalid: " + String(brightnress);
+        return false;
+      }
+    }
+  } else {
+    if (jsonTypeInvalid(root["ledbarBrightness"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("ledbarBrightness", "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  if (JSON.typeof_(root["displayBrightness"]) == "number") {
+    int brightness = root["displayBrightness"];
+    if (brightness != config.displayBrightness) {
+      if (brightness <= 100) {
+        changed = true;
+        displayBrightnessChanged = true;
+        configLogInfo("displayBrightness", String(config.displayBrightness),
+                      String(brightness));
+        config.displayBrightness = (uint8_t)brightness;
+      } else {
+        failedMessage =
+            "\"displayBrightness\" value invalid: " + String(brightness);
+        return false;
+      }
+    }
+  } else {
+    if (jsonTypeInvalid(root["displayBrightness"], "number")) {
+      failedMessage = jsonTypeInvalidMessage("displayBrightness", "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
   if (changed) {
     udpated = true;
     saveConfig();
@@ -606,6 +699,12 @@ String Configuration::toString(void) {
 
   /** "postDataToAirGradient" */
   root["postDataToAirGradient"] = config.postDataToAirGradient;
+
+  /** Led bar brightness */
+  root["ledbarBrightness"] = config.ledBarBrightness;
+
+  /** Display brightness */
+  root["displayBrightness"] = config.displayBrightness;
 
   return JSON.stringify(root);
 }
@@ -770,15 +869,15 @@ String Configuration::getPMStandardString(bool usaqi) {
   return "ugm3";
 }
 
-String Configuration::getDisplayModeString(bool dispMode) { 
-  if(dispMode){
+String Configuration::getDisplayModeString(bool dispMode) {
+  if (dispMode) {
     return String("on");
   }
   return String("off");
 }
 
-String Configuration::getAbcDayString(int value) { 
-  if(value <= 0){
+String Configuration::getAbcDayString(int value) {
+  if (value <= 0) {
     return String("off");
   }
   return String(value);
@@ -816,10 +915,26 @@ int Configuration::getNoxLearningOffset(void) {
   return config.noxLearningOffset;
 }
 
-String Configuration::wifiSSID(void) {
-  return "airgradient-" + ag->deviceId();
-}
+String Configuration::wifiSSID(void) { return "airgradient-" + ag->deviceId(); }
 
 String Configuration::wifiPass(void) { return String("cleanair"); }
 
-void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag;}
+void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+int Configuration::getLedBarBrightness(void) { return config.ledBarBrightness; }
+
+bool Configuration::isLedBarBrightnessChanged(void) {
+  bool changed = ledBarBrightnessChanged;
+  ledBarBrightnessChanged = false;
+  return changed;
+}
+
+int Configuration::getDisplayBrightness(void) {
+  return config.displayBrightness;
+}
+
+bool Configuration::isDisplayBrightnessChanged(void) {
+  bool changed = displayBrightnessChanged;
+  displayBrightnessChanged = false;
+  return changed;
+}

@@ -62,13 +62,13 @@ void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue, int ledNum) {
 /**
  * @brief Set LED brightness apply for all LED bar
  *
- * @param brightness Brightness (0 - 255)
+ * @param brightness Brightness (0 - 100)%
  */
 void LedBar::setBrighness(uint8_t brightness) {
   if (this->isBegin() == false) {
     return;
   }
-  pixel()->setBrightness(brightness);
+  pixel()->setBrightness((brightness * 0xff) / 100);
 }
 
 /**

@@ -93,6 +93,8 @@ bool OledDisplay::begin(void) {
     return false;
   }
 
+  setBrightness(config.getDisplayBrightness());
+
   isBegin = true;
   logInfo("begin");
   return true;
@@ -284,4 +286,8 @@ void OledDisplay::showDashboard(const char *status) {
     }
     DISP()->drawStr(85, 63, strBuf);
   } while (DISP()->nextPage());
+}
+
+void OledDisplay::setBrightness(int percent) {
+  DISP()->setContrast((127 * percent) / 100);
 }
