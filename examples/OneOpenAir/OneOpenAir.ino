@@ -82,7 +82,7 @@ static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
                                    configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
-static OtaHandler otaHandler(stateMachine, configuration);
+static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
@@ -93,6 +93,7 @@ static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
+static String fwNewVersion;
 
 static void boardInit(void);
 static void failedHandler(String msg);
@@ -112,6 +113,7 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
+static void otaHandlerCallback(StateMachine::OtaState state, String mesasge);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -157,7 +159,6 @@ void setup() {
   apiClient.setAirGradient(ag);
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
-  otaHandler.setAirGradient(ag);
 
   /** Connecting wifi */
   bool connectToWifi = false;
@@ -432,6 +433,25 @@ static bool sgp41Init(void) {
     configuration.hasSensorSGP = false;
   }
   return false;
+}
+
+static void otaHandlerCallback(StateMachine::OtaState state, String mesasge) {
+  switch (state) {
+  case StateMachine::OtaState::OTA_STATE_BEGIN:
+    stateMachine.executeOTA(state, fwNewVersion, 0);
+    break;
+  case StateMachine::OtaState::OTA_STATE_FAIL:
+    stateMachine.executeOTA(state, "", 0);
+    break;
+  case StateMachine::OtaState::OTA_STATE_PROCESSING:
+    stateMachine.executeOTA(state, "", mesasge.toInt());
+    break;
+  case StateMachine::OtaState::OTA_STATE_SUCCESS:
+    stateMachine.executeOTA(state, "", mesasge.toInt());
+    break;
+  default:
+    break;
+  }
 }
 
 static void sendDataToAg() {
@@ -734,9 +754,18 @@ static void configUpdateHandle() {
                    String(configuration.getDisplayBrightness()));
   }
 
-  String newVer = configuration.newFirmwareVersion();
-  if (newVer.length()) {
-    otaHandler.updateFirmwareIfOutdated(newVer);
+  fwNewVersion = configuration.newFirmwareVersion();
+  if (fwNewVersion.length()) {
+    int lastOta = configuration.getLastOta();
+    if (lastOta != 0 && lastOta < (60 * 60 * 24)) {
+      Serial.println("Ignore OTA cause last update is " + String(lastOta) +
+                     String("sec"));
+      Serial.println("Retry again after 24h");
+    } else {
+      configuration.updateLastOta();
+      otaHandler.setHandlerCallback(otaHandlerCallback);
+      otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+    }
   }
 
   appDispHandler();
