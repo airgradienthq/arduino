@@ -759,3 +759,47 @@ void StateMachine::executeCo2Calibration(void) {
 void StateMachine::executeLedBarTest(void) {
   handleLeds(AgStateMachineLedBarTest);
 }
+
+void StateMachine::executeOTA(StateMachine::OtaState state, String msg,
+                              int processing) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN: {
+    if (ag->isOne()) {
+      disp.showNewFirmwareVersion(msg);
+    } else {
+      logInfo("New firmware: " + msg);
+    }
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_FAIL: {
+    if (ag->isOne()) {
+      disp.showNewFirmwareFailed();
+    } else {
+      logError("Firmware update: failed");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_PROCESSING: {
+    if (ag->isOne()) {
+      disp.showNewFirmwareUpdating(String(processing));
+    } else {
+      logInfo("Firmware update: " + String(processing) + String("%"));
+    }
+
+    break;
+  }
+  case OtaState::OTA_STATE_SUCCESS: {
+    if (ag->isOne()) {
+      disp.showNewFirmwareSuccess(String(processing));
+    } else {
+      logInfo("Rebooting... " + String(processing));
+    }
+    break;
+  }
+  default:
+    break;
+  }
+}

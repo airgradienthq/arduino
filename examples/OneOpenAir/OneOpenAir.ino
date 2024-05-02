@@ -82,7 +82,7 @@ static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
                                    configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
-static OtaHandler otaHandler;
+static OtaHandler otaHandler(stateMachine, configuration);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
@@ -157,6 +157,7 @@ void setup() {
   apiClient.setAirGradient(ag);
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
+  otaHandler.setAirGradient(ag);
 
   /** Connecting wifi */
   bool connectToWifi = false;
@@ -184,7 +185,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -731,6 +732,11 @@ static void configUpdateHandle() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
     Serial.println("Set 'DisplayBrightness' brightness: " +
                    String(configuration.getDisplayBrightness()));
+  }
+
+  String newVer = configuration.newFirmwareVersion();
+  if (newVer.length()) {
+    otaHandler.updateFirmwareIfOutdated(newVer);
   }
 
   appDispHandler();

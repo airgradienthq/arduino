@@ -5,8 +5,11 @@
 #include <esp_err.h>
 #include <esp_http_client.h>
 #include <esp_ota_ops.h>
+#include "AgConfigure.h"
+#include "AgStateMachine.h"
+#include "AirGradient.h"
 
-#define OTA_BUF_SIZE 512
+#define OTA_BUF_SIZE 1024
 #define URL_BUF_SIZE 256
 
 enum OtaUpdateOutcome {
@@ -18,10 +21,23 @@ enum OtaUpdateOutcome {
 
 class OtaHandler {
 public:
-  void updateFirmwareIfOutdated(String deviceId) {
+  OtaHandler(StateMachine &sm, Configuration &config)
+      : sm(sm), config(config) {}
+  void setAirGradient(AirGradient *ag) { this->ag = ag; };
 
-    String url = "http://hw.airgradient.com/sensors/airgradient:" + deviceId +
-                 "/generic/os/firmware.bin";
+  void updateFirmwareIfOutdated(String newVersion) {
+    int lastOta = config.getLastOta();
+    // Retry OTA after last udpate 24h
+    if (lastOta != 0 && lastOta < (60 * 60 * 24)) {
+      Serial.println("Ignore OTA cause last update is " + String(lastOta) +
+                     String("sec"));
+      Serial.println("Retry again after 24h");
+      return;
+    }
+
+    String url =
+        "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
+        "/generic/os/firmware.bin";
     url += "?current_firmware=";
     url += GIT_VERSION;
     char urlAsChar[URL_BUF_SIZE];
@@ -30,16 +46,31 @@ public:
 
     esp_http_client_config_t config = {};
     config.url = urlAsChar;
-    esp_err_t ret = attemptToPerformOta(&config);
+    OtaUpdateOutcome ret = attemptToPerformOta(&config, newVersion);
+
+    // Update last OTA time whatever result.
+    this->config.updateLastOta();
+
     Serial.println(ret);
     if (ret == OtaUpdateOutcome::UPDATE_PERFORMED) {
       Serial.println("OTA update performed, restarting ...");
+      int i = 6;
+      while (i != 0) {
+        i = i - 1;
+        sm.executeOTA(StateMachine::OtaState::OTA_STATE_SUCCESS, "", i);
+        delay(1000);
+      }
       esp_restart();
     }
   }
 
 private:
-  OtaUpdateOutcome attemptToPerformOta(const esp_http_client_config_t *config) {
+  AirGradient *ag;
+  StateMachine &sm;
+  Configuration &config;
+
+  OtaUpdateOutcome attemptToPerformOta(const esp_http_client_config_t *config,
+                                       String newVersion) {
     esp_http_client_handle_t client = esp_http_client_init(config);
     if (client == NULL) {
       Serial.println("Failed to initialize HTTP connection");
@@ -94,6 +125,14 @@ private:
     }
 
     int binary_file_len = 0;
+    int totalSize = esp_http_client_get_content_length(client);
+    Serial.println("File size: " + String(totalSize) + String(" bytes"));
+
+    // Show display start update new firmware.
+    sm.executeOTA(StateMachine::OtaState::OTA_STATE_BEGIN, newVersion, 0);
+
+    // Download file and write new firmware to OTA partition
+    uint32_t lastUpdate = millis();
     while (1) {
       int data_read =
           esp_http_client_read(client, upgrade_data_buf, OTA_BUF_SIZE);
@@ -103,16 +142,25 @@ private:
       }
       if (data_read < 0) {
         Serial.println("Data read error");
+        sm.executeOTA(StateMachine::OtaState::OTA_STATE_FAIL, "", 0);
         break;
       }
       if (data_read > 0) {
         ota_write_err = esp_ota_write(
             update_handle, (const void *)upgrade_data_buf, data_read);
         if (ota_write_err != ESP_OK) {
+          sm.executeOTA(StateMachine::OtaState::OTA_STATE_FAIL, "", 0);
           break;
         }
         binary_file_len += data_read;
-        // Serial.printf("Written image length %d\n", binary_file_len);
+
+        int percent = (binary_file_len * 100) / totalSize;
+        uint32_t ms = (uint32_t)(millis() - lastUpdate);
+        if (ms >= 250) {
+          sm.executeOTA(StateMachine::OtaState::OTA_STATE_PROCESSING, "",
+                        percent);
+          lastUpdate = millis();
+        }
       }
     }
     free(upgrade_data_buf);

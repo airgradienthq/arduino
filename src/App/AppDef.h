@@ -60,6 +60,9 @@ enum AgStateMachineState {
   /* LED bar testing */
   AgStateMachineLedBarTest,
 
+  /** OTA perform, show display status */
+  AgStateMachineOtaPerform,
+
   /** LED: Show working state.
    * Display: Show dashboard */
   AgStateMachineNormal,

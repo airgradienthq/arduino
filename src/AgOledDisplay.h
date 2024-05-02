@@ -16,6 +16,9 @@ private:
   Measurements &value;
 
   void showTempHum(bool hasStatus);
+  void setCentralText(int y, String text);
+  void setCentralText(int y, const char *text);
+
 public:
   OledDisplay(Configuration &config, Measurements &value,
                 Stream &log);
@@ -33,6 +36,10 @@ public:
   void showDashboard(const char *status);
   void showWiFiQrCode(String content, String label);
   void setBrightness(int percent);
+  void showNewFirmwareVersion(String version);
+  void showNewFirmwareUpdating(String percent);
+  void showNewFirmwareSuccess(String count);
+  void showNewFirmwareFailed(void);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */
