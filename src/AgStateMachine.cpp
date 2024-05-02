@@ -302,25 +302,25 @@ void StateMachine::co2Calibration(void) {
 
 void StateMachine::ledBarTest(void) {
   if (config.isLedBarTestRequested()) {
-    ledBarPowerUpTest();
+    if (config.getCountry() == "TH") {
+      uint32_t tstart = millis();
+      logInfo("Start run LED test for 2 min");
+      while (1) {
+        ledBarRunTest();
+        uint32_t ms = (uint32_t)(millis() - tstart);
+        if (ms >= (60 * 1000 * 2)) {
+          logInfo("LED test after 2 min finish");
+          break;
+        }
+      }
+    } else {
+      ledBarRunTest();
+    }
   }
 }
 
 void StateMachine::ledBarPowerUpTest(void) {
-  if (config.getCountry() == "TH") {
-    uint32_t tstart = millis();
-    logInfo("Start run LED test for 2 min");
-    while (1) {
-      ledBarRunTest();
-      uint32_t ms = (uint32_t)(millis() - tstart);
-      if (ms >= (60 * 1000 * 2)) {
-        logInfo("LED test after 2 min finish");
-        break;
-      }
-    }
-  } else {
-    ledBarRunTest();
-  }
+  ledBarRunTest();
 }
 
 void StateMachine::ledBarRunTest(void) {
