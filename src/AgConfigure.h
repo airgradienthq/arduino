@@ -23,6 +23,8 @@ private:
     bool displayMode;             /** true if enable display */
     uint8_t useRGBLedBar;
     uint8_t abcDays;
+    uint8_t ledBarBrightness;
+    uint8_t displayBrightness;
     int tvocLearningOffset;
     int noxLearningOffset;
     char temperatureUnit; // 'f' or 'c'
@@ -36,6 +38,8 @@ private:
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
+  bool ledBarBrightnessChanged = false;
+  bool displayBrightnessChanged = false;
 
   AirGradient* ag;
 
@@ -89,6 +93,10 @@ public:
   String wifiSSID(void);
   String wifiPass(void);
   void setAirGradient(AirGradient *ag);
+  bool isLedBarBrightnessChanged(void);
+  int getLedBarBrightness(void);
+  bool isDisplayBrightnessChanged(void);
+  int getDisplayBrightness(void);
 };
 
 #endif /** _AG_CONFIG_H_ */
