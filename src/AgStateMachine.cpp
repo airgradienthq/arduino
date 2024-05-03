@@ -319,6 +319,10 @@ void StateMachine::ledBarTest(void) {
   }
 }
 
+void StateMachine::ledBarPowerUpTest(void) {
+  ledBarRunTest();
+}
+
 void StateMachine::ledBarRunTest(void) {
   disp.setText("LED Test", "running", ".....");
   runLedTest('r');
@@ -699,6 +703,8 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineLedBarTest:
     ledBarTest();
     break;
+  case AgStateMachineLedBarPowerUpTest:
+    ledBarPowerUpTest();
   default:
     break;
   }
@@ -751,4 +757,8 @@ void StateMachine::executeCo2Calibration(void) {
 
 void StateMachine::executeLedBarTest(void) {
   handleLeds(AgStateMachineLedBarTest);
+}
+
+void StateMachine::executeLedBarPowerUpTest(void) {
+  handleLeds(AgStateMachineLedBarPowerUpTest);
 }

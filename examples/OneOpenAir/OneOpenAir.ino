@@ -162,7 +162,7 @@ void setup() {
   bool connectToWifi = false;
   if (ag->isOne()) {
     if (ledBarButtonTest) {
-      stateMachine.executeLedBarTest();
+      stateMachine.executeLedBarPowerUpTest();
     } else {
       ledBarEnabledUpdate();
       connectToWifi = true;
