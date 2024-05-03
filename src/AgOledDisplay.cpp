@@ -1,6 +1,5 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
-#include "Libraries/QRCode/src/qrcode.h"
 
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
@@ -286,28 +285,6 @@ void OledDisplay::showDashboard(const char *status) {
       sprintf(strBuf, "%s", "-");
     }
     DISP()->drawStr(85, 63, strBuf);
-  } while (DISP()->nextPage());
-}
-
-void OledDisplay::showWiFiQrCode(String content, String label) {
-  QRCode qrcode;
-  int version = 6;
-  int x_start = (DISP()->getWidth() - (version * 4 + 17))/ 2;
-  uint8_t qrcodeData[qrcode_getBufferSize(version)];
-  qrcode_initText(&qrcode, qrcodeData, version, 0, content.c_str());
-
-  DISP()->firstPage();
-  do {
-    for (uint8_t y = 0; y < qrcode.size; y++) {
-      for (uint8_t x = 0; x < qrcode.size; x++) {
-        if (qrcode_getModule(&qrcode, x, y)) {
-          DISP()->drawPixel(x + x_start, y);
-        }
-      }
-    }
-    DISP()->setFont(u8g2_font_t0_16_tf);
-    x_start = (DISP()->getWidth() - DISP()->getStrWidth(label.c_str()))/2;
-    DISP()->drawStr(x_start, 60, label.c_str());
   } while (DISP()->nextPage());
 }
 
