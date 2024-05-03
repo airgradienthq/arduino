@@ -49,14 +49,6 @@ public:
   AgStateMachineState getLedState(void);
   void executeCo2Calibration(void);
   void executeLedBarTest(void);
-
-  enum OtaState {
-    OTA_STATE_BEGIN,
-    OTA_STATE_FAIL,
-    OTA_STATE_PROCESSING,
-    OTA_STATE_SUCCESS
-  };
-  void executeOTA(OtaState state, String msg, int processing);
 };
 
 #endif /** _AG_STATE_MACHINE_H_ */

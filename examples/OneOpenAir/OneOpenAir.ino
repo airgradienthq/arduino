@@ -113,7 +113,9 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
-static void otaHandlerCallback(StateMachine::OtaState state, String mesasge);
+static void otaHandlerCallback(OtaState state, String mesasge);
+static void displayExecuteOta(OtaState state, String msg,
+                              int processing);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -435,20 +437,63 @@ static bool sgp41Init(void) {
   return false;
 }
 
-static void otaHandlerCallback(StateMachine::OtaState state, String mesasge) {
+static void otaHandlerCallback(OtaState state, String mesasge) {
   switch (state) {
-  case StateMachine::OtaState::OTA_STATE_BEGIN:
-    stateMachine.executeOTA(state, fwNewVersion, 0);
+  case OtaState::OTA_STATE_BEGIN:
+    displayExecuteOta(state, fwNewVersion, 0);
     break;
-  case StateMachine::OtaState::OTA_STATE_FAIL:
-    stateMachine.executeOTA(state, "", 0);
+  case OtaState::OTA_STATE_FAIL:
+    displayExecuteOta(state, "", 0);
     break;
-  case StateMachine::OtaState::OTA_STATE_PROCESSING:
-    stateMachine.executeOTA(state, "", mesasge.toInt());
+  case OtaState::OTA_STATE_PROCESSING:
+    displayExecuteOta(state, "", mesasge.toInt());
     break;
-  case StateMachine::OtaState::OTA_STATE_SUCCESS:
-    stateMachine.executeOTA(state, "", mesasge.toInt());
+  case OtaState::OTA_STATE_SUCCESS:
+    displayExecuteOta(state, "", mesasge.toInt());
     break;
+  default:
+    break;
+  }
+}
+
+static void displayExecuteOta(OtaState state, String msg, int processing) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareVersion(msg);
+    } else {
+      Serial.println("New firmware: " + msg);
+    }
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_FAIL: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareFailed();
+    } else {
+      Serial.println("Error: Firmware update: failed");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_PROCESSING: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareUpdating(String(processing));
+    } else {
+      Serial.println("Firmware update: " + String(processing) + String("%"));
+    }
+
+    break;
+  }
+  case OtaState::OTA_STATE_SUCCESS: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareSuccess(String(processing));
+    } else {
+      Serial.println("Rebooting... " + String(processing));
+    }
+    break;
+  }
   default:
     break;
   }

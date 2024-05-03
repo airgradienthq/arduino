@@ -1,9 +1,5 @@
 #ifndef _OTA_HANDLER_H_
 #define _OTA_HANDLER_H_
-
-#include "AgConfigure.h"
-#include "AgStateMachine.h"
-#include "AirGradient.h"
 #include <Arduino.h>
 #include <esp_err.h>
 #include <esp_http_client.h>
@@ -19,7 +15,14 @@ enum OtaUpdateOutcome {
   UDPATE_SKIPPED
 };
 
-typedef void(*OtaHandlerCallback_t)(StateMachine::OtaState state,
+enum OtaState {
+  OTA_STATE_BEGIN,
+  OTA_STATE_FAIL,
+  OTA_STATE_PROCESSING,
+  OTA_STATE_SUCCESS
+};
+
+typedef void(*OtaHandlerCallback_t)(OtaState state,
                                    String message);
 
 class OtaHandler {
@@ -43,7 +46,7 @@ public:
       while (i != 0) {
         i = i - 1;
         if (this->callback) {
-          this->callback(StateMachine::OtaState::OTA_STATE_SUCCESS, String(i));
+          this->callback(OtaState::OTA_STATE_SUCCESS, String(i));
         }
         delay(1000);
       }
@@ -118,7 +121,7 @@ private:
 
     // Show display start update new firmware.
     if (this->callback) {
-      this->callback(StateMachine::OtaState::OTA_STATE_BEGIN, "");
+      this->callback(OtaState::OTA_STATE_BEGIN, "");
     }
 
     // Download file and write new firmware to OTA partition
@@ -133,7 +136,7 @@ private:
       if (data_read < 0) {
         Serial.println("Data read error");
         if (this->callback) {
-          this->callback(StateMachine::OtaState::OTA_STATE_FAIL, "");
+          this->callback(OtaState::OTA_STATE_FAIL, "");
         }
         break;
       }
@@ -142,7 +145,7 @@ private:
             update_handle, (const void *)upgrade_data_buf, data_read);
         if (ota_write_err != ESP_OK) {
           if (this->callback) {
-            this->callback(StateMachine::OtaState::OTA_STATE_FAIL, "");
+            this->callback(OtaState::OTA_STATE_FAIL, "");
           }
           break;
         }
@@ -154,7 +157,7 @@ private:
           // sm.executeOTA(StateMachine::OtaState::OTA_STATE_PROCESSING, "",
           //               percent);
           if (this->callback) {
-            this->callback(StateMachine::OtaState::OTA_STATE_PROCESSING,
+            this->callback(OtaState::OTA_STATE_PROCESSING,
                            String(percent));
           }
           lastUpdate = millis();
