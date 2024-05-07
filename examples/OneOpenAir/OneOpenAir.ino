@@ -51,6 +51,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "OpenMetrics.h"
 #include "WebServer.h"
 #include <WebServer.h>
+#include <WiFi.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
@@ -163,6 +164,11 @@ void setup() {
   if (ag->isOne()) {
     if (ledBarButtonTest) {
       stateMachine.executeLedBarPowerUpTest();
+      if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
+        WiFi.begin("airgradient", "cleanair");
+        Serial.println("WiFi Credential reset to factory defaults");
+        ESP.restart();
+      }
     } else {
       ledBarEnabledUpdate();
       connectToWifi = true;
