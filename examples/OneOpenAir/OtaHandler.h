@@ -41,16 +41,13 @@ public:
     OtaUpdateOutcome ret = attemptToPerformOta(&config);
     Serial.println(ret);
     if (ret == OtaUpdateOutcome::UPDATE_PERFORMED) {
-      Serial.println("OTA update performed, restarting ...");
-      int i = 6;
-      while (i != 0) {
-        i = i - 1;
-        if (this->callback) {
-          this->callback(OtaState::OTA_STATE_SUCCESS, String(i));
-        }
-        delay(1000);
+      if (this->callback) {
+        this->callback(OtaState::OTA_STATE_SUCCESS, "");
       }
-      esp_restart();
+    } else {
+      if(this->callback) {
+        this->callback(OtaState::OTA_STATE_FAIL, "");
+      }
     }
   }
 

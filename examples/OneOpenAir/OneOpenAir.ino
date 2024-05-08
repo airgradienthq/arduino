@@ -487,10 +487,22 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     break;
   }
   case OtaState::OTA_STATE_SUCCESS: {
-    if (ag->isOne()) {
-      oledDisplay.showNewFirmwareSuccess(String(processing));
-    } else {
-      Serial.println("Rebooting... " + String(processing));
+    int i = 6;
+    while(i != 0) {
+      i = i - 1;
+      Serial.println("OTA update performed, restarting ...");
+      int i = 6;
+      while (i != 0) {
+        i = i - 1;
+        if (ag->isOne()) {
+          oledDisplay.showNewFirmwareSuccess(String(i));
+        } else {
+          Serial.println("Rebooting... " + String(i));
+        }
+        
+        delay(1000);
+      }
+      esp_restart();
     }
     break;
   }
