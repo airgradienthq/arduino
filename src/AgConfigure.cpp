@@ -7,8 +7,8 @@
 #include "EEPROM.h"
 #endif
 
-#define EEPROM_CONFIG_SIZE 512
-#define CONFIG_FILE_NAME "/cfg.bin"
+#define EEPROM_CONFIG_SIZE 1024
+#define CONFIG_FILE_NAME "/cfg.json"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
@@ -20,6 +20,27 @@ const char *LED_BAR_MODE_NAMES[] = {
     [LedBarModePm] = "pm",
     [LedBarModeCO2] = "co2",
 };
+
+#define JSON_PROP_NAME(name) jprop_##name
+#define JSON_PROP_DEF(name) const char *JSON_PROP_NAME(name) = #name
+
+JSON_PROP_DEF(model);
+JSON_PROP_DEF(country);
+JSON_PROP_DEF(pmStandard);
+JSON_PROP_DEF(ledBarMode);
+JSON_PROP_DEF(displayMode);
+JSON_PROP_DEF(abcDays);
+JSON_PROP_DEF(tvocLearningOffset);
+JSON_PROP_DEF(noxLearningOffset);
+JSON_PROP_DEF(mqttBrokerUrl);
+JSON_PROP_DEF(temperatureUnit);
+JSON_PROP_DEF(configurationControl);
+JSON_PROP_DEF(postDataToAirGradient);
+JSON_PROP_DEF(ledbarBrightness);
+JSON_PROP_DEF(displayBrightness);
+JSON_PROP_DEF(co2CalibrationRequested);
+JSON_PROP_DEF(ledBarTestRequested);
+JSONVar jconfig;
 
 static bool jsonTypeInvalid(JSONVar root, String validType) {
   String type = JSON.typeof_(root);
@@ -52,22 +73,17 @@ String Configuration::getLedBarModeName(LedBarMode mode) {
  *
  */
 void Configuration::saveConfig(void) {
-  config._check = 0;
-  int len = sizeof(config) - sizeof(config._check);
-  uint8_t *data = (uint8_t *)&config;
-  for (int i = 0; i < len; i++) {
-    config._check += data[i];
-  }
+  String data = toString();
+  int len = data.length();
 #ifdef ESP8266
-  for (int i = 0; i < sizeof(config); i++) {
+  for (int i = 0; i < len; i++) {
     EEPROM.write(i, data[i]);
   }
   EEPROM.commit();
 #else
   File file = SPIFFS.open(CONFIG_FILE_NAME, "w", true);
   if (file && !file.isDirectory()) {
-    if (file.write((const uint8_t *)&config, sizeof(config)) !=
-        sizeof(config)) {
+    if (file.write((const uint8_t *)data.c_str(), len) != len) {
       logError("Write SPIFFS file failed");
     }
     file.close();
@@ -80,65 +96,30 @@ void Configuration::saveConfig(void) {
 
 void Configuration::loadConfig(void) {
   bool readSuccess = false;
+  char *buf = (char *)malloc(EEPROM_CONFIG_SIZE);
+  if (buf == NULL) {
+    logError("Malloc read file buffer failed");
+    return;
+  }
+  memset(buf, 0, EEPROM_CONFIG_SIZE);
 #ifdef ESP8266
-  uint8_t *data = (uint8_t *)&config;
-  for (int i = 0; i < sizeof(config); i++) {
-    data[i] = EEPROM.read(i);
+  for (int i = 0; i < EEPROM_CONFIG_SIZE; i++) {
+    buf[i] = EEPROM.read(i);
   }
   readSuccess = true;
 #else
   File file = SPIFFS.open(CONFIG_FILE_NAME);
   if (file && !file.isDirectory()) {
-    if (file.readBytes((char *)&config, sizeof(config)) == sizeof(config)) {
-      readSuccess = true;
-    }
+    logInfo("Read file");
+    file.readBytes(buf, file.size());
+    readSuccess = true;
     file.close();
+  } else {
+    SPIFFS.format();
   }
 #endif
-
-  if (!readSuccess) {
-    logError("Load configure failed");
-    defaultConfig();
-  } else {
-    uint32_t sum = 0;
-    uint8_t *data = (uint8_t *)&config;
-    int len = sizeof(config) - sizeof(config._check);
-    for (int i = 0; i < len; i++) {
-      sum += data[i];
-    }
-
-    if (sum != config._check) {
-      logError("Configure validate invalid");
-      defaultConfig();
-    } else {
-      /** Correct configuration parameter value. */
-      bool changed = false;
-      if ((config.temperatureUnit != 'c') && (config.temperatureUnit != 'f')) {
-        config.temperatureUnit = 'c';
-        changed = true;
-        logError("Temperture unit invalid, set default 'c'");
-      }
-      if ((config.useRGBLedBar != (uint8_t)LedBarModeCO2) &&
-          (config.useRGBLedBar != (uint8_t)LedBarModePm) &&
-          (config.useRGBLedBar != (uint8_t)LedBarModeOff)) {
-        config.useRGBLedBar = (uint8_t)LedBarModeCO2;
-        changed = true;
-        logError("LedBarMode invalid, set default: co2");
-      }
-      if (config.ledBarBrightness > 100) {
-        config.ledBarBrightness = 100;
-        changed = true;
-      }
-      if (config.displayBrightness > 100) {
-        config.displayBrightness = 100;
-        changed = true;
-      }
-
-      if (changed) {
-        saveConfig();
-      }
-    }
-  }
+  toConfig(buf);
+  free(buf);
 }
 
 /**
@@ -146,23 +127,24 @@ void Configuration::loadConfig(void) {
  *
  */
 void Configuration::defaultConfig(void) {
-  // Default country is null
-  memset(config.country, 0, sizeof(config.country));
-  // Default MQTT broker is null.
-  memset(config.mqttBroker, 0, sizeof(config.mqttBroker));
+  jconfig = JSON.parse("{}");
+  jconfig[jprop_country] = "";
+  jconfig[jprop_mqttBrokerUrl] = "";
+  jconfig[jprop_configurationControl] =
+      String(CONFIGURATION_CONTROL_NAME
+                 [ConfigurationControl::ConfigurationControlBoth]);
+  jconfig[jprop_pmStandard] = getPMStandardString(false);
+  jconfig[jprop_temperatureUnit] = "c";
+  jconfig[jprop_postDataToAirGradient] = true;
+  jconfig[jprop_displayMode] = getDisplayModeString(true);
+  jconfig[jprop_ledbarBrightness] = 100;
+  jconfig[jprop_displayBrightness] = 100;
+  jconfig[jprop_ledBarMode] = getLedBarModeName(LedBarMode::LedBarModeCO2);
 
-  config.configurationControl = ConfigurationControl::ConfigurationControlBoth;
-  config.inUSAQI = false; // pmStandard = ugm3
-  config.inF = false;
-  config.postDataToAirGradient = true;
-  config.displayMode = true;
-  config.useRGBLedBar = LedBarMode::LedBarModeCO2;
-  config.abcDays = 8;
-  config.tvocLearningOffset = 12;
-  config.noxLearningOffset = 12;
-  config.temperatureUnit = 'c';
-  config.ledBarBrightness = 100;
-  config.displayBrightness = 100;
+  jconfig[jprop_tvocLearningOffset] = 12;
+  jconfig[jprop_noxLearningOffset] = 12;
+  jconfig[jprop_abcDays] = 8;
+  jconfig[jprop_model] = "";
 
   saveConfig();
 }
@@ -171,7 +153,10 @@ void Configuration::defaultConfig(void) {
  * @brief Show configuration as JSON string message over log
  *
  */
-void Configuration::printConfig(void) { logInfo(toString().c_str()); }
+void Configuration::printConfig(void) {
+  String cfg = toString();
+  logInfo(cfg);
+}
 
 /**
  * @brief Construct a new Ag Configure:: Ag Configure object
@@ -194,11 +179,6 @@ Configuration::~Configuration() {}
  * @return false Failure
  */
 bool Configuration::begin(void) {
-  if (sizeof(config) > EEPROM_CONFIG_SIZE) {
-    logError("Configuration over EEPROM_CONFIG_SIZE");
-    return false;
-  }
-
 #ifdef ESP32
   if (!SPIFFS.begin(true)) {
     logError("Init SPIFFS failed");
@@ -228,7 +208,7 @@ bool Configuration::parse(String data, bool isLocal) {
 
   JSONVar root = JSON.parse(data);
   failedMessage = "";
-  if (JSON.typeof_(root) == "undefined") {
+  if (root == undefined) {
     failedMessage = "JSON invalid";
     logError(failedMessage);
     return false;
@@ -239,43 +219,33 @@ bool Configuration::parse(String data, bool isLocal) {
   bool changed = false;
 
   /** Get ConfigurationControl */
+  String lasCtrl = jconfig[jprop_configurationControl];
   if (isLocal) {
-    uint8_t configurationControl = config.configurationControl;
-    if (JSON.typeof_(root["configurationControl"]) == "string") {
-      String configurationControl = root["configurationControl"];
-      if (configurationControl !=
-          String(CONFIGURATION_CONTROL_NAME[config.configurationControl])) {
-        if (configurationControl ==
-            String(CONFIGURATION_CONTROL_NAME
-                       [ConfigurationControl::ConfigurationControlLocal])) {
-          config.configurationControl =
-              (uint8_t)ConfigurationControl::ConfigurationControlLocal;
+    if (JSON.typeof_(root[jprop_configurationControl]) == "string") {
+      String ctrl = root[jprop_configurationControl];
+      if (ctrl ==
+              String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlBoth]) ||
+          ctrl ==
+              String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlLocal]) ||
+          ctrl ==
+              String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlCloud])) {
+        if (ctrl != lasCtrl) {
+          jconfig[jprop_configurationControl] = ctrl;
           changed = true;
-        } else if (configurationControl ==
-                   String(
-                       CONFIGURATION_CONTROL_NAME
-                           [ConfigurationControl::ConfigurationControlCloud])) {
-          config.configurationControl =
-              (uint8_t)ConfigurationControl::ConfigurationControlCloud;
-          changed = true;
-        } else if (configurationControl ==
-                   String(
-                       CONFIGURATION_CONTROL_NAME
-                           [ConfigurationControl::ConfigurationControlBoth])) {
-          config.configurationControl =
-              (uint8_t)ConfigurationControl::ConfigurationControlBoth;
-          changed = true;
-        } else {
-          failedMessage = jsonValueInvalidMessage("configurationControl",
-                                                  configurationControl);
-          jsonInvalid();
-          return false;
         }
+      } else {
+        failedMessage =
+            jsonValueInvalidMessage(String(jprop_configurationControl), ctrl);
+        jsonInvalid();
+        return false;
       }
     } else {
-      if (jsonTypeInvalid(root["configurationControl"], "string")) {
-        failedMessage =
-            jsonTypeInvalidMessage("configurationControl", "string");
+      if (jsonTypeInvalid(root[jprop_configurationControl], "string")) {
+        failedMessage = jsonTypeInvalidMessage(
+            String(jprop_configurationControl), "string");
         jsonInvalid();
         return false;
       }
@@ -284,21 +254,21 @@ bool Configuration::parse(String data, bool isLocal) {
     if (changed) {
       changed = false;
       saveConfig();
-      configLogInfo(
-          "configurationControl",
-          String(CONFIGURATION_CONTROL_NAME[configurationControl]),
-          String(CONFIGURATION_CONTROL_NAME[config.configurationControl]));
+      configLogInfo(String(jprop_configurationControl), lasCtrl,
+                    jconfig[jprop_configurationControl]);
     }
 
-    if ((config.configurationControl ==
-         (byte)ConfigurationControl::ConfigurationControlCloud)) {
+    if (jconfig[jprop_configurationControl] ==
+        String(CONFIGURATION_CONTROL_NAME
+                   [ConfigurationControl::ConfigurationControlCloud])) {
       failedMessage = "Local configure ignored";
       jsonInvalid();
       return false;
     }
   } else {
-    if (config.configurationControl ==
-        (byte)ConfigurationControl::ConfigurationControlLocal) {
+    if (jconfig[jprop_configurationControl] ==
+        String(CONFIGURATION_CONTROL_NAME
+                   [ConfigurationControl::ConfigurationControlLocal])) {
       failedMessage = "Cloud configure ignored";
       jsonInvalid();
       return false;
@@ -306,13 +276,14 @@ bool Configuration::parse(String data, bool isLocal) {
   }
 
   char temperatureUnit = 0;
-  if (JSON.typeof_(root["country"]) == "string") {
-    String country = root["country"];
+  if (JSON.typeof_(root[jprop_country]) == "string") {
+    String country = root[jprop_country];
     if (country.length() == 2) {
-      if (country != String(config.country)) {
+      String oldCountry = jconfig[jprop_country];
+      if (country != oldCountry) {
         changed = true;
-        configLogInfo("country", String(config.country), country);
-        snprintf(config.country, sizeof(config.country), country.c_str());
+        configLogInfo(String(jprop_country), oldCountry, country);
+        jconfig[jprop_country] = country;
       }
     } else {
       failedMessage = "Country name " + country +
@@ -322,245 +293,247 @@ bool Configuration::parse(String data, bool isLocal) {
       return false;
     }
   } else {
-    if (jsonTypeInvalid(root["country"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("country", "string");
+    if (jsonTypeInvalid(root[jprop_country], "string")) {
+      failedMessage = jsonTypeInvalidMessage(String(jprop_country), "string");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["pmStandard"]) == "string") {
-    String pmStandard = root["pmStandard"];
-    bool inUSAQI = true;
-    if (pmStandard == getPMStandardString(false)) {
-      inUSAQI = false;
-    } else if (pmStandard == getPMStandardString(true)) {
-      inUSAQI = true;
+  if (JSON.typeof_(root[jprop_pmStandard]) == "string") {
+    String standard = root[jprop_pmStandard];
+    if (standard == getPMStandardString(true) ||
+        standard == getPMStandardString(false)) {
+      String oldStandard = jconfig[jprop_pmStandard];
+      if (standard != oldStandard) {
+        configLogInfo(String(jprop_pmStandard), oldStandard, standard);
+        jconfig[jprop_pmStandard] = standard;
+        changed = true;
+      }
     } else {
-      failedMessage = jsonValueInvalidMessage("pmStandard", pmStandard);
+      failedMessage =
+          jsonValueInvalidMessage(String(jprop_pmStandard), standard);
       jsonInvalid();
       return false;
-    }
-
-    if (inUSAQI != config.inUSAQI) {
-      configLogInfo("pmStandard", getPMStandardString(config.inUSAQI),
-                    pmStandard);
-      config.inUSAQI = inUSAQI;
-      changed = true;
     }
   } else {
-    if (jsonTypeInvalid(root["pmStandard"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("pmStandard", "string");
+    if (jsonTypeInvalid(root[jprop_pmStandard], "string")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_pmStandard), "string");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["co2CalibrationRequested"]) == "boolean") {
-    co2CalibrationRequested = root["co2CalibrationRequested"];
+  if (JSON.typeof_(root[jprop_co2CalibrationRequested]) == "boolean") {
+    co2CalibrationRequested = root[jprop_co2CalibrationRequested];
     if (co2CalibrationRequested) {
-      logInfo("co2CalibrationRequested: " +
+      logInfo(String(jprop_co2CalibrationRequested) + String(": ") +
               String(co2CalibrationRequested ? "True" : "False"));
     }
   } else {
-    if (jsonTypeInvalid(root["co2CalibrationRequested"], "boolean")) {
-      failedMessage =
-          jsonTypeInvalidMessage("co2CalibrationRequested", "boolean");
+    if (jsonTypeInvalid(root[jprop_co2CalibrationRequested], "boolean")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_co2CalibrationRequested), "boolean");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["ledBarTestRequested"]) == "boolean") {
-    ledBarTestRequested = root["ledBarTestRequested"];
+  if (JSON.typeof_(root[jprop_ledBarTestRequested]) == "boolean") {
+    ledBarTestRequested = root[jprop_ledBarTestRequested];
     if (ledBarTestRequested) {
-      logInfo("ledBarTestRequested: " +
+      logInfo(String(jprop_ledBarTestRequested) + String(": ") +
               String(ledBarTestRequested ? "True" : "False"));
     }
   } else {
-    if (jsonTypeInvalid(root["ledBarTestRequested"], "boolean")) {
-      failedMessage = jsonTypeInvalidMessage("ledBarTestRequested", "boolean");
+    if (jsonTypeInvalid(root[jprop_ledBarTestRequested], "boolean")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_ledBarTestRequested), "boolean");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["ledBarMode"]) == "string") {
-    String mode = root["ledBarMode"];
-    uint8_t ledBarMode = LedBarModeOff;
-    if (mode == String(LED_BAR_MODE_NAMES[LedBarModeCO2])) {
-      ledBarMode = LedBarModeCO2;
-    } else if (mode == String(LED_BAR_MODE_NAMES[LedBarModePm])) {
-      ledBarMode = LedBarModePm;
-    } else if (mode == String(LED_BAR_MODE_NAMES[LedBarModeOff])) {
-      ledBarMode = LedBarModeOff;
+  if (JSON.typeof_(root[jprop_ledBarMode]) == "string") {
+    String mode = root[jprop_ledBarMode];
+    if (mode == getLedBarModeName(LedBarMode::LedBarModeCO2) ||
+        mode == getLedBarModeName(LedBarMode::LedBarModeOff) ||
+        mode == getLedBarModeName(LedBarMode::LedBarModePm)) {
+      String oldMode = jconfig[jprop_ledBarMode];
+      if (mode != oldMode) {
+        jconfig[jprop_ledBarMode] = mode;
+        changed = true;
+      }
     } else {
-      failedMessage = jsonValueInvalidMessage("ledBarMode", mode);
+      failedMessage = jsonValueInvalidMessage(String(jprop_ledBarMode), mode);
       jsonInvalid();
       return false;
     }
-
-    if (ledBarMode != config.useRGBLedBar) {
-      configLogInfo("useRGBLedBar",
-                    String(LED_BAR_MODE_NAMES[config.useRGBLedBar]),
-                    String(LED_BAR_MODE_NAMES[ledBarMode]));
-      config.useRGBLedBar = ledBarMode;
-      changed = true;
-    }
   } else {
-    if (jsonTypeInvalid(root["ledBarMode"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("ledBarMode", "string");
+    if (jsonTypeInvalid(root[jprop_ledBarMode], "string")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_ledBarMode), "string");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["displayMode"]) == "string") {
-    String mode = root["displayMode"];
-    bool displayMode = false;
-    if (mode == getDisplayModeString(true)) {
-      displayMode = true;
-    } else if (mode == getDisplayModeString(false)) {
-      displayMode = false;
+  if (JSON.typeof_(root[jprop_displayMode]) == "string") {
+    String mode = root[jprop_displayMode];
+    if (mode == getDisplayModeString(true) ||
+        mode == getDisplayModeString(false)) {
+      String oldMode = jconfig[jprop_displayMode];
+      if (mode != oldMode) {
+        jconfig[jprop_displayMode] = mode;
+        changed = true;
+      }
     } else {
-      failedMessage = jsonTypeInvalidMessage("displayMode", mode);
+      jsonValueInvalidMessage(String(jprop_displayMode), mode);
       jsonInvalid();
       return false;
     }
-
-    if (displayMode != config.displayMode) {
-      changed = true;
-      configLogInfo("displayMode", getDisplayModeString(config.displayMode),
-                    mode);
-      config.displayMode = displayMode;
-    }
   } else {
-    if (jsonTypeInvalid(root["displayMode"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("displayMode", "string");
+    if (jsonTypeInvalid(root[jprop_displayMode], "string")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_displayMode), "string");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["abcDays"]) == "number") {
-    int abcDays = root["abcDays"];
-    if (abcDays <= 0) {
-      abcDays = 0;
+  if (JSON.typeof_(root[jprop_abcDays]) == "number") {
+    int value = root[jprop_abcDays];
+    if (value <= 0) {
+      value = 0;
     }
-    if (abcDays != config.abcDays) {
-      logInfo("Set abcDays: " + String(abcDays));
-      configLogInfo("abcDays", getAbcDayString(config.abcDays),
-                    String(getAbcDayString(abcDays)));
-      config.abcDays = abcDays;
+    int oldValue = jconfig[jprop_abcDays];
+    if (value != oldValue) {
+      logInfo(String("Set ") + String(jprop_abcDays) + String(": ") +
+              String(value));
+      configLogInfo(String(jprop_abcDays), getAbcDayString(oldValue),
+                    String(getAbcDayString(value)));
+
+      jconfig[jprop_abcDays] = value;
       changed = true;
     }
   } else {
-    if (jsonTypeInvalid(root["abcDays"], "number")) {
-      failedMessage = jsonTypeInvalidMessage("abcDays", "number");
+    if (jsonTypeInvalid(root[jprop_abcDays], "number")) {
+      failedMessage = jsonTypeInvalidMessage(String(jprop_abcDays), "number");
       jsonInvalid();
       return false;
     }
   }
 
   _tvocLearningOffsetChanged = false;
-  if (JSON.typeof_(root["tvocLearningOffset"]) == "number") {
-    int tvocLearningOffset = root["tvocLearningOffset"];
-    if (tvocLearningOffset != config.tvocLearningOffset) {
-      changed = true;
-      _tvocLearningOffsetChanged = true;
-      configLogInfo("tvocLearningOffset", String(config.tvocLearningOffset),
-                    String(tvocLearningOffset));
-      config.tvocLearningOffset = tvocLearningOffset;
+  if (JSON.typeof_(root[jprop_tvocLearningOffset]) == "number") {
+    int value = root[jprop_tvocLearningOffset];
+    int oldValue = jconfig[jprop_tvocLearningOffset];
+    if (value < 0) {
+      jsonValueInvalidMessage(String(jprop_tvocLearningOffset), String(value));
+      jsonInvalid();
+      return false;
+    } else {
+      if (value != oldValue) {
+        changed = true;
+        _tvocLearningOffsetChanged = true;
+        configLogInfo(String(jprop_tvocLearningOffset), String(oldValue),
+                      String(value));
+        jconfig[jprop_tvocLearningOffset] = value;
+      }
     }
   } else {
-    if (jsonTypeInvalid(root["tvocLearningOffset"], "number")) {
-      failedMessage = jsonTypeInvalidMessage("tvocLearningOffset", "number");
+    if (jsonTypeInvalid(root[jprop_tvocLearningOffset], "number")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_tvocLearningOffset), "number");
       jsonInvalid();
       return false;
     }
   }
 
   _noxLearnOffsetChanged = false;
-  if (JSON.typeof_(root["noxLearningOffset"]) == "number") {
-    int noxLearningOffset = root["noxLearningOffset"];
-    if (noxLearningOffset != config.noxLearningOffset) {
-      changed = true;
-      _noxLearnOffsetChanged = true;
-      configLogInfo("noxLearningOffset", String(config.noxLearningOffset),
-                    String(noxLearningOffset));
-      config.noxLearningOffset = noxLearningOffset;
-    }
-  } else {
-    if (jsonTypeInvalid(root["noxLearningOffset"], "number")) {
-      failedMessage = jsonTypeInvalidMessage("noxLearningOffset", "number");
-      jsonInvalid();
-      return false;
-    }
-  }
-
-  if (JSON.typeof_(root["mqttBrokerUrl"]) == "string") {
-    String broker = root["mqttBrokerUrl"];
-    if (broker.length() < sizeof(config.mqttBroker)) {
-      if (broker != String(config.mqttBroker)) {
+  if (JSON.typeof_(root[jprop_noxLearningOffset]) == "number") {
+    int value = root[jprop_noxLearningOffset];
+    int oldValue = jconfig[jprop_noxLearningOffset];
+    if (value > 0) {
+      if (value != oldValue) {
         changed = true;
-        configLogInfo("mqttBrokerUrl", String(config.mqttBroker), broker);
-        snprintf(config.mqttBroker, sizeof(config.mqttBroker), broker.c_str());
+        _noxLearnOffsetChanged = true;
+        configLogInfo(String(jprop_noxLearningOffset), String(oldValue),
+                      String(value));
+        jconfig[jprop_noxLearningOffset] = value;
       }
     } else {
+      failedMessage = jsonValueInvalidMessage(String(jprop_noxLearningOffset),
+                                              String(value));
+      jsonInvalid();
+      return false;
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_noxLearningOffset], "number")) {
       failedMessage =
-          "'mqttBroker' value length invalid: " + String(broker.length());
-      jsonInvalid();
-      return false;
-    }
-  } else {
-    if (jsonTypeInvalid(root["mqttBrokerUrl"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("mqttBrokerUrl", "string");
+          jsonTypeInvalidMessage(String(jprop_noxLearningOffset), "number");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["temperatureUnit"]) == "string") {
-    String unit = root["temperatureUnit"];
+  if (JSON.typeof_(root[jprop_mqttBrokerUrl]) == "string") {
+    String broker = root[jprop_mqttBrokerUrl];
+    String oldBroker = jconfig[jprop_mqttBrokerUrl];
+    if (broker != oldBroker) {
+      changed = true;
+      configLogInfo(String(jprop_mqttBrokerUrl), oldBroker, broker);
+      jconfig[jprop_mqttBrokerUrl] = broker;
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_mqttBrokerUrl], "string")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_mqttBrokerUrl), "string");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  if (JSON.typeof_(root[jprop_temperatureUnit]) == "string") {
+    String unit = root[jprop_temperatureUnit];
+    String oldUnit = jconfig[jprop_temperatureUnit];
     unit.toLowerCase();
-    if (unit == "c") {
-      temperatureUnit = 'c';
-    } else if (unit == "f") {
-      temperatureUnit = 'f';
+    if (unit == "c" || unit == "f") {
+      if (unit != oldUnit) {
+        changed = true;
+        jconfig[jprop_temperatureUnit] = unit;
+        configLogInfo(String(jprop_temperatureUnit), oldUnit, unit);
+      }
     } else {
-      failedMessage = "'temperatureUnit' value '" + unit + "' invalid";
-      logError(failedMessage);
-      return false;
-    }
-  } else {
-    if (jsonTypeInvalid(root["temperatureUnit"], "string")) {
-      failedMessage = jsonTypeInvalidMessage("temperatureUnit", "string");
+      jsonValueInvalidMessage(String(jprop_temperatureUnit), unit);
       jsonInvalid();
       return false;
     }
-  }
-
-  if (temperatureUnit != 0 && temperatureUnit != config.temperatureUnit) {
-    changed = true;
-    configLogInfo("temperatureUnit", String(config.temperatureUnit),
-                  String(temperatureUnit));
-    config.temperatureUnit = temperatureUnit;
+  } else {
+    if (jsonTypeInvalid(root[jprop_temperatureUnit], "string")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_temperatureUnit), "string");
+      jsonInvalid();
+      return false;
+    }
   }
 
   if (isLocal) {
-    if (JSON.typeof_(root["postDataToAirGradient"]) == "boolean") {
-      bool post = root["postDataToAirGradient"];
-      if (post != config.postDataToAirGradient) {
+    if (JSON.typeof_(root[jprop_postDataToAirGradient]) == "boolean") {
+      bool value = root[jprop_postDataToAirGradient];
+      bool oldValue = jconfig[jprop_postDataToAirGradient];
+      if (value != oldValue) {
         changed = true;
-        configLogInfo("postDataToAirGradient",
-                      String(config.postDataToAirGradient ? "true" : "false"),
-                      String(post ? "true" : "false"));
-        config.postDataToAirGradient = post;
+        configLogInfo(String(jprop_postDataToAirGradient),
+                      String(oldValue ? "true" : "false"),
+                      String(value ? "true" : "false"));
+        jconfig[jprop_postDataToAirGradient] = value;
       }
     } else {
-      if (jsonTypeInvalid(root["postDataToAirGradient"], "boolean")) {
-        failedMessage =
-            jsonTypeInvalidMessage("postDataToAirGradient", "boolean");
+      if (jsonTypeInvalid(root[jprop_postDataToAirGradient], "boolean")) {
+        failedMessage = jsonTypeInvalidMessage(
+            String(jprop_postDataToAirGradient), "boolean");
         jsonInvalid();
         return false;
       }
@@ -569,70 +542,70 @@ bool Configuration::parse(String data, bool isLocal) {
 
   /** Parse data only got from AirGradient server */
   if (isLocal == false) {
-    if (JSON.typeof_(root["model"]) == "string") {
-      String model = root["model"];
-      if (model.length() < sizeof(config.model)) {
-        if (model != String(config.model)) {
-          changed = true;
-          configLogInfo("model", String(config.model), model);
-          snprintf(config.model, sizeof(config.model), model.c_str());
-        }
-      } else {
-        failedMessage =
-            "'modal' value length invalid: " + String(model.length());
-        jsonInvalid();
-        return false;
+    if (JSON.typeof_(root[jprop_model]) == "string") {
+      String model = root[jprop_model];
+      String oldModel = jconfig[jprop_model];
+      if (model != oldModel) {
+        changed = true;
+        configLogInfo(String(jprop_model), oldModel, model);
+        jconfig[jprop_model] = model;
       }
     } else {
-      if (jsonTypeInvalid(root["model"], "string")) {
-        failedMessage = jsonTypeInvalidMessage("model", "string");
+      if (jsonTypeInvalid(root[jprop_model], "string")) {
+        failedMessage = jsonTypeInvalidMessage(String(jprop_model), "string");
         jsonInvalid();
         return false;
       }
     }
   }
 
-  if (JSON.typeof_(root["ledbarBrightness"]) == "number") {
-    int brightnress = root["ledbarBrightness"];
-    if (brightnress != config.ledBarBrightness) {
-      if (brightnress <= 100) {
+  if (JSON.typeof_(root[jprop_ledbarBrightness]) == "number") {
+    int value = root[jprop_ledbarBrightness];
+    int oldValue = jconfig[jprop_ledbarBrightness];
+    if (value >= 0 && value <= 100) {
+      if (value != oldValue) {
         changed = true;
-        configLogInfo("ledbarBrightness", String(config.ledBarBrightness),
-                      String(brightnress));
+        configLogInfo(String(jprop_ledbarBrightness), String(oldValue),
+                      String(value));
         ledBarBrightnessChanged = true;
-        config.ledBarBrightness = (uint8_t)brightnress;
-      } else {
-        failedMessage =
-            "\"ledbarBrightness\" value invalid: " + String(brightnress);
-        return false;
+        jconfig[jprop_ledbarBrightness] = value;
       }
+    } else {
+      failedMessage = jsonValueInvalidMessage(String(jprop_ledbarBrightness),
+                                              String(value));
+      jsonInvalid();
+      return false;
     }
   } else {
-    if (jsonTypeInvalid(root["ledbarBrightness"], "number")) {
-      failedMessage = jsonTypeInvalidMessage("ledbarBrightness", "number");
+    if (jsonTypeInvalid(root[jprop_ledbarBrightness], "number")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_ledbarBrightness), "number");
       jsonInvalid();
       return false;
     }
   }
 
-  if (JSON.typeof_(root["displayBrightness"]) == "number") {
-    int brightness = root["displayBrightness"];
-    if (brightness != config.displayBrightness) {
-      if (brightness <= 100) {
+  if (JSON.typeof_(root[jprop_displayBrightness]) == "number") {
+    int value = root[jprop_displayBrightness];
+    int oldValue = jconfig[jprop_displayBrightness];
+    if (value >= 0 && value <= 100) {
+      if (value != oldValue) {
         changed = true;
         displayBrightnessChanged = true;
-        configLogInfo("displayBrightness", String(config.displayBrightness),
-                      String(brightness));
-        config.displayBrightness = (uint8_t)brightness;
-      } else {
-        failedMessage =
-            "\"displayBrightness\" value invalid: " + String(brightness);
-        return false;
+        configLogInfo(String(jprop_displayBrightness), String(oldValue),
+                      String(value));
+        jconfig[jprop_displayBrightness] = value;
       }
+    } else {
+      failedMessage = jsonValueInvalidMessage(String(jprop_displayBrightness),
+                                              String(value));
+      jsonInvalid();
+      return false;
     }
   } else {
-    if (jsonTypeInvalid(root["displayBrightness"], "number")) {
-      failedMessage = jsonTypeInvalidMessage("displayBrightness", "number");
+    if (jsonTypeInvalid(root[jprop_displayBrightness], "number")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_displayBrightness), "number");
       jsonInvalid();
       return false;
     }
@@ -656,58 +629,7 @@ bool Configuration::parse(String data, bool isLocal) {
  *
  * @return String
  */
-String Configuration::toString(void) {
-  JSONVar root;
-
-  /** "country" */
-  root["country"] = String(config.country);
-
-  /** "pmStandard" */
-  root["pmStandard"] = getPMStandardString(config.inUSAQI);
-
-  /** co2CalibrationRequested */
-  /** ledBarTestRequested */
-
-  /** "ledBarMode" */
-  root["ledBarMode"] = getLedBarModeName();
-
-  /** "displayMode" */
-  if (config.displayMode) {
-    root["displayMode"] = "on";
-  } else {
-    root["displayMode"] = "off";
-  }
-
-  /** "abcDays" */
-  root["abcDays"] = config.abcDays;
-
-  /** "tvocLearningOffset" */
-  root["tvocLearningOffset"] = config.tvocLearningOffset;
-
-  /** "noxLearningOffset" */
-  root["noxLearningOffset"] = config.noxLearningOffset;
-
-  /** "mqttBrokerUrl" */
-  root["mqttBrokerUrl"] = String(config.mqttBroker);
-
-  /** "temperatureUnit" */
-  root["temperatureUnit"] = String(config.temperatureUnit);
-
-  /** configurationControl */
-  root["configurationControl"] =
-      String(CONFIGURATION_CONTROL_NAME[config.configurationControl]);
-
-  /** "postDataToAirGradient" */
-  root["postDataToAirGradient"] = config.postDataToAirGradient;
-
-  /** Led bar brightness */
-  root["ledbarBrightness"] = config.ledBarBrightness;
-
-  /** Display brightness */
-  root["displayBrightness"] = config.displayBrightness;
-
-  return JSON.stringify(root);
-}
+String Configuration::toString(void) { return JSON.stringify(jconfig); }
 
 /**
  * @brief Temperature unit (F or C)
@@ -716,7 +638,8 @@ String Configuration::toString(void) {
  * @return false C
  */
 bool Configuration::isTemperatureUnitInF(void) {
-  return (config.temperatureUnit == 'f');
+  String unit = jconfig[jprop_temperatureUnit];
+  return (unit == "f");
 }
 
 /**
@@ -724,7 +647,10 @@ bool Configuration::isTemperatureUnitInF(void) {
  *
  * @return String
  */
-String Configuration::getCountry(void) { return String(config.country); }
+String Configuration::getCountry(void) {
+  String country = jconfig[jprop_country];
+  return country;
+}
 
 /**
  * @brief PM unit standard (USAQI, ugm3)
@@ -732,14 +658,20 @@ String Configuration::getCountry(void) { return String(config.country); }
  * @return true USAQI
  * @return false ugm3
  */
-bool Configuration::isPmStandardInUSAQI(void) { return config.inUSAQI; }
+bool Configuration::isPmStandardInUSAQI(void) {
+  String standard = jconfig[jprop_pmStandard];
+  return (standard == getPMStandardString(true));
+}
 
 /**
  * @brief Get CO2 calibration ABC time
  *
  * @return int Number of day
  */
-int Configuration::getCO2CalibrationAbcDays(void) { return config.abcDays; }
+int Configuration::getCO2CalibrationAbcDays(void) {
+  int value = jconfig[jprop_abcDays];
+  return value;
+}
 
 /**
  * @brief Get Led Bar Mode
@@ -747,7 +679,17 @@ int Configuration::getCO2CalibrationAbcDays(void) { return config.abcDays; }
  * @return LedBarMode
  */
 LedBarMode Configuration::getLedBarMode(void) {
-  return (LedBarMode)config.useRGBLedBar;
+  String mode = jconfig[jprop_ledBarMode];
+  if (mode == getLedBarModeName(LedBarModeCO2)) {
+    return LedBarModeCO2;
+  }
+  if (mode == getLedBarModeName(LedBarModeOff)) {
+    return LedBarModeOff;
+  }
+  if (mode == getLedBarModeName(LedBarModePm)) {
+    return LedBarModePm;
+  }
+  return LedBarModeOff;
 }
 
 /**
@@ -756,7 +698,8 @@ LedBarMode Configuration::getLedBarMode(void) {
  * @return String
  */
 String Configuration::getLedBarModeName(void) {
-  return getLedBarModeName((LedBarMode)config.useRGBLedBar);
+  String mode = jconfig[jprop_ledBarMode];
+  return mode;
 }
 
 /**
@@ -765,7 +708,13 @@ String Configuration::getLedBarModeName(void) {
  * @return true On
  * @return false Off
  */
-bool Configuration::getDisplayMode(void) { return config.displayMode; }
+bool Configuration::getDisplayMode(void) {
+  String mode = jconfig[jprop_displayMode];
+  if (mode == getDisplayModeString(true)) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * @brief Get MQTT uri
@@ -773,7 +722,8 @@ bool Configuration::getDisplayMode(void) { return config.displayMode; }
  * @return String
  */
 String Configuration::getMqttBrokerUri(void) {
-  return String(config.mqttBroker);
+  String broker = jconfig[jprop_mqttBrokerUrl];
+  return broker;
 }
 
 /**
@@ -783,7 +733,8 @@ String Configuration::getMqttBrokerUri(void) {
  * @return false No-Post
  */
 bool Configuration::isPostDataToAirGradient(void) {
-  return config.postDataToAirGradient;
+  bool post = jconfig[jprop_postDataToAirGradient];
+  return post;
 }
 
 /**
@@ -792,7 +743,20 @@ bool Configuration::isPostDataToAirGradient(void) {
  * @return ConfigurationControl
  */
 ConfigurationControl Configuration::getConfigurationControl(void) {
-  return (ConfigurationControl)config.configurationControl;
+  String ctrl = jconfig[jprop_configurationControl];
+  if (ctrl == String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlBoth])) {
+    return ConfigurationControl::ConfigurationControlBoth;
+  }
+  if (ctrl == String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlLocal])) {
+    return ConfigurationControl::ConfigurationControlLocal;
+  }
+  if (ctrl == String(CONFIGURATION_CONTROL_NAME
+                         [ConfigurationControl::ConfigurationControlCloud])) {
+    return ConfigurationControl::ConfigurationControlCloud;
+  }
+  return ConfigurationControl::ConfigurationControlBoth;
 }
 
 /**
@@ -835,7 +799,10 @@ void Configuration::reset(void) {
  *
  * @return String
  */
-String Configuration::getModel(void) { return String(config.model); }
+String Configuration::getModel(void) {
+  String model = jconfig[jprop_model];
+  return model;
+}
 
 bool Configuration::isUpdated(void) {
   bool updated = this->udpated;
@@ -883,11 +850,244 @@ String Configuration::getAbcDayString(int value) {
   return String(value);
 }
 
+void Configuration::toConfig(const char *buf) {
+  logInfo("Parse file to JSON");
+  JSONVar root = JSON.parse(buf);
+  if (!(root == undefined)) {
+    jconfig = root;
+  }
+
+  bool changed = false;
+  bool isInvalid = false;
+
+  /** Validate country */
+  if (JSON.typeof_(jconfig[jprop_country]) != "string") {
+    isInvalid = true;
+  } else {
+    String country = jconfig[jprop_country];
+    if (country.length() != 2) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_country] = "";
+    changed = true;
+    logInfo("toConfig: country changed");
+  }
+
+  /** validate: PM standard */
+  if (JSON.typeof_(jconfig[jprop_pmStandard]) != "string") {
+    isInvalid = true;
+  } else {
+    String standard = jconfig[jprop_pmStandard];
+    if (standard != getPMStandardString(true) &&
+        standard != getPMStandardString(false)) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_pmStandard] = getPMStandardString(false);
+    changed = true;
+    logInfo("toConfig: pmStandard changed");
+  }
+
+  /** validate led bar mode */
+  if (JSON.typeof_(jconfig[jprop_ledBarMode]) != "string") {
+    isInvalid = true;
+  } else {
+    String mode = jconfig[jprop_ledBarMode];
+    if (mode != getLedBarModeName(LedBarMode::LedBarModeCO2) &&
+        mode != getLedBarModeName(LedBarMode::LedBarModeOff) &&
+        mode != getLedBarModeName(LedBarMode::LedBarModePm)) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_ledBarMode] = getLedBarModeName(LedBarMode::LedBarModeCO2);
+    changed = true;
+    logInfo("toConfig: ledBarMode changed");
+  }
+
+  /** validate display mode */
+  if (JSON.typeof_(jconfig[jprop_displayMode]) != "string") {
+    isInvalid = true;
+  } else {
+    String mode = jconfig[jprop_displayMode];
+    if (mode != getDisplayModeString(true) &&
+        mode != getDisplayModeString(false)) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_displayMode] = getDisplayModeString(true);
+    changed = true;
+    logInfo("toConfig: displayMode changed");
+  }
+
+  /** validate abcday */
+  if (JSON.typeof_(jconfig[jprop_abcDays]) != "number") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    jconfig[jprop_abcDays] = 8;
+    changed = true;
+    logInfo("toConfig: abcDays changed");
+  }
+
+  /** validate tvoc learning offset */
+  if (JSON.typeof_(jconfig[jprop_tvocLearningOffset]) != "number") {
+    isInvalid = true;
+  } else {
+    int value = jconfig[jprop_tvocLearningOffset];
+    if (value < 0) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_tvocLearningOffset] = 12;
+    changed = true;
+    logInfo("toConfig: tvocLearningOffset changed");
+  }
+
+  /** validate nox learning offset */
+  if (JSON.typeof_(jconfig[jprop_noxLearningOffset]) != "number") {
+    isInvalid = true;
+  } else {
+    int value = jconfig[jprop_noxLearningOffset];
+    if (value < 0) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_noxLearningOffset] = 12;
+    changed = true;
+    logInfo("toConfig: noxLearningOffset changed");
+  }
+
+  /** validate mqtt broker */
+  if (JSON.typeof_(jconfig[jprop_mqttBrokerUrl]) != "string") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    changed = true;
+    jconfig[jprop_mqttBrokerUrl] = "";
+    logInfo("toConfig: mqttBroker changed");
+  }
+
+  /** Validate temperature unit */
+  if (JSON.typeof_(jconfig[jprop_temperatureUnit]) != "string") {
+    isInvalid = true;
+  } else {
+    String unit = jconfig[jprop_temperatureUnit];
+    if (unit != "c" && unit != "f") {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_temperatureUnit] = "c";
+    changed = true;
+    logInfo("toConfig: temperatureUnit changed");
+  }
+
+  /** validate configuration control */
+  if (JSON.typeof_(jprop_configurationControl) != "string") {
+    isInvalid = true;
+  } else {
+    String ctrl = jconfig[jprop_configurationControl];
+    if (ctrl != String(CONFIGURATION_CONTROL_NAME
+                           [ConfigurationControl::ConfigurationControlBoth]) &&
+        ctrl != String(CONFIGURATION_CONTROL_NAME
+                           [ConfigurationControl::ConfigurationControlLocal]) &&
+        ctrl != String(CONFIGURATION_CONTROL_NAME
+                           [ConfigurationControl::ConfigurationControlCloud])) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_configurationControl] =
+        String(CONFIGURATION_CONTROL_NAME
+                   [ConfigurationControl::ConfigurationControlBoth]);
+    changed = true;
+    logInfo("toConfig: configurationControl changed");
+  }
+
+  /** Validate post to airgradient cloud */
+  if (JSON.typeof_(jconfig[jprop_postDataToAirGradient]) != "boolean") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    jconfig[jprop_postDataToAirGradient] = true;
+    changed = true;
+    logInfo("toConfig: postToAirGradient changed");
+  }
+
+  /** validate led bar brightness */
+  if (JSON.typeof_(jconfig[jprop_ledbarBrightness]) != "number") {
+    isInvalid = true;
+  } else {
+    int value = jconfig[jprop_ledbarBrightness];
+    if (value < 0 || value > 100) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_ledbarBrightness] = 100;
+    changed = true;
+    logInfo("toConfig: ledBarBrightness changed");
+  }
+
+  /** Validate display brightness */
+  if (JSON.typeof_(jconfig[jprop_displayBrightness]) != "number") {
+    isInvalid = true;
+  } else {
+    int value = jconfig[jprop_displayBrightness];
+    if (value < 0 || value > 100) {
+      isInvalid = true;
+    } else {
+      isInvalid = false;
+    }
+  }
+  if (isInvalid) {
+    jconfig[jprop_displayBrightness] = 100;
+    changed = true;
+    logInfo("toConfig: displayBrightness changed");
+  }
+
+  if (changed) {
+    saveConfig();
+  }
+}
+
 String Configuration::getFailedMesage(void) { return failedMessage; }
 
 void Configuration::setPostToAirGradient(bool enable) {
-  if (enable != config.postDataToAirGradient) {
-    config.postDataToAirGradient = enable;
+  bool oldEnabled = jconfig[jprop_postDataToAirGradient];
+  if (enable != oldEnabled) {
+    jconfig[jprop_postDataToAirGradient] = enable;
     logInfo("postDataToAirGradient set to: " + String(enable));
     saveConfig();
   } else {
@@ -908,11 +1108,13 @@ bool Configuration::tvocLearnOffsetChanged(void) {
 }
 
 int Configuration::getTvocLearningOffset(void) {
-  return config.tvocLearningOffset;
+  int value = jconfig[jprop_tvocLearningOffset];
+  return value;
 }
 
 int Configuration::getNoxLearningOffset(void) {
-  return config.noxLearningOffset;
+  int value = jconfig[jprop_noxLearningOffset];
+  return value;
 }
 
 String Configuration::wifiSSID(void) { return "airgradient-" + ag->deviceId(); }
@@ -921,7 +1123,10 @@ String Configuration::wifiPass(void) { return String("cleanair"); }
 
 void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-int Configuration::getLedBarBrightness(void) { return config.ledBarBrightness; }
+int Configuration::getLedBarBrightness(void) {
+  int value = jconfig[jprop_ledbarBrightness];
+  return value;
+}
 
 bool Configuration::isLedBarBrightnessChanged(void) {
   bool changed = ledBarBrightnessChanged;
@@ -930,7 +1135,8 @@ bool Configuration::isLedBarBrightnessChanged(void) {
 }
 
 int Configuration::getDisplayBrightness(void) {
-  return config.displayBrightness;
+  int value = jconfig[jprop_displayBrightness];
+  return value;
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {
