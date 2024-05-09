@@ -1186,7 +1186,8 @@ int Configuration::getLastOta(void) {
     logError("Current year " + String(curYear) + String(" invalid"));
     return -1;
   }
-  time_t lastOta = jconfig[jprop_lastOta];
+  double _t = jconfig[jprop_lastOta];
+  time_t lastOta = (time_t)_t;
   time_t curTime = mktime(&timeInfo);
   logInfo("Last ota time: " + String(lastOta));
   if (lastOta == 0) {
@@ -1211,7 +1212,7 @@ void Configuration::updateLastOta(void) {
   }
   
   time_t lastOta = mktime(&timeInfo);
-  jconfig[jprop_lastOta] = lastOta;
+  jconfig[jprop_lastOta] = (unsigned long)lastOta;
   logInfo("Last OTA: " + String(lastOta));
   saveConfig();
 }
