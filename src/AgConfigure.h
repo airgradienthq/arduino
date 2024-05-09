@@ -16,6 +16,7 @@ private:
   bool _tvocLearningOffsetChanged;
   bool ledBarBrightnessChanged = false;
   bool displayBrightnessChanged = false;
+  String otaNewFirmwareVersion;
 
   AirGradient* ag;
 
@@ -74,6 +75,9 @@ public:
   int getLedBarBrightness(void);
   bool isDisplayBrightnessChanged(void);
   int getDisplayBrightness(void);
+  int getLastOta(void);
+  void updateLastOta(void);
+  String newFirmwareVersion(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

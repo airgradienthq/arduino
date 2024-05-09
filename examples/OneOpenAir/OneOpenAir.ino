@@ -51,6 +51,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "OpenMetrics.h"
 #include "WebServer.h"
 #include <WebServer.h>
+#include <WiFi.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
@@ -93,6 +94,7 @@ static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
+static String fwNewVersion;
 
 static void boardInit(void);
 static void failedHandler(String msg);
@@ -112,6 +114,9 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
+static void otaHandlerCallback(OtaState state, String mesasge);
+static void displayExecuteOta(OtaState state, String msg,
+                              int processing);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -163,6 +168,11 @@ void setup() {
   if (ag->isOne()) {
     if (ledBarButtonTest) {
       stateMachine.executeLedBarPowerUpTest();
+      if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
+        WiFi.begin("airgradient", "cleanair");
+        Serial.println("WiFi Credential reset to factory defaults");
+        ESP.restart();
+      }
     } else {
       ledBarEnabledUpdate();
       connectToWifi = true;
@@ -184,7 +194,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -431,6 +441,80 @@ static bool sgp41Init(void) {
     configuration.hasSensorSGP = false;
   }
   return false;
+}
+
+static void otaHandlerCallback(OtaState state, String mesasge) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN:
+    displayExecuteOta(state, fwNewVersion, 0);
+    break;
+  case OtaState::OTA_STATE_FAIL:
+    displayExecuteOta(state, "", 0);
+    break;
+  case OtaState::OTA_STATE_PROCESSING:
+    displayExecuteOta(state, "", mesasge.toInt());
+    break;
+  case OtaState::OTA_STATE_SUCCESS:
+    displayExecuteOta(state, "", mesasge.toInt());
+    break;
+  default:
+    break;
+  }
+}
+
+static void displayExecuteOta(OtaState state, String msg, int processing) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareVersion(msg);
+    } else {
+      Serial.println("New firmware: " + msg);
+    }
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_FAIL: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareFailed();
+    } else {
+      Serial.println("Error: Firmware update: failed");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_PROCESSING: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareUpdating(String(processing));
+    } else {
+      Serial.println("Firmware update: " + String(processing) + String("%"));
+    }
+
+    break;
+  }
+  case OtaState::OTA_STATE_SUCCESS: {
+    int i = 6;
+    while(i != 0) {
+      i = i - 1;
+      Serial.println("OTA update performed, restarting ...");
+      int i = 6;
+      while (i != 0) {
+        i = i - 1;
+        if (ag->isOne()) {
+          oledDisplay.showNewFirmwareSuccess(String(i));
+        } else {
+          Serial.println("Rebooting... " + String(i));
+        }
+        
+        delay(1000);
+      }
+      esp_restart();
+    }
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 static void sendDataToAg() {
@@ -731,6 +815,20 @@ static void configUpdateHandle() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
     Serial.println("Set 'DisplayBrightness' brightness: " +
                    String(configuration.getDisplayBrightness()));
+  }
+
+  fwNewVersion = configuration.newFirmwareVersion();
+  if (fwNewVersion.length()) {
+    int lastOta = configuration.getLastOta();
+    if (lastOta != 0 && lastOta < (60 * 60 * 24)) {
+      Serial.println("Ignore OTA cause last update is " + String(lastOta) +
+                     String("sec"));
+      Serial.println("Retry again after 24h");
+    } else {
+      configuration.updateLastOta();
+      otaHandler.setHandlerCallback(otaHandlerCallback);
+      otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+    }
   }
 
   appDispHandler();
