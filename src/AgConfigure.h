@@ -74,6 +74,8 @@ public:
   int getLedBarBrightness(void);
   bool isDisplayBrightnessChanged(void);
   int getDisplayBrightness(void);
+  bool isOfflineMode(void);
+  void setOfflineMode(bool offline);
 };
 
 #endif /** _AG_CONFIG_H_ */

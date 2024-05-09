@@ -40,6 +40,7 @@ JSON_PROP_DEF(ledbarBrightness);
 JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
+JSON_PROP_DEF(offlineMode);
 JSONVar jconfig;
 
 static bool jsonTypeInvalid(JSONVar root, String validType) {
@@ -145,6 +146,7 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_noxLearningOffset] = 12;
   jconfig[jprop_abcDays] = 8;
   jconfig[jprop_model] = "";
+  jconfig[jprop_offlineMode] = false;
 
   saveConfig();
 }
@@ -1077,6 +1079,15 @@ void Configuration::toConfig(const char *buf) {
     logInfo("toConfig: displayBrightness changed");
   }
 
+  if (JSON.typeof_(jconfig[jprop_offlineMode]) != "boolean") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    jconfig[jprop_offlineMode] = false;
+  }
+
   if (changed) {
     saveConfig();
   }
@@ -1137,6 +1148,17 @@ bool Configuration::isLedBarBrightnessChanged(void) {
 int Configuration::getDisplayBrightness(void) {
   int value = jconfig[jprop_displayBrightness];
   return value;
+}
+
+bool Configuration::isOfflineMode(void) {
+  bool offline = jconfig[jprop_offlineMode];
+  return offline;
+}
+
+void Configuration::setOfflineMode(bool offline) {
+  logInfo("Set offline mode: " + String(offline ? "True" : "False"));
+  jconfig[jprop_offlineMode] = offline;
+  saveConfig();
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {
