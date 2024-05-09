@@ -8,30 +8,6 @@
 
 class Configuration : public PrintLog {
 private:
-  struct Config {
-    char model[20];
-    char country[3]; /** Country name has only 2 character, ex: TH = Thailand */
-    char mqttBroker[256]; /** MQTT broker URI */
-    bool inUSAQI; /** If PM standard "ugm3"  inUSAQI = false, otherwise is true
-                   */
-    bool inF;     /** Temperature unit F */
-    bool postDataToAirGradient;   /** If true, monitor will not POST data to
-                                    airgradient server. Make sure no error
-                                    message shown on monitor */
-    uint8_t configurationControl; /** If true, configuration from airgradient
-                               server will be ignored */
-    bool displayMode;             /** true if enable display */
-    uint8_t useRGBLedBar;
-    uint8_t abcDays;
-    uint8_t ledBarBrightness;
-    uint8_t displayBrightness;
-    int tvocLearningOffset;
-    int noxLearningOffset;
-    char temperatureUnit; // 'f' or 'c'
-
-    uint32_t _check;
-  };
-  struct Config config;
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
   bool udpated;
@@ -55,6 +31,7 @@ private:
   String getPMStandardString(bool usaqi);
   String getDisplayModeString(bool dispMode);
   String getAbcDayString(int value);
+  void toConfig(const char* buf);
 
 public:
   Configuration(Stream &debugLog);
