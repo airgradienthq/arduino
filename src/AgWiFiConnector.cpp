@@ -1,5 +1,6 @@
 #include "AgWiFiConnector.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
+#include <time.h>
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
@@ -158,6 +159,11 @@ bool WifiConnector::connect(void) {
       config.setPostToAirGradient(result != "T");
     }
     hasPortalConfig = false;
+
+    /** Configure internet time */
+    const char *ntp_server = "pool.ntp.org";
+    configTime(0, 0, ntp_server);
+    logInfo("Set internet time server: " + String(ntp_server));
   }
 #else
   _wifiProcess();

@@ -6,6 +6,7 @@
 #else
 #include "EEPROM.h"
 #endif
+#include <time.h>
 
 #define EEPROM_CONFIG_SIZE 1024
 #define CONFIG_FILE_NAME "/cfg.json"
@@ -613,6 +614,18 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  if (JSON.typeof_(root["targetFirmware"]) == "string") {
+    String newVer = root["targetFirmware"];
+    String curVer = String(GIT_VERSION);
+    if (curVer != newVer) {
+      logInfo("Detected new firwmare version: " + newVer);
+      otaNewFirmwareVersion = newVer;
+      udpated = true;
+    } else {
+      otaNewFirmwareVersion = String("");
+    }
+  }
+
   if (changed) {
     udpated = true;
     saveConfig();
@@ -1165,4 +1178,53 @@ bool Configuration::isDisplayBrightnessChanged(void) {
   bool changed = displayBrightnessChanged;
   displayBrightnessChanged = false;
   return changed;
+}
+
+/**
+ * @brief Get number of sec from last OTA
+ *
+ * @return int < 0 is invalid, 0 mean there is no OTA trigger.
+ */
+int Configuration::getLastOta(void) {
+  struct tm timeInfo;
+  if (getLocalTime(&timeInfo) == false) {
+    logError("Get localtime failed");
+    return -1;
+  }
+  int curYear = timeInfo.tm_year + 1900;
+  if (curYear < 2024) {
+    logError("Current year " + String(curYear) + String(" invalid"));
+    return -1;
+  }
+  time_t curTime = mktime(&timeInfo);
+  logInfo("Last ota time: " + String(config.lastOta));
+  if (config.lastOta == 0) {
+    return 0;
+  }
+
+  int sec = curTime - config.lastOta;
+  logInfo("Last ota secconds: " + String(sec));
+  return sec;
+}
+
+void Configuration::updateLastOta(void) {
+  struct tm timeInfo;
+  if (getLocalTime(&timeInfo) == false) {
+    logError("updateLastOta: Get localtime failed");
+    return;
+  }
+  int curYear = timeInfo.tm_year + 1900;
+  if (curYear < 2024) {
+    logError("updateLastOta: lolcal time invalid");
+    return;
+  }
+  config.lastOta = mktime(&timeInfo);
+  logInfo("Last OTA: " + String(config.lastOta));
+  saveConfig();
+}
+
+String Configuration::newFirmwareVersion(void) {
+  String newFw = otaNewFirmwareVersion;
+  otaNewFirmwareVersion = String("");
+  return newFw;
 }

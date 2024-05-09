@@ -49,6 +49,16 @@ void OledDisplay::showTempHum(bool hasStatus) {
   }
 }
 
+void OledDisplay::setCentralText(int y, String text) {
+  setCentralText(y, text.c_str());
+}
+
+void OledDisplay::setCentralText(int y, const char *text) {
+  int x = (DISP()->getWidth() - DISP()->getStrWidth(text)) / 2;
+  DISP()->drawStr(x, y, text);
+}
+
+
 /**
  * @brief Construct a new Ag Oled Display:: Ag Oled Display object
  * 
@@ -290,4 +300,43 @@ void OledDisplay::showDashboard(const char *status) {
 
 void OledDisplay::setBrightness(int percent) {
   DISP()->setContrast((127 * percent) / 100);
+}
+
+void OledDisplay::showNewFirmwareVersion(String version) {
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "New version");
+    setCentralText(60, version.c_str());
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareUpdating(String percent) {
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(50, String("Updating... ") + percent + String("%"));
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareSuccess(String count) {
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "Success");
+    setCentralText(60, String("Rebooting... ") + count);
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareFailed(void) {
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "Failed");
+    setCentralText(60, String("Retry after 24h"));
+  } while (DISP()->nextPage());
 }
