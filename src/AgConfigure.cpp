@@ -41,6 +41,7 @@ JSON_PROP_DEF(ledbarBrightness);
 JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
+JSON_PROP_DEF(lastOta);
 JSONVar jconfig;
 
 static bool jsonTypeInvalid(JSONVar root, String validType) {
@@ -1090,6 +1091,17 @@ void Configuration::toConfig(const char *buf) {
     logInfo("toConfig: displayBrightness changed");
   }
 
+  /** Last OTA */
+  if(JSON.typeof_(jconfig[jprop_lastOta]) != "number") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if(isInvalid) {
+    jconfig[jprop_lastOta] = 0;
+    changed = true;
+  }
+
   if (changed) {
     saveConfig();
   }
@@ -1174,13 +1186,14 @@ int Configuration::getLastOta(void) {
     logError("Current year " + String(curYear) + String(" invalid"));
     return -1;
   }
+  time_t lastOta = jconfig[jprop_lastOta];
   time_t curTime = mktime(&timeInfo);
-  logInfo("Last ota time: " + String(config.lastOta));
-  if (config.lastOta == 0) {
+  logInfo("Last ota time: " + String(lastOta));
+  if (lastOta == 0) {
     return 0;
   }
 
-  int sec = curTime - config.lastOta;
+  int sec = curTime - lastOta;
   logInfo("Last ota secconds: " + String(sec));
   return sec;
 }
@@ -1196,8 +1209,10 @@ void Configuration::updateLastOta(void) {
     logError("updateLastOta: lolcal time invalid");
     return;
   }
-  config.lastOta = mktime(&timeInfo);
-  logInfo("Last OTA: " + String(config.lastOta));
+  
+  time_t lastOta = mktime(&timeInfo);
+  jconfig[jprop_lastOta] = lastOta;
+  logInfo("Last OTA: " + String(lastOta));
   saveConfig();
 }
 
