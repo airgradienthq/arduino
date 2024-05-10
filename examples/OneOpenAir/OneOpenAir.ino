@@ -180,7 +180,7 @@ void setup() {
     oledDisplay.setText(
         "Press now for",
         configuration.isOfflineMode() ? "online mode" : "offline mode", "");
-    uint32_t stime = millis();
+    uint32_t startTime = millis();
     while (true) {
       if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
         configuration.setOfflineMode(!configuration.isOfflineMode());
@@ -191,8 +191,8 @@ void setup() {
         delay(1000);
         break;
       }
-      uint32_t ms = (uint32_t)(millis() - stime);
-      if (ms >= 3000) {
+      uint32_t periodMs = (uint32_t)(millis() - startTime);
+      if (periodMs >= 3000) {
         break;
       }
     }
