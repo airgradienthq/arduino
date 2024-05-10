@@ -124,7 +124,6 @@ void Configuration::loadConfig(void) {
   for (int i = 0; i < EEPROM_CONFIG_SIZE; i++) {
     buf[i] = EEPROM.read(i);
   }
-  readSuccess = true;
 #else
   File file = SPIFFS.open(CONFIG_FILE_NAME);
   if (file && !file.isDirectory()) {
