@@ -9,7 +9,7 @@
 #include <time.h>
 
 #define EEPROM_CONFIG_SIZE 1024
-#define CONFIG_FILE_NAME "/cfg.json"
+#define CONFIG_FILE_NAME "/AgConfigure_Configuration.json"
 
 const char *CONFIGURATION_CONTROL_NAME[] = {
     [ConfigurationControlLocal] = "local",
@@ -43,6 +43,24 @@ JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(lastOta);
 JSON_PROP_DEF(offlineMode);
+
+#define jprop_model_default                 ""
+#define jprop_country_default               ""
+#define jprop_pmStandard_default            getPMStandardString(false)
+#define jprop_ledBarMode_default            getLedBarModeName(LedBarMode::LedBarModeCO2)
+#define jprop_displayMode_default           getDisplayModeString(true)
+#define jprop_abcDays_default               8
+#define jprop_tvocLearningOffset_default    12
+#define jprop_noxLearningOffset_default     12
+#define jprop_mqttBrokerUrl_default         ""
+#define jprop_temperatureUnit_default       "c"
+#define jprop_configurationControl_default  String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
+#define jprop_postDataToAirGradient_default true
+#define jprop_ledbarBrightness_default      100
+#define jprop_displayBrightness_default     100
+#define jprop_lastOta_default               0
+#define jprop_offlineMode_default           false
+
 JSONVar jconfig;
 
 static bool jsonTypeInvalid(JSONVar root, String validType) {
@@ -98,7 +116,6 @@ void Configuration::saveConfig(void) {
 }
 
 void Configuration::loadConfig(void) {
-  bool readSuccess = false;
   char *buf = (char *)malloc(EEPROM_CONFIG_SIZE);
   if (buf == NULL) {
     logError("Malloc read file buffer failed");
@@ -109,13 +126,15 @@ void Configuration::loadConfig(void) {
   for (int i = 0; i < EEPROM_CONFIG_SIZE; i++) {
     buf[i] = EEPROM.read(i);
   }
-  readSuccess = true;
 #else
   File file = SPIFFS.open(CONFIG_FILE_NAME);
   if (file && !file.isDirectory()) {
-    logInfo("Read file");
-    file.readBytes(buf, file.size());
-    readSuccess = true;
+    logInfo("Reading file...");
+    if(file.readBytes(buf, file.size()) != file.size()) {
+      logError("Reading file: failed - size not match");
+    } else {
+      logInfo("Reading file: success");
+    }
     file.close();
   } else {
     SPIFFS.format();
@@ -131,24 +150,23 @@ void Configuration::loadConfig(void) {
  */
 void Configuration::defaultConfig(void) {
   jconfig = JSON.parse("{}");
-  jconfig[jprop_country] = "";
-  jconfig[jprop_mqttBrokerUrl] = "";
-  jconfig[jprop_configurationControl] =
-      String(CONFIGURATION_CONTROL_NAME
-                 [ConfigurationControl::ConfigurationControlBoth]);
-  jconfig[jprop_pmStandard] = getPMStandardString(false);
-  jconfig[jprop_temperatureUnit] = "c";
-  jconfig[jprop_postDataToAirGradient] = true;
-  jconfig[jprop_displayMode] = getDisplayModeString(true);
-  jconfig[jprop_ledbarBrightness] = 100;
-  jconfig[jprop_displayBrightness] = 100;
-  jconfig[jprop_ledBarMode] = getLedBarModeName(LedBarMode::LedBarModeCO2);
 
-  jconfig[jprop_tvocLearningOffset] = 12;
-  jconfig[jprop_noxLearningOffset] = 12;
-  jconfig[jprop_abcDays] = 8;
-  jconfig[jprop_model] = "";
-  jconfig[jprop_offlineMode] = false;
+  jconfig[jprop_country] = jprop_country_default;
+  jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
+  jconfig[jprop_configurationControl] = jprop_configurationControl_default;
+  jconfig[jprop_pmStandard] = jprop_pmStandard_default;
+  jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
+  jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
+  jconfig[jprop_displayMode] = getDisplayModeString(true);
+  jconfig[jprop_ledbarBrightness] = jprop_ledbarBrightness_default;
+  jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
+  jconfig[jprop_ledBarMode] = jprop_ledbarBrightness_default;
+  jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
+  jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
+  jconfig[jprop_abcDays] = jprop_abcDays_default;
+  jconfig[jprop_model] = jprop_model_default;
+  jconfig[jprop_lastOta] = jprop_lastOta_default;
+  jconfig[jprop_offlineMode] = jprop_offlineMode_default;
 
   saveConfig();
 }
@@ -888,7 +906,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_country] = "";
+    jconfig[jprop_country] = jprop_country_default;
     changed = true;
     logInfo("toConfig: country changed");
   }
@@ -906,7 +924,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_pmStandard] = getPMStandardString(false);
+    jconfig[jprop_pmStandard] = jprop_pmStandard_default;
     changed = true;
     logInfo("toConfig: pmStandard changed");
   }
@@ -925,7 +943,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_ledBarMode] = getLedBarModeName(LedBarMode::LedBarModeCO2);
+    jconfig[jprop_ledBarMode] = jprop_ledBarMode_default;
     changed = true;
     logInfo("toConfig: ledBarMode changed");
   }
@@ -943,7 +961,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_displayMode] = getDisplayModeString(true);
+    jconfig[jprop_displayMode] = jprop_displayMode_default;
     changed = true;
     logInfo("toConfig: displayMode changed");
   }
@@ -955,7 +973,7 @@ void Configuration::toConfig(const char *buf) {
     isInvalid = false;
   }
   if (isInvalid) {
-    jconfig[jprop_abcDays] = 8;
+    jconfig[jprop_abcDays] = jprop_abcDays_default;
     changed = true;
     logInfo("toConfig: abcDays changed");
   }
@@ -972,7 +990,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_tvocLearningOffset] = 12;
+    jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
     changed = true;
     logInfo("toConfig: tvocLearningOffset changed");
   }
@@ -989,7 +1007,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_noxLearningOffset] = 12;
+    jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
     changed = true;
     logInfo("toConfig: noxLearningOffset changed");
   }
@@ -1002,7 +1020,7 @@ void Configuration::toConfig(const char *buf) {
   }
   if (isInvalid) {
     changed = true;
-    jconfig[jprop_mqttBrokerUrl] = "";
+    jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
     logInfo("toConfig: mqttBroker changed");
   }
 
@@ -1018,7 +1036,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_temperatureUnit] = "c";
+    jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
     changed = true;
     logInfo("toConfig: temperatureUnit changed");
   }
@@ -1040,9 +1058,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_configurationControl] =
-        String(CONFIGURATION_CONTROL_NAME
-                   [ConfigurationControl::ConfigurationControlBoth]);
+    jconfig[jprop_configurationControl] =jprop_configurationControl_default;
     changed = true;
     logInfo("toConfig: configurationControl changed");
   }
@@ -1054,7 +1070,7 @@ void Configuration::toConfig(const char *buf) {
     isInvalid = false;
   }
   if (isInvalid) {
-    jconfig[jprop_postDataToAirGradient] = true;
+    jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
     changed = true;
     logInfo("toConfig: postToAirGradient changed");
   }
@@ -1071,7 +1087,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_ledbarBrightness] = 100;
+    jconfig[jprop_ledbarBrightness] = jprop_ledbarBrightness_default;
     changed = true;
     logInfo("toConfig: ledBarBrightness changed");
   }
@@ -1088,7 +1104,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_displayBrightness] = 100;
+    jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
     changed = true;
     logInfo("toConfig: displayBrightness changed");
   }
@@ -1109,7 +1125,7 @@ void Configuration::toConfig(const char *buf) {
     isInvalid = false;
   }
   if(isInvalid) {
-    jconfig[jprop_lastOta] = 0;
+    jconfig[jprop_lastOta] = jprop_lastOta_default;
     changed = true;
   }
 
