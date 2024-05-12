@@ -90,7 +90,6 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
 static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
-static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
@@ -175,8 +174,30 @@ void setup() {
       }
     } else {
       ledBarEnabledUpdate();
-      connectToWifi = true;
     }
+
+    /** Show message confirm offline mode. */
+    oledDisplay.setText(
+        "Press now for",
+        configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+    uint32_t startTime = millis();
+    while (true) {
+      if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+        configuration.setOfflineMode(!configuration.isOfflineMode());
+
+        oledDisplay.setText(
+        "Offline Mode",
+        configuration.isOfflineMode() ? " = True" : "  = False", "");
+        delay(1000);
+        break;
+      }
+      uint32_t periodMs = (uint32_t)(millis() - startTime);
+      if (periodMs >= 3000) {
+        break;
+      }
+    }
+    connectToWifi = !configuration.isOfflineMode();
+
   } else {
     connectToWifi = true;
   }
@@ -210,8 +231,6 @@ void setup() {
         } else {
           ledBarEnabledUpdate();
         }
-      } else {
-        offlineMode = true;
       }
     }
   }
@@ -259,9 +278,9 @@ void loop() {
     }
   }
 
-  /** Auto reset external watchdog timer on offline mode and
-   * postDataToAirGradient disabled. */
-  if (offlineMode || (configuration.isPostDataToAirGradient() == false)) {
+  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
+  if (configuration.isOfflineMode() ||
+      (configuration.isPostDataToAirGradient() == false)) {
     watchdogFeedSchedule.run();
   }
 
@@ -612,7 +631,7 @@ static void oneIndoorInit(void) {
   }
 
   /** Run LED test on start up */
-  oledDisplay.setText("Press now for", "LED test &", "offline mode");
+  oledDisplay.setText("Press now for", "LED test", "");
   ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {

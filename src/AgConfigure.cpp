@@ -42,6 +42,7 @@ JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(lastOta);
+JSON_PROP_DEF(offlineMode);
 
 #define jprop_model_default                 ""
 #define jprop_country_default               ""
@@ -58,6 +59,7 @@ JSON_PROP_DEF(lastOta);
 #define jprop_ledbarBrightness_default      100
 #define jprop_displayBrightness_default     100
 #define jprop_lastOta_default               0
+#define jprop_offlineMode_default           false
 
 JSONVar jconfig;
 
@@ -163,6 +165,8 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
   jconfig[jprop_model] = jprop_model_default;
+  jconfig[lastOta] = jprop_lastOta_default;
+  jconfig[jprop_offlineMode] = jprop_offlineMode_default;
 
   saveConfig();
 }
@@ -1105,6 +1109,15 @@ void Configuration::toConfig(const char *buf) {
     logInfo("toConfig: displayBrightness changed");
   }
 
+  if (JSON.typeof_(jconfig[jprop_offlineMode]) != "boolean") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    jconfig[jprop_offlineMode] = false;
+  }
+
   /** Last OTA */
   if(JSON.typeof_(jconfig[jprop_lastOta]) != "number") {
     isInvalid = true;
@@ -1176,6 +1189,17 @@ bool Configuration::isLedBarBrightnessChanged(void) {
 int Configuration::getDisplayBrightness(void) {
   int value = jconfig[jprop_displayBrightness];
   return value;
+}
+
+bool Configuration::isOfflineMode(void) {
+  bool offline = jconfig[jprop_offlineMode];
+  return offline;
+}
+
+void Configuration::setOfflineMode(bool offline) {
+  logInfo("Set offline mode: " + String(offline ? "True" : "False"));
+  jconfig[jprop_offlineMode] = offline;
+  saveConfig();
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {

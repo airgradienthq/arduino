@@ -78,6 +78,8 @@ public:
   int getLastOta(void);
   void updateLastOta(void);
   String newFirmwareVersion(void);
+  bool isOfflineMode(void);
+  void setOfflineMode(bool offline);
 };
 
 #endif /** _AG_CONFIG_H_ */
