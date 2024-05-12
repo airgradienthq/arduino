@@ -165,7 +165,7 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
   jconfig[jprop_model] = jprop_model_default;
-  jconfig[lastOta] = jprop_lastOta_default;
+  jconfig[jprop_lastOta] = jprop_lastOta_default;
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
 
   saveConfig();
