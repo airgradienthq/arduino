@@ -48,6 +48,7 @@ public:
   bool begin(void);
   bool parse(String data, bool isLocal);
   String toString(void);
+  String toString(AgFirmwareMode fwMode);
   bool isTemperatureUnitInF(void);
   String getCountry(void);
   bool isPmStandardInUSAQI(void);

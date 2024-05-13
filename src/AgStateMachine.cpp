@@ -394,6 +394,9 @@ StateMachine::~StateMachine() {}
 void StateMachine::displayHandle(AgStateMachineState state) {
   // Ignore handle if not ONE_INDOOR board
   if (!ag->isOne()) {
+    if (state == AgStateMachineCo2Calibration) {
+      co2Calibration();
+    }
     return;
   }
 
