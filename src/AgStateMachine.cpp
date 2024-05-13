@@ -454,15 +454,19 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineSensorConfigFailed: {
-    uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
-    if (ms >= 5000) {
-      addToDashboardTime = millis();
-      if (addToDashBoard) {
-        disp.showDashboard("Add to Dashboard");
-      } else {
-        disp.showDashboard(ag->deviceId().c_str());
+    if (addToDashBoard) {
+      uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
+      if (ms >= 5000) {
+        addToDashboardTime = millis();
+        if (addToDashBoardToggle) {
+          disp.showDashboard("Add to Dashboard");
+        } else {
+          disp.showDashboard(ag->deviceId().c_str());
+        }
+        addToDashBoardToggle = !addToDashBoardToggle;
       }
-      addToDashBoard = !addToDashBoard;
+    } else {
+      disp.showDashboard("");
     }
     break;
   }
@@ -489,8 +493,11 @@ void StateMachine::displayHandle(void) { displayHandle(dispState); }
  *
  */
 void StateMachine::displaySetAddToDashBoard(void) {
+  if(addToDashBoard == false) {
+    addToDashboardTime = 0;
+    addToDashBoardToggle = true;
+  }
   addToDashBoard = true;
-  addToDashboardTime = millis();
 }
 
 void StateMachine::displayClearAddToDashBoard(void) { addToDashBoard = false; }
