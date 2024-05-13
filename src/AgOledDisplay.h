@@ -14,6 +14,7 @@ private:
   bool isBegin = false;
   void *u8g2 = NULL;
   Measurements &value;
+  bool isDisplayOff = false;
 
   void showTempHum(bool hasStatus);
   void setCentralText(int y, String text);
