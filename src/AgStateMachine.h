@@ -17,6 +17,7 @@ private:
   Measurements &value;
   Configuration &config;
   bool addToDashBoard = false;
+  bool addToDashBoardToggle = false;
   uint32_t addToDashboardTime;
   int wifiConnectCountDown;
   int ledBarAnimationCount;
