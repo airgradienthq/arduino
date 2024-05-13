@@ -440,7 +440,7 @@ static void factoryConfigReset(void) {
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
   Serial.println();
-  Serial.println("External watchdog feed");
+  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
   Serial.println();
 }
 
@@ -583,11 +583,6 @@ static void sendDataToAg() {
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   stateMachine.handleLeds(AgStateMachineNormal);
 }
-
-/**
- * @brief Must reset each 5min to avoid ESP32 reset
- */
-static void resetWatchdog() { ag->watchdog.reset(); }
 
 void dispSensorNotFound(String ss) {
   ss = ss + " not found";
@@ -1101,10 +1096,19 @@ static void updatePm(void) {
 }
 
 static void sendDataToServer(void) {
+  /** Ignore send data to server if postToAirGradient disabled */
+  if (configuration.isPostDataToAirGradient() == false) {
+    return;
+  }
+
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    resetWatchdog();
+    ag->watchdog.reset();
+    Serial.println();
+    Serial.println(
+        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println();
   }
 
   measurements.bootCount++;
