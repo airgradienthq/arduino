@@ -795,9 +795,11 @@ static void configUpdateHandle() {
     return;
   }
 
-  ledBarEnabledUpdate();
+  if (ag->isOne()) {
+    ledBarEnabledUpdate();
+    stateMachine.executeLedBarTest();
+  }
   stateMachine.executeCo2Calibration();
-  stateMachine.executeLedBarTest();
 
   String mqttUri = configuration.getMqttBrokerUri();
   if (mqttClient.isCurrentUri(mqttUri) == false) {
@@ -805,38 +807,42 @@ static void configUpdateHandle() {
     initMqtt();
   }
 
-  if (configuration.noxLearnOffsetChanged() ||
-      configuration.tvocLearnOffsetChanged()) {
-    ag->sgp41.end();
+  if (configuration.hasSensorSGP) {
+    if (configuration.noxLearnOffsetChanged() ||
+        configuration.tvocLearnOffsetChanged()) {
+      ag->sgp41.end();
 
-    int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
-    int oldNoxOffset = ag->sgp41.getNoxLearningOffset();
-    bool result = sgp41Init();
-    const char *resultStr = "successful";
-    if (!result) {
-      resultStr = "failure";
-    }
-    if (oldTvocOffset != configuration.getTvocLearningOffset()) {
-      Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
-                    oldTvocOffset, configuration.getTvocLearningOffset(),
-                    resultStr);
-    }
-    if (oldNoxOffset != configuration.getNoxLearningOffset()) {
-      Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
-                    oldNoxOffset, configuration.getNoxLearningOffset(),
-                    resultStr);
+      int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
+      int oldNoxOffset = ag->sgp41.getNoxLearningOffset();
+      bool result = sgp41Init();
+      const char *resultStr = "successful";
+      if (!result) {
+        resultStr = "failure";
+      }
+      if (oldTvocOffset != configuration.getTvocLearningOffset()) {
+        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
+                      oldTvocOffset, configuration.getTvocLearningOffset(),
+                      resultStr);
+      }
+      if (oldNoxOffset != configuration.getNoxLearningOffset()) {
+        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
+                      oldNoxOffset, configuration.getNoxLearningOffset(),
+                      resultStr);
+      }
     }
   }
 
-  if (configuration.isLedBarBrightnessChanged()) {
-    ag->ledBar.setBrighness(configuration.getLedBarBrightness());
-    Serial.println("Set 'LedBarBrightness' brightness: " +
-                   String(configuration.getLedBarBrightness()));
-  }
-  if (configuration.isDisplayBrightnessChanged()) {
-    oledDisplay.setBrightness(configuration.getDisplayBrightness());
-    Serial.println("Set 'DisplayBrightness' brightness: " +
-                   String(configuration.getDisplayBrightness()));
+  if (ag->isOne()) {
+    if (configuration.isLedBarBrightnessChanged()) {
+      ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+      Serial.println("Set 'LedBarBrightness' brightness: " +
+                     String(configuration.getLedBarBrightness()));
+    }
+    if (configuration.isDisplayBrightnessChanged()) {
+      oledDisplay.setBrightness(configuration.getDisplayBrightness());
+      Serial.println("Set 'DisplayBrightness' brightness: " +
+                     String(configuration.getDisplayBrightness()));
+    }
   }
 
   fwNewVersion = configuration.newFirmwareVersion();
