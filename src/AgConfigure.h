@@ -31,7 +31,6 @@ private:
   void jsonInvalid(void);
   void configLogInfo(String name, String fromValue, String toValue);
   String getPMStandardString(bool usaqi);
-  String getDisplayModeString(bool dispMode);
   String getAbcDayString(int value);
   void toConfig(const char* buf);
 

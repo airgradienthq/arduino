@@ -29,7 +29,6 @@ JSON_PROP_DEF(model);
 JSON_PROP_DEF(country);
 JSON_PROP_DEF(pmStandard);
 JSON_PROP_DEF(ledBarMode);
-JSON_PROP_DEF(displayMode);
 JSON_PROP_DEF(abcDays);
 JSON_PROP_DEF(tvocLearningOffset);
 JSON_PROP_DEF(noxLearningOffset);
@@ -48,7 +47,6 @@ JSON_PROP_DEF(offlineMode);
 #define jprop_country_default               ""
 #define jprop_pmStandard_default            getPMStandardString(false)
 #define jprop_ledBarMode_default            getLedBarModeName(LedBarMode::LedBarModeCO2)
-#define jprop_displayMode_default           getDisplayModeString(true)
 #define jprop_abcDays_default               8
 #define jprop_tvocLearningOffset_default    12
 #define jprop_noxLearningOffset_default     12
@@ -157,7 +155,6 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
-  jconfig[jprop_displayMode] = getDisplayModeString(true);
   jconfig[jprop_ledbarBrightness] = jprop_ledbarBrightness_default;
   jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
   jconfig[jprop_ledBarMode] = jprop_ledbarBrightness_default;
@@ -396,30 +393,6 @@ bool Configuration::parse(String data, bool isLocal) {
     if (jsonTypeInvalid(root[jprop_ledBarMode], "string")) {
       failedMessage =
           jsonTypeInvalidMessage(String(jprop_ledBarMode), "string");
-      jsonInvalid();
-      return false;
-    }
-  }
-
-  if (JSON.typeof_(root[jprop_displayMode]) == "string") {
-    String mode = root[jprop_displayMode];
-    if (mode == getDisplayModeString(true) ||
-        mode == getDisplayModeString(false)) {
-      String oldMode = jconfig[jprop_displayMode];
-      if (mode != oldMode) {
-        jconfig[jprop_displayMode] = mode;
-        changed = true;
-      }
-    } else {
-      failedMessage = 
-      jsonValueInvalidMessage(String(jprop_displayMode), mode);
-      jsonInvalid();
-      return false;
-    }
-  } else {
-    if (jsonTypeInvalid(root[jprop_displayMode], "string")) {
-      failedMessage =
-          jsonTypeInvalidMessage(String(jprop_displayMode), "string");
       jsonInvalid();
       return false;
     }
@@ -758,20 +731,6 @@ String Configuration::getLedBarModeName(void) {
 }
 
 /**
- * @brief Get display mode
- *
- * @return true On
- * @return false Off
- */
-bool Configuration::getDisplayMode(void) {
-  String mode = jconfig[jprop_displayMode];
-  if (mode == getDisplayModeString(true)) {
-    return true;
-  }
-  return false;
-}
-
-/**
  * @brief Get MQTT uri
  *
  * @return String
@@ -891,13 +850,6 @@ String Configuration::getPMStandardString(bool usaqi) {
   return "ugm3";
 }
 
-String Configuration::getDisplayModeString(bool dispMode) {
-  if (dispMode) {
-    return String("on");
-  }
-  return String("off");
-}
-
 String Configuration::getAbcDayString(int value) {
   if (value <= 0) {
     return String("off");
@@ -967,24 +919,6 @@ void Configuration::toConfig(const char *buf) {
     jconfig[jprop_ledBarMode] = jprop_ledBarMode_default;
     changed = true;
     logInfo("toConfig: ledBarMode changed");
-  }
-
-  /** validate display mode */
-  if (JSON.typeof_(jconfig[jprop_displayMode]) != "string") {
-    isInvalid = true;
-  } else {
-    String mode = jconfig[jprop_displayMode];
-    if (mode != getDisplayModeString(true) &&
-        mode != getDisplayModeString(false)) {
-      isInvalid = true;
-    } else {
-      isInvalid = false;
-    }
-  }
-  if (isInvalid) {
-    jconfig[jprop_displayMode] = jprop_displayMode_default;
-    changed = true;
-    logInfo("toConfig: displayMode changed");
   }
 
   /** validate abcday */
