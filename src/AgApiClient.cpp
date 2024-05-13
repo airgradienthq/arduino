@@ -34,7 +34,8 @@ void AgApiClient::begin(void) {
  */
 bool AgApiClient::fetchServerConfiguration(void) {
   if (config.getConfigurationControl() ==
-      ConfigurationControl::ConfigurationControlLocal) {
+          ConfigurationControl::ConfigurationControlLocal ||
+      config.isOfflineMode()) {
     logWarning("Ignore fetch server configuration");
 
     // Clear server configuration failed flag, cause it's ignore but not

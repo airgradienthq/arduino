@@ -345,3 +345,16 @@ int WifiConnector::RSSI(void) { return WiFi.RSSI(); }
  * @return String
  */
 String WifiConnector::localIpStr(void) { return WiFi.localIP().toString(); }
+
+/**
+ * @brief Get status that wifi has configurated
+ * 
+ * @return true Configurated
+ * @return false Not Configurated
+ */
+bool WifiConnector::hasConfigurated(void) {
+  if (WiFi.SSID().isEmpty()) {
+    return false;
+  }
+  return true;
+}

@@ -1193,13 +1193,17 @@ int Configuration::getDisplayBrightness(void) {
 
 bool Configuration::isOfflineMode(void) {
   bool offline = jconfig[jprop_offlineMode];
-  return offline;
+  return (offline || _offlineMode);
 }
 
 void Configuration::setOfflineMode(bool offline) {
   logInfo("Set offline mode: " + String(offline ? "True" : "False"));
   jconfig[jprop_offlineMode] = offline;
   saveConfig();
+}
+
+void Configuration::setOfflineModeWithoutSave(bool offline) {
+  _offlineMode = offline;
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {
