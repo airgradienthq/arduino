@@ -673,6 +673,20 @@ bool Configuration::parse(String data, bool isLocal) {
 String Configuration::toString(void) { return JSON.stringify(jconfig); }
 
 /**
+ * @brief Get current configuration value as JSON string
+ *
+ * @param fwMode Firmware mode value
+ * @return String
+ */
+String Configuration::toString(AgFirmwareMode fwMode) {
+  String model = jconfig[jprop_model];
+  jconfig[jprop_model] = AgFirmwareModeName(fwMode);
+  String value = toString();
+  jconfig[jprop_model] = model;
+  return value;
+}
+
+/**
  * @brief Temperature unit (F or C)
  *
  * @return true F

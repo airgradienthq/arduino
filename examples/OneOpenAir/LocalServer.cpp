@@ -39,7 +39,11 @@ String LocalServer::getHostname(void) {
 void LocalServer::_handle(void) { server.handleClient(); }
 
 void LocalServer::_GET_config(void) {
-  server.send(200, "application/json", config.toString());
+  if(ag->isOne()) {
+    server.send(200, "application/json", config.toString());
+  } else {
+    server.send(200, "application/json", config.toString(fwMode));
+  }
 }
 
 void LocalServer::_PUT_config(void) {
