@@ -239,6 +239,9 @@ void setup() {
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+
+    Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
+    oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
   appLedHandler();
@@ -443,8 +446,14 @@ static void wdgFeedUpdate(void) {
 
 static void ledBarEnabledUpdate(void) {
   if (ag->isOne()) {
-    ag->ledBar.setBrighness(configuration.getLedBarBrightness());
-    ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    int brightness = configuration.getLedBarBrightness();
+    Serial.println("LED bar brightness: " + String(brightness));
+    if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
+      ag->ledBar.setEnable(false);
+    } else {
+      ag->ledBar.setBrighness(brightness);
+      ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    }
   }
 }
 
