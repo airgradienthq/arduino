@@ -411,6 +411,7 @@ bool Configuration::parse(String data, bool isLocal) {
         changed = true;
       }
     } else {
+      failedMessage = 
       jsonValueInvalidMessage(String(jprop_displayMode), mode);
       jsonInvalid();
       return false;
@@ -503,10 +504,16 @@ bool Configuration::parse(String data, bool isLocal) {
   if (JSON.typeof_(root[jprop_mqttBrokerUrl]) == "string") {
     String broker = root[jprop_mqttBrokerUrl];
     String oldBroker = jconfig[jprop_mqttBrokerUrl];
-    if (broker != oldBroker) {
-      changed = true;
-      configLogInfo(String(jprop_mqttBrokerUrl), oldBroker, broker);
-      jconfig[jprop_mqttBrokerUrl] = broker;
+    if (broker.length() <= 255) {
+      if (broker != oldBroker) {
+        changed = true;
+        configLogInfo(String(jprop_mqttBrokerUrl), oldBroker, broker);
+        jconfig[jprop_mqttBrokerUrl] = broker;
+      }
+    } else {
+      failedMessage = "\"mqttBrokerUrl\" length should <= 255";
+      jsonInvalid();
+      return false;
     }
   } else {
     if (jsonTypeInvalid(root[jprop_mqttBrokerUrl], "string")) {
@@ -528,7 +535,7 @@ bool Configuration::parse(String data, bool isLocal) {
         configLogInfo(String(jprop_temperatureUnit), oldUnit, unit);
       }
     } else {
-      jsonValueInvalidMessage(String(jprop_temperatureUnit), unit);
+      failedMessage = jsonValueInvalidMessage(String(jprop_temperatureUnit), unit);
       jsonInvalid();
       return false;
     }
