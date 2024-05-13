@@ -402,9 +402,8 @@ static void factoryConfigReset(void) {
               mqttTask = NULL;
             }
 
-            /** Disconnect WIFI */
-            wifiConnector.disconnect();
-            wifiConnector.reset();
+            /** Reset WIFI */
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();
@@ -875,14 +874,17 @@ static void appLedHandler(void) {
 static void appDispHandler(void) {
   if (ag->isOne()) {
     AgStateMachineState state = AgStateMachineNormal;
-    if (wifiConnector.isConnected() == false) {
-      state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
-      state = AgStateMachineSensorConfigFailed;
-    } else if (apiClient.isPostToServerFailed()) {
-      state = AgStateMachineServerLost;
-    }
 
+    /** Only show display status on online mode. */
+    if (configuration.isOfflineMode() == false) {
+      if (wifiConnector.isConnected() == false) {
+        state = AgStateMachineWiFiLost;
+      } else if (apiClient.isFetchConfigureFailed()) {
+        state = AgStateMachineSensorConfigFailed;
+      } else if (apiClient.isPostToServerFailed()) {
+        state = AgStateMachineServerLost;
+      }
+    }
     stateMachine.displayHandle(state);
   }
 }
