@@ -239,6 +239,9 @@ void setup() {
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+
+    Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
+    oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
   appLedHandler();
@@ -399,9 +402,8 @@ static void factoryConfigReset(void) {
               mqttTask = NULL;
             }
 
-            /** Disconnect WIFI */
-            wifiConnector.disconnect();
-            wifiConnector.reset();
+            /** Reset WIFI */
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();
@@ -437,14 +439,20 @@ static void factoryConfigReset(void) {
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
   Serial.println();
-  Serial.println("External watchdog feed");
+  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
   Serial.println();
 }
 
 static void ledBarEnabledUpdate(void) {
   if (ag->isOne()) {
-    ag->ledBar.setBrighness(configuration.getLedBarBrightness());
-    ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    int brightness = configuration.getLedBarBrightness();
+    Serial.println("LED bar brightness: " + String(brightness));
+    if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
+      ag->ledBar.setEnable(false);
+    } else {
+      ag->ledBar.setBrighness(brightness);
+      ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    }
   }
 }
 
@@ -574,11 +582,6 @@ static void sendDataToAg() {
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   stateMachine.handleLeds(AgStateMachineNormal);
 }
-
-/**
- * @brief Must reset each 5min to avoid ESP32 reset
- */
-static void resetWatchdog() { ag->watchdog.reset(); }
 
 void dispSensorNotFound(String ss) {
   ss = ss + " not found";
@@ -871,14 +874,17 @@ static void appLedHandler(void) {
 static void appDispHandler(void) {
   if (ag->isOne()) {
     AgStateMachineState state = AgStateMachineNormal;
-    if (wifiConnector.isConnected() == false) {
-      state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
-      state = AgStateMachineSensorConfigFailed;
-    } else if (apiClient.isPostToServerFailed()) {
-      state = AgStateMachineServerLost;
-    }
 
+    /** Only show display status on online mode. */
+    if (configuration.isOfflineMode() == false) {
+      if (wifiConnector.isConnected() == false) {
+        state = AgStateMachineWiFiLost;
+      } else if (apiClient.isFetchConfigureFailed()) {
+        state = AgStateMachineSensorConfigFailed;
+      } else if (apiClient.isPostToServerFailed()) {
+        state = AgStateMachineServerLost;
+      }
+    }
     stateMachine.displayHandle(state);
   }
 }
@@ -1092,10 +1098,19 @@ static void updatePm(void) {
 }
 
 static void sendDataToServer(void) {
+  /** Ignore send data to server if postToAirGradient disabled */
+  if (configuration.isPostDataToAirGradient() == false) {
+    return;
+  }
+
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    resetWatchdog();
+    ag->watchdog.reset();
+    Serial.println();
+    Serial.println(
+        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println();
   }
 
   measurements.bootCount++;

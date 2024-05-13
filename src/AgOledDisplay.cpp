@@ -103,7 +103,12 @@ bool OledDisplay::begin(void) {
     return false;
   }
 
-  setBrightness(config.getDisplayBrightness());
+  /** Show low brightness on startup. then it's completely turn off on main
+   * application */
+  int brightness = config.getDisplayBrightness();
+  if(brightness == 0) {
+    setBrightness(1);
+  }
 
   isBegin = true;
   logInfo("begin");
@@ -148,6 +153,10 @@ void OledDisplay::setText(String &line1, String &line2, String &line3) {
  */
 void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -180,6 +189,10 @@ void OledDisplay::setText(String &line1, String &line2, String &line3,
  */
 void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3, const char *line4) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -201,6 +214,10 @@ void OledDisplay::showDashboard(void) { showDashboard(NULL); }
  * 
  */
 void OledDisplay::showDashboard(const char *status) {
+  if (isDisplayOff) {
+    return;
+  }
+
   char strBuf[10];
 
   DISP()->firstPage();
@@ -299,10 +316,25 @@ void OledDisplay::showDashboard(const char *status) {
 }
 
 void OledDisplay::setBrightness(int percent) {
-  DISP()->setContrast((127 * percent) / 100);
+  if (percent == 0) {
+    isDisplayOff = true;
+
+    // Clear display.
+    DISP()->firstPage();
+    do {
+    } while (DISP()->nextPage());
+
+  } else {
+    isDisplayOff = false;
+    DISP()->setContrast((127 * percent) / 100);
+  }
 }
 
 void OledDisplay::showNewFirmwareVersion(String version) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -313,6 +345,10 @@ void OledDisplay::showNewFirmwareVersion(String version) {
 }
 
 void OledDisplay::showNewFirmwareUpdating(String percent) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -322,6 +358,10 @@ void OledDisplay::showNewFirmwareUpdating(String percent) {
 }
 
 void OledDisplay::showNewFirmwareSuccess(String count) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -332,6 +372,10 @@ void OledDisplay::showNewFirmwareSuccess(String count) {
 }
 
 void OledDisplay::showNewFirmwareFailed(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
