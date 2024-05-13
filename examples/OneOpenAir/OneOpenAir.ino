@@ -176,28 +176,32 @@ void setup() {
       ledBarEnabledUpdate();
     }
 
-    /** Show message confirm offline mode. */
-    oledDisplay.setText(
-        "Press now for",
-        configuration.isOfflineMode() ? "online mode" : "offline mode", "");
-    uint32_t startTime = millis();
-    while (true) {
-      if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
-        configuration.setOfflineMode(!configuration.isOfflineMode());
+    /** Show message confirm offline mode, should me perform if LED bar button
+     * test pressed */
+    if (ledBarButtonTest == false) {
+      oledDisplay.setText(
+          "Press now for",
+          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+      uint32_t startTime = millis();
+      while (true) {
+        if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+          configuration.setOfflineMode(!configuration.isOfflineMode());
 
-        oledDisplay.setText(
-        "Offline Mode",
-        configuration.isOfflineMode() ? " = True" : "  = False", "");
-        delay(1000);
-        break;
+          oledDisplay.setText(
+              "Offline Mode",
+              configuration.isOfflineMode() ? " = True" : "  = False", "");
+          delay(1000);
+          break;
+        }
+        uint32_t periodMs = (uint32_t)(millis() - startTime);
+        if (periodMs >= 3000) {
+          break;
+        }
       }
-      uint32_t periodMs = (uint32_t)(millis() - startTime);
-      if (periodMs >= 3000) {
-        break;
-      }
+      connectToWifi = !configuration.isOfflineMode();
+    } else {
+      configuration.setOfflineModeWithoutSave(true);
     }
-    connectToWifi = !configuration.isOfflineMode();
-
   } else {
     connectToWifi = true;
   }
@@ -1099,7 +1103,7 @@ static void updatePm(void) {
 
 static void sendDataToServer(void) {
   /** Ignore send data to server if postToAirGradient disabled */
-  if (configuration.isPostDataToAirGradient() == false) {
+  if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
     return;
   }
 

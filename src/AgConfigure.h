@@ -17,6 +17,7 @@ private:
   bool ledBarBrightnessChanged = false;
   bool displayBrightnessChanged = false;
   String otaNewFirmwareVersion;
+  bool _offlineMode = false;
 
   AirGradient* ag;
 
@@ -80,6 +81,7 @@ public:
   String newFirmwareVersion(void);
   bool isOfflineMode(void);
   void setOfflineMode(bool offline);
+  void setOfflineModeWithoutSave(bool offline);
 };
 
 #endif /** _AG_CONFIG_H_ */
