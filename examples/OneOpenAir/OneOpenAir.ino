@@ -402,9 +402,8 @@ static void factoryConfigReset(void) {
               mqttTask = NULL;
             }
 
-            /** Disconnect WIFI */
-            wifiConnector.disconnect();
-            wifiConnector.reset();
+            /** Reset WIFI */
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();
