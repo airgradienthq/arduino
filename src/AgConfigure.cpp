@@ -36,7 +36,7 @@ JSON_PROP_DEF(mqttBrokerUrl);
 JSON_PROP_DEF(temperatureUnit);
 JSON_PROP_DEF(configurationControl);
 JSON_PROP_DEF(postDataToAirGradient);
-JSON_PROP_DEF(ledbarBrightness);
+JSON_PROP_DEF(ledBarBrightness);
 JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
@@ -54,7 +54,7 @@ JSON_PROP_DEF(offlineMode);
 #define jprop_temperatureUnit_default       "c"
 #define jprop_configurationControl_default  String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
 #define jprop_postDataToAirGradient_default true
-#define jprop_ledbarBrightness_default      100
+#define jprop_ledBarBrightness_default      100
 #define jprop_displayBrightness_default     100
 #define jprop_lastOta_default               0
 #define jprop_offlineMode_default           false
@@ -155,9 +155,9 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
-  jconfig[jprop_ledbarBrightness] = jprop_ledbarBrightness_default;
+  jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
   jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
-  jconfig[jprop_ledBarMode] = jprop_ledbarBrightness_default;
+  jconfig[jprop_ledBarMode] = jprop_ledBarBrightness_default;
   jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
@@ -561,27 +561,27 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
-  if (JSON.typeof_(root[jprop_ledbarBrightness]) == "number") {
-    int value = root[jprop_ledbarBrightness];
-    int oldValue = jconfig[jprop_ledbarBrightness];
+  if (JSON.typeof_(root[jprop_ledBarBrightness]) == "number") {
+    int value = root[jprop_ledBarBrightness];
+    int oldValue = jconfig[jprop_ledBarBrightness];
     if (value >= 0 && value <= 100) {
       if (value != oldValue) {
         changed = true;
-        configLogInfo(String(jprop_ledbarBrightness), String(oldValue),
+        configLogInfo(String(jprop_ledBarBrightness), String(oldValue),
                       String(value));
         ledBarBrightnessChanged = true;
-        jconfig[jprop_ledbarBrightness] = value;
+        jconfig[jprop_ledBarBrightness] = value;
       }
     } else {
-      failedMessage = jsonValueInvalidMessage(String(jprop_ledbarBrightness),
+      failedMessage = jsonValueInvalidMessage(String(jprop_ledBarBrightness),
                                               String(value));
       jsonInvalid();
       return false;
     }
   } else {
-    if (jsonTypeInvalid(root[jprop_ledbarBrightness], "number")) {
+    if (jsonTypeInvalid(root[jprop_ledBarBrightness], "number")) {
       failedMessage =
-          jsonTypeInvalidMessage(String(jprop_ledbarBrightness), "number");
+          jsonTypeInvalidMessage(String(jprop_ledBarBrightness), "number");
       jsonInvalid();
       return false;
     }
@@ -1031,10 +1031,10 @@ void Configuration::toConfig(const char *buf) {
   }
 
   /** validate led bar brightness */
-  if (JSON.typeof_(jconfig[jprop_ledbarBrightness]) != "number") {
+  if (JSON.typeof_(jconfig[jprop_ledBarBrightness]) != "number") {
     isInvalid = true;
   } else {
-    int value = jconfig[jprop_ledbarBrightness];
+    int value = jconfig[jprop_ledBarBrightness];
     if (value < 0 || value > 100) {
       isInvalid = true;
     } else {
@@ -1042,7 +1042,7 @@ void Configuration::toConfig(const char *buf) {
     }
   }
   if (isInvalid) {
-    jconfig[jprop_ledbarBrightness] = jprop_ledbarBrightness_default;
+    jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
     changed = true;
     logInfo("toConfig: ledBarBrightness changed");
   }
@@ -1131,7 +1131,7 @@ String Configuration::wifiPass(void) { return String("cleanair"); }
 void Configuration::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
 int Configuration::getLedBarBrightness(void) {
-  int value = jconfig[jprop_ledbarBrightness];
+  int value = jconfig[jprop_ledBarBrightness];
   return value;
 }
 
