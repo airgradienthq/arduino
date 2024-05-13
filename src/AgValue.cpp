@@ -140,7 +140,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["channels"]["1"]["rhumCompensated"] =
                 (int)ag->pms5003t_1.humidityCompensated(this->hum_1);
           }
-        } else if (config->hasSensorPMS2) {
+        }
+        if (config->hasSensorPMS2) {
           root["channels"]["2"]["pm01"] = this->pm01_2;
           root["channels"]["2"]["pm02"] = this->pm25_2;
           root["channels"]["2"]["pm10"] = this->pm10_2;
