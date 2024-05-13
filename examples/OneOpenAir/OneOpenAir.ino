@@ -238,6 +238,11 @@ void setup() {
       }
     }
   }
+  /** Set offline mode without saving, cause wifi is not configured */
+  if (wifiConnector.hasConfigurated() == false) {
+    Serial.println("Set offline mode cause wifi is not configurated");
+    configuration.setOfflineModeWithoutSave(true);
+  }
 
   /** Show display Warning up */
   if (ag->isOne()) {

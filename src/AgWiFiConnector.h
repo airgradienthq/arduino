@@ -50,6 +50,7 @@ public:
   void reset(void);
   int RSSI(void);
   String localIpStr(void);
+  bool hasConfigurated(void);
 };
 
 #endif /** _AG_WIFI_CONNECTOR_H_ */
