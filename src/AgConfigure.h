@@ -76,8 +76,6 @@ public:
   int getLedBarBrightness(void);
   bool isDisplayBrightnessChanged(void);
   int getDisplayBrightness(void);
-  int getLastOta(void);
-  void updateLastOta(void);
   String newFirmwareVersion(void);
   bool isOfflineMode(void);
   void setOfflineMode(bool offline);
