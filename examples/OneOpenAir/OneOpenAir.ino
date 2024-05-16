@@ -519,6 +519,26 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
+  case OtaState::OTA_STATE_SKIP: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareSkipped();
+    } else {
+      Serial.println("Firmware update: Skipped");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_UP_TO_DATE: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareUpToDate();
+    } else {
+      Serial.println("Firmware update: up to date");
+    }
+
+    delay(2500);
+    break;
+  }
   case OtaState::OTA_STATE_PROCESSING: {
     if (ag->isOne()) {
       oledDisplay.showNewFirmwareUpdating(String(processing));

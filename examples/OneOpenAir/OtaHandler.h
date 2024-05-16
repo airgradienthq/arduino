@@ -18,6 +18,8 @@ enum OtaUpdateOutcome {
 enum OtaState {
   OTA_STATE_BEGIN,
   OTA_STATE_FAIL,
+  OTA_STATE_SKIP,
+  OTA_STATE_UP_TO_DATE,
   OTA_STATE_PROCESSING,
   OTA_STATE_SUCCESS
 };
@@ -40,13 +42,22 @@ public:
     config.url = urlAsChar;
     OtaUpdateOutcome ret = attemptToPerformOta(&config);
     Serial.println(ret);
-    if (ret == OtaUpdateOutcome::UPDATE_PERFORMED) {
-      if (this->callback) {
+    if (this->callback) {
+      switch (ret) {
+      case OtaUpdateOutcome::UPDATE_PERFORMED:
         this->callback(OtaState::OTA_STATE_SUCCESS, "");
-      }
-    } else {
-      if(this->callback) {
+        break;
+      case OtaUpdateOutcome::UDPATE_SKIPPED:
+        this->callback(OtaState::OTA_STATE_SKIP, "");
+        break;
+      case OtaUpdateOutcome::ALREADY_UP_TO_DATE:
+        this->callback(OtaState::OTA_STATE_UP_TO_DATE, "");
+        break;
+      case OtaUpdateOutcome::UPDATE_FAILED:
         this->callback(OtaState::OTA_STATE_FAIL, "");
+        break;
+      default:
+        break;
       }
     }
   }

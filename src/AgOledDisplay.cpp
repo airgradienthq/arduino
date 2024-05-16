@@ -381,6 +381,31 @@ void OledDisplay::showNewFirmwareFailed(void) {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
     setCentralText(40, "Failed");
-    setCentralText(60, String("Retry after 24h"));
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareSkipped(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "skipped");
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareUpToDate(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "up to date");
   } while (DISP()->nextPage());
 }
