@@ -856,13 +856,23 @@ static void configUpdateHandle() {
 
   fwNewVersion = configuration.newFirmwareVersion();
   if (fwNewVersion.length()) {
-    int lastOta = configuration.getLastOta();
-    if (lastOta != 0 && lastOta < (60 * 60 * 24)) {
-      Serial.println("Ignore OTA cause last update is " + String(lastOta) +
-                     String("sec"));
-      Serial.println("Retry again after 24h");
+    bool doOta = false;
+    if (measurements.otaBootCount == 0) {
+      doOta = true;
+      Serial.println("First OTA");
     } else {
-      configuration.updateLastOta();
+      if ((measurements.bootCount - measurements.otaBootCount) >= 30) {
+        doOta = true;
+      } else {
+        Serial.println(
+            "OTA ignore, try again next " +
+            String(30 - (measurements.bootCount - measurements.otaBootCount)) +
+            String(" boots"));
+      }
+    }
+
+    if (doOta) {
+      measurements.otaBootCount = measurements.bootCount;
       otaHandler.setHandlerCallback(otaHandlerCallback);
       otaHandler.updateFirmwareIfOutdated(ag->deviceId());
     }

@@ -40,7 +40,6 @@ JSON_PROP_DEF(ledBarBrightness);
 JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
-JSON_PROP_DEF(lastOta);
 JSON_PROP_DEF(offlineMode);
 
 #define jprop_model_default                 ""
@@ -56,7 +55,6 @@ JSON_PROP_DEF(offlineMode);
 #define jprop_postDataToAirGradient_default true
 #define jprop_ledBarBrightness_default      100
 #define jprop_displayBrightness_default     100
-#define jprop_lastOta_default               0
 #define jprop_offlineMode_default           false
 
 JSONVar jconfig;
@@ -162,7 +160,6 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
   jconfig[jprop_model] = jprop_model_default;
-  jconfig[jprop_lastOta] = jprop_lastOta_default;
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
 
   saveConfig();
@@ -1074,17 +1071,6 @@ void Configuration::toConfig(const char *buf) {
     jconfig[jprop_offlineMode] = false;
   }
 
-  /** Last OTA */
-  if(JSON.typeof_(jconfig[jprop_lastOta]) != "number") {
-    isInvalid = true;
-  } else {
-    isInvalid = false;
-  }
-  if(isInvalid) {
-    jconfig[jprop_lastOta] = jprop_lastOta_default;
-    changed = true;
-  }
-
   if (changed) {
     saveConfig();
   }
@@ -1166,53 +1152,6 @@ bool Configuration::isDisplayBrightnessChanged(void) {
   bool changed = displayBrightnessChanged;
   displayBrightnessChanged = false;
   return changed;
-}
-
-/**
- * @brief Get number of sec from last OTA
- *
- * @return int < 0 is invalid, 0 mean there is no OTA trigger.
- */
-int Configuration::getLastOta(void) {
-  struct tm timeInfo;
-  if (getLocalTime(&timeInfo) == false) {
-    logError("Get localtime failed");
-    return -1;
-  }
-  int curYear = timeInfo.tm_year + 1900;
-  if (curYear < 2024) {
-    logError("Current year " + String(curYear) + String(" invalid"));
-    return -1;
-  }
-  double _t = jconfig[jprop_lastOta];
-  time_t lastOta = (time_t)_t;
-  time_t curTime = mktime(&timeInfo);
-  logInfo("Last ota time: " + String(lastOta));
-  if (lastOta == 0) {
-    return 0;
-  }
-
-  int sec = curTime - lastOta;
-  logInfo("Last ota secconds: " + String(sec));
-  return sec;
-}
-
-void Configuration::updateLastOta(void) {
-  struct tm timeInfo;
-  if (getLocalTime(&timeInfo) == false) {
-    logError("updateLastOta: Get localtime failed");
-    return;
-  }
-  int curYear = timeInfo.tm_year + 1900;
-  if (curYear < 2024) {
-    logError("updateLastOta: lolcal time invalid");
-    return;
-  }
-  
-  time_t lastOta = mktime(&timeInfo);
-  jconfig[jprop_lastOta] = (unsigned long)lastOta;
-  logInfo("Last OTA: " + String(lastOta));
-  saveConfig();
 }
 
 String Configuration::newFirmwareVersion(void) {
