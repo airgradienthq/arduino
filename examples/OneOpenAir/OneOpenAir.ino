@@ -972,7 +972,7 @@ static void updatePm(void) {
       Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
       Serial.printf("[1] Temperature compensated in C: %0.2f\r\n",
                     ag->pms5003t_1.temperatureCompensated(measurements.temp_1));
-      Serial.printf("[1] Relative Humidity compensated: %d\r\n",
+      Serial.printf("[1] Relative Humidity compensated: %f\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_1));
     } else {
       measurements.pm01_1 = -1;
