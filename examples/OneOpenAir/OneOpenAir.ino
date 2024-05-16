@@ -874,13 +874,15 @@ static void configUpdateHandle() {
 
 static void appLedHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
-  if (wifiConnector.isConnected() == false) {
-    state = AgStateMachineWiFiLost;
-  } else if (apiClient.isFetchConfigureFailed()) {
-    stateMachine.displaySetAddToDashBoard();
-    state = AgStateMachineSensorConfigFailed;
-  } else if (apiClient.isPostToServerFailed()) {
-    state = AgStateMachineServerLost;
+  if (configuration.isOfflineMode() == false) {
+    if (wifiConnector.isConnected() == false) {
+      state = AgStateMachineWiFiLost;
+    } else if (apiClient.isFetchConfigureFailed()) {
+      stateMachine.displaySetAddToDashBoard();
+      state = AgStateMachineSensorConfigFailed;
+    } else if (apiClient.isPostToServerFailed()) {
+      state = AgStateMachineServerLost;
+    }
   }
 
   stateMachine.handleLeds(state);
