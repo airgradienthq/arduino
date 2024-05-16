@@ -280,7 +280,8 @@ bool Configuration::parse(String data, bool isLocal) {
     if (jconfig[jprop_configurationControl] ==
         String(CONFIGURATION_CONTROL_NAME
                    [ConfigurationControl::ConfigurationControlCloud])) {
-      failedMessage = "Local configure ignored";
+      failedMessage = "Monitor set to accept only configuration from the "
+                      "cloud. Use property configurationControl to change.";
       jsonInvalid();
       return false;
     }
