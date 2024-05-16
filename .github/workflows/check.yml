@@ -18,7 +18,7 @@ jobs:
             core: "esp8266:esp8266@3.1.2"
             core_url: "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
           - fqbn: "esp32:esp32:esp32c3"
-            board_options: "JTAGAdapter=default,CDCOnBoot=cdc,PartitionScheme=default,CPUFreq=160,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=verbose,EraseFlash=none"
+            board_options: "JTAGAdapter=default,CDCOnBoot=cdc,PartitionScheme=min_spiffs,CPUFreq=160,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=verbose,EraseFlash=none"
             core: "esp32:esp32@2.0.11"
         exclude:
           - example: "BASIC"

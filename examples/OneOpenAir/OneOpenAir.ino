@@ -51,6 +51,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "OpenMetrics.h"
 #include "WebServer.h"
 #include <WebServer.h>
+#include <WiFi.h>
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
@@ -89,10 +90,10 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
 static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
-static bool offlineMode = false;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
+static String fwNewVersion;
 
 static void boardInit(void);
 static void failedHandler(String msg);
@@ -112,6 +113,9 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
+static void otaHandlerCallback(OtaState state, String mesasge);
+static void displayExecuteOta(OtaState state, String msg,
+                              int processing);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
 AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
@@ -162,10 +166,41 @@ void setup() {
   bool connectToWifi = false;
   if (ag->isOne()) {
     if (ledBarButtonTest) {
-      stateMachine.executeLedBarTest();
+      stateMachine.executeLedBarPowerUpTest();
+      if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
+        WiFi.begin("airgradient", "cleanair");
+        Serial.println("WiFi Credential reset to factory defaults");
+        ESP.restart();
+      }
     } else {
       ledBarEnabledUpdate();
-      connectToWifi = true;
+    }
+
+    /** Show message confirm offline mode, should me perform if LED bar button
+     * test pressed */
+    if (ledBarButtonTest == false) {
+      oledDisplay.setText(
+          "Press now for",
+          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+      uint32_t startTime = millis();
+      while (true) {
+        if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+          configuration.setOfflineMode(!configuration.isOfflineMode());
+
+          oledDisplay.setText(
+              "Offline Mode",
+              configuration.isOfflineMode() ? " = True" : "  = False", "");
+          delay(1000);
+          break;
+        }
+        uint32_t periodMs = (uint32_t)(millis() - startTime);
+        if (periodMs >= 3000) {
+          break;
+        }
+      }
+      connectToWifi = !configuration.isOfflineMode();
+    } else {
+      configuration.setOfflineModeWithoutSave(true);
     }
   } else {
     connectToWifi = true;
@@ -184,7 +219,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -200,16 +235,22 @@ void setup() {
         } else {
           ledBarEnabledUpdate();
         }
-      } else {
-        offlineMode = true;
       }
     }
+  }
+  /** Set offline mode without saving, cause wifi is not configured */
+  if (wifiConnector.hasConfigurated() == false) {
+    Serial.println("Set offline mode cause wifi is not configurated");
+    configuration.setOfflineModeWithoutSave(true);
   }
 
   /** Show display Warning up */
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+
+    Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
+    oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
   appLedHandler();
@@ -249,9 +290,9 @@ void loop() {
     }
   }
 
-  /** Auto reset external watchdog timer on offline mode and
-   * postDataToAirGradient disabled. */
-  if (offlineMode || (configuration.isPostDataToAirGradient() == false)) {
+  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
+  if (configuration.isOfflineMode() ||
+      (configuration.isPostDataToAirGradient() == false)) {
     watchdogFeedSchedule.run();
   }
 
@@ -370,9 +411,8 @@ static void factoryConfigReset(void) {
               mqttTask = NULL;
             }
 
-            /** Disconnect WIFI */
-            wifiConnector.disconnect();
-            wifiConnector.reset();
+            /** Reset WIFI */
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();
@@ -408,13 +448,20 @@ static void factoryConfigReset(void) {
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
   Serial.println();
-  Serial.println("External watchdog feed");
+  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
   Serial.println();
 }
 
 static void ledBarEnabledUpdate(void) {
   if (ag->isOne()) {
-    ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    int brightness = configuration.getLedBarBrightness();
+    Serial.println("LED bar brightness: " + String(brightness));
+    if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
+      ag->ledBar.setEnable(false);
+    } else {
+      ag->ledBar.setBrighness(brightness);
+      ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
+    }
   }
 }
 
@@ -430,6 +477,80 @@ static bool sgp41Init(void) {
     configuration.hasSensorSGP = false;
   }
   return false;
+}
+
+static void otaHandlerCallback(OtaState state, String mesasge) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN:
+    displayExecuteOta(state, fwNewVersion, 0);
+    break;
+  case OtaState::OTA_STATE_FAIL:
+    displayExecuteOta(state, "", 0);
+    break;
+  case OtaState::OTA_STATE_PROCESSING:
+    displayExecuteOta(state, "", mesasge.toInt());
+    break;
+  case OtaState::OTA_STATE_SUCCESS:
+    displayExecuteOta(state, "", mesasge.toInt());
+    break;
+  default:
+    break;
+  }
+}
+
+static void displayExecuteOta(OtaState state, String msg, int processing) {
+  switch (state) {
+  case OtaState::OTA_STATE_BEGIN: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareVersion(msg);
+    } else {
+      Serial.println("New firmware: " + msg);
+    }
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_FAIL: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareFailed();
+    } else {
+      Serial.println("Error: Firmware update: failed");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_PROCESSING: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareUpdating(String(processing));
+    } else {
+      Serial.println("Firmware update: " + String(processing) + String("%"));
+    }
+
+    break;
+  }
+  case OtaState::OTA_STATE_SUCCESS: {
+    int i = 6;
+    while(i != 0) {
+      i = i - 1;
+      Serial.println("OTA update performed, restarting ...");
+      int i = 6;
+      while (i != 0) {
+        i = i - 1;
+        if (ag->isOne()) {
+          oledDisplay.showNewFirmwareSuccess(String(i));
+        } else {
+          Serial.println("Rebooting... " + String(i));
+        }
+        
+        delay(1000);
+      }
+      esp_restart();
+    }
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 static void sendDataToAg() {
@@ -470,11 +591,6 @@ static void sendDataToAg() {
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   stateMachine.handleLeds(AgStateMachineNormal);
 }
-
-/**
- * @brief Must reset each 5min to avoid ESP32 reset
- */
-static void resetWatchdog() { ag->watchdog.reset(); }
 
 void dispSensorNotFound(String ss) {
   ss = ss + " not found";
@@ -527,7 +643,7 @@ static void oneIndoorInit(void) {
   }
 
   /** Run LED test on start up */
-  oledDisplay.setText("Press now for", "LED test &", "offline mode");
+  oledDisplay.setText("Press now for", "LED test", "");
   ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {
@@ -688,9 +804,11 @@ static void configUpdateHandle() {
     return;
   }
 
-  ledBarEnabledUpdate();
+  if (ag->isOne()) {
+    ledBarEnabledUpdate();
+    stateMachine.executeLedBarTest();
+  }
   stateMachine.executeCo2Calibration();
-  stateMachine.executeLedBarTest();
 
   String mqttUri = configuration.getMqttBrokerUri();
   if (mqttClient.isCurrentUri(mqttUri) == false) {
@@ -698,26 +816,65 @@ static void configUpdateHandle() {
     initMqtt();
   }
 
-  if (configuration.noxLearnOffsetChanged() ||
-      configuration.tvocLearnOffsetChanged()) {
-    ag->sgp41.end();
+  if (configuration.hasSensorSGP) {
+    if (configuration.noxLearnOffsetChanged() ||
+        configuration.tvocLearnOffsetChanged()) {
+      ag->sgp41.end();
 
-    int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
-    int oldNoxOffset = ag->sgp41.getNoxLearningOffset();
-    bool result = sgp41Init();
-    const char *resultStr = "successful";
-    if (!result) {
-      resultStr = "failure";
+      int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
+      int oldNoxOffset = ag->sgp41.getNoxLearningOffset();
+      bool result = sgp41Init();
+      const char *resultStr = "successful";
+      if (!result) {
+        resultStr = "failure";
+      }
+      if (oldTvocOffset != configuration.getTvocLearningOffset()) {
+        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
+                      oldTvocOffset, configuration.getTvocLearningOffset(),
+                      resultStr);
+      }
+      if (oldNoxOffset != configuration.getNoxLearningOffset()) {
+        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
+                      oldNoxOffset, configuration.getNoxLearningOffset(),
+                      resultStr);
+      }
     }
-    if (oldTvocOffset != configuration.getTvocLearningOffset()) {
-      Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
-                    oldTvocOffset, configuration.getTvocLearningOffset(),
-                    resultStr);
+  }
+
+  if (ag->isOne()) {
+    if (configuration.isLedBarBrightnessChanged()) {
+      ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+      Serial.println("Set 'LedBarBrightness' brightness: " +
+                     String(configuration.getLedBarBrightness()));
     }
-    if (oldNoxOffset != configuration.getNoxLearningOffset()) {
-      Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
-                    oldNoxOffset, configuration.getNoxLearningOffset(),
-                    resultStr);
+    if (configuration.isDisplayBrightnessChanged()) {
+      oledDisplay.setBrightness(configuration.getDisplayBrightness());
+      Serial.println("Set 'DisplayBrightness' brightness: " +
+                     String(configuration.getDisplayBrightness()));
+    }
+  }
+
+  fwNewVersion = configuration.newFirmwareVersion();
+  if (fwNewVersion.length()) {
+    bool doOta = false;
+    if (measurements.otaBootCount == 0) {
+      doOta = true;
+      Serial.println("First OTA");
+    } else {
+      if ((measurements.bootCount - measurements.otaBootCount) >= 30) {
+        doOta = true;
+      } else {
+        Serial.println(
+            "OTA ignore, try again next " +
+            String(30 - (measurements.bootCount - measurements.otaBootCount)) +
+            String(" boots"));
+      }
+    }
+
+    if (doOta) {
+      measurements.otaBootCount = measurements.bootCount;
+      otaHandler.setHandlerCallback(otaHandlerCallback);
+      otaHandler.updateFirmwareIfOutdated(ag->deviceId());
     }
   }
 
@@ -727,13 +884,15 @@ static void configUpdateHandle() {
 
 static void appLedHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
-  if (wifiConnector.isConnected() == false) {
-    state = AgStateMachineWiFiLost;
-  } else if (apiClient.isFetchConfigureFailed()) {
-    stateMachine.displaySetAddToDashBoard();
-    state = AgStateMachineSensorConfigFailed;
-  } else if (apiClient.isPostToServerFailed()) {
-    state = AgStateMachineServerLost;
+  if (configuration.isOfflineMode() == false) {
+    if (wifiConnector.isConnected() == false) {
+      state = AgStateMachineWiFiLost;
+    } else if (apiClient.isFetchConfigureFailed()) {
+      stateMachine.displaySetAddToDashBoard();
+      state = AgStateMachineSensorConfigFailed;
+    } else if (apiClient.isPostToServerFailed()) {
+      state = AgStateMachineServerLost;
+    }
   }
 
   stateMachine.handleLeds(state);
@@ -742,14 +901,17 @@ static void appLedHandler(void) {
 static void appDispHandler(void) {
   if (ag->isOne()) {
     AgStateMachineState state = AgStateMachineNormal;
-    if (wifiConnector.isConnected() == false) {
-      state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
-      state = AgStateMachineSensorConfigFailed;
-    } else if (apiClient.isPostToServerFailed()) {
-      state = AgStateMachineServerLost;
-    }
 
+    /** Only show display status on online mode. */
+    if (configuration.isOfflineMode() == false) {
+      if (wifiConnector.isConnected() == false) {
+        state = AgStateMachineWiFiLost;
+      } else if (apiClient.isFetchConfigureFailed()) {
+        state = AgStateMachineSensorConfigFailed;
+      } else if (apiClient.isPostToServerFailed()) {
+        state = AgStateMachineServerLost;
+      }
+    }
     stateMachine.displayHandle(state);
   }
 }
@@ -822,7 +984,7 @@ static void updatePm(void) {
       Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
       Serial.printf("[1] Temperature compensated in C: %0.2f\r\n",
                     ag->pms5003t_1.temperatureCompensated(measurements.temp_1));
-      Serial.printf("[1] Relative Humidity compensated: %d\r\n",
+      Serial.printf("[1] Relative Humidity compensated: %f\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_1));
     } else {
       measurements.pm01_1 = -1;
@@ -963,10 +1125,19 @@ static void updatePm(void) {
 }
 
 static void sendDataToServer(void) {
+  /** Ignore send data to server if postToAirGradient disabled */
+  if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
+    return;
+  }
+
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    resetWatchdog();
+    ag->watchdog.reset();
+    Serial.println();
+    Serial.println(
+        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println();
   }
 
   measurements.bootCount++;

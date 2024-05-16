@@ -7,6 +7,12 @@
 
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5 /** sec */
 
+#define RGB_COLOR_R 255, 0, 0     /** Red */
+#define RGB_COLOR_G 0, 255, 0     /** Green */
+#define RGB_COLOR_Y 255, 255, 0   /** Yellow */
+#define RGB_COLOR_O 255, 165, 0   /** Organge */
+#define RGB_COLOR_P 160, 32, 240  /** Purple */
+
 /**
  * @brief Animation LED bar with color
  *
@@ -63,80 +69,69 @@ void StateMachine::sensorhandleLeds(void) {
  */
 void StateMachine::co2handleLeds(void) {
   int co2Value = value.CO2;
-  if (co2Value <= 400) {
+  if (co2Value <= 600) {
     /** G; 1 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (co2Value <= 700) {
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+  } else if (co2Value <= 800) {
     /** GG; 2 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
   } else if (co2Value <= 1000) {
     /** YYY; 3 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (co2Value <= 1333) {
-    /** YYYY; 4 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (co2Value <= 1666) {
-    /** YYYYY; 5 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (co2Value <= 2000) {
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+  } else if (co2Value <= 1250) {
+    /** OOOO; 4 */
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
+  } else if (co2Value <= 1500) {
+    /** OOOOO; 5 */
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
+  } else if (co2Value <= 1750) {
     /** RRRRRR; 6 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (co2Value <= 2666) {
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+  } else if (co2Value <= 2000) {
     /** RRRRRRR; 7 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (co2Value <= 3333) {
-    /** RRRRRRRR; 8 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (co2Value <= 4000) {
-    /** RRRRRRRRR; 9 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 9);
-  } else { /** > 4000 */
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+  } else if (co2Value <= 3000) {
+    /** PPPPPPPP; 8 */
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
+  } else { /** > 3000 */
     /* PRPRPRPRP; 9 */
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 9);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
   }
 }
 
@@ -146,80 +141,80 @@ void StateMachine::co2handleLeds(void) {
  */
 void StateMachine::pm25handleLeds(void) {
   int pm25Value = value.pm25_1;
-  if (pm25Value <= 5) {
+  if (pm25Value < 5) {
     /** G; 1 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (pm25Value <= 10) {
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+  } else if (pm25Value < 10) {
     /** GG; 2 */
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(0, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-  } else if (pm25Value <= 20) {
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
+  } else if (pm25Value < 20) {
     /** YYY; 3 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (pm25Value <= 35) {
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+  } else if (pm25Value < 35) {
     /** YYYY; 4 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (pm25Value <= 45) {
-    /** YYYYY; 5 */
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 255, 0, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (pm25Value <= 55) {
-    /** RRRRRR; 6 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (pm25Value <= 65) {
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
+  } else if (pm25Value < 45) {
+    /** OOOOO; 5 */
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
+  } else if (pm25Value < 55) {
+    /** OOOOOO; 6 */
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 6);
+  } else if (pm25Value < 100) {
     /** RRRRRRR; 7 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (pm25Value <= 150) {
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+  } else if (pm25Value < 200) {
     /** RRRRRRRR; 8 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (pm25Value <= 250) {
-    /** RRRRRRRRR; 9 */
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 9);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
+  } else if (pm25Value < 250) {
+    /** PPPPPPPPP; 9 */
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
   } else { /** > 250 */
     /* PRPRPRPRP; 9 */
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(255, 0, 0, ag->ledBar.getNumberOfLeds() - 8);
-    ag->ledBar.setColor(153, 153, 0, ag->ledBar.getNumberOfLeds() - 9);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
+    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
   }
 }
 
@@ -319,6 +314,10 @@ void StateMachine::ledBarTest(void) {
   }
 }
 
+void StateMachine::ledBarPowerUpTest(void) {
+  ledBarRunTest();
+}
+
 void StateMachine::ledBarRunTest(void) {
   disp.setText("LED Test", "running", ".....");
   runLedTest('r');
@@ -401,6 +400,9 @@ StateMachine::~StateMachine() {}
 void StateMachine::displayHandle(AgStateMachineState state) {
   // Ignore handle if not ONE_INDOOR board
   if (!ag->isOne()) {
+    if (state == AgStateMachineCo2Calibration) {
+      co2Calibration();
+    }
     return;
   }
 
@@ -414,19 +416,12 @@ void StateMachine::displayHandle(AgStateMachineState state) {
   switch (state) {
   case AgStateMachineWiFiManagerMode:
   case AgStateMachineWiFiManagerPortalActive: {
-    // if (wifiConnectCountDown >= 0) {
-    //   String line1 = String(wifiConnectCountDown) + "s to connect";
-    //   String line2 = "to WiFi hotspot:";
-    //   String line3 = "\"airgradient-";
-    //   String line4 = ag->deviceId() + "\"";
-    //   disp.setText(line1, line2, line3, line4);
-    //   wifiConnectCountDown--;
-    // }
     if (wifiConnectCountDown >= 0) {
-      String qrContent = "WIFI:S:" + config.wifiSSID() +
-                         ";T:WPA;P:" + config.wifiPass() + ";;";
-      String label = "Scan me (" + String(wifiConnectCountDown) + String(")");
-      disp.showWiFiQrCode(qrContent, label);
+      String line1 = String(wifiConnectCountDown) + "s to connect";
+      String line2 = "to WiFi hotspot:";
+      String line3 = "\"airgradient-";
+      String line4 = ag->deviceId() + "\"";
+      disp.setText(line1, line2, line3, line4);
       wifiConnectCountDown--;
     }
     break;
@@ -468,15 +463,19 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineSensorConfigFailed: {
-    uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
-    if (ms >= 5000) {
-      addToDashboardTime = millis();
-      if (addToDashBoard) {
-        disp.showDashboard("Add to Dashboard");
-      } else {
-        disp.showDashboard(ag->deviceId().c_str());
+    if (addToDashBoard) {
+      uint32_t ms = (uint32_t)(millis() - addToDashboardTime);
+      if (ms >= 5000) {
+        addToDashboardTime = millis();
+        if (addToDashBoardToggle) {
+          disp.showDashboard("Add to Dashboard");
+        } else {
+          disp.showDashboard(ag->deviceId().c_str());
+        }
+        addToDashBoardToggle = !addToDashBoardToggle;
       }
-      addToDashBoard = !addToDashBoard;
+    } else {
+      disp.showDashboard("");
     }
     break;
   }
@@ -503,8 +502,11 @@ void StateMachine::displayHandle(void) { displayHandle(dispState); }
  *
  */
 void StateMachine::displaySetAddToDashBoard(void) {
+  if(addToDashBoard == false) {
+    addToDashboardTime = 0;
+    addToDashBoardToggle = true;
+  }
   addToDashBoard = true;
-  addToDashboardTime = millis();
 }
 
 void StateMachine::displayClearAddToDashBoard(void) { addToDashBoard = false; }
@@ -706,6 +708,8 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineLedBarTest:
     ledBarTest();
     break;
+  case AgStateMachineLedBarPowerUpTest:
+    ledBarPowerUpTest();
   default:
     break;
   }
@@ -758,4 +762,8 @@ void StateMachine::executeCo2Calibration(void) {
 
 void StateMachine::executeLedBarTest(void) {
   handleLeds(AgStateMachineLedBarTest);
+}
+
+void StateMachine::executeLedBarPowerUpTest(void) {
+  handleLeds(AgStateMachineLedBarPowerUpTest);
 }

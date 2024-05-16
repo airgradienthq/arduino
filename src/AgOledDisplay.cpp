@@ -1,6 +1,5 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
-#include "Libraries/QRCode/src/qrcode.h"
 
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
@@ -50,6 +49,16 @@ void OledDisplay::showTempHum(bool hasStatus) {
   }
 }
 
+void OledDisplay::setCentralText(int y, String text) {
+  setCentralText(y, text.c_str());
+}
+
+void OledDisplay::setCentralText(int y, const char *text) {
+  int x = (DISP()->getWidth() - DISP()->getStrWidth(text)) / 2;
+  DISP()->drawStr(x, y, text);
+}
+
+
 /**
  * @brief Construct a new Ag Oled Display:: Ag Oled Display object
  * 
@@ -92,6 +101,13 @@ bool OledDisplay::begin(void) {
   if (DISP()->begin() == false) {
     logError("U8G2 'begin' failed");
     return false;
+  }
+
+  /** Show low brightness on startup. then it's completely turn off on main
+   * application */
+  int brightness = config.getDisplayBrightness();
+  if(brightness == 0) {
+    setBrightness(1);
   }
 
   isBegin = true;
@@ -137,6 +153,10 @@ void OledDisplay::setText(String &line1, String &line2, String &line3) {
  */
 void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -169,6 +189,10 @@ void OledDisplay::setText(String &line1, String &line2, String &line3,
  */
 void OledDisplay::setText(const char *line1, const char *line2,
                             const char *line3, const char *line4) {
+  if (isDisplayOff) {
+    return;
+  }
+
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
@@ -190,6 +214,10 @@ void OledDisplay::showDashboard(void) { showDashboard(NULL); }
  * 
  */
 void OledDisplay::showDashboard(const char *status) {
+  if (isDisplayOff) {
+    return;
+  }
+
   char strBuf[10];
 
   DISP()->firstPage();
@@ -287,24 +315,72 @@ void OledDisplay::showDashboard(const char *status) {
   } while (DISP()->nextPage());
 }
 
-void OledDisplay::showWiFiQrCode(String content, String label) {
-  QRCode qrcode;
-  int version = 6;
-  int x_start = (DISP()->getWidth() - (version * 4 + 17))/ 2;
-  uint8_t qrcodeData[qrcode_getBufferSize(version)];
-  qrcode_initText(&qrcode, qrcodeData, version, 0, content.c_str());
+void OledDisplay::setBrightness(int percent) {
+  if (percent == 0) {
+    isDisplayOff = true;
+
+    // Clear display.
+    DISP()->firstPage();
+    do {
+    } while (DISP()->nextPage());
+
+  } else {
+    isDisplayOff = false;
+    DISP()->setContrast((127 * percent) / 100);
+  }
+}
+
+void OledDisplay::showNewFirmwareVersion(String version) {
+  if (isDisplayOff) {
+    return;
+  }
 
   DISP()->firstPage();
   do {
-    for (uint8_t y = 0; y < qrcode.size; y++) {
-      for (uint8_t x = 0; x < qrcode.size; x++) {
-        if (qrcode_getModule(&qrcode, x, y)) {
-          DISP()->drawPixel(x + x_start, y);
-        }
-      }
-    }
     DISP()->setFont(u8g2_font_t0_16_tf);
-    x_start = (DISP()->getWidth() - DISP()->getStrWidth(label.c_str()))/2;
-    DISP()->drawStr(x_start, 60, label.c_str());
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "New version");
+    setCentralText(60, version.c_str());
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareUpdating(String percent) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(50, String("Updating... ") + percent + String("%"));
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareSuccess(String count) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "Success");
+    setCentralText(60, String("Rebooting... ") + count);
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showNewFirmwareFailed(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "Failed");
+    setCentralText(60, String("Retry after 24h"));
   } while (DISP()->nextPage());
 }

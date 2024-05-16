@@ -69,6 +69,7 @@ public:
   int countPosition;
   const int targetCount = 20;
   int bootCount;
+  int otaBootCount;
 
   String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void* _ag, void* _config);
 };

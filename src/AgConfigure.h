@@ -8,34 +8,16 @@
 
 class Configuration : public PrintLog {
 private:
-  struct Config {
-    char model[20];
-    char country[3]; /** Country name has only 2 character, ex: TH = Thailand */
-    char mqttBroker[256]; /** MQTT broker URI */
-    bool inUSAQI; /** If PM standard "ugm3"  inUSAQI = false, otherwise is true
-                   */
-    bool inF;     /** Temperature unit F */
-    bool postDataToAirGradient;   /** If true, monitor will not POST data to
-                                    airgradient server. Make sure no error
-                                    message shown on monitor */
-    uint8_t configurationControl; /** If true, configuration from airgradient
-                               server will be ignored */
-    bool displayMode;             /** true if enable display */
-    uint8_t useRGBLedBar;
-    uint8_t abcDays;
-    int tvocLearningOffset;
-    int noxLearningOffset;
-    char temperatureUnit; // 'f' or 'c'
-
-    uint32_t _check;
-  };
-  struct Config config;
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
   bool udpated;
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
+  bool ledBarBrightnessChanged = false;
+  bool displayBrightnessChanged = false;
+  String otaNewFirmwareVersion;
+  bool _offlineMode = false;
 
   AirGradient* ag;
 
@@ -49,8 +31,8 @@ private:
   void jsonInvalid(void);
   void configLogInfo(String name, String fromValue, String toValue);
   String getPMStandardString(bool usaqi);
-  String getDisplayModeString(bool dispMode);
   String getAbcDayString(int value);
+  void toConfig(const char* buf);
 
 public:
   Configuration(Stream &debugLog);
@@ -65,6 +47,7 @@ public:
   bool begin(void);
   bool parse(String data, bool isLocal);
   String toString(void);
+  String toString(AgFirmwareMode fwMode);
   bool isTemperatureUnitInF(void);
   String getCountry(void);
   bool isPmStandardInUSAQI(void);
@@ -89,6 +72,14 @@ public:
   String wifiSSID(void);
   String wifiPass(void);
   void setAirGradient(AirGradient *ag);
+  bool isLedBarBrightnessChanged(void);
+  int getLedBarBrightness(void);
+  bool isDisplayBrightnessChanged(void);
+  int getDisplayBrightness(void);
+  String newFirmwareVersion(void);
+  bool isOfflineMode(void);
+  void setOfflineMode(bool offline);
+  void setOfflineModeWithoutSave(bool offline);
 };
 
 #endif /** _AG_CONFIG_H_ */
