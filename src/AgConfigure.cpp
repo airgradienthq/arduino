@@ -617,7 +617,7 @@ bool Configuration::parse(String data, bool isLocal) {
     String newVer = root["targetFirmware"];
     String curVer = String(GIT_VERSION);
     if (curVer != newVer) {
-      logInfo("Detected new firwmare version: " + newVer);
+      logInfo("Detected new firmware version: " + newVer);
       otaNewFirmwareVersion = newVer;
       udpated = true;
     } else {
@@ -630,7 +630,7 @@ bool Configuration::parse(String data, bool isLocal) {
     saveConfig();
     printConfig();
   } else {
-    logInfo("Nothing changed ignore udpate");
+    logInfo("Update ignored due to local unofficial changes");
     if (ledBarTestRequested || co2CalibrationRequested) {
       udpated = true;
     }
