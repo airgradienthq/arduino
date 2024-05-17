@@ -138,6 +138,9 @@ private:
       int data_read =
           esp_http_client_read(client, upgrade_data_buf, OTA_BUF_SIZE);
       if (data_read == 0) {
+        if (this->callback) {
+          this->callback(OtaState::OTA_STATE_PROCESSING, String(100));
+        }
         Serial.println("Connection closed, all data received");
         break;
       }
