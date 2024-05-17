@@ -36,12 +36,12 @@ public:
   void showDashboard(void);
   void showDashboard(const char *status);
   void setBrightness(int percent);
-  void showNewFirmwareVersion(String version);
-  void showNewFirmwareUpdating(String percent);
-  void showNewFirmwareSuccess(String count);
-  void showNewFirmwareFailed(void);
-  void showNewFirmwareSkipped(void);
-  void showNewFirmwareUpToDate(void);
+  void showFirmwareUpdateVersion(String version);
+  void showFirmwareUpdateProgress(int percent);
+  void showFirmwareUpdateSuccess(String count);
+  void showFirmwareUpdateFailed(void);
+  void showFirmwareUpdateSkipped(void);
+  void showFirmwareUpdateUpToDate(void);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */
