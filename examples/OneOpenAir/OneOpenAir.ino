@@ -462,6 +462,7 @@ static void ledBarEnabledUpdate(void) {
       ag->ledBar.setBrighness(brightness);
       ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
     }
+     ag->ledBar.show();
   }
 }
 
@@ -804,10 +805,6 @@ static void configUpdateHandle() {
     return;
   }
 
-  if (ag->isOne()) {
-    ledBarEnabledUpdate();
-    stateMachine.executeLedBarTest();
-  }
   stateMachine.executeCo2Calibration();
 
   String mqttUri = configuration.getMqttBrokerUri();
@@ -843,15 +840,42 @@ static void configUpdateHandle() {
 
   if (ag->isOne()) {
     if (configuration.isLedBarBrightnessChanged()) {
-      ag->ledBar.setBrighness(configuration.getLedBarBrightness());
-      Serial.println("Set 'LedBarBrightness' brightness: " +
+      if (configuration.getLedBarBrightness() == 0) {
+        ag->ledBar.setEnable(false);
+      } else {
+        if (configuration.getLedBarMode() != LedBarMode::LedBarModeOff) {
+          ag->ledBar.setEnable(true);
+        }
+        ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+      }
+      ag->ledBar.show();
+      Serial.println("Set 'ledBarBrightness' brightness: " +
                      String(configuration.getLedBarBrightness()));
     }
+
+    if (configuration.isLedBarModeChanged()) {
+      Serial.println("Set 'ledBarMode' " + String(configuration.getLedBarMode()));
+      Serial.println("Get 'ledBarBrightness' " + String(configuration.getLedBarBrightness()));
+      if (configuration.getLedBarBrightness() == 0) {
+        ag->ledBar.setEnable(false);
+      } else {
+        if(configuration.getLedBarMode() == LedBarMode::LedBarModeOff) {
+          ag->ledBar.setEnable(false);
+        } else {
+          ag->ledBar.setEnable(true);
+          ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+        }
+      }
+      ag->ledBar.show();
+    }
+
     if (configuration.isDisplayBrightnessChanged()) {
       oledDisplay.setBrightness(configuration.getDisplayBrightness());
       Serial.println("Set 'DisplayBrightness' brightness: " +
                      String(configuration.getDisplayBrightness()));
     }
+
+    stateMachine.executeLedBarTest();
   }
 
   fwNewVersion = configuration.newFirmwareVersion();
