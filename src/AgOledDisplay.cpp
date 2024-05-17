@@ -380,7 +380,8 @@ void OledDisplay::showNewFirmwareFailed(void) {
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
-    setCentralText(40, "Failed");
+    setCentralText(40, "fail, will retry");
+    // setCentralText(60, "will retry");
   } while (DISP()->nextPage());
 }
 

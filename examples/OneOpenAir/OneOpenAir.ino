@@ -549,6 +549,11 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     break;
   }
   case OtaState::OTA_STATE_SUCCESS: {
+    if (ag->isOne()) {
+      oledDisplay.showNewFirmwareUpdating(String(100));
+      delay(250);
+    }
+
     int i = 6;
     while(i != 0) {
       i = i - 1;
@@ -564,6 +569,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
         
         delay(1000);
       }
+      oledDisplay.setBrightness(0);
       esp_restart();
     }
     break;
@@ -877,11 +883,12 @@ static void configUpdateHandle() {
   fwNewVersion = configuration.newFirmwareVersion();
   if (fwNewVersion.length()) {
     bool doOta = false;
-    if (measurements.otaBootCount == 0) {
+    if (measurements.otaBootCount < 0) {
       doOta = true;
       Serial.println("First OTA");
     } else {
-      if ((measurements.bootCount - measurements.otaBootCount) >= 30) {
+      int bootDiff = measurements.bootCount - measurements.otaBootCount;
+      if (bootDiff >= 30) {
         doOta = true;
       } else {
         Serial.println(
