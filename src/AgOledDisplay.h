@@ -19,6 +19,7 @@ private:
   void showTempHum(bool hasStatus);
   void setCentralText(int y, String text);
   void setCentralText(int y, const char *text);
+  void showIcon(int x, int y, const void* icon);
 
 public:
   OledDisplay(Configuration &config, Measurements &value,
