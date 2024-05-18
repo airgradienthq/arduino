@@ -1,6 +1,10 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
+#ifdef ESP32
 #include "WiFi.h"
+#else 
+#include "ESP8266WiFi.h"
+#endif
 
 typedef struct {
   const int width;
