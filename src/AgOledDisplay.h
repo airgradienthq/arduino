@@ -40,6 +40,7 @@ public:
   void showNewFirmwareUpdating(String percent);
   void showNewFirmwareSuccess(String count);
   void showNewFirmwareFailed(void);
+  void showRebooting(void);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */

@@ -235,6 +235,9 @@ void setup() {
         } else {
           ledBarEnabledUpdate();
         }
+      } else {
+        oledDisplay.showRebooting();
+        delay(2500);
       }
     }
   }
