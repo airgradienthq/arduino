@@ -111,6 +111,17 @@ void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 /**
+ * @brief Sets the hue of all LEDs
+ *
+ * @param hue Hue of the color as 16-bit number
+ */
+void LedBar::setHue(uint16_t hue) {
+  uint32_t rgbcolor = pixel()->ColorHSV(hue);
+  pixel()->fill(rgbcolor);
+  pixel()->show();
+}
+
+/**
  * @brief Call to turn LED on/off base on the setting color
  *
  */
