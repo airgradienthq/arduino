@@ -173,7 +173,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       root["noxRaw"] = this->NOxRaw;
     }
   }
-  root["bootCount"] = bootCount;
+  root["boot"] = bootCount;
 
   if (localServer) {
     root["ledMode"] = config->getLedBarModeName();
