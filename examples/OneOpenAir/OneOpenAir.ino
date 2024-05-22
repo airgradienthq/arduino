@@ -219,7 +219,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
         #endif
 
         apiClient.fetchServerConfiguration();
