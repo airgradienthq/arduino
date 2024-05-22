@@ -459,7 +459,7 @@ static void ledBarEnabledUpdate(void) {
     if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
       ag->ledBar.setEnable(false);
     } else {
-      ag->ledBar.setBrighness(brightness);
+      ag->ledBar.setBrightness(brightness);
       ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
     }
      ag->ledBar.show();
@@ -846,7 +846,7 @@ static void configUpdateHandle() {
         if (configuration.getLedBarMode() != LedBarMode::LedBarModeOff) {
           ag->ledBar.setEnable(true);
         }
-        ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+        ag->ledBar.setBrightness(configuration.getLedBarBrightness());
       }
       ag->ledBar.show();
       Serial.println("Set 'ledBarBrightness' brightness: " +
@@ -863,7 +863,7 @@ static void configUpdateHandle() {
           ag->ledBar.setEnable(false);
         } else {
           ag->ledBar.setEnable(true);
-          ag->ledBar.setBrighness(configuration.getLedBarBrightness());
+          ag->ledBar.setBrightness(configuration.getLedBarBrightness());
         }
       }
       ag->ledBar.show();
