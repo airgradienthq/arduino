@@ -295,13 +295,13 @@ void OledDisplay::setText(const char *line1, const char *line2,
  * @brief Update dashboard content
  * 
  */
-void OledDisplay::showDashboard(void) { showDashboard(NULL); }
+void OledDisplay::showDashboard(void) { showDashboard(DashBoardStatusNone); }
 
 /**
  * @brief Update dashboard content and error status
  * 
  */
-void OledDisplay::showDashboard(const char *status) {
+void OledDisplay::showDashboard(OledDisplay::DashboardStatus status) {
   if (isDisplayOff) {
     return;
   }
@@ -312,9 +312,8 @@ void OledDisplay::showDashboard(const char *status) {
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
-    showTempHum(false);
-
-    if ((status == NULL) || (strlen(status) == 0)) {
+    switch (status) {
+    case DashBoardStatusNone: {
       int rssi = WiFi.RSSI();
       int icon_type = WIFI_ICON_25;
       if (rssi > -40) {
@@ -327,12 +326,28 @@ void OledDisplay::showDashboard(const char *status) {
         icon_type = WIFI_ICON_25;
       }
       showIcon(icon_pos_x, 0, &wifi_icons[icon_type]);
-    } else {
-      if (strcmp(status, "WiFi N/A") == 0) {
-        showIcon(icon_pos_x, 0, &wifi_icons[WIFI_ICON_ISSUE]);
-      } else if (strcmp(status, "Server N/A") == 0) {
-        showIcon(icon_pos_x, 0, &cloud_icons[CLOUD_ICON_ISSUE]);
-      }
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusWiFiIssue: {
+      showIcon(icon_pos_x, 0, &wifi_icons[WIFI_ICON_ISSUE]);
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusServerIssue: {
+      showIcon(icon_pos_x, 0, &cloud_icons[CLOUD_ICON_ISSUE]);
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusAddToDashboard: {
+      setCentralText(10, "Add To Dashboard");
+      break;
+    }
+    case DashBoardStatusDeviceId: {
+      setCentralText(10, ag->deviceId().c_str());
+    }
+    default:
+      break;
     }
 
     /** Draw horizonal line */

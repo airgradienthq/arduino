@@ -22,6 +22,15 @@ private:
   void showIcon(int x, int y, const void* icon);
 
 public:
+  enum DashboardStatus
+  {
+    DashBoardStatusNone,          /** No Issue */
+    DashBoardStatusWiFiIssue,     /** WiFi Connection issue */
+    DashBoardStatusServerIssue,   /** Cloud connection issue */
+    DashBoardStatusAddToDashboard,/** Show status "Add To Dashboard"*/
+    DashBoardStatusDeviceId       /** Show status: device ID */
+  };
+
   OledDisplay(Configuration &config, Measurements &value,
                 Stream &log);
   ~OledDisplay();
@@ -35,7 +44,7 @@ public:
   void setText(const char *line1, const char *line2, const char *line3,
                const char *line4);
   void showDashboard(void);
-  void showDashboard(const char *status);
+  void showDashboard(OledDisplay::DashboardStatus status);
   void setBrightness(int percent);
   void showNewFirmwareVersion(String version);
   void showNewFirmwareUpdating(String percent);

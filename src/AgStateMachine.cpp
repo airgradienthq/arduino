@@ -455,11 +455,11 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineWiFiLost: {
-    disp.showDashboard("WiFi N/A");
+    disp.showDashboard(disp.DashBoardStatusWiFiIssue);
     break;
   }
   case AgStateMachineServerLost: {
-    disp.showDashboard("Server N/A");
+    disp.showDashboard(disp.DashBoardStatusServerIssue);
     break;
   }
   case AgStateMachineSensorConfigFailed: {
@@ -468,14 +468,14 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ms >= 5000) {
         addToDashboardTime = millis();
         if (addToDashBoardToggle) {
-          disp.showDashboard("Add to Dashboard");
+          disp.showDashboard(disp.DashBoardStatusAddToDashboard);
         } else {
-          disp.showDashboard(ag->deviceId().c_str());
+          disp.showDashboard(disp.DashBoardStatusDeviceId);
         }
         addToDashBoardToggle = !addToDashBoardToggle;
       }
     } else {
-      disp.showDashboard("");
+      disp.showDashboard(disp.DashBoardStatusNone);
     }
     break;
   }
