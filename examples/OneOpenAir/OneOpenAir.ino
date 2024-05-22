@@ -226,8 +226,10 @@ void setup() {
         configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOne()) {
-            stateMachine.displayHandle(
-                AgStateMachineWiFiOkServerOkSensorConfigFailed);
+            if (apiClient.isNotAvailableOnDashboard()) {
+              stateMachine.displayHandle(
+                  AgStateMachineWiFiOkServerOkSensorConfigFailed);
+            }
           }
           stateMachine.handleLeds(
               AgStateMachineWiFiOkServerOkSensorConfigFailed);

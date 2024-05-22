@@ -69,11 +69,17 @@ bool AgApiClient::fetchServerConfiguration(void) {
   if (retCode != 200) {
     client.end();
     getConfigFailed = true;
+
+    /** Return code 400 mean device not setup on cloud. */
+    if (retCode == 400) {
+      notAvailableOnDashboard = true;
+    }
     return false;
   }
 
   /** clear failed */
   getConfigFailed = false;
+  notAvailableOnDashboard = false;
 
   /** Get response string */
   String respContent = client.getString();
@@ -143,6 +149,17 @@ bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
  * @return false Failure
  */
 bool AgApiClient::isPostToServerFailed(void) { return postToServerFailed; }
+
+/**
+ * @brief Get status device has available on dashboard or not. should get after
+ * fetch configuration return failed
+ *
+ * @return true
+ * @return false
+ */
+bool AgApiClient::isNotAvailableOnDashboard(void) {
+  return notAvailableOnDashboard;
+}
 
 void AgApiClient::setAirGradient(AirGradient *ag) { this->ag = ag; }
 

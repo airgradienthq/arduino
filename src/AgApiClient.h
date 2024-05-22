@@ -23,6 +23,7 @@ private:
 
   bool getConfigFailed;
   bool postToServerFailed;
+  bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
 
 public:
   AgApiClient(Stream &stream, Configuration &config);
@@ -33,6 +34,7 @@ public:
   bool postToServer(String data);
   bool isFetchConfigureFailed(void);
   bool isPostToServerFailed(void);
+  bool isNotAvailableOnDashboard(void);
   void setAirGradient(AirGradient *ag);
   bool sendPing(int rssi, int bootCount);
 };
