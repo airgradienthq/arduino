@@ -864,8 +864,8 @@ static void configUpdateHandle() {
       doOta = true;
       Serial.println("First OTA");
     } else {
-      /** Only check for update each 2h*/
-      const float otaBootCount = 120.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
+      /** Only check for update each 1h*/
+      const float otaBootCount = 60.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
       if ((measurements.bootCount - measurements.otaBootCount) >= (int)otaBootCount) {
         doOta = true;
       } else {
