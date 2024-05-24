@@ -219,7 +219,10 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+
+          /** Update first OTA */
+          measurements.otaBootCount = 0;
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -863,7 +866,9 @@ static void configUpdateHandle() {
       doOta = true;
       Serial.println("First OTA");
     } else {
-      if ((measurements.bootCount - measurements.otaBootCount) >= 30) {
+      /** Only check for update each 1h*/
+      const float otaBootCount = 60.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
+      if ((measurements.bootCount - measurements.otaBootCount) >= (int)otaBootCount) {
         doOta = true;
       } else {
         Serial.println(
