@@ -628,7 +628,6 @@ bool Configuration::parse(String data, bool isLocal) {
     saveConfig();
     printConfig();
   } else {
-    logInfo("Update ignored due to local unofficial changes");
     if (ledBarTestRequested || co2CalibrationRequested) {
       udpated = true;
     }
