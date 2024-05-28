@@ -224,7 +224,7 @@ static void failedHandler(String msg) {
 static void executeCo2Calibration(void) {
   /** Count down for co2CalibCountdown secs */
   for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-    displayShowText("CO2 calib", "after",
+    displayShowText("CO2 calib.", "after",
                     String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec");
     delay(1000);
   }
@@ -232,16 +232,16 @@ static void executeCo2Calibration(void) {
   if (ag.s8.setBaselineCalibration()) {
     displayShowText("Calib", "success", "");
     delay(1000);
-    displayShowText("Wait for", "finish", "...");
+    displayShowText("Wait to", "complete", "...");
     int count = 0;
     while (ag.s8.isBaseLineCalibrationDone() == false) {
       delay(1000);
       count++;
     }
-    displayShowText("Finish", "after", String(count) + " sec");
+    displayShowText("Finished", "after", String(count) + " sec");
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   } else {
-    displayShowText("Calib", "failure!!!", "");
+    displayShowText("Calibration", "failure", "");
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 }
