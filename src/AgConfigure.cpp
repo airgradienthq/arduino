@@ -372,6 +372,7 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  _ledBarModeChanged = false;
   if (JSON.typeof_(root[jprop_ledBarMode]) == "string") {
     String mode = root[jprop_ledBarMode];
     if (mode == getLedBarModeName(LedBarMode::LedBarModeCO2) ||
@@ -380,6 +381,7 @@ bool Configuration::parse(String data, bool isLocal) {
       String oldMode = jconfig[jprop_ledBarMode];
       if (mode != oldMode) {
         jconfig[jprop_ledBarMode] = mode;
+        _ledBarModeChanged = true;
         changed = true;
       }
     } else {
@@ -559,6 +561,7 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  ledBarBrightnessChanged = false;
   if (JSON.typeof_(root[jprop_ledBarBrightness]) == "number") {
     int value = root[jprop_ledBarBrightness];
     int oldValue = jconfig[jprop_ledBarBrightness];
@@ -628,7 +631,6 @@ bool Configuration::parse(String data, bool isLocal) {
     saveConfig();
     printConfig();
   } else {
-    logInfo("Update ignored due to local unofficial changes");
     if (ledBarTestRequested || co2CalibrationRequested) {
       udpated = true;
     }
@@ -1146,6 +1148,12 @@ void Configuration::setOfflineMode(bool offline) {
 
 void Configuration::setOfflineModeWithoutSave(bool offline) {
   _offlineMode = offline;
+}
+
+bool Configuration::isLedBarModeChanged(void) { 
+  bool changed = _ledBarModeChanged;
+  _ledBarModeChanged = false;
+  return changed;
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {

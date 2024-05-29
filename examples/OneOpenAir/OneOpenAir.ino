@@ -152,8 +152,6 @@ void setup() {
   }
   Serial.println("Detected " + ag->getBoardName());
 
-  /** Init sensor */
-  boardInit();
   configuration.setAirGradient(ag);
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
@@ -162,11 +160,13 @@ void setup() {
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
 
+  /** Init sensor */
+  boardInit();
+
   /** Connecting wifi */
   bool connectToWifi = false;
   if (ag->isOne()) {
     if (ledBarButtonTest) {
-      stateMachine.executeLedBarPowerUpTest();
       if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
         WiFi.begin("airgradient", "cleanair");
         Serial.println("WiFi Credential reset to factory defaults");
@@ -219,15 +219,20 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          // otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+
+          /** Update first OTA */
+          measurements.otaBootCount = 0;
         #endif
 
         apiClient.fetchServerConfiguration();
         configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOne()) {
-            stateMachine.displayHandle(
-                AgStateMachineWiFiOkServerOkSensorConfigFailed);
+            if (apiClient.isNotAvailableOnDashboard()) {
+              stateMachine.displayHandle(
+                  AgStateMachineWiFiOkServerOkSensorConfigFailed);
+            }
           }
           stateMachine.handleLeds(
               AgStateMachineWiFiOkServerOkSensorConfigFailed);
@@ -235,6 +240,9 @@ void setup() {
         } else {
           ledBarEnabledUpdate();
         }
+      } else {
+        oledDisplay.showRebooting();
+        delay(2500);
       }
     }
   }
@@ -459,9 +467,10 @@ static void ledBarEnabledUpdate(void) {
     if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
       ag->ledBar.setEnable(false);
     } else {
-      ag->ledBar.setBrighness(brightness);
+      ag->ledBar.setBrightness(brightness);
       ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
     }
+     ag->ledBar.show();
   }
 }
 
@@ -615,6 +624,23 @@ static void oneIndoorInit(void) {
   ag->button.begin();
   ag->watchdog.begin();
 
+  /** Run LED test on start up if button pressed */
+  oledDisplay.setText("Press now for", "LED test", "");
+  ledBarButtonTest = false;
+  uint32_t stime = millis();
+  while (true) {
+    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+      ledBarButtonTest = true;
+      stateMachine.executeLedBarPowerUpTest();
+      break;
+    }
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - stime);
+    if (ms >= 3000) {
+      break;
+    }
+  }
+
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
     dispSensorNotFound("SGP41");
@@ -640,22 +666,6 @@ static void oneIndoorInit(void) {
     configuration.hasSensorPMS1 = false;
 
     dispSensorNotFound("PMS");
-  }
-
-  /** Run LED test on start up */
-  oledDisplay.setText("Press now for", "LED test", "");
-  ledBarButtonTest = false;
-  uint32_t stime = millis();
-  while (true) {
-    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
-      ledBarButtonTest = true;
-      break;
-    }
-    delay(1);
-    uint32_t ms = (uint32_t)(millis() - stime);
-    if (ms >= 3000) {
-      break;
-    }
   }
 }
 static void openAirInit(void) {
@@ -804,10 +814,6 @@ static void configUpdateHandle() {
     return;
   }
 
-  if (ag->isOne()) {
-    ledBarEnabledUpdate();
-    stateMachine.executeLedBarTest();
-  }
   stateMachine.executeCo2Calibration();
 
   String mqttUri = configuration.getMqttBrokerUri();
@@ -843,15 +849,36 @@ static void configUpdateHandle() {
 
   if (ag->isOne()) {
     if (configuration.isLedBarBrightnessChanged()) {
-      ag->ledBar.setBrighness(configuration.getLedBarBrightness());
-      Serial.println("Set 'LedBarBrightness' brightness: " +
-                     String(configuration.getLedBarBrightness()));
+      if (configuration.getLedBarBrightness() == 0) {
+        ag->ledBar.setEnable(false);
+      } else {
+        if (configuration.getLedBarMode() != LedBarMode::LedBarModeOff) {
+          ag->ledBar.setEnable(true);
+        }
+        ag->ledBar.setBrightness(configuration.getLedBarBrightness());
+      }
+      ag->ledBar.show();
     }
+
+    if (configuration.isLedBarModeChanged()) {
+      if (configuration.getLedBarBrightness() == 0) {
+        ag->ledBar.setEnable(false);
+      } else {
+        if(configuration.getLedBarMode() == LedBarMode::LedBarModeOff) {
+          ag->ledBar.setEnable(false);
+        } else {
+          ag->ledBar.setEnable(true);
+          ag->ledBar.setBrightness(configuration.getLedBarBrightness());
+        }
+      }
+      ag->ledBar.show();
+    }
+
     if (configuration.isDisplayBrightnessChanged()) {
       oledDisplay.setBrightness(configuration.getDisplayBrightness());
-      Serial.println("Set 'DisplayBrightness' brightness: " +
-                     String(configuration.getDisplayBrightness()));
     }
+
+    stateMachine.executeLedBarTest();
   }
 
   fwNewVersion = configuration.newFirmwareVersion();
@@ -861,7 +888,9 @@ static void configUpdateHandle() {
       doOta = true;
       Serial.println("First OTA");
     } else {
-      if ((measurements.bootCount - measurements.otaBootCount) >= 30) {
+      /** Only check for update each 1h*/
+      const float otaBootCount = 60.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
+      if ((measurements.bootCount - measurements.otaBootCount) >= (int)otaBootCount) {
         doOta = true;
       } else {
         Serial.println(
