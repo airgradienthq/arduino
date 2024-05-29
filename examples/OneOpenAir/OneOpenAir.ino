@@ -849,13 +849,9 @@ static void configUpdateHandle() {
         ag->ledBar.setBrightness(configuration.getLedBarBrightness());
       }
       ag->ledBar.show();
-      Serial.println("Set 'ledBarBrightness' brightness: " +
-                     String(configuration.getLedBarBrightness()));
     }
 
     if (configuration.isLedBarModeChanged()) {
-      Serial.println("Set 'ledBarMode' " + String(configuration.getLedBarMode()));
-      Serial.println("Get 'ledBarBrightness' " + String(configuration.getLedBarBrightness()));
       if (configuration.getLedBarBrightness() == 0) {
         ag->ledBar.setEnable(false);
       } else {
@@ -871,8 +867,6 @@ static void configUpdateHandle() {
 
     if (configuration.isDisplayBrightnessChanged()) {
       oledDisplay.setBrightness(configuration.getDisplayBrightness());
-      Serial.println("Set 'DisplayBrightness' brightness: " +
-                     String(configuration.getDisplayBrightness()));
     }
 
     stateMachine.executeLedBarTest();
