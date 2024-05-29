@@ -152,8 +152,6 @@ void setup() {
   }
   Serial.println("Detected " + ag->getBoardName());
 
-  /** Init sensor */
-  boardInit();
   configuration.setAirGradient(ag);
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
@@ -162,11 +160,13 @@ void setup() {
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
 
+  /** Init sensor */
+  boardInit();
+
   /** Connecting wifi */
   bool connectToWifi = false;
   if (ag->isOne()) {
     if (ledBarButtonTest) {
-      stateMachine.executeLedBarPowerUpTest();
       if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
         WiFi.begin("airgradient", "cleanair");
         Serial.println("WiFi Credential reset to factory defaults");
@@ -623,6 +623,23 @@ static void oneIndoorInit(void) {
   ag->button.begin();
   ag->watchdog.begin();
 
+  /** Run LED test on start up */
+  oledDisplay.setText("Press now for", "LED test", "");
+  ledBarButtonTest = false;
+  uint32_t stime = millis();
+  while (true) {
+    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+      ledBarButtonTest = true;
+      stateMachine.executeLedBarPowerUpTest();
+      break;
+    }
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - stime);
+    if (ms >= 3000) {
+      break;
+    }
+  }
+
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
     dispSensorNotFound("SGP41");
@@ -648,22 +665,6 @@ static void oneIndoorInit(void) {
     configuration.hasSensorPMS1 = false;
 
     dispSensorNotFound("PMS");
-  }
-
-  /** Run LED test on start up */
-  oledDisplay.setText("Press now for", "LED test", "");
-  ledBarButtonTest = false;
-  uint32_t stime = millis();
-  while (true) {
-    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
-      ledBarButtonTest = true;
-      break;
-    }
-    delay(1);
-    uint32_t ms = (uint32_t)(millis() - stime);
-    if (ms >= 3000) {
-      break;
-    }
   }
 }
 static void openAirInit(void) {
