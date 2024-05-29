@@ -623,7 +623,7 @@ static void oneIndoorInit(void) {
   ag->button.begin();
   ag->watchdog.begin();
 
-  /** Run LED test on start up */
+  /** Run LED test on start up if button pressed */
   oledDisplay.setText("Press now for", "LED test", "");
   ledBarButtonTest = false;
   uint32_t stime = millis();
