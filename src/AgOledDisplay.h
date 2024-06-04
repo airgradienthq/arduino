@@ -36,10 +36,12 @@ public:
   void showDashboard(void);
   void showDashboard(const char *status);
   void setBrightness(int percent);
-  void showNewFirmwareVersion(String version);
-  void showNewFirmwareUpdating(String percent);
-  void showNewFirmwareSuccess(String count);
-  void showNewFirmwareFailed(void);
+  void showFirmwareUpdateVersion(String version);
+  void showFirmwareUpdateProgress(int percent);
+  void showFirmwareUpdateSuccess(int count);
+  void showFirmwareUpdateFailed(void);
+  void showFirmwareUpdateSkipped(void);
+  void showFirmwareUpdateUpToDate(void);
   void showRebooting(void);
 };
 

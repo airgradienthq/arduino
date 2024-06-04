@@ -219,6 +219,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
+          otaHandler.setHandlerCallback(otaHandlerCallback);
           otaHandler.updateFirmwareIfOutdated(ag->deviceId());
 
           /** Update first OTA */
@@ -489,6 +490,7 @@ static bool sgp41Init(void) {
 }
 
 static void otaHandlerCallback(OtaState state, String mesasge) {
+  Serial.println("OTA message: " + mesasge);
   switch (state) {
   case OtaState::OTA_STATE_BEGIN:
     displayExecuteOta(state, fwNewVersion, 0);
@@ -511,7 +513,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
   switch (state) {
   case OtaState::OTA_STATE_BEGIN: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareVersion(msg);
+      oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
       Serial.println("New firmware: " + msg);
     }
@@ -520,7 +522,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
   }
   case OtaState::OTA_STATE_FAIL: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareFailed();
+      oledDisplay.showFirmwareUpdateFailed();
     } else {
       Serial.println("Error: Firmware update: failed");
     }
@@ -528,9 +530,29 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
+  case OtaState::OTA_STATE_SKIP: {
+    if (ag->isOne()) {
+      oledDisplay.showFirmwareUpdateSkipped();
+    } else {
+      Serial.println("Firmware update: Skipped");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_UP_TO_DATE: {
+    if (ag->isOne()) {
+      oledDisplay.showFirmwareUpdateUpToDate();
+    } else {
+      Serial.println("Firmware update: up to date");
+    }
+
+    delay(2500);
+    break;
+  }
   case OtaState::OTA_STATE_PROCESSING: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareUpdating(String(processing));
+      oledDisplay.showFirmwareUpdateProgress(processing);
     } else {
       Serial.println("Firmware update: " + String(processing) + String("%"));
     }
@@ -546,13 +568,14 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
       while (i != 0) {
         i = i - 1;
         if (ag->isOne()) {
-          oledDisplay.showNewFirmwareSuccess(String(i));
+          oledDisplay.showFirmwareUpdateSuccess(i);
         } else {
           Serial.println("Rebooting... " + String(i));
         }
         
         delay(1000);
       }
+      oledDisplay.setBrightness(0);
       esp_restart();
     }
     break;
@@ -884,7 +907,7 @@ static void configUpdateHandle() {
   fwNewVersion = configuration.newFirmwareVersion();
   if (fwNewVersion.length()) {
     bool doOta = false;
-    if (measurements.otaBootCount == 0) {
+    if (measurements.otaBootCount < 0) {
       doOta = true;
       Serial.println("First OTA");
     } else {
