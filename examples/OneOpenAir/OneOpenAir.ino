@@ -55,7 +55,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
-#define SERVER_CONFIG_UPDATE_INTERVAL 15000  /** ms */
+#define SERVER_CONFIG_SYNC_INTERVAL 15000    /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
 #define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
@@ -118,7 +118,7 @@ static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
+AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
