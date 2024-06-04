@@ -41,7 +41,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define LED_BAR_COUNT_INIT_VALUE (-1)        /** */
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 5000            /** ms */
-#define SERVER_CONFIG_SYNC_INTERVAL 30000  /** ms */
+#define SERVER_CONFIG_SYNC_INTERVAL 60000    /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
