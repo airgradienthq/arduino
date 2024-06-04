@@ -410,3 +410,13 @@ void OledDisplay::showFirmwareUpdateUpToDate(void) {
     setCentralText(40, "up to date");
   } while (DISP()->nextPage());
 }
+
+void OledDisplay::showRebooting(void) {
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    // setCentralText(20, "Firmware Update");
+    setCentralText(40, "Rebooting...");
+    // setCentralText(60, String("Retry after 24h"));
+  } while (DISP()->nextPage());
+}

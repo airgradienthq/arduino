@@ -42,6 +42,7 @@ public:
   void showFirmwareUpdateFailed(void);
   void showFirmwareUpdateSkipped(void);
   void showFirmwareUpdateUpToDate(void);
+  void showRebooting(void);
 };
 
 #endif /** _AG_OLED_DISPLAY_H_ */
