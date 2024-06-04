@@ -20,25 +20,27 @@ http://airgradient_ecda3b1eaaaf.local/measures/current
 “ecda3b1eaaaf” being the serial number of your monitor
 
 You get the following response:
-~~~ 
-{"wifi":-46,
-"serialno":"ecda3b1eaaaf",
-"rco2":447,
-"pm01":3,
-"pm02":7,
-"pm10":8,
-"pm003Count":442,
-"atmp":25.87,
-"rhum":43,
-"tvocIndex":100,
-"tvoc_raw":33051,
-"noxIndex":1,
-"nox_raw":16307,
-"boot":6,
-"ledMode":"pm",
-"firmwareVersion":"3.0.10beta",
-"fwMode":"I-9PSL"}
-~~~ 
+```json 
+{
+  "wifi": -46,
+  "serialno": "ecda3b1eaaaf",
+  "rco2": 447,
+  "pm01": 3,
+  "pm02": 7,
+  "pm10": 8,
+  "pm003Count": 442,
+  "atmp": 25.87,
+  "rhum": 43,
+  "tvocIndex": 100,
+  "tvoc_raw": 33051,
+  "noxIndex": 1,
+  "nox_raw": 16307,
+  "boot": 6,
+  "ledMode": "pm",
+  "firmwareVersion": "3.0.10beta",
+  "fwMode": "I-9PSL"
+}
+```
 
 |Properties|Type|Explanation|
 |-|-|-|
@@ -60,19 +62,21 @@ You get the following response:
 
 #### Get Configuration Parameters (GET)
 With the path "/config" you can get the current configuration.
-~~~ 
-{"country":"US",
-"pmStandard":"ugm3",
-"ledBarMode":"pm",
-"displayMode":"on",
-"abcDays":30,
-"tvocLearningOffset":12,
-"noxLearningOffset":12,
-"mqttBrokerUrl":"",
-"temperatureUnit":"f",
-"configurationControl":"both",
-"postDataToAirGradient":true}
-~~~ 
+```json 
+{
+  "country": "US",
+  "pmStandard": "ugm3",
+  "ledBarMode": "pm",
+  "displayMode": "on",
+  "abcDays": 30,
+  "tvocLearningOffset": 12,
+  "noxLearningOffset": 12,
+  "mqttBrokerUrl": "",
+  "temperatureUnit": "f",
+  "configurationControl": "both",
+  "postDataToAirGradient": true
+}
+```
 
 #### Set Configuration Parameters (PUT)
 
