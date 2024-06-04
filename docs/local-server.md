@@ -40,23 +40,23 @@ You get the following response:
 "fwMode":"I-9PSL"}
 ~~~ 
 
-|Properties|Type|Explanation|
-|-|-|-|
-|serialno|String| Serial Number of the monitor|
-|wifi|Number| WiFi signal strength|
-|pm01, pm02, pm10|Number| PM1, PM2.5 and PM10 in ug/m3|
-|rco2|Number| CO2 in ppm|
-|pm003Count|Number| Particle count per dL|
-|atmp|Number| Temperature in Degrees Celcius|
-|rhum|Number| Relative Humidity|
-|tvocIndex|Number| Senisiron VOC Index|
-|tvoc_raw|Number| VOC raw value|
-|noxIndex|Number| Senisirion NOx Index|
-|nox_raw|Number| NOx raw value|
-|boot|Number| Counts every measurement cycle. Low boot counts indicate restarts.|
-|ledMode|String| Current configuration of the LED mode|
-|firmwareVersion|String| Current firmware version|
-|fwMode|String| Current model name|
+| Properties       | Type   | Explanation                                                        |
+|------------------|--------|--------------------------------------------------------------------|
+| serialno         | String | Serial Number of the monitor                                       |
+| wifi             | Number | WiFi signal strength                                               |
+| pm01, pm02, pm10 | Number | PM1, PM2.5 and PM10 in ug/m3                                       |
+| rco2             | Number | CO2 in ppm                                                         |
+| pm003Count       | Number | Particle count per dL                                              |
+| atmp             | Number | Temperature in Degrees Celcius                                     |
+| rhum             | Number | Relative Humidity                                                  |
+| tvocIndex        | Number | Senisiron VOC Index                                                |
+| tvoc_raw         | Number | VOC raw value                                                      |
+| noxIndex         | Number | Senisirion NOx Index                                               |
+| nox_raw          | Number | NOx raw value                                                      |
+| boot             | Number | Counts every measurement cycle. Low boot counts indicate restarts. |
+| ledMode          | String | Current configuration of the LED mode                              |
+| firmwareVersion  | String | Current firmware version                                           |
+| fwMode           | String | Current model name                                                 |
 
 #### Get Configuration Parameters (GET)
 With the path "/config" you can get the current configuration.
