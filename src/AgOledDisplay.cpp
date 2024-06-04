@@ -357,7 +357,7 @@ void OledDisplay::showFirmwareUpdateProgress(int percent) {
   } while (DISP()->nextPage());
 }
 
-void OledDisplay::showFirmwareUpdateSuccess(String count) {
+void OledDisplay::showFirmwareUpdateSuccess(int count) {
   if (isDisplayOff) {
     return;
   }
@@ -367,7 +367,7 @@ void OledDisplay::showFirmwareUpdateSuccess(String count) {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
     setCentralText(40, "Success");
-    setCentralText(60, String("Rebooting... ") + count);
+    setCentralText(60, String("Rebooting... ") + String(count));
   } while (DISP()->nextPage());
 }
 

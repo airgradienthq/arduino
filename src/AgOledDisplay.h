@@ -38,7 +38,7 @@ public:
   void setBrightness(int percent);
   void showFirmwareUpdateVersion(String version);
   void showFirmwareUpdateProgress(int percent);
-  void showFirmwareUpdateSuccess(String count);
+  void showFirmwareUpdateSuccess(int count);
   void showFirmwareUpdateFailed(void);
   void showFirmwareUpdateSkipped(void);
   void showFirmwareUpdateUpToDate(void);
