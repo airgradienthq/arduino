@@ -17,7 +17,7 @@ With the path "/measures/current" you can get the current air quality data.
 
 http://airgradient_ecda3b1eaaaf.local/measures/current
 
-“ecda3b1eaaaf” being the serial number of your monitor
+“ecda3b1eaaaf” being the serial number of your monitor.
 
 You get the following response:
 ~~~ 
@@ -82,12 +82,12 @@ Example to force CO2 calibration
 
  ```curl -X PUT -H "Content-Type: application/json" -d '{"co2CalibrationRequested":true}' http://airgradient_84fce612eff4.local/config ```
 
-Example to set monitor to Celcius
+Example to set monitor to Celsius
 
  ```curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config ```
 
 #### Avoiding Conflicts with Configuration on AirGradient Server
-If the monitor is setup on the AirGradient dashboard, it will also receive configurations from there. In case you do not want this, please set "configurationControl" to local. In case you set it to cloud and want to change it to local, you need to make a factory reset. 
+If the monitor is set up on the AirGradient dashboard, it will also receive configurations from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
 
 #### Configuration Parameters (GET/PUT)
 
