@@ -219,6 +219,7 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
+          otaHandler.setHandlerCallback(otaHandlerCallback);
           otaHandler.updateFirmwareIfOutdated(ag->deviceId());
 
           /** Update first OTA */
@@ -485,6 +486,7 @@ static bool sgp41Init(void) {
 }
 
 static void otaHandlerCallback(OtaState state, String mesasge) {
+  Serial.println("OTA message: " + mesasge);
   switch (state) {
   case OtaState::OTA_STATE_BEGIN:
     displayExecuteOta(state, fwNewVersion, 0);
@@ -562,7 +564,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
       while (i != 0) {
         i = i - 1;
         if (ag->isOne()) {
-          oledDisplay.showFirmwareUpdateSuccess(String(i));
+          oledDisplay.showFirmwareUpdateSuccess(i);
         } else {
           Serial.println("Rebooting... " + String(i));
         }
