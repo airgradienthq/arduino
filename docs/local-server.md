@@ -95,15 +95,15 @@ If the monitor is setup on the AirGradient dashboard, it will also receive confi
 
 #### Configuration Parameters (GET/PUT)
 
-|Properties|Type|Accepted Values|Example|
-|-|-|-|-|
-|country|String| Country code as [ALPHA-2 notation](https://www.iban.com/country-codes) |  {"country": "TH"}|
-|pmStandard|String|ugm3 : ug/m3 <br> usaqi: USAQI |  {"pmStandard": "ugm3"}|
-|ledBarMode|String|co2: LED bar displays CO2 <br> pm: LED bar displays PM <br> off: Turn off LED bar |  {"ledBarMode": "off"}|
-|abcDays|Number|Number of days for CO2 automatic baseline balibration. Maximum 200 days. Default 8 days. |  {"abcDays": 8}|
-|mqttBrokerUrl|String|MQTT broker URL. |  {"mqttBrokerUrl":"mqtt://192.168.0.18:1883"} |
-|temperatureUnit|String|c or C: Degree Celsius °C <br>f or F: Degree Fahrenheit °F |  {"temperatureUnit": "c"}|
-|configurationControl|String|both : Accept local and cloud configuration <br>local : Accept only local configuration  <br>cloud : Accept only cloud configuration |  {"configurationControl": "both"}|
-|postDataToAirGradient|Boolean|Send data to AirGradient cloud: <br>true : Enabled <br>false: Disabled |  {"postDataToAirGradient": true}|
-|co2CalibrationRequested|Boolean|Trigger CO2 calibration (400ppm) on monitor:<br>true : Calibration will be triggered |  {"co2CalibrationRequested": true}|
-|ledBarTestRequested|Boolean|Test LED bar:<br> true : LEDs will run test sequence |  {"ledBarTestRequested": true}|
+| Properties              | Description                                            | Type    | Accepted Values                                                                                                                         | Example                                       |
+|-------------------------|:-------------------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------|
+| country                 | Country where the device is.                           | String  | Country code as [ALPHA-2 notation](https://www.iban.com/country-codes)                                                                  | {"country": "TH"}                             |
+| pmStandard              | Particle matter standard used on the display.          | String  | `ugm3`: ug/m3 <br> `us-aqi`: USAQI                                                                                                      | {"pmStandard": "ugm3"}                        |
+| ledBarMode              | Mode in which the led bar can be set.                  | String  | `co2`: LED bar displays CO2 <br>`pm`: LED bar displays PM <br>`off`: Turn off LED bar                                                   | {"ledBarMode": "off"}                         |
+| abcDays                 | Number of days for CO2 automatic baseline calibration. | Number  | Maximum 200 days. Default 8 days.                                                                                                       | {"abcDays": 8}                                |
+| mqttBrokerUrl           | MQTT broker URL.                                       | String  |                                                                                                                                         | {"mqttBrokerUrl": "mqtt://192.168.0.18:1883"} |
+| temperatureUnit         | Temperature unit shown on the display.                 | String  | `c` or `C`: Degree Celsius °C <br>`f` or `F`: Degree Fahrenheit °F                                                                      | {"temperatureUnit": "c"}                      |
+| configurationControl    | The configuration source of the device.                | String  | `both`: Accept local and cloud configuration <br>`local`: Accept only local configuration  <br>`cloud`: Accept only cloud configuration | {"configurationControl": "both"}              |
+| postDataToAirGradient   | Send data to AirGradient cloud.                        | Boolean | `true`: Enabled <br>`false`: Disabled                                                                                                   | {"postDataToAirGradient": true}               |
+| co2CalibrationRequested | Can be set to trigger a calibration.                   | Boolean | `true`: CO2 calibration (400ppm) will be triggered                                                                                      | {"co2CalibrationRequested": true}             |
+| ledBarTestRequested     | Can be set to trigger a test.                          | Boolean | `true` : LEDs will run test sequence                                                                                                    | {"ledBarTestRequested": true}                 |
