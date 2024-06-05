@@ -64,6 +64,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
+#define FIRMWARE_CHECK_FOR_UPDATE_MS (60*60*1000)   /** ms */
 
 /** I2C define */
 #define I2C_SDA_PIN 7
@@ -113,6 +114,7 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
+static void firmwareCheckForUpdate(void);
 static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
@@ -126,6 +128,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
+AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -219,11 +222,8 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          otaHandler.setHandlerCallback(otaHandlerCallback);
-          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
-
-          /** Update first OTA */
-          measurements.otaBootCount = 0;
+          firmwareCheckForUpdate();
+          checkForUpdateSchedule.update();
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -313,6 +313,9 @@ void loop() {
 
   /** check that local configura changed then do some action */
   configUpdateHandle();
+
+  /** Firmware check for update handle */
+  checkForUpdateSchedule.run();
 }
 
 static void co2Update(void) {
@@ -487,6 +490,20 @@ static bool sgp41Init(void) {
     configuration.hasSensorSGP = false;
   }
   return false;
+}
+
+static void firmwareCheckForUpdate(void) {
+  Serial.println();
+  Serial.println("firmwareCheckForUpdate:");
+
+  if (wifiConnector.isConnected()) {
+    Serial.println("firmwareCheckForUpdate: Perform");
+    otaHandler.setHandlerCallback(otaHandlerCallback);
+    otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+  } else {
+    Serial.println("firmwareCheckForUpdate: Ignored");
+  }
+  Serial.println();
 }
 
 static void otaHandlerCallback(OtaState state, String mesasge) {
@@ -902,32 +919,6 @@ static void configUpdateHandle() {
     }
 
     stateMachine.executeLedBarTest();
-  }
-
-  fwNewVersion = configuration.newFirmwareVersion();
-  if (fwNewVersion.length()) {
-    bool doOta = false;
-    if (measurements.otaBootCount < 0) {
-      doOta = true;
-      Serial.println("First OTA");
-    } else {
-      /** Only check for update each 1h*/
-      const float otaBootCount = 60.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
-      if ((measurements.bootCount - measurements.otaBootCount) >= (int)otaBootCount) {
-        doOta = true;
-      } else {
-        Serial.println(
-            "OTA ignore, try again next " +
-            String(30 - (measurements.bootCount - measurements.otaBootCount)) +
-            String(" boots"));
-      }
-    }
-
-    if (doOta) {
-      measurements.otaBootCount = measurements.bootCount;
-      otaHandler.setHandlerCallback(otaHandlerCallback);
-      otaHandler.updateFirmwareIfOutdated(ag->deviceId());
-    }
   }
 
   appDispHandler();
