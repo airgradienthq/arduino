@@ -24,6 +24,7 @@ private:
   bool hasConfig;
   uint32_t lastRetry;
   bool hasPortalConfig = false;
+  bool connectorTimeout = false;
 
   bool wifiClientConnected(void);
 
@@ -44,6 +45,7 @@ public:
   void _wifiSaveConfig(void);
   void _wifiSaveParamCallback(void);
   bool _wifiConfigPortalActive(void);
+  void _wifiTimeoutCallback(void);
 #endif
   void _wifiProcess();
   bool isConnected(void);
@@ -51,6 +53,7 @@ public:
   int RSSI(void);
   String localIpStr(void);
   bool hasConfigurated(void);
+  bool isConfigurePorttalTimeout(void);
 };
 
 #endif /** _AG_WIFI_CONNECTOR_H_ */

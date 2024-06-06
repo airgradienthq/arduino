@@ -232,8 +232,12 @@ void setup() {
           ledBarEnabledUpdate();
         }
       } else {
-        oledDisplay.showRebooting();
-        delay(2500);
+        if (wifiConnector.isConfigurePorttalTimeout()) {
+          oledDisplay.showRebooting();
+          delay(2500);
+          oledDisplay.setText("", "", "");
+          ESP.restart();
+        }
       }
     }
   }
