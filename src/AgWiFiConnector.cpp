@@ -53,6 +53,7 @@ bool WifiConnector::connect(void) {
   WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
+  WIFI()->setConfigPortalTimeoutCallback([this](){});
   if (ag->isOne()) {
     disp.setText("Connecting to", "WiFi", "...");
   } else {
@@ -245,6 +246,7 @@ void WifiConnector::_wifiSaveParamCallback(void) {
 bool WifiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
+void WifiConnector::_wifiTimeoutCallback(void) { connectorTimeout = true; }
 #endif
 /**
  * @brief Process WiFiManager connection
@@ -352,3 +354,11 @@ bool WifiConnector::hasConfigurated(void) {
   }
   return true;
 }
+
+/**
+ * @brief Get WiFi connection porttal timeout.
+ * 
+ * @return true 
+ * @return false 
+ */
+bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }

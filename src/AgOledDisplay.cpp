@@ -330,7 +330,7 @@ void OledDisplay::setBrightness(int percent) {
   }
 }
 
-void OledDisplay::showNewFirmwareVersion(String version) {
+void OledDisplay::showFirmwareUpdateVersion(String version) {
   if (isDisplayOff) {
     return;
   }
@@ -344,7 +344,7 @@ void OledDisplay::showNewFirmwareVersion(String version) {
   } while (DISP()->nextPage());
 }
 
-void OledDisplay::showNewFirmwareUpdating(String percent) {
+void OledDisplay::showFirmwareUpdateProgress(int percent) {
   if (isDisplayOff) {
     return;
   }
@@ -353,11 +353,11 @@ void OledDisplay::showNewFirmwareUpdating(String percent) {
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
-    setCentralText(50, String("Updating... ") + percent + String("%"));
+    setCentralText(50, String("Updating... ") + String(percent) + String("%"));
   } while (DISP()->nextPage());
 }
 
-void OledDisplay::showNewFirmwareSuccess(String count) {
+void OledDisplay::showFirmwareUpdateSuccess(int count) {
   if (isDisplayOff) {
     return;
   }
@@ -367,11 +367,11 @@ void OledDisplay::showNewFirmwareSuccess(String count) {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
     setCentralText(40, "Success");
-    setCentralText(60, String("Rebooting... ") + count);
+    setCentralText(60, String("Rebooting... ") + String(count));
   } while (DISP()->nextPage());
 }
 
-void OledDisplay::showNewFirmwareFailed(void) {
+void OledDisplay::showFirmwareUpdateFailed(void) {
   if (isDisplayOff) {
     return;
   }
@@ -380,8 +380,34 @@ void OledDisplay::showNewFirmwareFailed(void) {
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
     setCentralText(20, "Firmware Update");
-    setCentralText(40, "Failed");
-    setCentralText(60, String("Retry after 24h"));
+    setCentralText(40, "fail, will retry");
+    // setCentralText(60, "will retry");
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showFirmwareUpdateSkipped(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "skipped");
+  } while (DISP()->nextPage());
+}
+
+void OledDisplay::showFirmwareUpdateUpToDate(void) {
+  if (isDisplayOff) {
+    return;
+  }
+
+  DISP()->firstPage();
+  do {
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    setCentralText(20, "Firmware Update");
+    setCentralText(40, "up to date");
   } while (DISP()->nextPage());
 }
 

@@ -174,6 +174,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
   root["boot"] = bootCount;
+  root["bootCount"] = bootCount;
 
   if (localServer) {
     root["ledMode"] = config->getLedBarModeName();

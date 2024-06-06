@@ -55,7 +55,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
-#define SERVER_CONFIG_UPDATE_INTERVAL 15000  /** ms */
+#define SERVER_CONFIG_SYNC_INTERVAL 60000    /** ms */
 #define SERVER_SYNC_INTERVAL 60000           /** ms */
 #define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
@@ -64,6 +64,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
+#define FIRMWARE_CHECK_FOR_UPDATE_MS (60*60*1000)   /** ms */
 
 /** I2C define */
 #define I2C_SDA_PIN 7
@@ -113,12 +114,13 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
+static void firmwareCheckForUpdate(void);
 static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
-AgSchedule configSchedule(SERVER_CONFIG_UPDATE_INTERVAL,
+AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
@@ -126,6 +128,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
+AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -166,16 +169,6 @@ void setup() {
   /** Connecting wifi */
   bool connectToWifi = false;
   if (ag->isOne()) {
-    if (ledBarButtonTest) {
-      if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
-        WiFi.begin("airgradient", "cleanair");
-        Serial.println("WiFi Credential reset to factory defaults");
-        ESP.restart();
-      }
-    } else {
-      ledBarEnabledUpdate();
-    }
-
     /** Show message confirm offline mode, should me perform if LED bar button
      * test pressed */
     if (ledBarButtonTest == false) {
@@ -219,10 +212,8 @@ void setup() {
         #ifdef ESP8266
           // ota not supported
         #else
-          otaHandler.updateFirmwareIfOutdated(ag->deviceId());
-
-          /** Update first OTA */
-          measurements.otaBootCount = 0;
+          firmwareCheckForUpdate();
+          checkForUpdateSchedule.update();
         #endif
 
         apiClient.fetchServerConfiguration();
@@ -241,8 +232,12 @@ void setup() {
           ledBarEnabledUpdate();
         }
       } else {
-        oledDisplay.showRebooting();
-        delay(2500);
+        if (wifiConnector.isConfigurePorttalTimeout()) {
+          oledDisplay.showRebooting();
+          delay(2500);
+          oledDisplay.setText("", "", "");
+          ESP.restart();
+        }
       }
     }
   }
@@ -312,6 +307,9 @@ void loop() {
 
   /** check that local configura changed then do some action */
   configUpdateHandle();
+
+  /** Firmware check for update handle */
+  checkForUpdateSchedule.run();
 }
 
 static void co2Update(void) {
@@ -420,6 +418,7 @@ static void factoryConfigReset(void) {
             }
 
             /** Reset WIFI */
+            WiFi.enableSTA(true);   // Incase offline mode
             WiFi.disconnect(true, true);
 
             /** Reset local config */
@@ -431,6 +430,7 @@ static void factoryConfigReset(void) {
               Serial.println("Factory reset successful");
             }
             delay(3000);
+            oledDisplay.setText("","","");
             ESP.restart();
           }
         }
@@ -488,7 +488,22 @@ static bool sgp41Init(void) {
   return false;
 }
 
+static void firmwareCheckForUpdate(void) {
+  Serial.println();
+  Serial.println("firmwareCheckForUpdate:");
+
+  if (wifiConnector.isConnected()) {
+    Serial.println("firmwareCheckForUpdate: Perform");
+    otaHandler.setHandlerCallback(otaHandlerCallback);
+    otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+  } else {
+    Serial.println("firmwareCheckForUpdate: Ignored");
+  }
+  Serial.println();
+}
+
 static void otaHandlerCallback(OtaState state, String mesasge) {
+  Serial.println("OTA message: " + mesasge);
   switch (state) {
   case OtaState::OTA_STATE_BEGIN:
     displayExecuteOta(state, fwNewVersion, 0);
@@ -511,7 +526,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
   switch (state) {
   case OtaState::OTA_STATE_BEGIN: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareVersion(msg);
+      oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
       Serial.println("New firmware: " + msg);
     }
@@ -520,7 +535,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
   }
   case OtaState::OTA_STATE_FAIL: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareFailed();
+      oledDisplay.showFirmwareUpdateFailed();
     } else {
       Serial.println("Error: Firmware update: failed");
     }
@@ -528,9 +543,29 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
+  case OtaState::OTA_STATE_SKIP: {
+    if (ag->isOne()) {
+      oledDisplay.showFirmwareUpdateSkipped();
+    } else {
+      Serial.println("Firmware update: Skipped");
+    }
+
+    delay(2500);
+    break;
+  }
+  case OtaState::OTA_STATE_UP_TO_DATE: {
+    if (ag->isOne()) {
+      oledDisplay.showFirmwareUpdateUpToDate();
+    } else {
+      Serial.println("Firmware update: up to date");
+    }
+
+    delay(2500);
+    break;
+  }
   case OtaState::OTA_STATE_PROCESSING: {
     if (ag->isOne()) {
-      oledDisplay.showNewFirmwareUpdating(String(processing));
+      oledDisplay.showFirmwareUpdateProgress(processing);
     } else {
       Serial.println("Firmware update: " + String(processing) + String("%"));
     }
@@ -546,13 +581,14 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
       while (i != 0) {
         i = i - 1;
         if (ag->isOne()) {
-          oledDisplay.showNewFirmwareSuccess(String(i));
+          oledDisplay.showFirmwareUpdateSuccess(i);
         } else {
           Serial.println("Rebooting... " + String(i));
         }
         
         delay(1000);
       }
+      oledDisplay.setBrightness(0);
       esp_restart();
     }
     break;
@@ -640,6 +676,24 @@ static void oneIndoorInit(void) {
       break;
     }
   }
+
+  /** Check for button to reset WiFi connecto to "airgraident" after test LED
+   * bar */
+  if (ledBarButtonTest) {
+    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+      WiFi.begin("airgradient", "cleanair");
+      oledDisplay.setText("Configure WiFi", "connect to", "\'airgradient\'");
+      delay(2500);
+      oledDisplay.setText("Rebooting...", "","");
+      delay(2500);
+      oledDisplay.setText("","","");
+      ESP.restart();
+    }
+  }
+  ledBarEnabledUpdate();
+
+  /** Show message init sensor */
+  oledDisplay.setText("Sensor", "initializing...", "");
 
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
@@ -879,32 +933,6 @@ static void configUpdateHandle() {
     }
 
     stateMachine.executeLedBarTest();
-  }
-
-  fwNewVersion = configuration.newFirmwareVersion();
-  if (fwNewVersion.length()) {
-    bool doOta = false;
-    if (measurements.otaBootCount == 0) {
-      doOta = true;
-      Serial.println("First OTA");
-    } else {
-      /** Only check for update each 1h*/
-      const float otaBootCount = 60.0f / (SERVER_SYNC_INTERVAL / 60000.0f);
-      if ((measurements.bootCount - measurements.otaBootCount) >= (int)otaBootCount) {
-        doOta = true;
-      } else {
-        Serial.println(
-            "OTA ignore, try again next " +
-            String(30 - (measurements.bootCount - measurements.otaBootCount)) +
-            String(" boots"));
-      }
-    }
-
-    if (doOta) {
-      measurements.otaBootCount = measurements.bootCount;
-      otaHandler.setHandlerCallback(otaHandlerCallback);
-      otaHandler.updateFirmwareIfOutdated(ag->deviceId());
-    }
   }
 
   appDispHandler();
