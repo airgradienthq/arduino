@@ -169,16 +169,6 @@ void setup() {
   /** Connecting wifi */
   bool connectToWifi = false;
   if (ag->isOne()) {
-    if (ledBarButtonTest) {
-      if (ag->button.getState() == PushButton::BUTTON_PRESSED) {
-        WiFi.begin("airgradient", "cleanair");
-        Serial.println("WiFi Credential reset to factory defaults");
-        ESP.restart();
-      }
-    } else {
-      ledBarEnabledUpdate();
-    }
-
     /** Show message confirm offline mode, should me perform if LED bar button
      * test pressed */
     if (ledBarButtonTest == false) {
@@ -436,6 +426,7 @@ static void factoryConfigReset(void) {
               Serial.println("Factory reset successful");
             }
             delay(3000);
+            oledDisplay.setText("","","");
             ESP.restart();
           }
         }
@@ -681,6 +672,24 @@ static void oneIndoorInit(void) {
       break;
     }
   }
+
+  /** Check for button to reset WiFi connecto to "airgraident" after test LED
+   * bar */
+  if (ledBarButtonTest) {
+    if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
+      WiFi.begin("airgradient", "cleanair");
+      oledDisplay.setText("Configure WiFi", "connect to", "\'airgradient\'");
+      delay(2500);
+      oledDisplay.setText("Rebooting...", "","");
+      delay(2500);
+      oledDisplay.setText("","","");
+      ESP.restart();
+    }
+  }
+  ledBarEnabledUpdate();
+
+  /** Show message init sensor */
+  oledDisplay.setText("Sensor", "initializing...", "");
 
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
