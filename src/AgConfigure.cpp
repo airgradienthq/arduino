@@ -235,7 +235,7 @@ bool Configuration::parse(String data, bool isLocal) {
   bool changed = false;
 
   /** Get ConfigurationControl */
-  String lasCtrl = jconfig[jprop_configurationControl];
+  String lastCtrl = jconfig[jprop_configurationControl];
   if (isLocal) {
     if (JSON.typeof_(root[jprop_configurationControl]) == "string") {
       String ctrl = root[jprop_configurationControl];
@@ -248,7 +248,7 @@ bool Configuration::parse(String data, bool isLocal) {
           ctrl ==
               String(CONFIGURATION_CONTROL_NAME
                          [ConfigurationControl::ConfigurationControlCloud])) {
-        if (ctrl != lasCtrl) {
+        if (ctrl != lastCtrl) {
           jconfig[jprop_configurationControl] = ctrl;
           changed = true;
         }
@@ -270,7 +270,7 @@ bool Configuration::parse(String data, bool isLocal) {
     if (changed) {
       changed = false;
       saveConfig();
-      configLogInfo(String(jprop_configurationControl), lasCtrl,
+      configLogInfo(String(jprop_configurationControl), lastCtrl,
                     jconfig[jprop_configurationControl]);
     }
 
