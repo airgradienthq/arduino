@@ -236,6 +236,9 @@ bool Configuration::parse(String data, bool isLocal) {
 
   /** Get ConfigurationControl */
   String lastCtrl = jconfig[jprop_configurationControl];
+  const char *msg = "Monitor set to accept only configuration from the "
+                    "cloud. Use property configurationControl to change.";
+
   if (isLocal) {
     if (JSON.typeof_(root[jprop_configurationControl]) == "string") {
       String ctrl = root[jprop_configurationControl];
@@ -250,7 +253,17 @@ bool Configuration::parse(String data, bool isLocal) {
                          [ConfigurationControl::ConfigurationControlCloud])) {
         if (ctrl != lastCtrl) {
           jconfig[jprop_configurationControl] = ctrl;
-          changed = true;
+          saveConfig();
+          configLogInfo(String(jprop_configurationControl), lastCtrl,
+                        jconfig[jprop_configurationControl]);
+        }
+
+        /** Check to return result if configurationControl is 'cloud' */
+        if (ctrl ==
+            String(CONFIGURATION_CONTROL_NAME
+                       [ConfigurationControl::ConfigurationControlCloud])) {
+          failedMessage = String(msg);
+          return true;
         }
       } else {
         failedMessage =
@@ -267,18 +280,11 @@ bool Configuration::parse(String data, bool isLocal) {
       }
     }
 
-    if (changed) {
-      changed = false;
-      saveConfig();
-      configLogInfo(String(jprop_configurationControl), lastCtrl,
-                    jconfig[jprop_configurationControl]);
-    }
-
+    /** Ignore all configuration value if 'configurationControl' is 'cloud' */
     if (jconfig[jprop_configurationControl] ==
         String(CONFIGURATION_CONTROL_NAME
                    [ConfigurationControl::ConfigurationControlCloud])) {
-      failedMessage = "Monitor set to accept only configuration from the "
-                      "cloud. Use property configurationControl to change.";
+      failedMessage = String(msg);
       jsonInvalid();
       return false;
     }
