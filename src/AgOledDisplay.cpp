@@ -85,6 +85,16 @@ const xbm_icon_t cloud_icons[] = {
   [CLOUD_ICON_ISSUE] = {.width = cloud_issue_width, .height = cloud_issue_height, .icon = cloud_issue_bits},
 };
 
+#define offline_width  14
+#define offline_height 11
+static unsigned char offline_bits[] = {
+ 0xe9,0xc7,0xe6,0xdf,0x06,0xf8,0xe9,0xe3,0xe0,0xcf,0x0c,0xcc,
+ 0xe0,0xc1,0xf0,0xc3,0x00,0xc0,0xc0,0xc0,0xc0,0xc0};
+
+ const xbm_icon_t offline_icon[] = {
+  {.width = offline_width, .height = offline_height, .icon = offline_bits},
+ };
+
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
 
@@ -345,6 +355,12 @@ void OledDisplay::showDashboard(OledDisplay::DashboardStatus status) {
     }
     case DashBoardStatusDeviceId: {
       setCentralText(10, ag->deviceId().c_str());
+      break;
+    }
+    case DashBoardStatusOfflineMode: {
+      showIcon(icon_pos_x, 0, &offline_icon[0]);
+      showTempHum(true);
+      break;
     }
     default:
       break;

@@ -480,7 +480,11 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineNormal: {
-    disp.showDashboard();
+    if(config.isOfflineMode()) {
+      disp.showDashboard(OledDisplay::DashboardStatus::DashBoardStatusOfflineMode);
+    } else {
+      disp.showDashboard();
+    }
     break;
   }
   case AgStateMachineCo2Calibration:

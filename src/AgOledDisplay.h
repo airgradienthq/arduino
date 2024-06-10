@@ -28,7 +28,8 @@ public:
     DashBoardStatusWiFiIssue,     /** WiFi Connection issue */
     DashBoardStatusServerIssue,   /** Cloud connection issue */
     DashBoardStatusAddToDashboard,/** Show status "Add To Dashboard"*/
-    DashBoardStatusDeviceId       /** Show status: device ID */
+    DashBoardStatusDeviceId,      /** Show status: device ID */
+    DashBoardStatusOfflineMode,   /** Show status: offline mode */
   };
 
   OledDisplay(Configuration &config, Measurements &value,
