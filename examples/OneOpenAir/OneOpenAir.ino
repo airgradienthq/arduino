@@ -418,8 +418,12 @@ static void factoryConfigReset(void) {
             }
 
             /** Reset WIFI */
-            WiFi.enableSTA(true);   // Incase offline mode
+            WiFi.enableSTA(true); // Incase offline mode
             WiFi.disconnect(true, true);
+            if (ag->isOne() == false) {
+              WiFi.begin("airgradient", "cleanair");
+              Serial.println("Set WiFi connect to \"airgradient\"");
+            }
 
             /** Reset local config */
             configuration.reset();
