@@ -19,8 +19,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
 
-  if (ag->isOne()) {
-    if (config->hasSensorPMS1) {
+  if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
+    if (config->hasSensorPMS1 || config->hasSensorPMS) {
       if (this->pm01_1 >= 0) {
         root["pm01"] = this->pm01_1;
       }

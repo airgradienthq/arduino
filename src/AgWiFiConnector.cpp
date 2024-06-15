@@ -13,7 +13,6 @@
  */
 void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-#ifdef ESP32
 /**
  * @brief Construct a new Ag Wi Fi Connector:: Ag Wi Fi Connector object
  *
@@ -24,9 +23,10 @@ void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,
                              Configuration &config)
     : PrintLog(log, "WifiConnector"), disp(disp), sm(sm), config(config) {}
-#else
-WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
-#endif
+
+// #ifdef ESP8266
+// WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
+// #endif
 
 WifiConnector::~WifiConnector() {}
 
@@ -49,20 +49,18 @@ bool WifiConnector::connect(void) {
   WIFI()->setConnectTimeout(15);
   WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
-#ifdef ESP32
   WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
-  WIFI()->setConfigPortalTimeoutCallback([this](){});
-  if (ag->isOne()) {
+  WIFI()->setConfigPortalTimeoutCallback([this]() {});
+  if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
     disp.setText("Connecting to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }
   ssid = "airgradient-" + ag->deviceId();
-#else
-  ssid = "AG-" + String(ESP.getChipId(), HEX);
-#endif
+
+  // ssid = "AG-" + String(ESP.getChipId(), HEX);
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
   WiFiManagerParameter postToAg("chbPostToAg",
@@ -77,6 +75,8 @@ bool WifiConnector::connect(void) {
   WIFI()->addParameter(&postToAgInfo);
 
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
+
+  logInfo("Wait for configure portal");
 
 #ifdef ESP32
   // Task handle WiFi connection.
@@ -139,10 +139,14 @@ bool WifiConnector::connect(void) {
 
     delay(1); // avoid watchdog timer reset.
   }
+#else
+  _wifiProcess();
+#endif
+
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
     sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
-    if (ag->isOne()) {
+    if (ag->isOne() || ag->getBoardType() == DIY_PRO_INDOOR_V4_2) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
@@ -160,9 +164,7 @@ bool WifiConnector::connect(void) {
     }
     hasPortalConfig = false;
   }
-#else
-  _wifiProcess();
-#endif
+
   return true;
 }
 
@@ -179,20 +181,20 @@ void WifiConnector::disconnect(void) {
 
 #ifdef ESP32
 #else
-void WifiConnector::displayShowText(String ln1, String ln2, String ln3) {
-  char buf[9];
-  ag->display.clear();
+// void WifiConnector::displayShowText(String ln1, String ln2, String ln3) {
+//   char buf[9];
+//   ag->display.clear();
 
-  ag->display.setCursor(1, 1);
-  ag->display.setText(ln1);
-  ag->display.setCursor(1, 19);
-  ag->display.setText(ln2);
-  ag->display.setCursor(1, 37);
-  ag->display.setText(ln3);
+//   ag->display.setCursor(1, 1);
+//   ag->display.setText(ln1);
+//   ag->display.setCursor(1, 19);
+//   ag->display.setText(ln2);
+//   ag->display.setCursor(1, 37);
+//   ag->display.setText(ln3);
 
-  ag->display.show();
-  delay(100);
-}
+//   ag->display.show();
+//   delay(100);
+// }
 #endif
 
 /**
@@ -205,7 +207,6 @@ bool WifiConnector::wifiClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
-#ifdef ESP32
 /**
  * @brief Handle WiFiManage softAP setup completed callback
  *
@@ -247,7 +248,7 @@ bool WifiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
 void WifiConnector::_wifiTimeoutCallback(void) { connectorTimeout = true; }
-#endif
+
 /**
  * @brief Process WiFiManager connection
  *
@@ -256,34 +257,66 @@ void WifiConnector::_wifiProcess() {
 #ifdef ESP32
   WIFI()->process();
 #else
-  int count = WIFI_CONNECT_COUNTDOWN_MAX;
-  displayShowText(String(WIFI_CONNECT_COUNTDOWN_MAX) + " sec", "SSID:", ssid);
+  /** Wait for WiFi connect and show LED, display status */
+  uint32_t dispPeriod = millis();
+  uint32_t ledPeriod = millis();
+  bool clientConnectChanged = false;
+  AgStateMachineState stateOld = sm.getDisplayState();
+
   while (WIFI()->getConfigPortalActive()) {
     WIFI()->process();
 
-    uint32_t lastTime = millis();
-    uint32_t ms = (uint32_t)(millis() - lastTime);
-    if (ms >= 1000) {
-      lastTime = millis();
+    if (WiFi.isConnected() == false) {
+      /** Display countdown */
+      uint32_t ms;
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
+        ms = (uint32_t)(millis() - dispPeriod);
+        if (ms >= 1000) {
+          dispPeriod = millis();
+          sm.displayHandle();
+          logInfo("displayHandle state: " + String(sm.getDisplayState()));
+        } else {
+          if (stateOld != sm.getDisplayState()) {
+            stateOld = sm.getDisplayState();
+            sm.displayHandle();
+          }
+        }
+      }
 
-      displayShowText(String(count) + " sec", "SSID:", ssid);
+      /** LED animations */
+      ms = (uint32_t)(millis() - ledPeriod);
+      if (ms >= 100) {
+        ledPeriod = millis();
+        sm.handleLeds();
+      }
 
-      count--;
-
-      // Timeout
-      if (count == 0) {
-        break;
+      /** Check for client connect to change led color */
+      bool clientConnected = wifiClientConnected();
+      if (clientConnected != clientConnectChanged) {
+        clientConnectChanged = clientConnected;
+        if (clientConnectChanged) {
+          sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
+        } else {
+          sm.ledAnimationInit();
+          sm.handleLeds(AgStateMachineWiFiManagerMode);
+          if (ag->isOne()) {
+            sm.displayHandle(AgStateMachineWiFiManagerMode);
+          }
+        }
       }
     }
+
+    delay(1);
   }
 
-  if (!WiFi.isConnected()) {
-    displayShowText("Booting", "offline", "mode");
-    Serial.println("failed to connect and hit timeout");
-    delay(2500);
-  } else {
-    hasConfig = true;
-  }
+  // TODO This is for basic
+  // if (!WiFi.isConnected()) {
+  //   disp.setText("Booting", "offline", "mode");
+  //   Serial.println("failed to connect and hit timeout");
+  //   delay(2500);
+  // } else {
+  //   hasConfig = true;
+  // }
 #endif
 }
 
@@ -344,7 +377,7 @@ String WifiConnector::localIpStr(void) { return WiFi.localIP().toString(); }
 
 /**
  * @brief Get status that wifi has configurated
- * 
+ *
  * @return true Configurated
  * @return false Not Configurated
  */
@@ -357,8 +390,8 @@ bool WifiConnector::hasConfigurated(void) {
 
 /**
  * @brief Get WiFi connection porttal timeout.
- * 
- * @return true 
- * @return false 
+ *
+ * @return true
+ * @return false
  */
 bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }

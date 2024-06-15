@@ -14,6 +14,8 @@ const char *AgFirmwareModeName(AgFirmwareMode mode) {
     return "0-1PS";
   case FW_MODE_O_1P:
     return "O-1P";
+  case FW_MODE_I_8PSL:
+    return "I-8PSL";
   default:
     break;
   }

@@ -224,7 +224,7 @@ void StateMachine::co2Calibration(void) {
 
     /** Count down to 0 then start */
     for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
         String str =
             "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec";
         disp.setText("Start CO2 calib", str.c_str(), "");
@@ -236,13 +236,13 @@ void StateMachine::co2Calibration(void) {
     }
 
     if (ag->s8.setBaselineCalibration()) {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
         disp.setText("Calibration", "success", "");
       } else {
         logInfo("CO2 Calibration: success");
       }
       delay(1000);
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
         disp.setText("Wait for", "calib finish", "...");
       } else {
         logInfo("CO2 Calibration: Wait for calibration finish...");
@@ -254,7 +254,7 @@ void StateMachine::co2Calibration(void) {
         delay(1000);
         count++;
       }
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
         String str = "after " + String(count);
         disp.setText("Calib finish", str.c_str(), "sec");
       } else {
@@ -262,7 +262,7 @@ void StateMachine::co2Calibration(void) {
       }
       delay(2000);
     } else {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2)) {
         disp.setText("Calibration", "failure!!!", "");
       } else {
         logInfo("CO2 Calibration: failure!!!");
@@ -399,7 +399,7 @@ StateMachine::~StateMachine() {}
  */
 void StateMachine::displayHandle(AgStateMachineState state) {
   // Ignore handle if not ONE_INDOOR board
-  if (!ag->isOne()) {
+  if (!(ag->isOne() || (ag->getBoardType() == DIY_PRO_INDOOR_V4_2))) {
     if (state == AgStateMachineCo2Calibration) {
       co2Calibration();
     }

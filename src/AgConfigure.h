@@ -42,6 +42,7 @@ public:
   bool hasSensorS8 = true;
   bool hasSensorPMS1 = true;
   bool hasSensorPMS2 = true;
+  bool hasSensorPMS = true;
   bool hasSensorSGP = true;
   bool hasSensorSHT = true;
 

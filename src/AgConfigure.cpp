@@ -43,7 +43,7 @@ JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(offlineMode);
 
 #define jprop_model_default                 ""
-#define jprop_country_default               ""
+#define jprop_country_default               "TH"
 #define jprop_pmStandard_default            getPMStandardString(false)
 #define jprop_ledBarMode_default            getLedBarModeName(LedBarMode::LedBarModeCO2)
 #define jprop_abcDays_default               8
@@ -614,15 +614,18 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
-  if (JSON.typeof_(root["targetFirmware"]) == "string") {
-    String newVer = root["targetFirmware"];
-    String curVer = String(GIT_VERSION);
-    if (curVer != newVer) {
-      logInfo("Detected new firmware version: " + newVer);
-      otaNewFirmwareVersion = newVer;
-      udpated = true;
-    } else {
-      otaNewFirmwareVersion = String("");
+  if (ag->getBoardType() == ONE_INDOOR ||
+      ag->getBoardType() == OPEN_AIR_OUTDOOR) {
+    if (JSON.typeof_(root["targetFirmware"]) == "string") {
+      String newVer = root["targetFirmware"];
+      String curVer = String(GIT_VERSION);
+      if (curVer != newVer) {
+        logInfo("Detected new firmware version: " + newVer);
+        otaNewFirmwareVersion = newVer;
+        udpated = true;
+      } else {
+        otaNewFirmwareVersion = String("");
+      }
     }
   }
 
