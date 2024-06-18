@@ -346,8 +346,9 @@ static void factoryConfigReset(void) {
             // }
 
             /** Reset WIFI */
-            WiFi.enableSTA(true); // Incase offline mode
-            WiFi.disconnect(true, true);
+            // WiFi.enableSTA(true); // Incase offline mode
+            // WiFi.disconnect(true, true);
+            wifiConnector.reset();
 
             /** Reset local config */
             configuration.reset();
@@ -417,7 +418,9 @@ static bool sgp41Init(void) {
 }
 
 static void wifiFactoryConfigure(void) {
+  WiFi.persistent(true);
   WiFi.begin("airgradient", "cleanair");
+  WiFi.persistent(false);
   oledDisplay.setText("Configure WiFi", "connect to", "\'airgradient\'");
   delay(2500);
   oledDisplay.setText("Rebooting...", "", "");
