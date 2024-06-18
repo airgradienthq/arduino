@@ -29,9 +29,6 @@ public:
   void setAirGradient(AirGradient *ag);
 
   WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm, Configuration& config);
-#ifdef ESP8266
-  // WifiConnector(Stream &log);
-#endif
   ~WifiConnector();
 
   bool connect(void);

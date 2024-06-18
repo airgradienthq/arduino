@@ -24,10 +24,6 @@ WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,
                              Configuration &config)
     : PrintLog(log, "WifiConnector"), disp(disp), sm(sm), config(config) {}
 
-// #ifdef ESP8266
-// WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
-// #endif
-
 WifiConnector::~WifiConnector() {}
 
 /**
@@ -179,24 +175,6 @@ void WifiConnector::disconnect(void) {
   }
 }
 
-#ifdef ESP32
-#else
-// void WifiConnector::displayShowText(String ln1, String ln2, String ln3) {
-//   char buf[9];
-//   ag->display.clear();
-
-//   ag->display.setCursor(1, 1);
-//   ag->display.setText(ln1);
-//   ag->display.setCursor(1, 19);
-//   ag->display.setText(ln2);
-//   ag->display.setCursor(1, 37);
-//   ag->display.setText(ln3);
-
-//   ag->display.show();
-//   delay(100);
-// }
-#endif
-
 /**
  * @brief Has wifi STA connected to WIFI softAP (this device)
  *
@@ -310,13 +288,15 @@ void WifiConnector::_wifiProcess() {
   }
 
   // TODO This is for basic
-  // if (!WiFi.isConnected()) {
-  //   disp.setText("Booting", "offline", "mode");
-  //   Serial.println("failed to connect and hit timeout");
-  //   delay(2500);
-  // } else {
-  //   hasConfig = true;
-  // }
+  if (ag->getBoardType() == DIY_BASIC) {
+    if (!WiFi.isConnected()) {
+      // disp.setText("Booting", "offline", "mode");
+      Serial.println("failed to connect and hit timeout");
+      delay(2500);
+    } else {
+      hasConfig = true;
+    }
+  }
 #endif
 }
 
@@ -340,8 +320,6 @@ void WifiConnector::handle(void) {
   if (ms >= 10000) {
     lastRetry = millis();
     WiFi.reconnect();
-
-    // Serial.printf("Re-Connect WiFi\r\n");
     logInfo("Re-Connect WiFi");
   }
 }

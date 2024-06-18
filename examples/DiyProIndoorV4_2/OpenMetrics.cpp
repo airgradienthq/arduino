@@ -81,14 +81,14 @@ String OpenMetrics::getPayload(void) {
     ahumCompensated = _hum;
   }
 
-  if (config.hasSensorPMS) {
+  if (config.hasSensorPMS1) {
     pm01 = measure.pm01_1;
     pm25 = measure.pm25_1;
     pm10 = measure.pm10_1;
     pm03PCount = measure.pm03PCount_1;
   }
 
-  if (config.hasSensorPMS) {
+  if (config.hasSensorPMS1) {
     if (pm01 >= 0) {
       add_metric("pm1",
                  "PM1.0 concentration as measured by the AirGradient PMS "

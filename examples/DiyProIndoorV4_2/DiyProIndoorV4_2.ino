@@ -204,7 +204,7 @@ void loop() {
   if (configuration.hasSensorS8) {
     co2Schedule.run();
   }
-  if (configuration.hasSensorPMS) {
+  if (configuration.hasSensorPMS1) {
     pmsSchedule.run();
     ag.pms5003.handle();
   }
@@ -546,11 +546,11 @@ static void boardInit(void) {
   }
 
   /** Init PMS5003 */
-  configuration.hasSensorPMS1 = false;
+  configuration.hasSensorPMS1 = true;
   configuration.hasSensorPMS2 = false;
   if (ag.pms5003.begin(&Serial) == false) {
     Serial.println("PMS sensor not found");
-    configuration.hasSensorPMS = false;
+    configuration.hasSensorPMS1 = false;
 
     dispSensorNotFound("PMS");
   }

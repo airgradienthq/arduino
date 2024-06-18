@@ -57,13 +57,16 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 static AirGradient ag = AirGradient(DIY_BASIC);
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
-static WifiConnector wifiConnector(Serial);
+
+static Measurements measurements;
+static OledDisplay oledDisp(configuration, measurements, Serial);
+static StateMachine sm(oledDisp, Serial, measurements, configuration);
+static WifiConnector wifiConnector(oledDisp, Serial, sm, configuration);
 
 static int co2Ppm = -1;
 static int pm25 = -1;
 static float temp = -1001;
 static int hum = -1;
-static long val;
 
 static void boardInit(void);
 static void failedHandler(String msg);
