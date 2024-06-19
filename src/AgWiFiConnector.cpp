@@ -1,8 +1,7 @@
 #include "AgWiFiConnector.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 
-// FIXME Just for test
-#define WIFI_CONNECT_COUNTDOWN_MAX 60
+#define WIFI_CONNECT_COUNTDOWN_MAX 180
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
 
 #define WIFI() ((WiFiManager *)(this->wifi))

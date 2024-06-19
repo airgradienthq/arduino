@@ -1,9 +1,39 @@
+/*
+This is the code for the AirGradient DIY PRO 4.2 Air Quality Monitor with an D1
+ESP8266 Microcontroller.
+
+It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
+small display and can send data over Wifi.
+
+Open source air quality monitors and kits are available:
+Indoor Monitor: https://www.airgradient.com/indoor/
+Outdoor Monitor: https://www.airgradient.com/outdoor/
+
+Build Instructions:
+https://www.airgradient.com/documentation/diy-v4/
+
+Please make sure you have esp8266 board manager installed. Tested with
+version 3.1.2.
+
+Set board to "LOLIN(WEMOS) D1 R2 & mini"
+
+Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
+can be set through the AirGradient dashboard.
+
+If you have any questions please visit our forum at
+https://forum.airgradient.com/
+
+CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
+
+*/
+
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgWiFiConnector.h"
 #include "LocalServer.h"
 #include "OpenMetrics.h"
+#include "MqttClient.h"
 #include <AirGradient.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
@@ -36,36 +66,34 @@ static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
+static MqttClient mqttClient(Serial);
 
 static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_8PSL;
 
-static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
 static void boardInit(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
-static void appLedHandler(void);
 static void appDispHandler(void);
-static void oledDisplayLedBarSchedule(void);
+static void oledDisplaySchedule(void);
 static void updateTvoc(void);
 static void updatePm(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
 static void mdnsInit(void);
-static void createMqttTask(void);
 static void initMqtt(void);
 static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
-static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
 static void wifiFactoryConfigure(void);
+static void mqttHandle(void);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplaySchedule);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -74,6 +102,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
+AgSchedule mqttSchedule(MQTT_SYNC_INTERVAL, mqttHandle);
 
 void setup() {
   /** Serial for print debug message */
@@ -103,39 +132,33 @@ void setup() {
 
   /** Connecting wifi */
   bool connectToWifi = false;
-  if (ag.isOne() || ag.getBoardType() == DIY_PRO_INDOOR_V4_2) {
-    /** Show message confirm offline mode, should me perform if LED bar button
-     * test pressed */
-    if (ledBarButtonTest == false) {
+
+  /** Show message confirm offline mode, should me perform if LED bar button
+   * test pressed */
+
+  oledDisplay.setText(
+      "Press now for",
+      configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+  uint32_t startTime = millis();
+  while (true) {
+    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+      configuration.setOfflineMode(!configuration.isOfflineMode());
+
       oledDisplay.setText(
-          "Press now for",
-          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
-      uint32_t startTime = millis();
-      while (true) {
-        if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
-          configuration.setOfflineMode(!configuration.isOfflineMode());
-
-          oledDisplay.setText(
-              "Offline Mode",
-              configuration.isOfflineMode() ? " = True" : "  = False", "");
-          delay(1000);
-          break;
-        }
-        uint32_t periodMs = (uint32_t)(millis() - startTime);
-        if (periodMs >= 3000) {
-          Serial.println("Set for offline mode timeout");
-          break;
-        }
-
-        delay(1);
-      }
-      connectToWifi = !configuration.isOfflineMode();
-    } else {
-      configuration.setOfflineModeWithoutSave(true);
+          "Offline Mode",
+          configuration.isOfflineMode() ? " = True" : "  = False", "");
+      delay(1000);
+      break;
     }
-  } else {
-    connectToWifi = true;
+    uint32_t periodMs = (uint32_t)(millis() - startTime);
+    if (periodMs >= 3000) {
+      Serial.println("Set for offline mode timeout");
+      break;
+    }
+
+    delay(1);
   }
+  connectToWifi = !configuration.isOfflineMode();
 
   if (connectToWifi) {
     apiClient.begin();
@@ -150,20 +173,14 @@ void setup() {
         apiClient.fetchServerConfiguration();
         configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
-          if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-            if (apiClient.isNotAvailableOnDashboard()) {
-              stateMachine.displaySetAddToDashBoard();
-              stateMachine.displayHandle(
-                  AgStateMachineWiFiOkServerOkSensorConfigFailed);
-            } else {
-              stateMachine.displayClearAddToDashBoard();
-            }
+          if (apiClient.isNotAvailableOnDashboard()) {
+            stateMachine.displaySetAddToDashBoard();
+            stateMachine.displayHandle(
+                AgStateMachineWiFiOkServerOkSensorConfigFailed);
+          } else {
+            stateMachine.displayClearAddToDashBoard();
           }
-          stateMachine.handleLeds(
-              AgStateMachineWiFiOkServerOkSensorConfigFailed);
           delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-        } else {
-          ledBarEnabledUpdate();
         }
       } else {
         if (wifiConnector.isConfigurePorttalTimeout()) {
@@ -182,16 +199,13 @@ void setup() {
   }
 
   /** Show display Warning up */
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    oledDisplay.setText("Warming Up", "Serial Number:", ag.deviceId().c_str());
-    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+  oledDisplay.setText("Warming Up", "Serial Number:", ag.deviceId().c_str());
+  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-    Serial.println("Display brightness: " +
-                   String(configuration.getDisplayBrightness()));
-    oledDisplay.setBrightness(configuration.getDisplayBrightness());
-  }
+  Serial.println("Display brightness: " +
+                 String(configuration.getDisplayBrightness()));
+  oledDisplay.setBrightness(configuration.getDisplayBrightness());
 
-  appLedHandler();
   appDispHandler();
 }
 
@@ -208,10 +222,8 @@ void loop() {
     pmsSchedule.run();
     ag.pms5003.handle();
   }
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    if (configuration.hasSensorSHT) {
-      tempHumSchedule.run();
-    }
+  if (configuration.hasSensorSHT) {
+    tempHumSchedule.run();
   }
   if (configuration.hasSensorSGP) {
     tvocSchedule.run();
@@ -234,9 +246,12 @@ void loop() {
 
   localServer._handle();
 
-  if (ag.getBoardType() == DIY_PRO_INDOOR_V4_2) {
-    ag.sgp41.handle();
-  }
+  ag.sgp41.handle();
+
+  MDNS.update();
+
+  mqttSchedule.run();
+  mqttClient.handle();
 }
 
 static void co2Update(void) {
@@ -267,50 +282,16 @@ static void mdnsInit(void) {
   MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", ag.deviceId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag.getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
-}
 
-static void createMqttTask(void) {
-  // if (mqttTask) {
-  //   vTaskDelete(mqttTask);
-  //   mqttTask = NULL;
-  //   Serial.println("Delete old MQTT task");
-  // }
-
-  // Serial.println("Create new MQTT task");
-  // xTaskCreate(
-  //     [](void *param) {
-  //       for (;;) {
-  //         delay(MQTT_SYNC_INTERVAL);
-
-  //         /** Send data */
-  //         if (mqttClient.isConnected()) {
-  //           String payload = measurements.toString(
-  //               true, fwMode, wifiConnector.RSSI(), ag, &configuration);
-  //           String topic = "airgradient/readings/" + ag.deviceId();
-
-  //           if (mqttClient.publish(topic.c_str(), payload.c_str(),
-  //                                  payload.length())) {
-  //             Serial.println("MQTT sync success");
-  //           } else {
-  //             Serial.println("MQTT sync failure");
-  //           }
-  //         }
-  //       }
-  //     },
-  //     "mqtt-task", 1024 * 4, NULL, 6, &mqttTask);
-
-  // if (mqttTask == NULL) {
-  //   Serial.println("Creat mqttTask failed");
-  // }
+  MDNS.announce();
 }
 
 static void initMqtt(void) {
-  // if (mqttClient.begin(configuration.getMqttBrokerUri())) {
-  //   Serial.println("Connect to MQTT broker successful");
-  //   createMqttTask();
-  // } else {
-  //   Serial.println("Connect to MQTT broker failed");
-  // }
+  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
+    Serial.println("Connect to MQTT broker successful");
+  } else {
+    Serial.println("Connect to MQTT broker failed");
+  }
 }
 
 static void factoryConfigReset(void) {
@@ -321,7 +302,7 @@ static void factoryConfigReset(void) {
       uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
       if (ms >= 2000) {
         // Show display message: For factory keep for x seconds
-        if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
+        if (ag.isOne() || ag.isPro4_2()) {
           oledDisplay.setText("Factory reset", "keep pressed", "for 8 sec");
         } else {
           Serial.println("Factory reset, keep pressed for 8 sec");
@@ -330,13 +311,9 @@ static void factoryConfigReset(void) {
         int count = 7;
         while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
           delay(1000);
-          if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
+          String str = "for " + String(count) + " sec";
+          oledDisplay.setText("Factory reset", "keep pressed", str.c_str());
 
-            String str = "for " + String(count) + " sec";
-            oledDisplay.setText("Factory reset", "keep pressed", str.c_str());
-          } else {
-            Serial.printf("Factory reset, keep pressed for %d sec\r\n", count);
-          }
           count--;
           if (count == 0) {
             /** Stop MQTT task first */
@@ -353,11 +330,8 @@ static void factoryConfigReset(void) {
             /** Reset local config */
             configuration.reset();
 
-            if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-              oledDisplay.setText("Factory reset", "successful", "");
-            } else {
-              Serial.println("Factory reset successful");
-            }
+            oledDisplay.setText("Factory reset", "successful", "");
+
             delay(3000);
             oledDisplay.setText("", "", "");
             ESP.restart();
@@ -366,17 +340,12 @@ static void factoryConfigReset(void) {
 
         /** Show current content cause reset ignore */
         factoryBtnPressTime = 0;
-        if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-          appDispHandler();
-        }
+        appDispHandler();
       }
     }
   } else {
     if (factoryBtnPressTime != 0) {
-      if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-        /** Restore last display content */
-        appDispHandler();
-      }
+      appDispHandler();
     }
     factoryBtnPressTime = 0;
   }
@@ -387,20 +356,6 @@ static void wdgFeedUpdate(void) {
   Serial.println();
   Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
   Serial.println();
-}
-
-static void ledBarEnabledUpdate(void) {
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    int brightness = configuration.getLedBarBrightness();
-    Serial.println("LED bar brightness: " + String(brightness));
-    if ((brightness == 0) || (configuration.getLedBarMode() == LedBarModeOff)) {
-      ag.ledBar.setEnable(false);
-    } else {
-      ag.ledBar.setBrightness(brightness);
-      ag.ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
-    }
-    ag.ledBar.show();
-  }
 }
 
 static bool sgp41Init(void) {
@@ -429,43 +384,34 @@ static void wifiFactoryConfigure(void) {
   ESP.restart();
 }
 
+static void mqttHandle(void) {
+  if(mqttClient.isConnected() == false) {
+    mqttClient.connect(String("airgradient-") + ag.deviceId());
+  }
+
+  if (mqttClient.isConnected()) {
+    String payload = measurements.toString(true, fwMode, wifiConnector.RSSI(),
+                                           &ag, &configuration);
+    String topic = "airgradient/readings/" + ag.deviceId();
+    if (mqttClient.publish(topic.c_str(), payload.c_str(), payload.length())) {
+      Serial.println("MQTT sync success");
+    } else {
+      Serial.println("MQTT sync failure");
+    }
+  }
+}
+
 static void sendDataToAg() {
   /** Change oledDisplay and led state */
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
-  }
-  stateMachine.handleLeds(AgStateMachineWiFiOkServerConnecting);
-
-  /** Task handle led connecting animation */
-  // xTaskCreate(
-  //     [](void *obj) {
-  //       for (;;) {
-  //         // ledSmHandler();
-  //         stateMachine.handleLeds();
-  //         if (stateMachine.getLedState() !=
-  //             AgStateMachineWiFiOkServerConnecting) {
-  //           break;
-  //         }
-  //         delay(LED_BAR_ANIMATION_PERIOD);
-  //       }
-  //       vTaskDelete(NULL);
-  //     },
-  //     "task_led", 2048, NULL, 5, NULL);
+  stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
 
   delay(1500);
   if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount)) {
-    if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-      stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
-    }
-    stateMachine.handleLeds(AgStateMachineWiFiOkServerConnected);
+    stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
   } else {
-    if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-      stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
-    }
-    stateMachine.handleLeds(AgStateMachineWiFiOkServerConnectFailed);
+    stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
   }
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-  stateMachine.handleLeds(AgStateMachineNormal);
 }
 
 void dispSensorNotFound(String ss) {
@@ -485,29 +431,16 @@ static void boardInit(void) {
                       "FW Version: ", ag.getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-  ag.ledBar.begin();
   ag.button.begin();
   ag.watchdog.begin();
 
   /** Run LED test on start up if button pressed */
-  if (ag.isOne()) {
-    oledDisplay.setText("Press now for", "LED test", "");
-  } else if (ag.getBoardType() == DIY_PRO_INDOOR_V4_2) {
-    oledDisplay.setText("Press now for", "factory WiFi", "configure");
-  }
+  oledDisplay.setText("Press now for", "factory WiFi", "configure");
 
-  ledBarButtonTest = false;
   uint32_t stime = millis();
   while (true) {
     if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
-      if (ag.isOne()) {
-        ledBarButtonTest = true;
-        stateMachine.executeLedBarPowerUpTest();
-        break;
-      }
-      if (ag.getBoardType() == DIY_PRO_INDOOR_V4_2) {
-        wifiFactoryConfigure();
-      }
+      wifiFactoryConfigure();
     }
     delay(1);
     uint32_t ms = (uint32_t)(millis() - stime);
@@ -516,15 +449,6 @@ static void boardInit(void) {
     }
     delay(1);
   }
-
-  /** Check for button to reset WiFi connecto to "airgraident" after test LED
-   * bar */
-  if (ledBarButtonTest && ag.isOne()) {
-    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
-      wifiFactoryConfigure();
-    }
-  }
-  ledBarEnabledUpdate();
 
   /** Show message init sensor */
   oledDisplay.setText("Sensor", "initializing...", "");
@@ -590,11 +514,11 @@ static void configUpdateHandle() {
 
   stateMachine.executeCo2Calibration();
 
-  // String mqttUri = configuration.getMqttBrokerUri();
-  // if (mqttClient.isCurrentUri(mqttUri) == false) {
-  //   mqttClient.end();
-  //   initMqtt();
-  // }
+  String mqttUri = configuration.getMqttBrokerUri();
+  if (mqttClient.isCurrentUri(mqttUri) == false) {
+    mqttClient.end();
+    initMqtt();
+  }
 
   if (configuration.hasSensorSGP) {
     if (configuration.noxLearnOffsetChanged() ||
@@ -621,89 +545,38 @@ static void configUpdateHandle() {
     }
   }
 
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    if (configuration.isLedBarBrightnessChanged()) {
-      if (configuration.getLedBarBrightness() == 0) {
-        ag.ledBar.setEnable(false);
-      } else {
-        if (configuration.getLedBarMode() != LedBarMode::LedBarModeOff) {
-          ag.ledBar.setEnable(true);
-        }
-        ag.ledBar.setBrightness(configuration.getLedBarBrightness());
-      }
-      ag.ledBar.show();
-    }
-
-    // if (configuration.isLedBarModeChanged()) {
-    //   if (configuration.getLedBarBrightness() == 0) {
-    //     ag.ledBar.setEnable(false);
-    //   } else {
-    //     if (configuration.getLedBarMode() == LedBarMode::LedBarModeOff) {
-    //       ag.ledBar.setEnable(false);
-    //     } else {
-    //       ag.ledBar.setEnable(true);
-    //       ag.ledBar.setBrightness(configuration.getLedBarBrightness());
-    //     }
-    //   }
-    //   ag.ledBar.show();
-    // }
-
-    if (configuration.isDisplayBrightnessChanged()) {
-      oledDisplay.setBrightness(configuration.getDisplayBrightness());
-    }
-
-    // stateMachine.executeLedBarTest();
+  if (configuration.isDisplayBrightnessChanged()) {
+    oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
   appDispHandler();
-  appLedHandler();
 }
 
-static void appLedHandler(void) {
+static void appDispHandler(void) {
   AgStateMachineState state = AgStateMachineNormal;
+
+  /** Only show display status on online mode. */
   if (configuration.isOfflineMode() == false) {
     if (wifiConnector.isConnected() == false) {
       state = AgStateMachineWiFiLost;
     } else if (apiClient.isFetchConfigureFailed()) {
       state = AgStateMachineSensorConfigFailed;
+      if (apiClient.isNotAvailableOnDashboard()) {
+        stateMachine.displaySetAddToDashBoard();
+      } else {
+        stateMachine.displayClearAddToDashBoard();
+      }
     } else if (apiClient.isPostToServerFailed()) {
       state = AgStateMachineServerLost;
     }
   }
-
-  stateMachine.handleLeds(state);
+  stateMachine.displayHandle(state);
 }
 
-static void appDispHandler(void) {
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    AgStateMachineState state = AgStateMachineNormal;
-
-    /** Only show display status on online mode. */
-    if (configuration.isOfflineMode() == false) {
-      if (wifiConnector.isConnected() == false) {
-        state = AgStateMachineWiFiLost;
-      } else if (apiClient.isFetchConfigureFailed()) {
-        state = AgStateMachineSensorConfigFailed;
-        if (apiClient.isNotAvailableOnDashboard()) {
-          stateMachine.displaySetAddToDashBoard();
-        } else {
-          stateMachine.displayClearAddToDashBoard();
-        }
-      } else if (apiClient.isPostToServerFailed()) {
-        state = AgStateMachineServerLost;
-      }
-    }
-    stateMachine.displayHandle(state);
+static void oledDisplaySchedule(void) {
+  if (factoryBtnPressTime == 0) {
+    appDispHandler();
   }
-}
-
-static void oledDisplayLedBarSchedule(void) {
-  if (ag.isOne() || (ag.getBoardType() == DIY_PRO_INDOOR_V4_2)) {
-    if (factoryBtnPressTime == 0) {
-      appDispHandler();
-    }
-  }
-  appLedHandler();
 }
 
 static void updateTvoc(void) {
