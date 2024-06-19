@@ -41,6 +41,7 @@ Local server API documentation is available in [/docs/local-server.md](/docs/loc
 - [Sensirion I2C SHT](https://github.com/Sensirion/arduino-sht)
 - [WiFiManager](https://github.com/tzapu/WiFiManager)
 - [Arduino_JSON](https://github.com/arduino-libraries/Arduino_JSON)
+- [PubSubClient](https://github.com/knolleary/pubsubclient)
 
 ## License
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
