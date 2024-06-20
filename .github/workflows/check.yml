@@ -7,6 +7,7 @@ jobs:
         example:
           - "BASIC"
           - "DiyProIndoorV4_2"
+          - "DiyProIndoorV3_7"
           - "TestCO2"
           - "TestPM"
           - "TestSht"
@@ -25,6 +26,8 @@ jobs:
           - example: "BASIC"
             fqbn: "esp32:esp32:esp32c3"
           - example: "DiyProIndoorV4_2"
+            fqbn: "esp32:esp32:esp32c3"
+          - example: "DiyProIndoorV3_7"
             fqbn: "esp32:esp32:esp32c3"
           - example: "OneOpenAir"
             fqbn: "esp8266:esp8266:d1_mini"

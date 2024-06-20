@@ -19,7 +19,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
 
-  if (ag->isOne() || (ag->isPro4_2())) {
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7()) {
     if (config->hasSensorPMS1) {
       if (this->pm01_1 >= 0) {
         root["pm01"] = this->pm01_1;
