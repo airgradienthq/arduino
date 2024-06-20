@@ -288,9 +288,9 @@ static void mdnsInit(void) {
 
 static void initMqtt(void) {
   if (mqttClient.begin(configuration.getMqttBrokerUri())) {
-    Serial.println("Connect to MQTT broker successful");
+    Serial.println("Setup connect to MQTT broker successful");
   } else {
-    Serial.println("Connect to MQTT broker failed");
+    Serial.println("setup Connect to MQTT broker failed");
   }
 }
 
