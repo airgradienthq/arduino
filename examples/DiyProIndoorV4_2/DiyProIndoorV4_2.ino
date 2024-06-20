@@ -71,7 +71,7 @@ static MqttClient mqttClient(Serial);
 static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
-static AgFirmwareMode fwMode = FW_MODE_I_BASIC_40PS;
+static AgFirmwareMode fwMode = FW_MODE_I_43PS;
 
 static String fwNewVersion;
 
