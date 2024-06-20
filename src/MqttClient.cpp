@@ -249,6 +249,10 @@ int MqttClient::getConnectionFailedCount(void) { return connectionFailedCount; }
 
 #ifdef ESP8266
 bool MqttClient::connect(String id) {
+  if (isBegin == false) {
+    return false;
+  }
+
   if (this->uri.isEmpty()) {
     return false;
   }
@@ -264,6 +268,9 @@ bool MqttClient::connect(String id) {
   return CLIENT()->connect(id.c_str(), user.c_str(), password.c_str());
 }
 void MqttClient::handle(void) {
+  if (isBegin == false) {
+    return;
+  }
   CLIENT()->loop();
 }
 #endif
