@@ -449,7 +449,7 @@ static void boardInit(void) {
     }
   }
 
-  localServer.setFwMode(FW_MODE_I_43PS);
+  localServer.setFwMode(FW_MODE_I_37PS);
 }
 
 static void failedHandler(String msg) {
