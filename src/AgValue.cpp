@@ -19,7 +19,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
 
-  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7()) {
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7() || ag->isBasic()) {
     if (config->hasSensorPMS1) {
       if (this->pm01_1 >= 0) {
         root["pm01"] = this->pm01_1;
@@ -177,7 +177,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   root["bootCount"] = bootCount;
 
   if (localServer) {
-    root["ledMode"] = config->getLedBarModeName();
+    if (ag->isOne()) {
+      root["ledMode"] = config->getLedBarModeName();
+    }
     root["firmware"] = ag->getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
   }

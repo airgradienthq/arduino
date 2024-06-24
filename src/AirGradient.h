@@ -150,6 +150,14 @@ public:
   bool isPro3_7(void);
 
   /**
+   * @brief Check that Airgradient object is DIY_BASIC
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isBasic(void);
+
+  /**
    * @brief Get device Id
    *
    * @return String

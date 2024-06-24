@@ -66,6 +66,8 @@ bool AirGradient::isPro3_7(void) {
   return boardType == BoardType::DIY_PRO_INDOOR_V3_7;
 }
 
+bool AirGradient::isBasic(void) { return boardType == BoardType::DIY_BASIC; }
+
 String AirGradient::deviceId(void) {
   String mac = WiFi.macAddress();
   mac.replace(":", "");

@@ -49,8 +49,8 @@ bool WifiConnector::connect(void) {
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
   WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
-  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7()) {
-    disp.setText("Connecting to", "WiFi", "...");
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7() || ag->isBasic()) {
+    disp.setText("Connect to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }
@@ -81,6 +81,7 @@ bool WifiConnector::connect(void) {
         WifiConnector *connector = (WifiConnector *)obj;
         while (connector->_wifiConfigPortalActive()) {
           connector->_wifiProcess();
+          vTaskDelay(1);
         }
         vTaskDelete(NULL);
       },
@@ -142,7 +143,7 @@ bool WifiConnector::connect(void) {
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
     sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
-    if (ag->isOne() || ag->isPro4_2() || ag->isPro3_7()) {
+    if (ag->isOne() || ag->isPro4_2() || ag->isPro3_7() || ag->isBasic()) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
@@ -247,7 +248,7 @@ void WifiConnector::_wifiProcess() {
     if (WiFi.isConnected() == false) {
       /** Display countdown */
       uint32_t ms;
-      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_7() || ag->isBasic()) {
         ms = (uint32_t)(millis() - dispPeriod);
         if (ms >= 1000) {
           dispPeriod = millis();
