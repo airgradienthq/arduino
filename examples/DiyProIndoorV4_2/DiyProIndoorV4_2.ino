@@ -245,8 +245,10 @@ void loop() {
   configUpdateHandle();
 
   localServer._handle();
-
-  ag.sgp41.handle();
+  
+  if (configuration.hasSensorSGP) {
+    ag.sgp41.handle();
+  }
 
   MDNS.update();
 
