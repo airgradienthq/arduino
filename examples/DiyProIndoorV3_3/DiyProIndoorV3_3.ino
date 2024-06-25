@@ -70,7 +70,7 @@ static MqttClient mqttClient(Serial);
 
 static int pmFailCount = 0;
 static int getCO2FailCount = 0;
-static AgFirmwareMode fwMode = FW_MODE_I_37PS;
+static AgFirmwareMode fwMode = FW_MODE_I_33PS;
 
 static String fwNewVersion;
 
@@ -451,7 +451,7 @@ static void boardInit(void) {
     }
   }
 
-  localServer.setFwMode(FW_MODE_I_37PS);
+  localServer.setFwMode(FW_MODE_I_33PS);
 }
 
 static void failedHandler(String msg) {
