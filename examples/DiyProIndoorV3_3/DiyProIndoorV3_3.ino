@@ -1,5 +1,5 @@
 /*
-This is the code for the AirGradient DIY PRO 3.7 Air Quality Monitor with an D1
+This is the code for the AirGradient DIY PRO 3.3 Air Quality Monitor with an D1
 ESP8266 Microcontroller.
 
 It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
