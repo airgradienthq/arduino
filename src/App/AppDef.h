@@ -101,7 +101,7 @@ enum AgFirmwareMode {
   FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
   FW_MODE_O_1PS,  /** PMS5003T, S8 */
   FW_MODE_O_1P,   /** PMS5003T */
-  FW_MODE_I_43PS, /** DIY_PRO 4.2 */
+  FW_MODE_I_42PS, /** DIY_PRO 4.2 */
   FW_MODE_I_37PS, /** DIY_PRO 3.7 */
   FW_MODE_I_BASIC_40PS, /** DIY_BASIC 4.0 */
 };

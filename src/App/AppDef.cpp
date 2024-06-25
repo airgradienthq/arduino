@@ -14,8 +14,8 @@ const char *AgFirmwareModeName(AgFirmwareMode mode) {
     return "0-1PS";
   case FW_MODE_O_1P:
     return "O-1P";
-  case FW_MODE_I_43PS:
-    return "DIY-PRO-I-4.3PS";
+  case FW_MODE_I_42PS:
+    return "DIY-PRO-I-4.2PS";
   case FW_MODE_I_37PS:
     return "DIY-PRO-I-3.7PS";
   case FW_MODE_I_BASIC_40PS:
