@@ -116,7 +116,6 @@ void setup() {
 
   /** Init I2C */
   Wire.begin(ag.getI2cSdaPin(), ag.getI2cSclPin());
-  Wire.endTransmission(1);
   delay(1000);
 
   configuration.setAirGradient(&ag);
