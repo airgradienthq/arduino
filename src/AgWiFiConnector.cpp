@@ -338,7 +338,16 @@ bool WifiConnector::isConnected(void) { return WiFi.isConnected(); }
  * this method
  *
  */
-void WifiConnector::reset(void) { WIFI()->resetSettings(); }
+void WifiConnector::reset(void) { 
+  if(this->wifi == NULL) {
+    this->wifi = new WiFiManager();
+    if(this->wifi == NULL){
+      logInfo("reset failed");
+      return;
+    }
+  }
+  WIFI()->resetSettings(); 
+}
 
 /**
  * @brief Get wifi RSSI
