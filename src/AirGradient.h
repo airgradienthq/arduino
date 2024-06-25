@@ -147,7 +147,7 @@ public:
    * @return true Yes
    * @return false No
    */
-  bool isPro3_7(void);
+  bool isPro3_3(void);
 
   /**
    * @brief Check that Airgradient object is DIY_BASIC

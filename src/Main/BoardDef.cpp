@@ -322,8 +322,8 @@ const BoardDef bsps[_BOARD_MAX] = {
                 },
             .name = "OPEN_AIR_OUTDOOR",
         },
-    /** DIY_PRO_INDOOR_V3_7 */
-    [DIY_PRO_INDOOR_V3_7] =
+    /** DIY_PRO_INDOOR_V3_3 */
+    [DIY_PRO_INDOOR_V3_3] =
         {
             .SenseAirS8 =
                 {
@@ -394,7 +394,7 @@ const BoardDef bsps[_BOARD_MAX] = {
                     .resetPin = -1,
                     .supported = false,
                 },
-            .name = "DIY_PRO_INDOOR_V3_7",
+            .name = "DIY_PRO_INDOOR_V3_3",
         },
 };
 

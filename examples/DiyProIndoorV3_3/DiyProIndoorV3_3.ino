@@ -53,7 +53,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000) /** ms */
 
-static AirGradient ag(DIY_PRO_INDOOR_V3_7);
+static AirGradient ag(DIY_PRO_INDOOR_V3_3);
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
 static Measurements measurements;

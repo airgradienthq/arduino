@@ -153,10 +153,10 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
-  if (ag->isOne) {
+  if (ag->isOne()) {
     jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
   }
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2() || ag->isBasic()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2() || ag->isBasic()) {
     jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
   }
   if (ag->isOne()) {

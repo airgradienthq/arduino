@@ -90,7 +90,7 @@ bool OledDisplay::begin(void) {
     return true;
   }
 
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     /** Create u8g2 instance */
     u8g2 = new U8G2_SH1106_128X64_NONAME_F_HW_I2C(U8G2_R0, U8X8_PIN_NONE);
     if (u8g2 == NULL) {
@@ -133,7 +133,7 @@ void OledDisplay::end(void) {
     return;
   }
 
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     /** Free u8g2 */
     delete DISP();
     u8g2 = NULL;
@@ -169,7 +169,7 @@ void OledDisplay::setText(const char *line1, const char *line2,
     return;
   }
 
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
@@ -218,7 +218,7 @@ void OledDisplay::setText(const char *line1, const char *line2,
     return;
   }
 
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
@@ -255,7 +255,7 @@ void OledDisplay::showDashboard(const char *status) {
   }
 
   char strBuf[16];
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
@@ -389,7 +389,7 @@ void OledDisplay::showDashboard(const char *status) {
 }
 
 void OledDisplay::setBrightness(int percent) {
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     if (percent == 0) {
       isDisplayOff = true;
 
@@ -493,7 +493,7 @@ void OledDisplay::showFirmwareUpdateUpToDate(void) {
 #endif
 
 void OledDisplay::showRebooting(void) {
-  if (ag->isOne() || ag->isPro3_7() || ag->isPro4_2()) {
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);

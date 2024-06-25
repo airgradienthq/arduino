@@ -62,8 +62,8 @@ bool AirGradient::isPro4_2(void) {
   return boardType == BoardType::DIY_PRO_INDOOR_V4_2;
 }
 
-bool AirGradient::isPro3_7(void) { 
-  return boardType == BoardType::DIY_PRO_INDOOR_V3_7;
+bool AirGradient::isPro3_3(void) { 
+  return boardType == BoardType::DIY_PRO_INDOOR_V3_3;
 }
 
 bool AirGradient::isBasic(void) { return boardType == BoardType::DIY_BASIC; }
