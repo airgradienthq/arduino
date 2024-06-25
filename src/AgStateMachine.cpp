@@ -247,8 +247,8 @@ void StateMachine::co2Calibration(void) {
         logInfo("CO2 Calibration: success");
       }
       delay(1000);
-      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
-        disp.setText("Wait for", "calib finish", "...");
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+        disp.setText("Wait for", "calib done", "...");
       } else {
         logInfo("CO2 Calibration: Wait for calibration finish...");
       }
@@ -259,9 +259,9 @@ void StateMachine::co2Calibration(void) {
         delay(1000);
         count++;
       }
-      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
         String str = "after " + String(count);
-        disp.setText("Calib finish", str.c_str(), "sec");
+        disp.setText("Calib done", str.c_str(), "sec");
       } else {
         logInfo("CO2 Calibration: finish after " + String(count) + " sec");
       }
@@ -269,10 +269,9 @@ void StateMachine::co2Calibration(void) {
     } else {
       if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
         disp.setText("Calibration", "failure!!!", "");
-      } else if(ag->isBasic()) {
+      } else if (ag->isBasic()) {
         disp.setText("CO2 calib", "failure!!!", "");
-      }
-      else {
+      } else {
         logInfo("CO2 Calibration: failure!!!");
       }
       delay(2000);
