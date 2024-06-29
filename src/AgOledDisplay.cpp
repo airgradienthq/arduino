@@ -1,5 +1,99 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
+#ifdef ESP32
+#include "WiFi.h"
+#else 
+#include "ESP8266WiFi.h"
+#endif
+
+typedef struct {
+  const int width;
+  const int height;
+  const unsigned char* icon;
+} xbm_icon_t;
+
+/** WiFi ICON */
+enum {
+  WIFI_ICON_ISSUE,
+  WIFI_ICON_25,
+  WIFI_ICON_50,
+  WIFI_ICON_75,
+  WIFI_ICON_100,
+  WIFI_ICON_MAX
+};
+
+#define wifi_100_width 14
+#define wifi_100_height 11
+const unsigned char wifi_100_bits[] = {
+    0xf8, 0xc7, 0xfe, 0xdf, 0x07, 0xf8, 0xf1, 0xe3, 0xfc, 0xcf, 0x0c,
+    0xcc, 0xe0, 0xc1, 0xf0, 0xc3, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+#define wifi_75_width 14
+#define wifi_75_height 11
+const unsigned char wifi_75_bits[] = {
+    0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0xf0, 0xc3, 0xfc, 0xcf, 0x0c,
+    0xcc, 0xe0, 0xc1, 0xf0, 0xc3, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+#define wifi_50_width 14
+#define wifi_50_height 11
+const unsigned char wifi_50_bits[] = {
+    0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00,
+    0xc0, 0xe0, 0xc1, 0xf0, 0xc3, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+#define wifi_25_width 14
+#define wifi_25_height 11
+const unsigned char wifi_25_bits[] = {
+    0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00,
+    0xc0, 0x00, 0xc0, 0x00, 0xc0, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+#define wifi_issue_width 14
+#define wifi_issue_height 11
+const unsigned char wifi_issue_bits[] = {
+    0xd8, 0xc6, 0xde, 0xde, 0xc7, 0xf8, 0xd1, 0xe2, 0xdc, 0xce, 0xcc,
+    0xcc, 0xc0, 0xc0, 0xd0, 0xc2, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+const xbm_icon_t wifi_icons[] = {
+  [WIFI_ICON_ISSUE] = {.width = wifi_issue_width, .height = wifi_issue_height, .icon = wifi_issue_bits},
+  [WIFI_ICON_25] = {.width = wifi_25_width, .height = wifi_25_height, .icon = wifi_25_bits},
+  [WIFI_ICON_50] = {.width = wifi_50_width, .height = wifi_50_height, .icon = wifi_50_bits},
+  [WIFI_ICON_75] = {.width = wifi_75_width, .height = wifi_75_height, .icon = wifi_75_bits},
+  [WIFI_ICON_100] = {.width = wifi_100_width, .height = wifi_100_height, .icon = wifi_100_bits},
+};
+
+/** Cloud ICON */
+enum
+{
+  CLOUD_ICON_NORMAL,
+  CLOUD_ICON_ISSUE,
+  CLOUD_ICON_MAX, 
+};
+
+#define cloud_issue_width 14
+#define cloud_issue_height 11
+const unsigned char cloud_issue_bits[] = {
+    0x70, 0xc0, 0x88, 0xc0, 0x04, 0xc1, 0x04, 0xcf, 0x02, 0xd0, 0x01,
+    0xe0, 0x01, 0xe0, 0x01, 0xe0, 0xa2, 0xd0, 0x4c, 0xce, 0xa0, 0xc0};
+
+#define cloud_normal_width 14
+#define cloud_normal_height 11
+const unsigned char cloud_normal_bits[] = {
+    0x70, 0xc0, 0x88, 0xc0, 0x04, 0xc1, 0x04, 0xcf, 0x02, 0xd0, 0x01,
+    0xe0, 0x01, 0xe0, 0x01, 0xe0, 0x02, 0xd0, 0xfc, 0xcf, 0x00, 0xc0};
+
+const xbm_icon_t cloud_icons[] = {
+  [CLOUD_ICON_NORMAL] = {.width = cloud_normal_width, .height = cloud_normal_height, .icon = cloud_normal_bits},
+  [CLOUD_ICON_ISSUE] = {.width = cloud_issue_width, .height = cloud_issue_height, .icon = cloud_issue_bits},
+};
+
+#define offline_width  14
+#define offline_height 11
+static unsigned char offline_bits[] = {
+ 0xe9,0xc7,0xe6,0xdf,0x06,0xf8,0xe9,0xe3,0xe0,0xcf,0x0c,0xcc,
+ 0xe0,0xc1,0xf0,0xc3,0x00,0xc0,0xc0,0xc0,0xc0,0xc0};
+
+ const xbm_icon_t offline_icon[] = {
+  {.width = offline_width, .height = offline_height, .icon = offline_bits},
+ };
 
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
@@ -58,6 +152,10 @@ void OledDisplay::setCentralText(int y, const char *text) {
   DISP()->drawStr(x, y, text);
 }
 
+void OledDisplay::showIcon(int x, int y, const void* ico) {
+  xbm_icon_t* icon = (xbm_icon_t*)ico;
+  DISP()->drawXBM(x, y, icon->width, icon->height, icon->icon);
+}
 
 /**
  * @brief Construct a new Ag Oled Display:: Ag Oled Display object
@@ -67,7 +165,7 @@ void OledDisplay::setCentralText(int y, const char *text) {
  * @param log Serial Stream
  */
 OledDisplay::OledDisplay(Configuration &config, Measurements &value, Stream &log)
-    : PrintLog(log, "OledDisplay"), config(config), value(value) {}
+    : PrintLog(log, "OledDisplay"), config(config), value(value){}
 
 /**
  * @brief Set AirGradient instance
@@ -207,36 +305,65 @@ void OledDisplay::setText(const char *line1, const char *line2,
  * @brief Update dashboard content
  * 
  */
-void OledDisplay::showDashboard(void) { showDashboard(NULL); }
+void OledDisplay::showDashboard(void) { showDashboard(DashBoardStatusNone); }
 
 /**
  * @brief Update dashboard content and error status
  * 
  */
-void OledDisplay::showDashboard(const char *status) {
+void OledDisplay::showDashboard(OledDisplay::DashboardStatus status) {
   if (isDisplayOff) {
     return;
   }
 
   char strBuf[10];
+  const int icon_pos_x = 64;
 
   DISP()->firstPage();
   do {
     DISP()->setFont(u8g2_font_t0_16_tf);
-    if ((status == NULL) || (strlen(status) == 0)) {
-      showTempHum(false);
-    } else {
-      String strStatus = "Show status: " + String(status);
-      logInfo(strStatus);
-
-      int strWidth = DISP()->getStrWidth(status);
-      DISP()->drawStr((DISP()->getWidth() - strWidth) / 2, 10, status);
-
-      /** Show WiFi NA*/
-      if (strcmp(status, "WiFi N/A") == 0) {
-        DISP()->setFont(u8g2_font_t0_12_tf);
-        showTempHum(true);
+    switch (status) {
+    case DashBoardStatusNone: {
+      int rssi = WiFi.RSSI();
+      int icon_type = WIFI_ICON_25;
+      if (rssi > -40) {
+        icon_type = WIFI_ICON_100;
+      } else if (rssi > -67) {
+        icon_type = WIFI_ICON_75;
+      } else if (rssi > -70) {
+        icon_type = WIFI_ICON_50;
+      } else {
+        icon_type = WIFI_ICON_25;
       }
+      showIcon(icon_pos_x, 0, &wifi_icons[icon_type]);
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusWiFiIssue: {
+      showIcon(icon_pos_x, 0, &wifi_icons[WIFI_ICON_ISSUE]);
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusServerIssue: {
+      showIcon(icon_pos_x, 0, &cloud_icons[CLOUD_ICON_ISSUE]);
+      showTempHum(false);
+      break;
+    }
+    case DashBoardStatusAddToDashboard: {
+      setCentralText(10, "Add To Dashboard");
+      break;
+    }
+    case DashBoardStatusDeviceId: {
+      setCentralText(10, ag->deviceId().c_str());
+      break;
+    }
+    case DashBoardStatusOfflineMode: {
+      showIcon(icon_pos_x, 0, &offline_icon[0]);
+      showTempHum(true);
+      break;
+    }
+    default:
+      break;
     }
 
     /** Draw horizonal line */
