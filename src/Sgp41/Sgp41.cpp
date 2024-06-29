@@ -104,6 +104,8 @@ void Sgp41::handle(void) {
     } else {
       uint16_t srawVoc, srawNox;
       if (getRawSignal(srawVoc, srawNox)) {
+        tvocRaw = srawVoc;
+        noxRaw = srawNox;
         nox = noxAlgorithm()->process(srawNox);
         tvoc = vocAlgorithm()->process(srawVoc);
         // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);

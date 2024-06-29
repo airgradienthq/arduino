@@ -36,12 +36,16 @@ public:
   void showDashboard(void);
   void showDashboard(const char *status);
   void setBrightness(int percent);
+#ifdef ESP32
   void showFirmwareUpdateVersion(String version);
   void showFirmwareUpdateProgress(int percent);
   void showFirmwareUpdateSuccess(int count);
   void showFirmwareUpdateFailed(void);
   void showFirmwareUpdateSkipped(void);
   void showFirmwareUpdateUpToDate(void);
+#else
+
+#endif
   void showRebooting(void);
 };
 

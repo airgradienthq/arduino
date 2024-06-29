@@ -135,6 +135,29 @@ public:
   bool isOne(void);
 
   /**
+   * @brief Check that Airgradient object is DIY_PRO 4.2 indoor
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isPro4_2(void);
+  /**
+   * @brief Check that Airgradient object is DIY_PRO 3.7 indoor
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isPro3_3(void);
+
+  /**
+   * @brief Check that Airgradient object is DIY_BASIC
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isBasic(void);
+
+  /**
    * @brief Get device Id
    *
    * @return String
