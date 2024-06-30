@@ -43,7 +43,7 @@ JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(offlineMode);
 
 #define jprop_model_default                 ""
-#define jprop_country_default               ""
+#define jprop_country_default               "TH"
 #define jprop_pmStandard_default            getPMStandardString(false)
 #define jprop_ledBarMode_default            getLedBarModeName(LedBarMode::LedBarModeCO2)
 #define jprop_abcDays_default               8
@@ -153,9 +153,15 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
-  jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
-  jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
-  jconfig[jprop_ledBarMode] = jprop_ledBarBrightness_default;
+  if (ag->isOne()) {
+    jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
+  }
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2() || ag->isBasic()) {
+    jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
+  }
+  if (ag->isOne()) {
+    jconfig[jprop_ledBarMode] = jprop_ledBarBrightness_default;
+  }
   jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
@@ -235,7 +241,10 @@ bool Configuration::parse(String data, bool isLocal) {
   bool changed = false;
 
   /** Get ConfigurationControl */
-  String lasCtrl = jconfig[jprop_configurationControl];
+  String lastCtrl = jconfig[jprop_configurationControl];
+  const char *msg = "Monitor set to accept only configuration from the "
+                    "cloud. Use property configurationControl to change.";
+
   if (isLocal) {
     if (JSON.typeof_(root[jprop_configurationControl]) == "string") {
       String ctrl = root[jprop_configurationControl];
@@ -248,9 +257,19 @@ bool Configuration::parse(String data, bool isLocal) {
           ctrl ==
               String(CONFIGURATION_CONTROL_NAME
                          [ConfigurationControl::ConfigurationControlCloud])) {
-        if (ctrl != lasCtrl) {
+        if (ctrl != lastCtrl) {
           jconfig[jprop_configurationControl] = ctrl;
-          changed = true;
+          saveConfig();
+          configLogInfo(String(jprop_configurationControl), lastCtrl,
+                        jconfig[jprop_configurationControl]);
+        }
+
+        /** Check to return result if configurationControl is 'cloud' */
+        if (ctrl ==
+            String(CONFIGURATION_CONTROL_NAME
+                       [ConfigurationControl::ConfigurationControlCloud])) {
+          failedMessage = String(msg);
+          return true;
         }
       } else {
         failedMessage =
@@ -267,18 +286,11 @@ bool Configuration::parse(String data, bool isLocal) {
       }
     }
 
-    if (changed) {
-      changed = false;
-      saveConfig();
-      configLogInfo(String(jprop_configurationControl), lasCtrl,
-                    jconfig[jprop_configurationControl]);
-    }
-
+    /** Ignore all configuration value if 'configurationControl' is 'cloud' */
     if (jconfig[jprop_configurationControl] ==
         String(CONFIGURATION_CONTROL_NAME
                    [ConfigurationControl::ConfigurationControlCloud])) {
-      failedMessage = "Monitor set to accept only configuration from the "
-                      "cloud. Use property configurationControl to change.";
+      failedMessage = String(msg);
       jsonInvalid();
       return false;
     }
@@ -614,15 +626,18 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
-  if (JSON.typeof_(root["targetFirmware"]) == "string") {
-    String newVer = root["targetFirmware"];
-    String curVer = String(GIT_VERSION);
-    if (curVer != newVer) {
-      logInfo("Detected new firmware version: " + newVer);
-      otaNewFirmwareVersion = newVer;
-      udpated = true;
-    } else {
-      otaNewFirmwareVersion = String("");
+  if (ag->getBoardType() == ONE_INDOOR ||
+      ag->getBoardType() == OPEN_AIR_OUTDOOR) {
+    if (JSON.typeof_(root["targetFirmware"]) == "string") {
+      String newVer = root["targetFirmware"];
+      String curVer = String(GIT_VERSION);
+      if (curVer != newVer) {
+        logInfo("Detected new firmware version: " + newVer);
+        otaNewFirmwareVersion = newVer;
+        udpated = true;
+      } else {
+        otaNewFirmwareVersion = String("");
+      }
     }
   }
 

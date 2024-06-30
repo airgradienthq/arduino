@@ -221,8 +221,11 @@ void setup() {
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOne()) {
             if (apiClient.isNotAvailableOnDashboard()) {
+              stateMachine.displaySetAddToDashBoard();
               stateMachine.displayHandle(
                   AgStateMachineWiFiOkServerOkSensorConfigFailed);
+            } else {
+              stateMachine.displayClearAddToDashBoard();
             }
           }
           stateMachine.handleLeds(
@@ -949,7 +952,6 @@ static void appLedHandler(void) {
     if (wifiConnector.isConnected() == false) {
       state = AgStateMachineWiFiLost;
     } else if (apiClient.isFetchConfigureFailed()) {
-      stateMachine.displaySetAddToDashBoard();
       state = AgStateMachineSensorConfigFailed;
     } else if (apiClient.isPostToServerFailed()) {
       state = AgStateMachineServerLost;
@@ -969,6 +971,11 @@ static void appDispHandler(void) {
         state = AgStateMachineWiFiLost;
       } else if (apiClient.isFetchConfigureFailed()) {
         state = AgStateMachineSensorConfigFailed;
+        if (apiClient.isNotAvailableOnDashboard()) {
+          stateMachine.displaySetAddToDashBoard();
+        } else {
+          stateMachine.displayClearAddToDashBoard();
+        }
       } else if (apiClient.isPostToServerFailed()) {
         state = AgStateMachineServerLost;
       }

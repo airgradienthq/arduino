@@ -1,5 +1,5 @@
 /*
-This is the code for the AirGradient DIY BASIC Air Quality Monitor with an D1
+This is the code for the AirGradient DIY PRO 3.3 Air Quality Monitor with an D1
 ESP8266 Microcontroller.
 
 It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
@@ -53,7 +53,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000) /** ms */
 
-static AirGradient ag(DIY_BASIC);
+static AirGradient ag(DIY_PRO_INDOOR_V3_3);
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
 static Measurements measurements;
@@ -70,7 +70,7 @@ static MqttClient mqttClient(Serial);
 
 static int pmFailCount = 0;
 static int getCO2FailCount = 0;
-static AgFirmwareMode fwMode = FW_MODE_I_BASIC_40PS;
+static AgFirmwareMode fwMode = FW_MODE_I_33PS;
 
 static String fwNewVersion;
 
@@ -172,9 +172,7 @@ void setup() {
   }
 
   /** Show display Warning up */
-  String sn = "SN:" + ag.deviceId();
-  oledDisplay.setText("Warming Up", sn.c_str(), "");
-
+  oledDisplay.setText("Warming Up", "Serial Number:", ag.deviceId().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   Serial.println("Display brightness: " +
@@ -271,6 +269,65 @@ static void initMqtt(void) {
   }
 }
 
+static void factoryConfigReset(void) {
+#if 0
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    if (factoryBtnPressTime == 0) {
+      factoryBtnPressTime = millis();
+    } else {
+      uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
+      if (ms >= 2000) {
+        // Show display message: For factory keep for x seconds
+        if (ag.isOne() || ag.isPro4_2()) {
+          oledDisplay.setText("Factory reset", "keep pressed", "for 8 sec");
+        } else {
+          Serial.println("Factory reset, keep pressed for 8 sec");
+        }
+
+        int count = 7;
+        while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+          delay(1000);
+          String str = "for " + String(count) + " sec";
+          oledDisplay.setText("Factory reset", "keep pressed", str.c_str());
+
+          count--;
+          if (count == 0) {
+            /** Stop MQTT task first */
+            // if (mqttTask) {
+            //   vTaskDelete(mqttTask);
+            //   mqttTask = NULL;
+            // }
+
+            /** Reset WIFI */
+            // WiFi.enableSTA(true); // Incase offline mode
+            // WiFi.disconnect(true, true);
+            wifiConnector.reset();
+
+            /** Reset local config */
+            configuration.reset();
+
+            oledDisplay.setText("Factory reset", "successful", "");
+
+            delay(3000);
+            oledDisplay.setText("", "", "");
+            ESP.restart();
+          }
+        }
+
+        /** Show current content cause reset ignore */
+        factoryBtnPressTime = 0;
+        appDispHandler();
+      }
+    }
+  } else {
+    if (factoryBtnPressTime != 0) {
+      appDispHandler();
+    }
+    factoryBtnPressTime = 0;
+  }
+#endif
+}
+
 static void wdgFeedUpdate(void) {
   ag.watchdog.reset();
   Serial.println();
@@ -335,7 +392,8 @@ static void sendDataToAg() {
 }
 
 void dispSensorNotFound(String ss) {
-  oledDisplay.setText("Sensor", ss.c_str(), "not found");
+  ss = ss + " not found";
+  oledDisplay.setText("Sensor init", "Error:", ss.c_str());
   delay(2000);
 }
 
@@ -346,25 +404,19 @@ static void boardInit(void) {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
 
-  if (ag.isBasic()) {
-    oledDisplay.setText("DIY Basic", ag.getVersion().c_str(), "");
-  } else {
-    oledDisplay.setText("AirGradient ONE",
-                        "FW Version: ", ag.getVersion().c_str());
-  }
-
+  oledDisplay.setText("AirGradient ONE",
+                      "FW Version: ", ag.getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   ag.watchdog.begin();
 
   /** Show message init sensor */
-  oledDisplay.setText("Sensor", "init...", "");
+  oledDisplay.setText("Sensor", "initializing...", "");
 
   /** Init sensor SGP41 */
-  configuration.hasSensorSGP = false;
-  // if (sgp41Init() == false) {
-  //   dispSensorNotFound("SGP41");
-  // }
+  if (sgp41Init() == false) {
+    dispSensorNotFound("SGP41");
+  }
 
   /** Init SHT */
   if (ag.sht.begin(Wire) == false) {
@@ -399,7 +451,7 @@ static void boardInit(void) {
     }
   }
 
-  localServer.setFwMode(fwMode);
+  localServer.setFwMode(FW_MODE_I_33PS);
 }
 
 static void failedHandler(String msg) {

@@ -21,6 +21,7 @@ enum BoardType {
   DIY_PRO_INDOOR_V4_2 = 0x01,
   ONE_INDOOR = 0x02,
   OPEN_AIR_OUTDOOR = 0x03,
+  DIY_PRO_INDOOR_V3_3 = 0x04,
   _BOARD_MAX
 };
 

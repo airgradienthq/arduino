@@ -1,5 +1,5 @@
 /*
-This is the code for the AirGradient DIY BASIC Air Quality Monitor with an D1
+This is the code for the AirGradient DIY PRO 4.2 Air Quality Monitor with an D1
 ESP8266 Microcontroller.
 
 It is an air quality monitor for PM2.5, CO2, Temperature and Humidity with a
@@ -53,7 +53,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000) /** ms */
 
-static AirGradient ag(DIY_BASIC);
+static AirGradient ag(DIY_PRO_INDOOR_V4_2);
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
 static Measurements measurements;
@@ -69,8 +69,9 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
 static MqttClient mqttClient(Serial);
 
 static int pmFailCount = 0;
+static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
-static AgFirmwareMode fwMode = FW_MODE_I_BASIC_40PS;
+static AgFirmwareMode fwMode = FW_MODE_I_42PS;
 
 static String fwNewVersion;
 
@@ -132,7 +133,33 @@ void setup() {
   /** Connecting wifi */
   bool connectToWifi = false;
 
+  /** Show message confirm offline mode, should me perform if LED bar button
+   * test pressed */
+
+  oledDisplay.setText(
+      "Press now for",
+      configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+  uint32_t startTime = millis();
+  while (true) {
+    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+      configuration.setOfflineMode(!configuration.isOfflineMode());
+
+      oledDisplay.setText(
+          "Offline Mode",
+          configuration.isOfflineMode() ? " = True" : "  = False", "");
+      delay(1000);
+      break;
+    }
+    uint32_t periodMs = (uint32_t)(millis() - startTime);
+    if (periodMs >= 3000) {
+      Serial.println("Set for offline mode timeout");
+      break;
+    }
+
+    delay(1);
+  }
   connectToWifi = !configuration.isOfflineMode();
+
   if (connectToWifi) {
     apiClient.begin();
 
@@ -172,9 +199,7 @@ void setup() {
   }
 
   /** Show display Warning up */
-  String sn = "SN:" + ag.deviceId();
-  oledDisplay.setText("Warming Up", sn.c_str(), "");
-
+  oledDisplay.setText("Warming Up", "Serial Number:", ag.deviceId().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   Serial.println("Display brightness: " +
@@ -214,13 +239,13 @@ void loop() {
   wifiConnector.handle();
 
   /** factory reset handle */
-  // factoryConfigReset();
+  factoryConfigReset();
 
   /** check that local configura changed then do some action */
   configUpdateHandle();
 
   localServer._handle();
-
+  
   if (configuration.hasSensorSGP) {
     ag.sgp41.handle();
   }
@@ -268,6 +293,63 @@ static void initMqtt(void) {
     Serial.println("Setup connect to MQTT broker successful");
   } else {
     Serial.println("setup Connect to MQTT broker failed");
+  }
+}
+
+static void factoryConfigReset(void) {
+  if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+    if (factoryBtnPressTime == 0) {
+      factoryBtnPressTime = millis();
+    } else {
+      uint32_t ms = (uint32_t)(millis() - factoryBtnPressTime);
+      if (ms >= 2000) {
+        // Show display message: For factory keep for x seconds
+        if (ag.isOne() || ag.isPro4_2()) {
+          oledDisplay.setText("Factory reset", "keep pressed", "for 8 sec");
+        } else {
+          Serial.println("Factory reset, keep pressed for 8 sec");
+        }
+
+        int count = 7;
+        while (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+          delay(1000);
+          String str = "for " + String(count) + " sec";
+          oledDisplay.setText("Factory reset", "keep pressed", str.c_str());
+
+          count--;
+          if (count == 0) {
+            /** Stop MQTT task first */
+            // if (mqttTask) {
+            //   vTaskDelete(mqttTask);
+            //   mqttTask = NULL;
+            // }
+
+            /** Reset WIFI */
+            // WiFi.enableSTA(true); // Incase offline mode
+            // WiFi.disconnect(true, true);
+            wifiConnector.reset();
+
+            /** Reset local config */
+            configuration.reset();
+
+            oledDisplay.setText("Factory reset", "successful", "");
+
+            delay(3000);
+            oledDisplay.setText("", "", "");
+            ESP.restart();
+          }
+        }
+
+        /** Show current content cause reset ignore */
+        factoryBtnPressTime = 0;
+        appDispHandler();
+      }
+    }
+  } else {
+    if (factoryBtnPressTime != 0) {
+      appDispHandler();
+    }
+    factoryBtnPressTime = 0;
   }
 }
 
@@ -335,7 +417,8 @@ static void sendDataToAg() {
 }
 
 void dispSensorNotFound(String ss) {
-  oledDisplay.setText("Sensor", ss.c_str(), "not found");
+  ss = ss + " not found";
+  oledDisplay.setText("Sensor init", "Error:", ss.c_str());
   delay(2000);
 }
 
@@ -346,25 +429,36 @@ static void boardInit(void) {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag.getVersion());
 
-  if (ag.isBasic()) {
-    oledDisplay.setText("DIY Basic", ag.getVersion().c_str(), "");
-  } else {
-    oledDisplay.setText("AirGradient ONE",
-                        "FW Version: ", ag.getVersion().c_str());
-  }
-
+  oledDisplay.setText("AirGradient ONE",
+                      "FW Version: ", ag.getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
+  ag.button.begin();
   ag.watchdog.begin();
 
+  /** Run LED test on start up if button pressed */
+  oledDisplay.setText("Press now for", "factory WiFi", "configure");
+
+  uint32_t stime = millis();
+  while (true) {
+    if (ag.button.getState() == ag.button.BUTTON_PRESSED) {
+      wifiFactoryConfigure();
+    }
+    delay(1);
+    uint32_t ms = (uint32_t)(millis() - stime);
+    if (ms >= 3000) {
+      break;
+    }
+    delay(1);
+  }
+
   /** Show message init sensor */
-  oledDisplay.setText("Sensor", "init...", "");
+  oledDisplay.setText("Sensor", "initializing...", "");
 
   /** Init sensor SGP41 */
-  configuration.hasSensorSGP = false;
-  // if (sgp41Init() == false) {
-  //   dispSensorNotFound("SGP41");
-  // }
+  if (sgp41Init() == false) {
+    dispSensorNotFound("SGP41");
+  }
 
   /** Init SHT */
   if (ag.sht.begin(Wire) == false) {
@@ -399,7 +493,7 @@ static void boardInit(void) {
     }
   }
 
-  localServer.setFwMode(fwMode);
+  localServer.setFwMode(FW_MODE_I_42PS);
 }
 
 static void failedHandler(String msg) {
@@ -482,8 +576,9 @@ static void appDispHandler(void) {
 }
 
 static void oledDisplaySchedule(void) {
-
-  appDispHandler();
+  if (factoryBtnPressTime == 0) {
+    appDispHandler();
+  }
 }
 
 static void updateTvoc(void) {
