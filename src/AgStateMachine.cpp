@@ -9,9 +9,9 @@
 
 #define RGB_COLOR_R 255, 0, 0    /** Red */
 #define RGB_COLOR_G 0, 255, 0    /** Green */
-#define RGB_COLOR_Y 255, 255, 0  /** Yellow */
-#define RGB_COLOR_O 255, 165, 0  /** Organge */
-#define RGB_COLOR_P 160, 32, 240 /** Purple */
+#define RGB_COLOR_Y 255, 150, 0  /** Yellow */
+#define RGB_COLOR_O 255, 40, 0  /** Organge */
+#define RGB_COLOR_P 180, 0, 255 /** Purple */
 
 /**
  * @brief Animation LED bar with color
