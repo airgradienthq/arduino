@@ -330,7 +330,7 @@ void OledDisplay::showDashboard(const char *status) {
 
       /** Draw tvocIndexlabel */
       DISP()->setFont(u8g2_font_t0_12_tf);
-      DISP()->drawStr(85, 27, "tvoc:");
+      DISP()->drawStr(85, 27, "VOC:");
 
       /** Draw tvocIndexvalue */
       if (value.TVOC >= 0) {
