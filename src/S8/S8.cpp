@@ -1,5 +1,6 @@
 #include "S8.h"
 #include "mb_crc.h"
+#include "../Main/utils.h"
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
 #else
@@ -245,7 +246,7 @@ int16_t S8::getCo2(void) {
     AgLog("Error getting CO2 value!");
   }
 
-  return co2;
+  return utils::correctCO2(co2);
 }
 
 /**
