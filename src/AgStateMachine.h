@@ -27,6 +27,7 @@ private:
   void sensorhandleLeds(void);
   void co2handleLeds(void);
   void pm25handleLeds(void);
+  void hybridhandleLeds(void);
   void co2Calibration(void);
   void ledBarTest(void);
   void ledBarPowerUpTest(void);

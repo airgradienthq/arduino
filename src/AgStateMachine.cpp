@@ -57,9 +57,38 @@ void StateMachine::sensorhandleLeds(void) {
   case LedBarMode::LedBarModePm:
     pm25handleLeds();
     break;
+  case LedBarMode::LedBarModeHybrid:
+    hybridhandleLeds();
+    break;
   default:
     ag->ledBar.clear();
     break;
+  }
+}
+
+/**
+ * @brief Calculate CO2 LED level
+ *
+ */
+static int getCo2LedLevel(const int co2Value) {
+  if (co2Value <= 600) {
+    return 1;
+  } else if (co2Value <= 800) {
+    return 2;
+  } else if (co2Value <= 1000) {
+    return 3;
+  } else if (co2Value <= 1250) {
+    return 4;
+  } else if (co2Value <= 1500) {
+    return 5;
+  } else if (co2Value <= 1750) {
+    return 6;
+  } else if (co2Value <= 2000) {
+    return 7;
+  } else if (co2Value <= 3000) {
+    return 8;
+  } else { /** > 3000 */
+    return 9;
   }
 }
 
@@ -68,33 +97,38 @@ void StateMachine::sensorhandleLeds(void) {
  *
  */
 void StateMachine::co2handleLeds(void) {
-  int co2Value = value.CO2;
-  if (co2Value <= 600) {
+  switch (getCo2LedLevel(value.CO2)) {
+  case 1:
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (co2Value <= 800) {
+    break;
+  case 2:
     /** GG; 2 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
-  } else if (co2Value <= 1000) {
+    break;
+  case 3:
     /** YYY; 3 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (co2Value <= 1250) {
+    break;
+  case 4:
     /** OOOO; 4 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (co2Value <= 1500) {
+    break;
+  case 5:
     /** OOOOO; 5 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (co2Value <= 1750) {
+    break;
+  case 6:
     /** RRRRRR; 6 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -102,7 +136,8 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (co2Value <= 2000) {
+    break;
+  case 7:
     /** RRRRRRR; 7 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -111,7 +146,8 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (co2Value <= 3000) {
+    break;
+  case 8:
     /** PPPPPPPP; 8 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
@@ -121,7 +157,8 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
-  } else { /** > 3000 */
+    break;
+  default:
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -136,37 +173,70 @@ void StateMachine::co2handleLeds(void) {
 }
 
 /**
+ * @brief Calculate PM2.5 LED level
+ *
+ */
+static int getPm25LedLevel(const int pm25Value) {
+  if (pm25Value < 5) {
+    return 1;
+  } else if (pm25Value < 10) {
+    return 2;
+  } else if (pm25Value < 20) {
+    return 3;
+  } else if (pm25Value < 35) {
+    return 4;
+  } else if (pm25Value < 45) {
+    return 5;
+  } else if (pm25Value < 55) {
+    return 6;
+  } else if (pm25Value < 100) {
+    return 7;
+  } else if (pm25Value < 200) {
+    return 8;
+  } else if (pm25Value < 250) {
+    return 9;
+  } else { /** > 250 */
+   return 10;
+  }
+}
+
+/**
  * @brief Show PM2.5 LED status
  *
  */
 void StateMachine::pm25handleLeds(void) {
-  int pm25Value = value.pm25_1;
-  if (pm25Value < 5) {
+  switch (getPm25LedLevel(value.pm25_1)) {
+  case 1:
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (pm25Value < 10) {
+    break;
+  case 2:
     /** GG; 2 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
-  } else if (pm25Value < 20) {
+    break;
+  case 3:
     /** YYY; 3 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
-  } else if (pm25Value < 35) {
+    break;
+  case 4:
     /** YYYY; 4 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
-  } else if (pm25Value < 45) {
+    break;
+  case 5:
     /** OOOOO; 5 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
-  } else if (pm25Value < 55) {
+    break;
+  case 6:
     /** OOOOOO; 6 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 2);
@@ -174,7 +244,8 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 6);
-  } else if (pm25Value < 100) {
+    break;
+  case 7:
     /** RRRRRRR; 7 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -183,7 +254,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (pm25Value < 200) {
+  case 8:
     /** RRRRRRRR; 8 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -193,7 +264,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (pm25Value < 250) {
+  case 9:
     /** PPPPPPPPP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
@@ -204,7 +275,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
-  } else { /** > 250 */
+  case 10:
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -215,6 +286,14 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
+  }
+}
+
+void StateMachine::hybridhandleLeds(void) {
+  if (getPm25LedLevel(value.pm25_1) > getCo2LedLevel(value.CO2)) {
+    pm25handleLeds();
+  } else {
+    co2handleLeds();
   }
 }
 

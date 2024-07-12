@@ -81,6 +81,9 @@ enum LedBarMode {
 
   /** Use LED bar for show CO2 value level */
   LedBarModeCO2,
+
+  /** Use LED bar for show combined (CO2 and PM2.5) value level display, showing the worst value */
+  LedBarModeHybrid,
 };
 
 enum ConfigurationControl {
