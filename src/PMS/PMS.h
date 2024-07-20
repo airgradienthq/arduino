@@ -26,6 +26,7 @@ public:
   /** For PMS5003T*/
   uint16_t getTemp(void);
   uint16_t getHum(void);
+  uint8_t getFirmwareVersion(void); 
 
   int pm25ToAQI(int pm02);
 

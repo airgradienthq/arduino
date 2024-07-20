@@ -102,7 +102,7 @@ bool PMS5003T::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -160,6 +160,13 @@ float PMS5003T::getTemperature(void) {
 float PMS5003T::getRelativeHumidity(void) {
   return pms.getHum()/10.0f;
 }
+
+/**
+ * @brief Get module(s) firmware version
+ * 
+ * @return int Version code
+ */
+int PMS5003T::getFirmwareVersion(void) { return _ver; }
 
 /**
  * @brief Check device initialized or not

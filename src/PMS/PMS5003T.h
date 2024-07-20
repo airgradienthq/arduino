@@ -29,10 +29,12 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
+  int getFirmwareVersion(void);
 
 private:
   bool _isBegin = false;
   bool _isSleep = false;
+  int _ver;   /** Firmware version code */
 
   BoardType _boardDef;
   const BoardDef *bsp;
