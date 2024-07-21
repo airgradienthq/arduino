@@ -162,6 +162,17 @@ float PMS5003T::getRelativeHumidity(void) {
 }
 
 /**
+ * @brief Correct PM2.5
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param humidity Humidity value
+ * @return float 
+ */
+float PMS5003T::pm25Compensated(int pm25, float humidity) {
+  return pms.pm25Compensated(pm25, humidity);
+}
+
+/**
  * @brief Check device initialized or not
  *
  * @return true Initialized

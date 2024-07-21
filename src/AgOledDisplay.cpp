@@ -10,7 +10,7 @@
  * @param hasStatus
  */
 void OledDisplay::showTempHum(bool hasStatus) {
-  char buf[10];
+  char buf[16];
   if (value.Temperature > -1001) {
     if (config.isTemperatureUnitInF()) {
       float tempF = (value.Temperature * 9) / 5 + 32;
@@ -307,10 +307,14 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(48, 27, "PM2.5");
 
       /** Draw PM2.5 value */
+      int pm25 = value.pm25_1;
+      if (config.hasSensorSHT) {
+        pm25 = ag->pms5003.pm25Compensated(pm25, value.Humidity);
+      }
       DISP()->setFont(u8g2_font_t0_22b_tf);
       if (config.isPmStandardInUSAQI()) {
         if (value.pm25_1 >= 0) {
-          sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.pm25_1));
+          sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
           sprintf(strBuf, "%s", "-");
         }
@@ -319,7 +323,7 @@ void OledDisplay::showDashboard(const char *status) {
         DISP()->drawUTF8(48, 61, "AQI");
       } else {
         if (value.pm25_1 >= 0) {
-          sprintf(strBuf, "%d", value.pm25_1);
+          sprintf(strBuf, "%d", pm25);
         } else {
           sprintf(strBuf, "%s", "-");
         }
@@ -358,8 +362,12 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setText(strBuf);
 
     /** Set PM */
+    int pm25 = value.pm25_1;
+    if(config.hasSensorSHT) {
+      pm25 = (int)ag->pms5003.pm25Compensated(pm25, value.Humidity);
+    }
     ag->display.setCursor(0, 12);
-    snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", value.pm25_1);
+    snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", pm25);
     ag->display.setText(strBuf);
 
     /** Set temperature and humidity */

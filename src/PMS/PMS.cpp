@@ -271,6 +271,41 @@ int PMSBase::pm25ToAQI(int pm02) {
 }
 
 /**
+ * @brief Correction PM2.5
+ * 
+ * @param pm25 Raw PM2.5 value
+ * @param humidity Humidity value (%)
+ * @return float 
+ */
+int PMSBase::pm25Compensated(int pm25, float humidity) {
+  float value;
+  if (humidity < 0) {
+    humidity = 0;
+  }
+  if (humidity > 100) {
+    humidity = 100;
+  }
+
+  if(pm25 < 30) {
+    value = (pm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
+  } else if(pm25 < 50) {
+    value = (0.786f * (pm25 / 20 - 3 / 2) + 0.524f * (1 - (pm25 / 20 - 3 / 2))) * pm25 - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 210) {
+    value = (0.786f * pm25) - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 260) {
+    value = (0.69f * (pm25/50 - 21/5) + 0.786f * (1 - (pm25/50 - 21/5))) * pm25 - (0.0862f * humidity * (1 - (pm25/50 - 21/5))) + (2.966f * (pm25/50 -21/5)) + (5.75f * (1 - (pm25/50 - 21/5))) + (8.84f * (1.e-4) * pm25* (pm25/50 - 21/5));
+  } else {
+    value = 2.966f + (0.69f * pm25) + (8.84f * (1.e-4) * pm25);
+  }
+
+  if(value < 0) {
+    value = 0;
+  }
+
+  return (int)value;
+}
+
+/**
  * @brief   Convert two byte value to uint16_t value
  *
  * @param buf bytes array (must be >= 2)
