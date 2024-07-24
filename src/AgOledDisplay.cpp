@@ -372,9 +372,9 @@ void OledDisplay::showDashboard(const char *status) {
     if (utils::isValidTemperature(value.Temperature)) {
       if (config.isTemperatureUnitInF()) {
         float tempF = (value.Temperature * 9) / 5 + 32;
-        snprintf(strBuf, sizeof(strBuf), "T:%d F", (int)tempF);
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", tempF);
       } else {
-        snprintf(strBuf, sizeof(strBuf), "T:%d C", (int)value.Temperature);
+        snprintf(strBuf, sizeof(strBuf), "T:%0.f1 C", value.Temperature);
       }
     } else {
       if (config.isTemperatureUnitInF()) {
