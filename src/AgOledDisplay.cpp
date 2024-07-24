@@ -299,12 +299,12 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(1, 61, "ppm");
 
       /** Draw vertical line */
-      DISP()->drawLine(45, 14, 45, 64);
-      DISP()->drawLine(82, 14, 82, 64);
+      DISP()->drawLine(52, 14, 52, 64);
+      DISP()->drawLine(97, 14, 97, 64);
 
       /** Draw PM2.5 label */
       DISP()->setFont(u8g2_font_t0_12_tf);
-      DISP()->drawStr(48, 27, "PM2.5");
+      DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
       DISP()->setFont(u8g2_font_t0_22b_tf);
@@ -314,23 +314,23 @@ void OledDisplay::showDashboard(const char *status) {
         } else {
           sprintf(strBuf, "%s", "-");
         }
-        DISP()->drawStr(48, 48, strBuf);
+        DISP()->drawStr(55, 48, strBuf);
         DISP()->setFont(u8g2_font_t0_12_tf);
-        DISP()->drawUTF8(48, 61, "AQI");
+        DISP()->drawUTF8(55, 61, "AQI");
       } else {
         if (value.pm25_1 >= 0) {
           sprintf(strBuf, "%d", value.pm25_1);
         } else {
           sprintf(strBuf, "%s", "-");
         }
-        DISP()->drawStr(48, 48, strBuf);
+        DISP()->drawStr(55, 48, strBuf);
         DISP()->setFont(u8g2_font_t0_12_tf);
-        DISP()->drawUTF8(48, 61, "ug/m³");
+        DISP()->drawUTF8(55, 61, "ug/m³");
       }
 
       /** Draw tvocIndexlabel */
       DISP()->setFont(u8g2_font_t0_12_tf);
-      DISP()->drawStr(85, 27, "tvoc:");
+      DISP()->drawStr(100, 27, "VOC:");
 
       /** Draw tvocIndexvalue */
       if (value.TVOC >= 0) {
@@ -338,16 +338,16 @@ void OledDisplay::showDashboard(const char *status) {
       } else {
         sprintf(strBuf, "%s", "-");
       }
-      DISP()->drawStr(85, 39, strBuf);
+      DISP()->drawStr(100, 39, strBuf);
 
       /** Draw NOx label */
-      DISP()->drawStr(85, 53, "NOx:");
+      DISP()->drawStr(100, 53, "NOx:");
       if (value.NOx >= 0) {
         sprintf(strBuf, "%d", value.NOx);
       } else {
         sprintf(strBuf, "%s", "-");
       }
-      DISP()->drawStr(85, 63, strBuf);
+      DISP()->drawStr(100, 63, strBuf);
     } while (DISP()->nextPage());
   } else if (ag->isBasic()) {
     ag->display.clear();
