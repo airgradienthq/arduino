@@ -10,7 +10,7 @@
 #define RGB_COLOR_R 255, 0, 0    /** Red */
 #define RGB_COLOR_G 0, 255, 0    /** Green */
 #define RGB_COLOR_Y 255, 150, 0  /** Yellow */
-#define RGB_COLOR_O 255, 40, 0  /** Organge */
+#define RGB_COLOR_O 255, 40, 0  /** Orange */
 #define RGB_COLOR_P 180, 0, 255 /** Purple */
 
 /**
@@ -573,7 +573,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiManagerMode: {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
-    /** Turn midle LED Color */
+    /** Turn middle LED Color */
     if (ag->isOne()) {
       ag->ledBar.setColor(0, 0, 255, ag->ledBar.getNumberOfLeds() / 2);
     } else {
@@ -713,7 +713,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     break;
   }
   case AgStateMachineSensorConfigFailed: {
-    /** Server is reachable but there is some conﬁguration issue to be fixed on
+    /** Server is reachable but there is some configuration issue to be fixed on
      * the server side */
     if (ag->isOne()) {
       ag->ledBar.setColor(139, 24, 248, 0);
