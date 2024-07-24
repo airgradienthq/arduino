@@ -104,7 +104,7 @@ void S8::getFirmwareVersion(char firmver[]) {
  */
 int32_t S8::getSensorTypeId(void) {
   if (this->isBegin() == false) {
-    return -1;
+    return utils::getInvalidCO2();
   }
 
   int32_t sensorType = 0;
@@ -246,7 +246,7 @@ int16_t S8::getCo2(void) {
     AgLog("Error getting CO2 value!");
   }
 
-  return utils::correctCO2(co2);
+  return co2;
 }
 
 /**

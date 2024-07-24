@@ -113,21 +113,21 @@ bool PMS5003T::begin(void) {
  *
  * @return int PM1.0 index
  */
-int PMS5003T::getPm01Ae(void) { return utils::correctPMS(pms.getPM0_1()); }
+int PMS5003T::getPm01Ae(void) { return pms.getPM0_1(); }
 
 /**
  * @brief Read PM2.5 must call this function after @ref readData success
  *
  * @return int PM2.5 index
  */
-int PMS5003T::getPm25Ae(void) { return utils::correctPMS(pms.getPM2_5()); }
+int PMS5003T::getPm25Ae(void) { return pms.getPM2_5(); }
 
 /**
  * @brief Read PM10.0 must call this function after @ref readData success
  *
  * @return int PM10.0 index
  */
-int PMS5003T::getPm10Ae(void) { return utils::correctPMS(pms.getPM10()); }
+int PMS5003T::getPm10Ae(void) { return pms.getPM10(); }
 
 /**
  * @brief Read PM 0.3 Count must call this function after @ref readData success
@@ -135,7 +135,7 @@ int PMS5003T::getPm10Ae(void) { return utils::correctPMS(pms.getPM10()); }
  * @return int PM 0.3 Count index
  */
 int PMS5003T::getPm03ParticleCount(void) {
-  return utils::correctPMS(pms.getCount0_3());
+  return pms.getCount0_3();
 }
 
 /**
@@ -152,7 +152,7 @@ int PMS5003T::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
  * @return float Degree Celcius
  */
 float PMS5003T::getTemperature(void) {
-  return utils::correctTemperature(pms.getTemp() / 10.0f);
+  return pms.getTemp() / 10.0f;
 }
 
 /**
@@ -161,7 +161,7 @@ float PMS5003T::getTemperature(void) {
  * @return float Percent (%)
  */
 float PMS5003T::getRelativeHumidity(void) {
-  return utils::correctHumidity(pms.getHum() / 10.0f);
+  return pms.getHum() / 10.0f;
 }
 
 /**

@@ -133,7 +133,7 @@ void Sht::end(void) {
  * @return float
  */
 float Sht::getTemperature(void) {
-  return utils::correctTemperature(shtSensor()->getTemperature());
+  return shtSensor()->getTemperature();
 }
 
 /**
@@ -142,7 +142,7 @@ float Sht::getTemperature(void) {
  * @return float
  */
 float Sht::getRelativeHumidity(void) {
-  return utils::correctHumidity(shtSensor()->getHumidity());
+  return shtSensor()->getHumidity();
 }
 
 /**
