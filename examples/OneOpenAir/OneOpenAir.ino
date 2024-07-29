@@ -317,7 +317,7 @@ void loop() {
 
 static void co2Update(void) {
   int value = ag->s8.getCo2();
-  if (value >= 0) {
+  if (utils::isValidCO2(value)) {
     measurements.CO2 = value;
     getCO2FailCount = 0;
     Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
@@ -325,7 +325,7 @@ static void co2Update(void) {
     getCO2FailCount++;
     Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
     if (getCO2FailCount >= 3) {
-      measurements.CO2 = -1;
+      measurements.CO2 = utils::getInvalidCO2();
     }
   }
 }
@@ -1020,10 +1020,10 @@ static void updatePm(void) {
       pmFailCount++;
       Serial.printf("PMS read failed: %d\r\n", pmFailCount);
       if (pmFailCount >= 3) {
-        measurements.pm01_1 = -1;
-        measurements.pm25_1 = -1;
-        measurements.pm10_1 = -1;
-        measurements.pm03PCount_1 = -1;
+        measurements.pm01_1 = utils::getInvalidPMS();
+        measurements.pm25_1 = utils::getInvalidPMS();
+        measurements.pm10_1 = utils::getInvalidPMS();
+        measurements.pm03PCount_1 = utils::getInvalidPMS();
       }
     }
   } else {
@@ -1051,12 +1051,12 @@ static void updatePm(void) {
       Serial.printf("[1] Relative Humidity compensated: %f\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_1));
     } else {
-      measurements.pm01_1 = -1;
-      measurements.pm25_1 = -1;
-      measurements.pm10_1 = -1;
-      measurements.pm03PCount_1 = -1;
-      measurements.temp_1 = -1001;
-      measurements.hum_1 = -1;
+      measurements.pm01_1 = utils::getInvalidPMS();
+      measurements.pm25_1 = utils::getInvalidPMS();
+      measurements.pm10_1 = utils::getInvalidPMS();
+      measurements.pm03PCount_1 = utils::getInvalidPMS();
+      measurements.temp_1 = utils::getInvalidTemperature();
+      measurements.hum_1 = utils::getInvalidHumidity();
     }
 
     if (configuration.hasSensorPMS2 && (ag->pms5003t_2.isFailed() == false)) {
@@ -1081,12 +1081,12 @@ static void updatePm(void) {
       Serial.printf("[2] Relative Humidity compensated: %d\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_2));
     } else {
-      measurements.pm01_2 = -1;
-      measurements.pm25_2 = -1;
-      measurements.pm10_2 = -1;
-      measurements.pm03PCount_2 = -1;
-      measurements.temp_2 = -1001;
-      measurements.hum_2 = -1;
+      measurements.pm01_2 = utils::getInvalidPMS();
+      measurements.pm25_2 = utils::getInvalidPMS();
+      measurements.pm10_2 = utils::getInvalidPMS();
+      measurements.pm03PCount_2 = utils::getInvalidPMS();
+      measurements.temp_2 = utils::getInvalidTemperature();
+      measurements.hum_2 = utils::getInvalidHumidity();
     }
 
     if (configuration.hasSensorPMS1 && configuration.hasSensorPMS2 &&
@@ -1226,6 +1226,8 @@ static void tempHumUpdate(void) {
                                                    measurements.Humidity);
     }
   } else {
+    measurements.Temperature = utils::getInvalidTemperature();
+    measurements.Humidity = utils::getInvalidHumidity();
     Serial.println("SHT read failed");
   }
 }

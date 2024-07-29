@@ -12,6 +12,7 @@
 #include "S8/S8.h"
 #include "Sgp41/Sgp41.h"
 #include "Sht/Sht.h"
+#include "Main/utils.h"
 
 #ifndef GIT_VERSION
 #define GIT_VERSION "snapshot"

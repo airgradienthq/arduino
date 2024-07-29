@@ -35,6 +35,7 @@ private:
   bool onConditioning = true;
   bool ready = false;
   bool _isBegin = false;
+  uint8_t _handleFailCount = 0;
   void *_sensor;
   void *_vocAlgorithm;
   void *_noxAlgorithm;
