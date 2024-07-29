@@ -121,6 +121,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
         }
+        if (!localServer) {
+          root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+        }
       }
       if (config->hasSensorPMS2) {
         if(utils::isValidPMS(this->pm01_2)) {
@@ -156,6 +159,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               root["rhumCompensated"] = (int)val;
             }
           }
+        }
+        if(!localServer) {
+          root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
         }
       }
     } else {
@@ -193,6 +199,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
+          if(!localServer) {
+            root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+          }
         } else if (config->hasSensorPMS2) {
           if(utils::isValidPMS(this->pm01_2)) {
             root["pm01"] = this->pm01_2;
@@ -225,6 +234,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
                 root["rhumCompensated"] = (int)val;
               }
             }
+          }
+          if(!localServer) {
+            root["PMS5003T_FwVer"] = ag->pms5003t_2.getFirmwareVersion();
           }
         }
       } else {
@@ -262,6 +274,11 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
+        
+          // PMS5003T version
+          if(!localServer) {
+            root["channels"]["1"]["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+          }
         }
         if (config->hasSensorPMS2) {
           float val;
@@ -296,6 +313,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
                 root["channels"]["2"]["rhumCompensated"] = (int)val;
               }
             }
+          }
+          // PMS5003T version
+          if(!localServer) {
+            root["channels"]["2"]["PMS5003T_FwVer"] = ag->pms5003t_2.getFirmwareVersion();
           }
         }
       }
