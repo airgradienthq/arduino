@@ -338,7 +338,7 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(100, 39, strBuf);
 
       /** Draw NOx label */
-      DISP()->drawStr(85, 53, "NOx:");
+      DISP()->drawStr(100, 53, "NOx:");
       if (utils::isValidNOx(value.NOx)) {
         sprintf(strBuf, "%d", value.NOx);
       } else {
