@@ -3,7 +3,7 @@
 
 /**
  * @brief Init and check that sensor has connected
- * 
+ *
  * @param stream UART stream
  * @return true Sucecss
  * @return false Failure
@@ -252,20 +252,18 @@ uint16_t PMSBase::getHum(void) { return toValue(&package[26]); }
  * @return int
  */
 int PMSBase::pm25ToAQI(int pm02) {
-  if (pm02 <= 12.0)
-    return ((50 - 0) / (12.0 - .0) * (pm02 - .0) + 0);
+  if (pm02 <= 9.0)
+    return ((50 - 0) / (9.0 - .0) * (pm02 - .0) + 0);
   else if (pm02 <= 35.4)
-    return ((100 - 50) / (35.4 - 12.0) * (pm02 - 12.0) + 50);
+    return ((100 - 50) / (35.4 - 9.0) * (pm02 - 9.0) + 5);
   else if (pm02 <= 55.4)
     return ((150 - 100) / (55.4 - 35.4) * (pm02 - 35.4) + 100);
-  else if (pm02 <= 150.4)
-    return ((200 - 150) / (150.4 - 55.4) * (pm02 - 55.4) + 150);
-  else if (pm02 <= 250.4)
-    return ((300 - 200) / (250.4 - 150.4) * (pm02 - 150.4) + 200);
-  else if (pm02 <= 350.4)
-    return ((400 - 300) / (350.4 - 250.4) * (pm02 - 250.4) + 300);
-  else if (pm02 <= 500.4)
-    return ((500 - 400) / (500.4 - 350.4) * (pm02 - 350.4) + 400);
+  else if (pm02 <= 125.4)
+    return ((200 - 150) / (125.4 - 55.4) * (pm02 - 55.4) + 150);
+  else if (pm02 <= 225.4)
+    return ((300 - 200) / (225.4 - 125.4) * (pm02 - 125.4) + 200);
+  else if (pm02 <= 325.4)
+    return ((500 - 300) / (325.4 - 225.4) * (pm02 - 225.4) + 300);
   else
     return 500;
 }
