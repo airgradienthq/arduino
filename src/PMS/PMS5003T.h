@@ -30,6 +30,7 @@ public:
   float getTemperature(void);
   float getRelativeHumidity(void);
   int getFirmwareVersion(void);
+  uint8_t getErrorCode(void);
 
 private:
   bool _isBegin = false;

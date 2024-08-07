@@ -4,6 +4,39 @@
 #include "Main/utils.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
+#define json_prop_pmsFirmware     "pmsFirmware"
+
+/**
+ * @brief Get PMS5003 firmware version string
+ * 
+ * @param fwCode 
+ * @return String
+ */
+String Measurements::pms5003FirmwareVersion(int fwCode) {
+  return pms5003FirmwareVersionBase("PMS5003", fwCode);
+}
+
+/**
+ * @brief Get PMS5003T firmware version string
+ * 
+ * @param fwCode 
+ * @return String
+ */
+String Measurements::pms5003TFirmwareVersion(int fwCode) {
+  return pms5003FirmwareVersionBase("PMS5003T", fwCode);
+}
+
+/**
+ * @brief Get firmware version string
+ * 
+ * @param prefix Prefix firmware string
+ * @param fwCode Version code
+ * @return string 
+ */
+String Measurements::pms5003FirmwareVersionBase(String prefix, int fwCode) {
+  return prefix + String("-") + String(fwCode);
+}
+
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
                               void *_ag, void *_config) {
   AirGradient *ag = (AirGradient *)_ag;
@@ -32,6 +65,11 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       }
       if (utils::isValidPMS03Count(this->pm03PCount_1)) {
         root["pm003Count"] = this->pm03PCount_1;
+      }
+      if (!localServer) {
+
+        root[json_prop_pmsFirmware] =
+            this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
       }
     }
 
@@ -122,7 +160,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           }
         }
         if (!localServer) {
-          root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+          root[json_prop_pmsFirmware] =
+              pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
         }
       }
       if (config->hasSensorPMS2) {
@@ -161,7 +200,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           }
         }
         if(!localServer) {
-          root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+          root[json_prop_pmsFirmware] =
+              pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
         }
       }
     } else {
@@ -200,7 +240,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
           if(!localServer) {
-            root["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+            root[json_prop_pmsFirmware] =
+                pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
           }
         } else if (config->hasSensorPMS2) {
           if(utils::isValidPMS(this->pm01_2)) {
@@ -236,7 +277,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
           if(!localServer) {
-            root["PMS5003T_FwVer"] = ag->pms5003t_2.getFirmwareVersion();
+            root[json_prop_pmsFirmware] =
+                pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
           }
         }
       } else {
@@ -277,7 +319,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         
           // PMS5003T version
           if(!localServer) {
-            root["channels"]["1"]["PMS5003T_FwVer"] = ag->pms5003t_1.getFirmwareVersion();
+            root["channels"]["1"][json_prop_pmsFirmware] =
+                pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
           }
         }
         if (config->hasSensorPMS2) {
@@ -316,7 +359,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           }
           // PMS5003T version
           if(!localServer) {
-            root["channels"]["2"]["PMS5003T_FwVer"] = ag->pms5003t_2.getFirmwareVersion();
+            root["channels"]["2"][json_prop_pmsFirmware] =
+                pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
           }
         }
       }

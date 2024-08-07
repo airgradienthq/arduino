@@ -246,11 +246,18 @@ uint16_t PMSBase::getTemp(void) { return toValue(&package[24]); }
 uint16_t PMSBase::getHum(void) { return toValue(&package[26]); }
 
 /**
- * @brief Get PMS500T firmware version code
+ * @brief Get firmware version code
  * 
  * @return uint8_t 
  */
 uint8_t PMSBase::getFirmwareVersion(void) { return package[28]; }
+
+/**
+ * @brief Ge PMS5003 error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMSBase::getErrorCode(void) { return package[29]; }
 
 /**
  * @brief Convert PMS2.5 to US AQI unit

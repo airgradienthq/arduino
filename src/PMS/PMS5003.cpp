@@ -78,7 +78,7 @@ bool PMS5003::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -120,6 +120,20 @@ int PMS5003::getPm03ParticleCount(void) {
  * @return int PM2.5 US AQI
  */
 int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
+
+/**
+ * @brief Get sensor firmware version
+ * 
+ * @return int
+ */
+int PMS5003::getFirmwareVersion(void) { return _ver; }
+
+/**
+ * @brief Get sensor error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMS5003::getErrorCode(void) { return pms.getErrorCode(); }
 
 /**
  * @brief Check device initialized or not
