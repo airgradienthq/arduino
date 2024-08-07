@@ -101,6 +101,9 @@ Example to set monitor to Celsius
 
  ```curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config ```
 
+ If you use command prompt on Windows, you need to escape the quotes:
+ -d "{\"param\":\"value\"}"
+
 #### Avoiding Conflicts with Configuration on AirGradient Server
 If the monitor is set up on the AirGradient dashboard, it will also receive configurations from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
 
