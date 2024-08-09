@@ -421,8 +421,8 @@ static void factoryConfigReset(void) {
             }
 
             /** Reset WIFI */
-            WiFi.enableSTA(true);   // Incase offline mode
-            WiFi.disconnect(true, true);
+            Serial.println("Set wifi connect to 'airgradient' as default");
+            WiFi.begin("airgradient", "cleanair");
 
             /** Reset local config */
             configuration.reset();
