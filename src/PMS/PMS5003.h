@@ -24,7 +24,7 @@ public:
   int getPm10Ae(void);
   int getPm03ParticleCount(void);
   int convertPm25ToUsAqi(int pm25);
-  int pm25Compensated(int pm25, float humidity);
+  int compensated(int pm25, float humidity);
 
 private:
   bool _isBegin = false;
