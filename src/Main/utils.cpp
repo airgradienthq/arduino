@@ -12,10 +12,14 @@
 #define VALID_PMS_MIN         (0)
 #define INVALID_PMS           (-1)
 
+#define VALID_PMS03COUNT_MIN  (0)
+
 #define VALID_CO2_MAX         (10000)
 #define VALID_CO2_MIN         (0)
 #define INVALID_CO2           (-1)
 
+#define VALID_NOX_MIN         (0)
+#define VALID_VOC_MIN         (0)
 #define INVALID_NOX           (-1)
 #define INVALID_VOC           (-1)
 
@@ -24,49 +28,49 @@ utils::utils(/* args */) {}
 utils::~utils() {}
 
 bool utils::isValidTemperature(float value) {
-  if (value >= VALID_TEMPERATURE_MIN && value <= VALID_TEMPERATURE_MAX) {
+  if ((value >= VALID_TEMPERATURE_MIN) && (value <= VALID_TEMPERATURE_MAX)) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidHumidity(float value) {
-  if (value >= VALID_HUMIDITY_MIN && value <= VALID_HUMIDITY_MAX) {
+  if ((value >= VALID_HUMIDITY_MIN) && (value <= VALID_HUMIDITY_MAX)) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidCO2(int16_t value) {
-  if (value >= VALID_CO2_MIN && value <= VALID_CO2_MAX) {
+  if ((value >= VALID_CO2_MIN) && (value <= VALID_CO2_MAX)) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidPMS(int value) {
-  if (value >= VALID_PMS_MIN && value <= VALID_PMS_MAX) {
+  if ((value >= VALID_PMS_MIN) && (value <= VALID_PMS_MAX)) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidPMS03Count(int value) {
-  if (value >= 0) {
+  if (value >= VALID_PMS03COUNT_MIN) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidNOx(int value) {
-  if (value > INVALID_NOX) {
+  if (value >= VALID_NOX_MIN) {
     return true;
   }
   return false;
 }
 
 bool utils::isValidVOC(int value) {
-  if (value > INVALID_VOC) {
+  if (value >= VALID_VOC_MIN) {
     return true;
   }
   return false;
