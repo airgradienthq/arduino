@@ -13,7 +13,7 @@
  * @return String
  */
 String Measurements::pms5003FirmwareVersion(int fwCode) {
-  return pms5003FirmwareVersionBase("PMS5003", fwCode);
+  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
 }
 
 /**
@@ -23,7 +23,7 @@ String Measurements::pms5003FirmwareVersion(int fwCode) {
  * @return String
  */
 String Measurements::pms5003TFirmwareVersion(int fwCode) {
-  return pms5003FirmwareVersionBase("PMS5003T", fwCode);
+  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
 }
 
 /**
