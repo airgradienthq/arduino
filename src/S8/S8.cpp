@@ -1,5 +1,6 @@
 #include "S8.h"
 #include "mb_crc.h"
+#include "../Main/utils.h"
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
 #else
@@ -103,7 +104,7 @@ void S8::getFirmwareVersion(char firmver[]) {
  */
 int32_t S8::getSensorTypeId(void) {
   if (this->isBegin() == false) {
-    return -1;
+    return utils::getInvalidCO2();
   }
 
   int32_t sensorType = 0;
