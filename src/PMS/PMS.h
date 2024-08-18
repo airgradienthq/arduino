@@ -28,6 +28,7 @@ public:
   uint16_t getHum(void);
 
   int pm25ToAQI(int pm02);
+  int compensated(int pm25, float humidity);
 
 private:
   Stream *stream;

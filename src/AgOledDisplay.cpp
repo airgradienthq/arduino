@@ -304,6 +304,10 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
+      int pm25 = value.pm25_1;
+      if (config.hasSensorSHT) {
+        pm25 = ag->pms5003.compensated(pm25, value.Humidity);
+      }
       DISP()->setFont(u8g2_font_t0_22b_tf);
       if (config.isPmStandardInUSAQI()) {
         if (utils::isValidPMS(value.pm25_1)) {
@@ -360,6 +364,10 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setText(strBuf);
 
     /** Set PM */
+    int pm25 = value.pm25_1;
+    if(config.hasSensorSHT) {
+      pm25 = (int)ag->pms5003.compensated(pm25, value.Humidity);
+    }
     ag->display.setCursor(0, 12);
     if (utils::isValidPMS(value.pm25_1)) {
       snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", value.pm25_1);

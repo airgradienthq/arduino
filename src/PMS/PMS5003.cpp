@@ -122,6 +122,17 @@ int PMS5003::getPm03ParticleCount(void) {
 int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 
 /**
+ * @brief Correct PM2.5
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param humidity Humidity value
+ * @return float 
+ */
+int PMS5003::compensated(int pm25, float humidity) {
+  return pms.compensated(pm25, humidity);
+}
+
+/**
  * @brief Check device initialized or not
  *
  * @return true Initialized
