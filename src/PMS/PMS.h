@@ -24,7 +24,7 @@ public:
   uint16_t getCount10(void);
 
   /** For PMS5003T*/
-  uint16_t getTemp(void);
+  int16_t getTemp(void);
   uint16_t getHum(void);
 
   int pm25ToAQI(int pm02);
@@ -36,7 +36,8 @@ private:
   bool failed = false;
   uint32_t lastRead;
 
-  uint16_t toValue(char *buf);
+  int16_t toI16(char *buf);
+  uint16_t toU16(char* buf);
   bool validate(char *buf);
 };
 
