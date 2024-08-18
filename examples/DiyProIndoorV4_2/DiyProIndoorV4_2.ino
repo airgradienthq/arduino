@@ -127,6 +127,9 @@ void setup() {
   openMetrics.setAirGradient(&ag);
   localServer.setAirGraident(&ag);
 
+  /** Example set custom API root URL */
+  // apiClient.setApiRoot("https://example.custom.api");
+
   /** Init sensor */
   boardInit();
 
