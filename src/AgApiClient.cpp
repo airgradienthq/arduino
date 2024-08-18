@@ -66,6 +66,10 @@ bool AgApiClient::fetchServerConfiguration(void) {
 
   /** Get data */
   int retCode = client.GET();
+
+  logInfo(String("GET: ") + uri);
+  logInfo(String("Return code: ") + String(retCode));
+
   if (retCode != 200) {
     client.end();
     getConfigFailed = true;
@@ -112,17 +116,21 @@ bool AgApiClient::postToServer(String data) {
   String uri =
       "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
       "/measures";
-  logInfo("Post uri: " + uri);
-  logInfo("Post data: " + data);
+  // logInfo("Post uri: " + uri);
+  // logInfo("Post data: " + data);
 
   WiFiClient wifiClient;
   HTTPClient client;
   if (client.begin(wifiClient, uri.c_str()) == false) {
+    logError("Init client failed");
     return false;
   }
   client.addHeader("content-type", "application/json");
   int retCode = client.POST(data);
   client.end();
+
+  logInfo(String("POST: ") + uri);
+  logInfo(String("Return code: ") + String(retCode));
 
   if ((retCode == 200) || (retCode == 429)) {
     postToServerFailed = false;
