@@ -1,5 +1,6 @@
 #include "AgOledDisplay.h"
 #include "Libraries/U8g2/src/U8g2lib.h"
+#include "Main/utils.h"
 
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
@@ -10,8 +11,8 @@
  * @param hasStatus
  */
 void OledDisplay::showTempHum(bool hasStatus) {
-  char buf[10];
-  if (value.Temperature > -1001) {
+  char buf[16];
+  if (utils::isValidTemperature(value.Temperature)) {
     if (config.isTemperatureUnitInF()) {
       float tempF = (value.Temperature * 9) / 5 + 32;
       if (hasStatus) {
@@ -36,10 +37,10 @@ void OledDisplay::showTempHum(bool hasStatus) {
   DISP()->drawUTF8(1, 10, buf);
 
   /** Show humidty */
-  if (value.Humidity >= 0) {
+  if (utils::isValidHumidity(value.Humidity)) {
     snprintf(buf, sizeof(buf), "%d%%", value.Humidity);
   } else {
-    snprintf(buf, sizeof(buf), "%-%%");
+    snprintf(buf, sizeof(buf), "-%%");
   }
 
   if (value.Humidity > 99) {
@@ -283,12 +284,8 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawUTF8(1, 27, "CO2");
 
       DISP()->setFont(u8g2_font_t0_22b_tf);
-      if (value.CO2 > 0) {
-        int val = 9999;
-        if (value.CO2 < 10000) {
-          val = value.CO2;
-        }
-        sprintf(strBuf, "%d", val);
+      if (utils::isValidCO2(value.CO2)) {
+        sprintf(strBuf, "%d", value.CO2);
       } else {
         sprintf(strBuf, "%s", "-");
       }
@@ -299,88 +296,111 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(1, 61, "ppm");
 
       /** Draw vertical line */
-      DISP()->drawLine(45, 14, 45, 64);
-      DISP()->drawLine(82, 14, 82, 64);
+      DISP()->drawLine(52, 14, 52, 64);
+      DISP()->drawLine(97, 14, 97, 64);
 
       /** Draw PM2.5 label */
       DISP()->setFont(u8g2_font_t0_12_tf);
-      DISP()->drawStr(48, 27, "PM2.5");
+      DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
+      int pm25 = value.pm25_1;
+      if (config.hasSensorSHT) {
+        pm25 = ag->pms5003.compensated(pm25, value.Humidity);
+      }
       DISP()->setFont(u8g2_font_t0_22b_tf);
       if (config.isPmStandardInUSAQI()) {
-        if (value.pm25_1 >= 0) {
+        if (utils::isValidPMS(value.pm25_1)) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(value.pm25_1));
         } else {
           sprintf(strBuf, "%s", "-");
         }
-        DISP()->drawStr(48, 48, strBuf);
+        DISP()->drawStr(55, 48, strBuf);
         DISP()->setFont(u8g2_font_t0_12_tf);
-        DISP()->drawUTF8(48, 61, "AQI");
+        DISP()->drawUTF8(55, 61, "AQI");
       } else {
-        if (value.pm25_1 >= 0) {
+        if (utils::isValidPMS(value.pm25_1)) {
           sprintf(strBuf, "%d", value.pm25_1);
         } else {
           sprintf(strBuf, "%s", "-");
         }
-        DISP()->drawStr(48, 48, strBuf);
+        DISP()->drawStr(55, 48, strBuf);
         DISP()->setFont(u8g2_font_t0_12_tf);
-        DISP()->drawUTF8(48, 61, "ug/m³");
+        DISP()->drawUTF8(55, 61, "ug/m³");
       }
 
       /** Draw tvocIndexlabel */
       DISP()->setFont(u8g2_font_t0_12_tf);
-      DISP()->drawStr(85, 27, "tvoc:");
+      DISP()->drawStr(100, 27, "VOC:");
 
       /** Draw tvocIndexvalue */
-      if (value.TVOC >= 0) {
+      if (utils::isValidVOC(value.TVOC)) {
         sprintf(strBuf, "%d", value.TVOC);
       } else {
         sprintf(strBuf, "%s", "-");
       }
-      DISP()->drawStr(85, 39, strBuf);
+      DISP()->drawStr(100, 39, strBuf);
 
       /** Draw NOx label */
-      DISP()->drawStr(85, 53, "NOx:");
-      if (value.NOx >= 0) {
+      DISP()->drawStr(100, 53, "NOx:");
+      if (utils::isValidNOx(value.NOx)) {
         sprintf(strBuf, "%d", value.NOx);
       } else {
         sprintf(strBuf, "%s", "-");
       }
-      DISP()->drawStr(85, 63, strBuf);
+      DISP()->drawStr(100, 63, strBuf);
     } while (DISP()->nextPage());
   } else if (ag->isBasic()) {
     ag->display.clear();
 
     /** Set CO2 */
-    snprintf(strBuf, sizeof(strBuf), "CO2:%d", value.CO2);
+    if(utils::isValidCO2(value.CO2)) {
+      snprintf(strBuf, sizeof(strBuf), "CO2:%d", value.CO2);
+    } else {
+      snprintf(strBuf, sizeof(strBuf), "CO2:-");
+    }
+    
     ag->display.setCursor(0, 0);
     ag->display.setText(strBuf);
 
     /** Set PM */
+    int pm25 = value.pm25_1;
+    if(config.hasSensorSHT) {
+      pm25 = (int)ag->pms5003.compensated(pm25, value.Humidity);
+    }
     ag->display.setCursor(0, 12);
-    snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", value.pm25_1);
+    if (utils::isValidPMS(value.pm25_1)) {
+      snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", value.pm25_1);
+    } else {
+      snprintf(strBuf, sizeof(strBuf), "PM2.5:-");
+    }
     ag->display.setText(strBuf);
 
     /** Set temperature and humidity */
-    if (value.Temperature <= -1001.0f) {
+    if (utils::isValidTemperature(value.Temperature)) {
+      if (config.isTemperatureUnitInF()) {
+        float tempF = (value.Temperature * 9) / 5 + 32;
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", tempF);
+      } else {
+        snprintf(strBuf, sizeof(strBuf), "T:%0.f1 C", value.Temperature);
+      }
+    } else {
       if (config.isTemperatureUnitInF()) {
         snprintf(strBuf, sizeof(strBuf), "T:-F");
       } else {
         snprintf(strBuf, sizeof(strBuf), "T:-C");
       }
-    } else {
-      if (config.isTemperatureUnitInF()) {
-        float tempF = (value.Temperature * 9) / 5 + 32;
-        snprintf(strBuf, sizeof(strBuf), "T:%d F", (int)tempF);
-      } else {
-        snprintf(strBuf, sizeof(strBuf), "T:%d C", (int)value.Temperature);
-      }
     }
+
     ag->display.setCursor(0, 24);
     ag->display.setText(strBuf);
 
-    snprintf(strBuf, sizeof(strBuf), "H:%d %%", (int)value.Humidity);
+    if (utils::isValidHumidity(value.Humidity)) {
+      snprintf(strBuf, sizeof(strBuf), "H:%d %%", (int)value.Humidity);
+    } else {
+      snprintf(strBuf, sizeof(strBuf), "H:- %%");
+    }
+
     ag->display.setCursor(0, 36);
     ag->display.setText(strBuf);
 
