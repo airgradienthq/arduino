@@ -22,6 +22,7 @@ AgApiClient::~AgApiClient() {}
 void AgApiClient::begin(void) {
   getConfigFailed = false;
   postToServerFailed = false;
+  logInfo("Init apiRoot: " + apiRoot);
   logInfo("begin");
 }
 
@@ -44,9 +45,8 @@ bool AgApiClient::fetchServerConfiguration(void) {
     return false;
   }
 
-  String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
-      "/one/config";
+  String uri = apiRoot + "/sensors/airgradient:" +
+               ag->deviceId() + "/one/config";
 
   /** Init http client */
 #ifdef ESP8266
@@ -185,3 +185,7 @@ bool AgApiClient::sendPing(int rssi, int bootCount) {
   root["boot"] = bootCount;
   return postToServer(JSON.stringify(root));
 }
+
+String AgApiClient::getApiRoot() const { return apiRoot; }
+
+void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }

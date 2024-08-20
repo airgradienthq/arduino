@@ -20,6 +20,7 @@ class AgApiClient : public PrintLog {
 private:
   Configuration &config;
   AirGradient *ag;
+  String apiRoot = "http://hw.airgradient.com";
 
   bool getConfigFailed;
   bool postToServerFailed;
@@ -37,6 +38,8 @@ public:
   bool isNotAvailableOnDashboard(void);
   void setAirGradient(AirGradient *ag);
   bool sendPing(int rssi, int bootCount);
+  String getApiRoot() const;
+  void setApiRoot(const String &apiRoot);
 };
 
 #endif /** _AG_API_CLIENT_H_ */
