@@ -130,6 +130,7 @@ bool AgApiClient::postToServer(String data) {
   client.end();
 
   logInfo(String("POST: ") + uri);
+  logInfo(String("DATA: ") + data);
   logInfo(String("Return code: ") + String(retCode));
 
   if ((retCode == 200) || (retCode == 429)) {
