@@ -264,12 +264,14 @@ bool Configuration::parse(String data, bool isLocal) {
                         jconfig[jprop_configurationControl]);
         }
 
-        /** Check to return result if configurationControl is 'cloud' */
-        if (ctrl ==
-            String(CONFIGURATION_CONTROL_NAME
-                       [ConfigurationControl::ConfigurationControlCloud])) {
-          failedMessage = String(msg);
-          return true;
+        /** Return failed if new "configurationControl" new and old is "cloud" */
+        if (ctrl == String(CONFIGURATION_CONTROL_NAME [ConfigurationControl::ConfigurationControlCloud])) {
+          if(ctrl != lastCtrl) {
+            return true;
+          } else {
+            failedMessage = String(msg);
+            return false;
+          }
         }
       } else {
         failedMessage =
