@@ -127,6 +127,9 @@ void setup() {
   openMetrics.setAirGradient(&ag);
   localServer.setAirGraident(&ag);
 
+  /** Example set custom API root URL */
+  // apiClient.setApiRoot("https://example.custom.api");
+
   /** Init sensor */
   boardInit();
 
@@ -258,7 +261,7 @@ void loop() {
 
 static void co2Update(void) {
   int value = ag.s8.getCo2();
-  if (value >= 0) {
+  if (utils::isValidCO2(value)) {
     measurements.CO2 = value;
     getCO2FailCount = 0;
     Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
@@ -266,7 +269,7 @@ static void co2Update(void) {
     getCO2FailCount++;
     Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
     if (getCO2FailCount >= 3) {
-      measurements.CO2 = -1;
+      measurements.CO2 = utils::getInvalidCO2();
     }
   }
 }
@@ -611,10 +614,10 @@ static void updatePm(void) {
     pmFailCount++;
     Serial.printf("PMS read failed: %d\r\n", pmFailCount);
     if (pmFailCount >= 3) {
-      measurements.pm01_1 = -1;
-      measurements.pm25_1 = -1;
-      measurements.pm10_1 = -1;
-      measurements.pm03PCount_1 = -1;
+      measurements.pm01_1 = utils::getInvalidPMS();
+      measurements.pm25_1 = utils::getInvalidPMS();
+      measurements.pm10_1 = utils::getInvalidPMS();
+      measurements.pm03PCount_1 = utils::getInvalidPMS();
     }
   }
 }
@@ -659,5 +662,7 @@ static void tempHumUpdate(void) {
     }
   } else {
     Serial.println("SHT read failed");
+    measurements.Temperature = utils::getInvalidTemperature();
+    measurements.Humidity = utils::getInvalidHumidity();
   }
 }

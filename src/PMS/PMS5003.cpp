@@ -1,5 +1,6 @@
 #include "PMS5003.h"
 #include "Arduino.h"
+#include "../Main/utils.h"
 
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
@@ -108,7 +109,9 @@ int PMS5003::getPm10Ae(void) { return pms.getPM10(); }
  *
  * @return int PM0.3 index
  */
-int PMS5003::getPm03ParticleCount(void) { return pms.getCount0_3(); }
+int PMS5003::getPm03ParticleCount(void) {
+  return pms.getCount0_3();
+}
 
 /**
  * @brief Convert PM2.5 to US AQI
@@ -117,6 +120,17 @@ int PMS5003::getPm03ParticleCount(void) { return pms.getCount0_3(); }
  * @return int PM2.5 US AQI
  */
 int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
+
+/**
+ * @brief Correct PM2.5
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param humidity Humidity value
+ * @return float 
+ */
+int PMS5003::compensated(int pm25, float humidity) {
+  return pms.compensated(pm25, humidity);
+}
 
 /**
  * @brief Check device initialized or not

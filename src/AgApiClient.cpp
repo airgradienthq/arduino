@@ -22,6 +22,7 @@ AgApiClient::~AgApiClient() {}
 void AgApiClient::begin(void) {
   getConfigFailed = false;
   postToServerFailed = false;
+  logInfo("Init apiRoot: " + apiRoot);
   logInfo("begin");
 }
 
@@ -44,9 +45,8 @@ bool AgApiClient::fetchServerConfiguration(void) {
     return false;
   }
 
-  String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
-      "/one/config";
+  String uri = apiRoot + "/sensors/airgradient:" +
+               ag->deviceId() + "/one/config";
 
   /** Init http client */
 #ifdef ESP8266
@@ -66,6 +66,10 @@ bool AgApiClient::fetchServerConfiguration(void) {
 
   /** Get data */
   int retCode = client.GET();
+
+  logInfo(String("GET: ") + uri);
+  logInfo(String("Return code: ") + String(retCode));
+
   if (retCode != 200) {
     client.end();
     getConfigFailed = true;
@@ -112,17 +116,22 @@ bool AgApiClient::postToServer(String data) {
   String uri =
       "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
       "/measures";
-  logInfo("Post uri: " + uri);
-  logInfo("Post data: " + data);
+  // logInfo("Post uri: " + uri);
+  // logInfo("Post data: " + data);
 
   WiFiClient wifiClient;
   HTTPClient client;
   if (client.begin(wifiClient, uri.c_str()) == false) {
+    logError("Init client failed");
     return false;
   }
   client.addHeader("content-type", "application/json");
   int retCode = client.POST(data);
   client.end();
+
+  logInfo(String("POST: ") + uri);
+  logInfo(String("DATA: ") + data);
+  logInfo(String("Return code: ") + String(retCode));
 
   if ((retCode == 200) || (retCode == 429)) {
     postToServerFailed = false;
@@ -177,3 +186,7 @@ bool AgApiClient::sendPing(int rssi, int bootCount) {
   root["boot"] = bootCount;
   return postToServer(JSON.stringify(root));
 }
+
+String AgApiClient::getApiRoot() const { return apiRoot; }
+
+void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }

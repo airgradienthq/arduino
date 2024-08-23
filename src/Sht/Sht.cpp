@@ -1,6 +1,7 @@
 #include "Sht.h"
 
 #include "../Libraries/arduino-sht/SHTSensor.h"
+#include "../Main/utils.h"
 
 /** Cast _sensor to SHTSensor */
 #define shtSensor() ((SHTSensor *)(this->_sensor))
@@ -131,14 +132,18 @@ void Sht::end(void) {
  *
  * @return float
  */
-float Sht::getTemperature(void) { return shtSensor()->getTemperature(); }
+float Sht::getTemperature(void) {
+  return shtSensor()->getTemperature();
+}
 
 /**
  * @brief Get humidity
  *
  * @return float
  */
-float Sht::getRelativeHumidity(void) { return shtSensor()->getHumidity(); }
+float Sht::getRelativeHumidity(void) {
+  return shtSensor()->getHumidity();
+}
 
 /**
  * @brief Measure temperature and humidity
