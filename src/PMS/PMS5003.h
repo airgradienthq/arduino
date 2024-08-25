@@ -24,6 +24,7 @@ public:
   int getPm10Ae(void);
   int getPm03ParticleCount(void);
   int convertPm25ToUsAqi(int pm25);
+  int compensated(int pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
 

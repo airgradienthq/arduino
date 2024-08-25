@@ -3,7 +3,7 @@
 
 /**
  * @brief Init and check that sensor has connected
- * 
+ *
  * @param stream UART stream
  * @return true Sucecss
  * @return false Failure
@@ -86,7 +86,7 @@ void PMSBase::handle() {
     case 2: {
       buf[bufIndex++] = value;
       if (bufIndex >= 4) {
-        len = toValue(&buf[2]);
+        len = toI16(&buf[2]);
         if (len != 28) {
           // Serial.printf("Got good bad len %d\r\n", len);
           len += 4;
@@ -152,98 +152,98 @@ bool PMSBase::isFailed(void) { return failed; }
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw0_1(void) { return toValue(&package[4]); }
+uint16_t PMSBase::getRaw0_1(void) { return toU16(&package[4]); }
 
 /**
  * @brief Read PMS 2.5 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw2_5(void) { return toValue(&package[6]); }
+uint16_t PMSBase::getRaw2_5(void) { return toU16(&package[6]); }
 
 /**
  * @brief Read PMS 10 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw10(void) { return toValue(&package[8]); }
+uint16_t PMSBase::getRaw10(void) { return toU16(&package[8]); }
 
 /**
  * @brief Read PMS 0.1 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM0_1(void) { return toValue(&package[10]); }
+uint16_t PMSBase::getPM0_1(void) { return toU16(&package[10]); }
 
 /**
  * @brief Read PMS 2.5 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM2_5(void) { return toValue(&package[12]); }
+uint16_t PMSBase::getPM2_5(void) { return toU16(&package[12]); }
 
 /**
  * @brief Read PMS 10 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM10(void) { return toValue(&package[14]); }
+uint16_t PMSBase::getPM10(void) { return toU16(&package[14]); }
 
 /**
  * @brief Get numnber concentrations over 0.3 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount0_3(void) { return toValue(&package[16]); }
+uint16_t PMSBase::getCount0_3(void) { return toU16(&package[16]); }
 
 /**
  * @brief Get numnber concentrations over 0.5 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount0_5(void) { return toValue(&package[18]); }
+uint16_t PMSBase::getCount0_5(void) { return toU16(&package[18]); }
 
 /**
  * @brief Get numnber concentrations over 1.0 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount1_0(void) { return toValue(&package[20]); }
+uint16_t PMSBase::getCount1_0(void) { return toU16(&package[20]); }
 
 /**
  * @brief Get numnber concentrations over 2.5 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount2_5(void) { return toValue(&package[22]); }
+uint16_t PMSBase::getCount2_5(void) { return toU16(&package[22]); }
 
 /**
  * @brief Get numnber concentrations over 5.0 um/0.1L (only PMS5003)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount5_0(void) { return toValue(&package[24]); }
+uint16_t PMSBase::getCount5_0(void) { return toU16(&package[24]); }
 
 /**
  * @brief Get numnber concentrations over 10.0 um/0.1L (only PMS5003)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount10(void) { return toValue(&package[26]); }
+uint16_t PMSBase::getCount10(void) { return toU16(&package[26]); }
 
 /**
  * @brief Get temperature (only PMS5003T)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getTemp(void) { return toValue(&package[24]); }
+int16_t PMSBase::getTemp(void) { return toI16(&package[24]); }
 
 /**
  * @brief Get humidity (only PMS5003T)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getHum(void) { return toValue(&package[26]); }
+uint16_t PMSBase::getHum(void) { return toU16(&package[26]); }
 
 /**
  * @brief Get firmware version code
@@ -285,12 +285,57 @@ int PMSBase::pm25ToAQI(int pm02) {
 }
 
 /**
+ * @brief Correction PM2.5
+ * 
+ * @param pm25 Raw PM2.5 value
+ * @param humidity Humidity value (%)
+ * @return int 
+ */
+int PMSBase::compensated(int pm25, float humidity) {
+  float value;
+  if (humidity < 0) {
+    humidity = 0;
+  }
+  if (humidity > 100) {
+    humidity = 100;
+  }
+
+  if(pm25 < 30) {
+    value = (pm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
+  } else if(pm25 < 50) {
+    value = (0.786f * (pm25 / 20 - 3 / 2) + 0.524f * (1 - (pm25 / 20 - 3 / 2))) * pm25 - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 210) {
+    value = (0.786f * pm25) - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 260) {
+    value = (0.69f * (pm25/50 - 21/5) + 0.786f * (1 - (pm25/50 - 21/5))) * pm25 - (0.0862f * humidity * (1 - (pm25/50 - 21/5))) + (2.966f * (pm25/50 -21/5)) + (5.75f * (1 - (pm25/50 - 21/5))) + (8.84f * (1.e-4) * pm25* (pm25/50 - 21/5));
+  } else {
+    value = 2.966f + (0.69f * pm25) + (8.84f * (1.e-4) * pm25);
+  }
+
+  if(value < 0) {
+    value = 0;
+  }
+
+  return (int)value;
+}
+
+/**
  * @brief   Convert two byte value to uint16_t value
  *
  * @param buf bytes array (must be >= 2)
- * @return uint16_t
+ * @return int16_t
  */
-uint16_t PMSBase::toValue(char *buf) { return (buf[0] << 8) | buf[1]; }
+int16_t PMSBase::toI16(char *buf) {
+  int16_t value = buf[0];
+  value = (value << 8) | buf[1];
+  return value;
+}
+
+uint16_t PMSBase::toU16(char *buf) {
+  uint16_t value = buf[0];
+  value = (value << 8) | buf[1];
+  return value;
+}
 
 /**
  * @brief Validate package data
@@ -304,7 +349,7 @@ bool PMSBase::validate(char *buf) {
   for (int i = 0; i < 30; i++) {
     sum += buf[i];
   }
-  if (sum == toValue(&buf[30])) {
+  if (sum == toU16(&buf[30])) {
     for (int i = 0; i < 32; i++) {
       package[i] = buf[i];
     }

@@ -41,7 +41,14 @@ String AirGradient::getVersion(void) { return GIT_VERSION; }
 BoardType AirGradient::getBoardType(void) { return boardType; }
 
 double AirGradient::round2(double value) {
-  return (int)(value * 100 + 0.5) / 100.0;
+  double ret;
+  if (value >= 0) {
+    ret = (int)(value * 100 + 0.5f);
+  } else {
+    ret = (int)(value * 100 - 0.5f);
+  }
+
+  return ret / 100;
 }
 
 String AirGradient::getBoardName(void) {
