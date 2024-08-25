@@ -611,7 +611,7 @@ static void updatePm(void) {
     ag.pms5003.resetFailCount();
   } else {
     ag.pms5003.updateFailCount();
-    Serial.printf("PMS read failed: %d\r\n", pmFailCount);
+    Serial.printf("PMS read failed: %d\r\n", ag.pms5003.getFailCount());
     if (ag.pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
       measurements.pm01_1 = utils::getInvalidPMS();
       measurements.pm25_1 = utils::getInvalidPMS();
