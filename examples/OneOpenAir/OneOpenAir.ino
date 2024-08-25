@@ -1081,7 +1081,7 @@ static void updatePm(void) {
       Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
       Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
                     ag->pms5003t_1.temperatureCompensated(measurements.temp_2));
-      Serial.printf("[2] Relative Humidity compensated: %d\r\n",
+      Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.humidityCompensated(measurements.hum_2));
     } else {
       measurements.pm01_2 = utils::getInvalidPMS();
