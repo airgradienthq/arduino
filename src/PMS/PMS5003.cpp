@@ -126,7 +126,7 @@ int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
  * 
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
- * @return float 
+ * @return int 
  */
 int PMS5003::compensated(int pm25, float humidity) {
   return pms.compensated(pm25, humidity);
