@@ -19,6 +19,10 @@ public:
   void end(void);
   void handle(void);
   bool isFailed(void);
+  void updateFailCount(void);
+  void resetFailCount(void);
+  int getFailCount(void);
+  int getFailCountMax(void);
   int getPm01Ae(void);
   int getPm25Ae(void);
   int getPm10Ae(void);

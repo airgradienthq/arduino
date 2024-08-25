@@ -12,6 +12,7 @@ bool PMSBase::begin(Stream *stream) {
   this->stream = stream;
 
   failed = true;
+  failCount = 0;
   lastRead = 0; // To read buffer on handle without wait after 1.5sec
 
   this->stream->flush();
@@ -146,6 +147,36 @@ void PMSBase::handle() {
  * @return false No problem
  */
 bool PMSBase::isFailed(void) { return failed; }
+
+/**
+ * @brief Increate number of fail
+ * 
+ */
+void PMSBase::updateFailCount(void) {
+  if (failCount < failCountMax) {
+    failCount++;
+  }
+}
+
+/**
+ * @brief Reset number of fail
+ * 
+ */
+void PMSBase::resetFailCount(void) {failCount = 0;}
+
+/**
+ * @brief Get number of fail
+ * 
+ * @return int 
+ */
+int PMSBase::getFailCount(void) { return failCount; }
+
+/**
+ * @brief Get maximum of fail count max
+ * 
+ * @return int 
+ */
+int PMSBase::getFailCountMax(void) { return failCountMax; }
 
 /**
  * @brief Read PMS 0.1 ug/m3 with CF = 1 PM estimates
