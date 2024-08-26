@@ -577,7 +577,7 @@ static void updatePm(void) {
     }
 
     if(ag.pms5003.getFailCount() >= ag.pms5003.getFailCountMax()) {
-      Serial.printf("PMS failure count reach to max set %d, restarting...", ag->pms5003.getFailCountMax());
+      Serial.printf("PMS failure count reach to max set %d, restarting...", ag.pms5003.getFailCountMax());
       ESP.restart();
     }
   }
