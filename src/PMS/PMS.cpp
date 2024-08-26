@@ -277,7 +277,7 @@ int PMSBase::pm25ToAQI(int pm02) {
  * @param humidity Humidity value (%)
  * @return int 
  */
-int PMSBase::compensated(int pm25, float humidity) {
+int PMSBase::compensate(int pm25, float humidity) {
   float value;
   if (humidity < 0) {
     humidity = 0;

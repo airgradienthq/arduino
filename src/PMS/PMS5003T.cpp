@@ -171,8 +171,8 @@ float PMS5003T::getRelativeHumidity(void) {
  * @param humidity Humidity value
  * @return int 
  */
-int PMS5003T::compensated(int pm25, float humidity) {
-  return pms.compensated(pm25, humidity);
+int PMS5003T::compensate(int pm25, float humidity) {
+  return pms.compensate(pm25, humidity);
 }
 
 /**

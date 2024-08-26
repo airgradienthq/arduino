@@ -128,8 +128,8 @@ int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
  * @param humidity Humidity value
  * @return int 
  */
-int PMS5003::compensated(int pm25, float humidity) {
-  return pms.compensated(pm25, humidity);
+int PMS5003::compensate(int pm25, float humidity) {
+  return pms.compensate(pm25, humidity);
 }
 
 /**

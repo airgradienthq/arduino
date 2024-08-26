@@ -29,7 +29,7 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
-  int compensated(int pm25, float humidity);
+  int compensate(int pm25, float humidity);
 
 private:
   bool _isBegin = false;
