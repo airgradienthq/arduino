@@ -46,6 +46,10 @@ public:
   String localIpStr(void);
   bool hasConfigurated(void);
   bool isConfigurePorttalTimeout(void);
+
+  const char* defaultSsid = "airgradient";
+  const char* defaultPassword = "cleanair";
+  void setDefault(void);
 };
 
 #endif /** _AG_WIFI_CONNECTOR_H_ */

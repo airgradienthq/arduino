@@ -424,8 +424,7 @@ static void factoryConfigReset(void) {
             }
 
             /** Reset WIFI */
-            Serial.println("Set wifi connect to 'airgradient' as default");
-            WiFi.begin("airgradient", "cleanair");
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();

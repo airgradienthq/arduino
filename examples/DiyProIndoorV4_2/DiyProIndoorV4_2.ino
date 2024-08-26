@@ -328,9 +328,7 @@ static void factoryConfigReset(void) {
             // }
 
             /** Reset WIFI */
-            // WiFi.enableSTA(true); // Incase offline mode
-            // WiFi.disconnect(true, true);
-            wifiConnector.reset();
+            WiFi.disconnect(true, true);
 
             /** Reset local config */
             configuration.reset();
