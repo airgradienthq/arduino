@@ -158,11 +158,7 @@ void PMSBase::updateFailCount(void) {
   }
 }
 
-/**
- * @brief Reset number of fail
- * 
- */
-void PMSBase::resetFailCount(void) {failCount = 0;}
+void PMSBase::resetFailCount(void) { failCount = 0; }
 
 /**
  * @brief Get number of fail
@@ -171,11 +167,6 @@ void PMSBase::resetFailCount(void) {failCount = 0;}
  */
 int PMSBase::getFailCount(void) { return failCount; }
 
-/**
- * @brief Get maximum of fail count max
- * 
- * @return int 
- */
 int PMSBase::getFailCountMax(void) { return failCountMax; }
 
 /**

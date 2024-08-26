@@ -176,18 +176,10 @@ void PMS5003::handle(void) { pms.handle(); }
  */
 bool PMS5003::isFailed(void) { return pms.isFailed(); }
 
-/**
- * @brief Increate number of fail
- * 
- */
 void PMS5003::updateFailCount(void) {
   pms.updateFailCount();
 }
 
-/**
- * @brief Reset fail count
- * 
- */
 void PMS5003::resetFailCount(void) {
   pms.resetFailCount();
 }

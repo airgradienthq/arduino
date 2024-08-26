@@ -21,7 +21,7 @@ public:
   static float getInvalidTemperature(void);
   static float getInvalidHumidity(void);
   static int getInvalidCO2(void);
-  static int getInvalidPMS(void);
+  static int getInvalidPmValue(void);
   static int getInvalidNOx(void);
   static int getInvalidVOC(void);
 };

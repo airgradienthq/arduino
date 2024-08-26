@@ -516,16 +516,16 @@ static void updatePm(void) {
     ag.pms5003.resetFailCount();
   } else {
     ag.pms5003.updateFailCount();
-    Serial.printf("PMS read failed: %d\r\n", ag.pms5003.getFailCount());
+    Serial.printf("PMS read failed %d times\r\n", ag.pms5003.getFailCount());
     if (ag.pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
-      measurements.pm01_1 = utils::getInvalidPMS();
-      measurements.pm25_1 = utils::getInvalidPMS();
-      measurements.pm10_1 = utils::getInvalidPMS();
-      measurements.pm03PCount_1 = utils::getInvalidPMS();
+      measurements.pm01_1 = utils::getInvalidPmValue();
+      measurements.pm25_1 = utils::getInvalidPmValue();
+      measurements.pm10_1 = utils::getInvalidPmValue();
+      measurements.pm03PCount_1 = utils::getInvalidPmValue();
     }
 
     if(ag.pms5003.getFailCount() >= ag.pms5003.getFailCountMax()) {
-      Serial.printf("Restarting...");
+      Serial.printf("PMS failure count reach to max set %d, restarting...", ag->pms5003.getFailCountMax());
       ESP.restart();
     }
   }

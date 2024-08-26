@@ -1005,7 +1005,7 @@ static void updateTvoc(void) {
 }
 
 static void updatePm(void) {
-  bool failToRestart = false;
+  bool restart = false;
   if (ag->isOne()) {
     if (ag->pms5003.isFailed() == false) {
       measurements.pm01_1 = ag->pms5003.getPm01Ae();
@@ -1021,16 +1021,16 @@ static void updatePm(void) {
       ag->pms5003.resetFailCount();
     } else {
       ag->pms5003.updateFailCount();
-      Serial.printf("PMS read failed: %d\r\n", ag->pms5003.getFailCount());
+      Serial.printf("PMS read faile %d times\r\n", ag->pms5003.getFailCount());
       if (ag->pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
-        measurements.pm01_1 = utils::getInvalidPMS();
-        measurements.pm25_1 = utils::getInvalidPMS();
-        measurements.pm10_1 = utils::getInvalidPMS();
-        measurements.pm03PCount_1 = utils::getInvalidPMS();
+        measurements.pm01_1 = utils::getInvalidPmValue();
+        measurements.pm25_1 = utils::getInvalidPmValue();
+        measurements.pm10_1 = utils::getInvalidPmValue();
+        measurements.pm03PCount_1 = utils::getInvalidPmValue();
       }
 
       if (ag->pms5003.getFailCount() >= ag->pms5003.getFailCountMax()) {
-        failToRestart = true;
+        restart = true;
       }
     }
   } else {
@@ -1062,19 +1062,19 @@ static void updatePm(void) {
     } else {
       if (configuration.hasSensorPMS1) {
         ag->pms5003t_1.updateFailCount();
-        Serial.printf("[1] PMS read failed: %d\r\n", ag->pms5003t_1.getFailCount());
+        Serial.printf("[1] PMS read failed %d times\r\n", ag->pms5003t_1.getFailCount());
 
         if (ag->pms5003t_1.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
-          measurements.pm01_1 = utils::getInvalidPMS();
-          measurements.pm25_1 = utils::getInvalidPMS();
-          measurements.pm10_1 = utils::getInvalidPMS();
-          measurements.pm03PCount_1 = utils::getInvalidPMS();
+          measurements.pm01_1 = utils::getInvalidPmValue();
+          measurements.pm25_1 = utils::getInvalidPmValue();
+          measurements.pm10_1 = utils::getInvalidPmValue();
+          measurements.pm03PCount_1 = utils::getInvalidPmValue();
           measurements.temp_1 = utils::getInvalidTemperature();
           measurements.hum_1 = utils::getInvalidHumidity();
         }
 
         if (ag->pms5003t_1.getFailCount() >= ag->pms5003t_1.getFailCountMax()) {
-          failToRestart = true;
+          restart = true;
         }
       }
     }
@@ -1105,19 +1105,19 @@ static void updatePm(void) {
     } else {
       if (configuration.hasSensorPMS2) {
         ag->pms5003t_2.updateFailCount();
-        Serial.printf("[2] PMS read failed: %d\r\n", ag->pms5003t_2.getFailCount());
+        Serial.printf("[2] PMS read failed %d times\r\n", ag->pms5003t_2.getFailCount());
 
         if (ag->pms5003t_2.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
-          measurements.pm01_2 = utils::getInvalidPMS();
-          measurements.pm25_2 = utils::getInvalidPMS();
-          measurements.pm10_2 = utils::getInvalidPMS();
-          measurements.pm03PCount_2 = utils::getInvalidPMS();
+          measurements.pm01_2 = utils::getInvalidPmValue();
+          measurements.pm25_2 = utils::getInvalidPmValue();
+          measurements.pm10_2 = utils::getInvalidPmValue();
+          measurements.pm03PCount_2 = utils::getInvalidPmValue();
           measurements.temp_2 = utils::getInvalidTemperature();
           measurements.hum_2 = utils::getInvalidHumidity();
         }
 
         if (ag->pms5003t_2.getFailCount() >= ag->pms5003t_2.getFailCountMax()) {
-          failToRestart = true;
+          restart = true;
         }
       }
     }
@@ -1220,8 +1220,8 @@ static void updatePm(void) {
     }
   }
 
-  if (failToRestart) {
-    Serial.printf("Restarting...");
+  if (restart) {
+    Serial.printf("PMS failure count reach to max set %d, restarting...", ag->pms5003.getFailCountMax());
     ESP.restart();
   }
 }
