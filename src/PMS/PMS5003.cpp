@@ -175,3 +175,25 @@ void PMS5003::handle(void) { pms.handle(); }
  * @return false Communication timeout or sensor has removed
  */
 bool PMS5003::isFailed(void) { return pms.isFailed(); }
+
+void PMS5003::updateFailCount(void) {
+  pms.updateFailCount();
+}
+
+void PMS5003::resetFailCount(void) {
+  pms.resetFailCount();
+}
+
+/**
+ * @brief Get number of fail count
+ * 
+ * @return int 
+ */
+int PMS5003::getFailCount(void) { return pms.getFailCount(); }
+
+/**
+ * @brief Get number of fail count max
+ * 
+ * @return int 
+ */
+int PMS5003::getFailCountMax(void) { return pms.getFailCountMax(); }

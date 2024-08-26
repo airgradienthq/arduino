@@ -216,3 +216,24 @@ void PMS5003T::handle(void) { pms.handle(); }
  */
 bool PMS5003T::isFailed(void) { return pms.isFailed(); }
 
+void PMS5003T::updateFailCount(void) {
+  pms.updateFailCount();
+}
+
+void PMS5003T::resetFailCount(void) {
+  pms.resetFailCount();
+}
+
+/**
+ * @brief Get fail count
+ * 
+ * @return int 
+ */
+int PMS5003T::getFailCount(void) { return pms.getFailCount(); }
+
+/**
+ * @brief Get fail count max
+ * 
+ * @return int 
+ */
+int PMS5003T::getFailCountMax(void) { return pms.getFailCountMax(); }
