@@ -82,7 +82,7 @@ float utils::getInvalidHumidity(void) { return INVALID_HUMIDITY; }
 
 int utils::getInvalidCO2(void) { return INVALID_CO2; }
 
-int utils::getInvalidPMS(void) { return INVALID_PMS; }
+int utils::getInvalidPmValue(void) { return INVALID_PMS; }
 
 int utils::getInvalidNOx(void) { return INVALID_NOX; }
 
