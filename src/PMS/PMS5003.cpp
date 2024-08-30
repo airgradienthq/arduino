@@ -78,7 +78,7 @@ bool PMS5003::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -133,6 +133,20 @@ int PMS5003::compensate(int pm25, float humidity) {
 }
 
 /**
+ * @brief Get sensor firmware version
+ * 
+ * @return int
+ */
+int PMS5003::getFirmwareVersion(void) { return _ver; }
+
+/**
+ * @brief Get sensor error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMS5003::getErrorCode(void) { return pms.getErrorCode(); }
+
+/**
  * @brief Check device initialized or not
  *
  * @return true Initialized
@@ -175,3 +189,25 @@ void PMS5003::handle(void) { pms.handle(); }
  * @return false Communication timeout or sensor has removed
  */
 bool PMS5003::isFailed(void) { return pms.isFailed(); }
+
+void PMS5003::updateFailCount(void) {
+  pms.updateFailCount();
+}
+
+void PMS5003::resetFailCount(void) {
+  pms.resetFailCount();
+}
+
+/**
+ * @brief Get number of fail count
+ * 
+ * @return int 
+ */
+int PMS5003::getFailCount(void) { return pms.getFailCount(); }
+
+/**
+ * @brief Get number of fail count max
+ * 
+ * @return int 
+ */
+int PMS5003::getFailCountMax(void) { return pms.getFailCountMax(); }

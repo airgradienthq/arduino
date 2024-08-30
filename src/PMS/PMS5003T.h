@@ -22,6 +22,10 @@ public:
 
   void handle(void);
   bool isFailed(void);
+  void updateFailCount(void);
+  void resetFailCount(void);
+  int getFailCount(void);
+  int getFailCountMax(void);
   int getPm01Ae(void);
   int getPm25Ae(void);
   int getPm10Ae(void);
@@ -30,10 +34,13 @@ public:
   float getTemperature(void);
   float getRelativeHumidity(void);
   int compensate(int pm25, float humidity);
+  int getFirmwareVersion(void);
+  uint8_t getErrorCode(void);
 
 private:
   bool _isBegin = false;
   bool _isSleep = false;
+  int _ver;   /** Firmware version code */
 
   BoardType _boardDef;
   const BoardDef *bsp;

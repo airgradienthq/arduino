@@ -67,10 +67,10 @@ String OpenMetrics::getPayload(void) {
 
   float _temp = utils::getInvalidTemperature();
   float _hum = utils::getInvalidHumidity();
-  int pm01 = utils::getInvalidPMS();
-  int pm25 = utils::getInvalidPMS();
-  int pm10 = utils::getInvalidPMS();
-  int pm03PCount = utils::getInvalidPMS();
+  int pm01 = utils::getInvalidPmValue();
+  int pm25 = utils::getInvalidPmValue();
+  int pm10 = utils::getInvalidPmValue();
+  int pm03PCount = utils::getInvalidPmValue();
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
   if (config.hasSensorPMS1 && config.hasSensorPMS2) {

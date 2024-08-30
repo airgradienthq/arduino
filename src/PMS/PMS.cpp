@@ -12,6 +12,7 @@ bool PMSBase::begin(Stream *stream) {
   this->stream = stream;
 
   failed = true;
+  failCount = 0;
   lastRead = 0; // To read buffer on handle without wait after 1.5sec
 
   this->stream->flush();
@@ -148,6 +149,27 @@ void PMSBase::handle() {
 bool PMSBase::isFailed(void) { return failed; }
 
 /**
+ * @brief Increate number of fail
+ * 
+ */
+void PMSBase::updateFailCount(void) {
+  if (failCount < failCountMax) {
+    failCount++;
+  }
+}
+
+void PMSBase::resetFailCount(void) { failCount = 0; }
+
+/**
+ * @brief Get number of fail
+ * 
+ * @return int 
+ */
+int PMSBase::getFailCount(void) { return failCount; }
+
+int PMSBase::getFailCountMax(void) { return failCountMax; }
+
+/**
  * @brief Read PMS 0.1 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
@@ -244,6 +266,20 @@ int16_t PMSBase::getTemp(void) { return toI16(&package[24]); }
  * @return uint16_t
  */
 uint16_t PMSBase::getHum(void) { return toU16(&package[26]); }
+
+/**
+ * @brief Get firmware version code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMSBase::getFirmwareVersion(void) { return package[28]; }
+
+/**
+ * @brief Ge PMS5003 error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMSBase::getErrorCode(void) { return package[29]; }
 
 /**
  * @brief Convert PMS2.5 to US AQI unit
