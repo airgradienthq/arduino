@@ -34,10 +34,13 @@ public:
   float getTemperature(void);
   float getRelativeHumidity(void);
   float compensated(int pm25, float humidity);
+  int getFirmwareVersion(void);
+  uint8_t getErrorCode(void);
 
 private:
   bool _isBegin = false;
   bool _isSleep = false;
+  int _ver;   /** Firmware version code */
 
   BoardType _boardDef;
   const BoardDef *bsp;

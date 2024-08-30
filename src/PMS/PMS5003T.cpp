@@ -103,7 +103,7 @@ bool PMS5003T::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -174,6 +174,20 @@ float PMS5003T::getRelativeHumidity(void) {
 float PMS5003T::compensated(int pm25, float humidity) {
   return pms.compensated(pm25, humidity);
 }
+
+/**
+ * @brief Get module(s) firmware version
+ * 
+ * @return int Version code
+ */
+int PMS5003T::getFirmwareVersion(void) { return _ver; }
+
+/**
+ * @brief Get sensor error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMS5003T::getErrorCode(void) { return pms.getErrorCode(); }
 
 /**
  * @brief Check device initialized or not

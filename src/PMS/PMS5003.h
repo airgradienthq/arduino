@@ -29,9 +29,12 @@ public:
   int getPm03ParticleCount(void);
   int convertPm25ToUsAqi(int pm25);
   int compensated(int pm25, float humidity);
+  int getFirmwareVersion(void);
+  uint8_t getErrorCode(void);
 
 private:
   bool _isBegin = false;
+  int _ver;
   BoardType _boardDef;
   PMSBase pms;
   const BoardDef *bsp;
