@@ -76,7 +76,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       if (utils::isValidTemperature(this->temp_1) && utils::isValidTemperature(this->temp_1)) {
         root["atmp"] = ag->round2((this->temp_1 + this->temp_2) / 2.0f);
         if (localServer) {
-          val = ag->pms5003t_2.temperatureCompensated((this->temp_1 + this->temp_2) / 2.0f);
+          val = ag->pms5003t_2.compensateTemp((this->temp_1 + this->temp_2) / 2.0f);
           if (utils::isValidTemperature(val)) {
             root["atmpCompensated"] = ag->round2(val);
           }
@@ -85,7 +85,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       if (utils::isValidHumidity(this->hum_1) && utils::isValidHumidity(this->hum_1)) {
         root["rhum"] = ag->round2((this->hum_1 + this->hum_2) / 2.0f);
         if (localServer) {
-          val = ag->pms5003t_2.humidityCompensated((this->hum_1 + this->hum_2) / 2.0f);
+          val = ag->pms5003t_2.compensateHum((this->hum_1 + this->hum_2) / 2.0f);
           if (utils::isValidHumidity(val)) {
             root["rhumCompensated"] = (int)val;
           }
@@ -117,7 +117,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["atmp"] = ag->round2(this->temp_1);
 
           if (localServer) {
-            val = ag->pms5003t_1.temperatureCompensated(this->temp_1);
+            val = ag->pms5003t_1.compensateTemp(this->temp_1);
             if (utils::isValidTemperature(val)) {
               root["atmpCompensated"] = ag->round2(val);
             }
@@ -127,7 +127,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["rhum"] = this->hum_1;
 
           if (localServer) {
-            val = ag->pms5003t_1.humidityCompensated(this->hum_1);
+            val = ag->pms5003t_1.compensateHum(this->hum_1);
             if (utils::isValidHumidity(val)) {
               root["rhumCompensated"] = (int)val;
             }
@@ -154,7 +154,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["atmp"] = ag->round2(this->temp_2);
 
           if (localServer) {
-            val = ag->pms5003t_2.temperatureCompensated(this->temp_2);
+            val = ag->pms5003t_2.compensateTemp(this->temp_2);
             if (utils::isValidTemperature(val)) {
               root["atmpCompensated"] = ag->round2(val);
             }
@@ -164,7 +164,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           root["rhum"] = this->hum_2;
 
           if (localServer) {
-            val = ag->pms5003t_2.humidityCompensated(this->hum_2);
+            val = ag->pms5003t_2.compensateHum(this->hum_2);
             if (utils::isValidHumidity(val)) {
               root["rhumCompensated"] = (int)val;
             }
@@ -192,7 +192,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["atmp"] = ag->round2(this->temp_1);
 
             if (localServer) {
-              val = ag->pms5003t_1.temperatureCompensated(this->temp_1);
+              val = ag->pms5003t_1.compensateTemp(this->temp_1);
               if (utils::isValidTemperature(val)) {
                 root["atmpCompensated"] = ag->round2(val);
               }
@@ -201,7 +201,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
           if (utils::isValidHumidity(this->hum_1)) {
             root["rhum"] = this->hum_1;
             if(localServer) {
-              val = ag->pms5003t_1.humidityCompensated(this->hum_1);
+              val = ag->pms5003t_1.compensateHum(this->hum_1);
               if(utils::isValidHumidity(val)) {
                 root["rhumCompensated"] = (int)val;
               }
@@ -225,7 +225,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["atmp"] = ag->round2(this->temp_2);
             if (localServer) {
 
-              val = ag->pms5003t_1.temperatureCompensated(this->temp_2);
+              val = ag->pms5003t_1.compensateTemp(this->temp_2);
               if (utils::isValidTemperature(val)) {
                 root["atmpCompensated"] = ag->round2(val);
               }
@@ -235,7 +235,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["rhum"] = this->hum_2;
 
             if(localServer) {
-              val = ag->pms5003t_1.humidityCompensated(this->hum_2);
+              val = ag->pms5003t_1.compensateHum(this->hum_2);
               if(utils::isValidHumidity(val)) {
                 root["rhumCompensated"] = (int)val;
               }
@@ -262,7 +262,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["channels"]["1"]["atmp"] = ag->round2(this->temp_1);
 
             if (localServer) {
-              val = ag->pms5003t_1.temperatureCompensated(this->temp_1);
+              val = ag->pms5003t_1.compensateTemp(this->temp_1);
               if (utils::isValidTemperature(val)) {
                 root["channels"]["1"]["atmpCompensated"] = ag->round2(val);
               }
@@ -272,7 +272,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["channels"]["1"]["rhum"] = this->hum_1;
 
             if (localServer) {
-              val = ag->pms5003t_1.humidityCompensated(this->hum_1);
+              val = ag->pms5003t_1.compensateHum(this->hum_1);
               if (utils::isValidHumidity(val)) {
                 root["channels"]["1"]["rhumCompensated"] = (int)val;
               }
@@ -298,7 +298,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["channels"]["2"]["atmp"] = ag->round2(this->temp_2);
 
             if (localServer) {
-              val = ag->pms5003t_1.temperatureCompensated(this->temp_2);
+              val = ag->pms5003t_1.compensateTemp(this->temp_2);
               if (utils::isValidTemperature(val)) {
                 root["channels"]["2"]["atmpCompensated"] = ag->round2(val);
               }
@@ -308,7 +308,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             root["channels"]["2"]["rhum"] = this->hum_2;
 
             if (localServer) {
-              val = ag->pms5003t_1.humidityCompensated(this->hum_2);
+              val = ag->pms5003t_1.compensateHum(this->hum_2);
               if (utils::isValidHumidity(val)) {
                 root["channels"]["2"]["rhumCompensated"] = (int)val;
               }

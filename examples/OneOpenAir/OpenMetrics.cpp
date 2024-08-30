@@ -118,8 +118,8 @@ String OpenMetrics::getPayload(void) {
     atmpCompensated = _temp;
     ahumCompensated = _hum;
   } else {
-    atmpCompensated = ag->pms5003t_1.temperatureCompensated(_temp);
-    ahumCompensated = ag->pms5003t_1.humidityCompensated(_hum);
+    atmpCompensated = ag->pms5003t_1.compensateTemp(_temp);
+    ahumCompensated = ag->pms5003t_1.compensateHum(_hum);
   }
 
   if (config.hasSensorPMS1 || config.hasSensorPMS2) {
