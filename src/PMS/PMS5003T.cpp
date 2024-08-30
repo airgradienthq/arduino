@@ -167,6 +167,8 @@ float PMS5003T::getRelativeHumidity(void) {
 /**
  * @brief Correct PM2.5
  * 
+ * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
  * @return int 

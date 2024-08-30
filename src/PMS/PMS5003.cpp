@@ -124,6 +124,8 @@ int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 /**
  * @brief Correct PM2.5
  * 
+ * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
  * @return int 
