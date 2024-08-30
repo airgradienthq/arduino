@@ -311,7 +311,7 @@ void OledDisplay::showDashboard(const char *status) {
       }
       DISP()->setFont(u8g2_font_t0_22b_tf);
       if (config.isPmStandardInUSAQI()) {
-        if (utils::isValidPMS(pm25)) {
+        if (utils::isValidPm(pm25)) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
           sprintf(strBuf, "%s", "-");
@@ -320,7 +320,7 @@ void OledDisplay::showDashboard(const char *status) {
         DISP()->setFont(u8g2_font_t0_12_tf);
         DISP()->drawUTF8(55, 61, "AQI");
       } else {
-        if (utils::isValidPMS(pm25)) {
+        if (utils::isValidPm(pm25)) {
           sprintf(strBuf, "%d", pm25);
         } else {
           sprintf(strBuf, "%s", "-");
@@ -370,7 +370,7 @@ void OledDisplay::showDashboard(const char *status) {
       pm25 = (int)ag->pms5003.compensate(pm25, value.Humidity);
     }
     ag->display.setCursor(0, 12);
-    if (utils::isValidPMS(pm25)) {
+    if (utils::isValidPm(pm25)) {
       snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", pm25);
     } else {
       snprintf(strBuf, sizeof(strBuf), "PM2.5:-");

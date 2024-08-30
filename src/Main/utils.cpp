@@ -48,14 +48,14 @@ bool utils::isValidCO2(int16_t value) {
   return false;
 }
 
-bool utils::isValidPMS(int value) {
+bool utils::isValidPm(int value) {
   if ((value >= VALID_PMS_MIN) && (value <= VALID_PMS_MAX)) {
     return true;
   }
   return false;
 }
 
-bool utils::isValidPMS03Count(int value) {
+bool utils::isValidPm03Count(int value) {
   if (value >= VALID_PMS03COUNT_MIN) {
     return true;
   }

@@ -14,8 +14,8 @@ public:
   static bool isValidTemperature(float value);
   static bool isValidHumidity(float value);
   static bool isValidCO2(int16_t value);
-  static bool isValidPMS(int value);
-  static bool isValidPMS03Count(int value);
+  static bool isValidPm(int value);
+  static bool isValidPm03Count(int value);
   static bool isValidNOx(int value);
   static bool isValidVOC(int value);
   static float getInvalidTemperature(void);
