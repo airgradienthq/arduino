@@ -295,7 +295,7 @@ int PMSBase::pm25ToAQI(int pm02) {
 /**
  * @brief Correction PM2.5
  * 
- * Formula: https://github.com/airgradienthq/arduino/issues/182
+ * Formula: https://www.airgradient.com/documentation/correction-algorithms/
  * 
  * @param pm25 Raw PM2.5 value
  * @param humidity Humidity value (%)
