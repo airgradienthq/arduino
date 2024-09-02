@@ -54,16 +54,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
     if (config->hasSensorPMS1) {
-      if (utils::isValidPMS(this->pm01_1)) {
+      if (utils::isValidPm(this->pm01_1)) {
         root["pm01"] = this->pm01_1;
       }
-      if (utils::isValidPMS(this->pm25_1)) {
+      if (utils::isValidPm(this->pm25_1)) {
         root["pm02"] = this->pm25_1;
       }
-      if (utils::isValidPMS(this->pm10_1)) {
+      if (utils::isValidPm(this->pm10_1)) {
         root["pm10"] = this->pm10_1;
       }
-      if (utils::isValidPMS03Count(this->pm03PCount_1)) {
+      if (utils::isValidPm03Count(this->pm03PCount_1)) {
         root["pm003Count"] = this->pm03PCount_1;
       }
       if (!localServer) {
@@ -89,7 +89,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
 
     if (config->hasSensorSHT && config->hasSensorPMS1) {
-      int pm25 = ag->pms5003.compensated(this->pm25_1, this->Humidity);
+      int pm25 = ag->pms5003.compensate(this->pm25_1, this->Humidity);
       if (pm25 >= 0) {
         root["pm02Compensated"] = pm25;
       }
@@ -97,16 +97,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   } else {
     if (config->hasSensorPMS1 && config->hasSensorPMS2) {
-      if (utils::isValidPMS(this->pm01_1) && utils::isValidPMS(this->pm01_2)) {
+      if (utils::isValidPm(this->pm01_1) && utils::isValidPm(this->pm01_2)) {
         root["pm01"] = ag->round2((this->pm01_1 + this->pm01_2) / 2.0f);
       }
-      if (utils::isValidPMS(this->pm25_1) && utils::isValidPMS(this->pm25_2)) {
+      if (utils::isValidPm(this->pm25_1) && utils::isValidPm(this->pm25_2)) {
         root["pm02"] = ag->round2((this->pm25_1 + this->pm25_2) / 2.0f);
       }
-      if (utils::isValidPMS(this->pm10_1) && utils::isValidPMS(this->pm10_2)) {
+      if (utils::isValidPm(this->pm10_1) && utils::isValidPm(this->pm10_2)) {
         root["pm10"] = ag->round2((this->pm10_1 + this->pm10_2) / 2.0f);
       }
-      if (utils::isValidPMS(this->pm03PCount_1) && utils::isValidPMS(this->pm03PCount_2)) {
+      if (utils::isValidPm(this->pm03PCount_1) && utils::isValidPm(this->pm03PCount_2)) {
         root["pm003Count"] = ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0f);
       }
 
@@ -130,8 +130,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
       }
 
-      int pm25 = (ag->pms5003t_1.compensated(this->pm25_1, this->temp_1) +
-                  ag->pms5003t_2.compensated(this->pm25_2, this->temp_2)) /
+      int pm25 = (ag->pms5003t_1.compensate(this->pm25_1, this->temp_1) +
+                  ag->pms5003t_2.compensate(this->pm25_2, this->temp_2)) /
                  2;
       root["pm02Compensated"] = pm25;
     }
@@ -139,16 +139,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     if (fwMode == FW_MODE_O_1PS || fwMode == FW_MODE_O_1PST) {
       float val;
       if (config->hasSensorPMS1) {
-        if (utils::isValidPMS(this->pm01_1)) {
+        if (utils::isValidPm(this->pm01_1)) {
           root["pm01"] = this->pm01_1;
         }
-        if (utils::isValidPMS(this->pm25_1)) {
+        if (utils::isValidPm(this->pm25_1)) {
           root["pm02"] = this->pm25_1;
         }
-        if (utils::isValidPMS(this->pm10_1)) {
+        if (utils::isValidPm(this->pm10_1)) {
           root["pm10"] = this->pm10_1;
         }
-        if (utils::isValidPMS03Count(this->pm03PCount_1)) {
+        if (utils::isValidPm03Count(this->pm03PCount_1)) {
           root["pm003Count"] = this->pm03PCount_1;
         }
         if (utils::isValidTemperature(this->temp_1)) {
@@ -171,23 +171,23 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
         }
-        root["pm02Compensated"] = ag->pms5003t_1.compensated(this->pm25_1, this->temp_1);
+        root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
         if (!localServer) {
           root[json_prop_pmFirmware] =
               pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
         }
       }
       if (config->hasSensorPMS2) {
-        if(utils::isValidPMS(this->pm01_2)) {
+        if(utils::isValidPm(this->pm01_2)) {
           root["pm01"] = this->pm01_2;
         }
-        if(utils::isValidPMS(this->pm25_2)) {
+        if(utils::isValidPm(this->pm25_2)) {
           root["pm02"] = this->pm25_2;
         }
-        if(utils::isValidPMS(this->pm10_2)) {
+        if(utils::isValidPm(this->pm10_2)) {
           root["pm10"] = this->pm10_2;
         }
-        if(utils::isValidPMS03Count(this->pm03PCount_2)) {
+        if(utils::isValidPm03Count(this->pm03PCount_2)) {
           root["pm003Count"] = this->pm03PCount_2;
         }
 
@@ -212,7 +212,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
         }
-        root["pm02Compensated"] = ag->pms5003t_2.compensated(this->pm25_2, this->temp_2);
+        root["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->temp_2);
         if(!localServer) {
           root[json_prop_pmFirmware] =
               pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
@@ -222,16 +222,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       if (fwMode == FW_MODE_O_1P) {
         float val;
         if (config->hasSensorPMS1) {
-          if (utils::isValidPMS(this->pm01_1)) {
+          if (utils::isValidPm(this->pm01_1)) {
             root["pm01"] = this->pm01_1;
           }
-          if (utils::isValidPMS(this->pm25_1)) {
+          if (utils::isValidPm(this->pm25_1)) {
             root["pm02"] = this->pm25_1;
           }
-          if (utils::isValidPMS(this->pm10_1)) {
+          if (utils::isValidPm(this->pm10_1)) {
             root["pm10"] = this->pm10_1;
           }
-          if (utils::isValidPMS03Count(this->pm03PCount_1)) {
+          if (utils::isValidPm03Count(this->pm03PCount_1)) {
             root["pm003Count"] = this->pm03PCount_1;
           }
           if (utils::isValidTemperature(this->temp_1)) {
@@ -253,22 +253,22 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["pm02Compensated"] = ag->pms5003t_1.compensated(this->pm25_1, this->temp_1);
+          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
           if(!localServer) {
             root[json_prop_pmFirmware] =
                 pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
           }
         } else if (config->hasSensorPMS2) {
-          if(utils::isValidPMS(this->pm01_2)) {
+          if(utils::isValidPm(this->pm01_2)) {
             root["pm01"] = this->pm01_2;
           }
-          if(utils::isValidPMS(this->pm25_2)) {
+          if(utils::isValidPm(this->pm25_2)) {
             root["pm02"] = this->pm25_2;
           }
-          if(utils::isValidPMS(this->pm10_2)) {
+          if(utils::isValidPm(this->pm10_2)) {
             root["pm10"] = this->pm10_2;
           }
-          if(utils::isValidPMS03Count(this->pm03PCount_2)) {
+          if(utils::isValidPm03Count(this->pm03PCount_2)) {
             root["pm003Count"] = this->pm03PCount_2;
           }
           if (utils::isValidTemperature(this->temp_2)) {
@@ -291,7 +291,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["pm02Compensated"] = ag->pms5003t_1.compensated(this->pm25_1, this->temp_1);
+          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
           if(!localServer) {
             root[json_prop_pmFirmware] =
                 pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
@@ -300,16 +300,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
       } else {
         float val;
         if (config->hasSensorPMS1) {
-          if(utils::isValidPMS(this->pm01_1)) {
+          if(utils::isValidPm(this->pm01_1)) {
             root["channels"]["1"]["pm01"] = this->pm01_1;
           }
-          if(utils::isValidPMS(this->pm25_1)) {
+          if(utils::isValidPm(this->pm25_1)) {
             root["channels"]["1"]["pm02"] = this->pm25_1;
           }
-          if(utils::isValidPMS(this->pm10_1)) {
+          if(utils::isValidPm(this->pm10_1)) {
             root["channels"]["1"]["pm10"] = this->pm10_1;
           }
-          if (utils::isValidPMS03Count(this->pm03PCount_1)) {
+          if (utils::isValidPm03Count(this->pm03PCount_1)) {
             root["channels"]["1"]["pm003Count"] = this->pm03PCount_1;
           }
           if(utils::isValidTemperature(this->temp_1)) {
@@ -332,7 +332,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["channels"]["1"]["pm02Compensated"] = ag->pms5003t_1.compensated(this->pm25_1, this->temp_1);
+          root["channels"]["1"]["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
         
           // PMS5003T version
           if(!localServer) {
@@ -342,16 +342,16 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
         if (config->hasSensorPMS2) {
           float val;
-          if (utils::isValidPMS(this->pm01_2)) {
+          if (utils::isValidPm(this->pm01_2)) {
             root["channels"]["2"]["pm01"] = this->pm01_2;
           }
-          if (utils::isValidPMS(this->pm25_2)) {
+          if (utils::isValidPm(this->pm25_2)) {
             root["channels"]["2"]["pm02"] = this->pm25_2;
           }
-          if (utils::isValidPMS(this->pm10_2)) {
+          if (utils::isValidPm(this->pm10_2)) {
             root["channels"]["2"]["pm10"] = this->pm10_2;
           }
-          if (utils::isValidPMS03Count(this->pm03PCount_2)) {
+          if (utils::isValidPm03Count(this->pm03PCount_2)) {
             root["channels"]["2"]["pm003Count"] = this->pm03PCount_2;
           }
           if (utils::isValidTemperature(this->temp_2)) {
@@ -374,7 +374,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["channels"]["2"]["pm02Compensated"] = ag->pms5003t_2.compensated(this->pm25_2, this->temp_2);
+          root["channels"]["2"]["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->temp_2);
           // PMS5003T version
           if(!localServer) {
             root["channels"]["2"][json_prop_pmFirmware] =

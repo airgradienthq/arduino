@@ -36,7 +36,7 @@ public:
   uint8_t getErrorCode(void);
 
   int pm25ToAQI(int pm02);
-  int compensated(int pm25, float humidity);
+  int compensate(int pm25, float humidity);
 
 private:
   Stream *stream;

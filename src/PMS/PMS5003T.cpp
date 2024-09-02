@@ -167,12 +167,14 @@ float PMS5003T::getRelativeHumidity(void) {
 /**
  * @brief Correct PM2.5
  * 
+ * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
- * @return float 
+ * @return int 
  */
-float PMS5003T::compensated(int pm25, float humidity) {
-  return pms.compensated(pm25, humidity);
+int PMS5003T::compensate(int pm25, float humidity) {
+  return pms.compensate(pm25, humidity);
 }
 
 /**
