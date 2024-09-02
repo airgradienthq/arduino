@@ -41,6 +41,28 @@ bool WifiConnector::connect(void) {
     }
   }
 
+  WiFi.begin();
+  String wifiSSID = WIFI()->getWiFiSSID(true);
+  if (wifiSSID.isEmpty()) {
+    logInfo("Connected WiFi is empty, connect to default wifi \"" +
+            String(this->defaultSsid) + String("\""));
+
+    /** Set wifi connect */
+    WiFi.begin(this->defaultSsid, this->defaultPassword);
+
+    /** Wait for wifi connect to AP */
+    int count = 0;
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      count++;
+      if (count >= 15) {
+        logError("Try connect to default wifi \"" + String(this->defaultSsid) +
+                 String("\" failed"));
+        break;
+      }
+    }
+  }
+
   WIFI()->setConfigPortalBlocking(false);
   WIFI()->setConnectTimeout(15);
   WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
@@ -383,3 +405,11 @@ bool WifiConnector::hasConfigurated(void) {
  * @return false
  */
 bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
+
+/**
+ * @brief Set wifi connect to default WiFi
+ * 
+ */
+void WifiConnector::setDefault(void) {
+  WiFi.begin("airgradient", "cleanair");
+}
