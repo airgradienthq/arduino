@@ -12,6 +12,7 @@ bool PMSBase::begin(Stream *stream) {
   this->stream = stream;
 
   failed = true;
+  failCount = 0;
   lastRead = 0; // To read buffer on handle without wait after 1.5sec
 
   this->stream->flush();
@@ -148,6 +149,27 @@ void PMSBase::handle() {
 bool PMSBase::isFailed(void) { return failed; }
 
 /**
+ * @brief Increate number of fail
+ * 
+ */
+void PMSBase::updateFailCount(void) {
+  if (failCount < failCountMax) {
+    failCount++;
+  }
+}
+
+void PMSBase::resetFailCount(void) { failCount = 0; }
+
+/**
+ * @brief Get number of fail
+ * 
+ * @return int 
+ */
+int PMSBase::getFailCount(void) { return failCount; }
+
+int PMSBase::getFailCountMax(void) { return failCountMax; }
+
+/**
  * @brief Read PMS 0.1 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
@@ -246,6 +268,20 @@ int16_t PMSBase::getTemp(void) { return toI16(&package[24]); }
 uint16_t PMSBase::getHum(void) { return toU16(&package[26]); }
 
 /**
+ * @brief Get firmware version code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMSBase::getFirmwareVersion(void) { return package[28]; }
+
+/**
+ * @brief Ge PMS5003 error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMSBase::getErrorCode(void) { return package[29]; }
+
+/**
  * @brief Convert PMS2.5 to US AQI unit
  *
  * @param pm02
@@ -273,29 +309,32 @@ int PMSBase::pm25ToAQI(int pm02) {
 /**
  * @brief Correction PM2.5
  * 
+ * Formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
  * @param pm25 Raw PM2.5 value
  * @param humidity Humidity value (%)
  * @return int 
  */
-int PMSBase::compensated(int pm25, float humidity) {
+int PMSBase::compensate(int pm25, float humidity) {
   float value;
+  float fpm25 = pm25;
   if (humidity < 0) {
     humidity = 0;
   }
   if (humidity > 100) {
-    humidity = 100;
+    humidity = 100.0f;
   }
 
-  if(pm25 < 30) {
-    value = (pm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
-  } else if(pm25 < 50) {
-    value = (0.786f * (pm25 / 20 - 3 / 2) + 0.524f * (1 - (pm25 / 20 - 3 / 2))) * pm25 - (0.0862f * humidity) + 5.75f;
-  } else if(pm25 < 210) {
-    value = (0.786f * pm25) - (0.0862f * humidity) + 5.75f;
-  } else if(pm25 < 260) {
-    value = (0.69f * (pm25/50 - 21/5) + 0.786f * (1 - (pm25/50 - 21/5))) * pm25 - (0.0862f * humidity * (1 - (pm25/50 - 21/5))) + (2.966f * (pm25/50 -21/5)) + (5.75f * (1 - (pm25/50 - 21/5))) + (8.84f * (1.e-4) * pm25* (pm25/50 - 21/5));
-  } else {
-    value = 2.966f + (0.69f * pm25) + (8.84f * (1.e-4) * pm25);
+  if(pm25 < 30) { /** pm2.5 < 30 */
+    value = (fpm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
+  } else if(pm25 < 50) { /** 30 <= pm2.5 < 50 */
+    value = (0.786f * (fpm25 * 0.05f - 1.5f) + 0.524f * (1.0f - (fpm25 * 0.05f - 1.5f))) * fpm25 - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 210) { /** 50 <= pm2.5 < 210 */
+    value = (0.786f * fpm25) - (0.0862f * humidity) + 5.75f;
+  } else if(pm25 < 260) { /** 210 <= pm2.5 < 260 */
+    value = (0.69f * (fpm25 * 0.02f - 4.2f) + 0.786f * (1.0f - (fpm25 * 0.02f - 4.2f))) * fpm25 - (0.0862f * humidity * (1.0f - (fpm25 * 0.02f - 4.2f))) + (2.966f * (fpm25 * 0.02f - 4.2f)) + (5.75f * (1.0f - (fpm25 * 0.02f - 4.2f))) + (8.84f * (1.e-4) * fpm25 * fpm25 * (fpm25 * 0.02f - 4.2f));
+  } else { /** 260 <= pm2.5 */
+    value = 2.966f + (0.69f * fpm25) + (8.84f * (1.e-4) * fpm25 * fpm25);
   }
 
   if(value < 0) {

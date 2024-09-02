@@ -1,5 +1,6 @@
 #include "AgStateMachine.h"
 
+#define LED_TEST_BLINK_DELAY  50  /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
 #define LED_SLOW_BLINK_DELAY 1000 /** ms */
 #define LED_SHORT_BLINK_DELAY 500 /** ms */
@@ -305,18 +306,23 @@ void StateMachine::co2Calibration(void) {
 
 void StateMachine::ledBarTest(void) {
   if (config.isLedBarTestRequested()) {
-    if (config.getCountry() == "TH") {
-      uint32_t tstart = millis();
-      logInfo("Start run LED test for 2 min");
-      while (1) {
-        ledBarRunTest();
-        uint32_t ms = (uint32_t)(millis() - tstart);
-        if (ms >= (60 * 1000 * 2)) {
-          logInfo("LED test after 2 min finish");
-          break;
+    if (ag->isOne()) {
+      if (config.getCountry() == "TH") {
+        uint32_t tstart = millis();
+        logInfo("Start run LED test for 2 min");
+        while (1) {
+          ledBarRunTest();
+          uint32_t ms = (uint32_t)(millis() - tstart);
+          if (ms >= (60 * 1000 * 2)) {
+            logInfo("LED test after 2 min finish");
+            break;
+          }
         }
+      } else {
+        ledBarRunTest();
       }
-    } else {
+    }
+    else if(ag->isOpenAir()) {
       ledBarRunTest();
     }
   }
@@ -325,22 +331,31 @@ void StateMachine::ledBarTest(void) {
 void StateMachine::ledBarPowerUpTest(void) { ledBarRunTest(); }
 
 void StateMachine::ledBarRunTest(void) {
-  disp.setText("LED Test", "running", ".....");
-  runLedTest('r');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('g');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('b');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('w');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('n');
-  ag->ledBar.show();
-  delay(1000);
+  if (ag->isOne()) {
+    disp.setText("LED Test", "running", ".....");
+    runLedTest('r');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('g');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('b');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('w');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('n');
+    ag->ledBar.show();
+    delay(1000);
+  } else if (ag->isOpenAir()) {
+    for (int i = 0; i < 100; i++) {
+      ag->statusLed.setOn();
+      delay(LED_TEST_BLINK_DELAY);
+      ag->statusLed.setOff();
+      delay(LED_TEST_BLINK_DELAY);
+    }
+  }
 }
 
 void StateMachine::runLedTest(char color) {

@@ -68,7 +68,6 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static MqttClient mqttClient(Serial);
 
-static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_42PS;
@@ -609,15 +608,20 @@ static void updatePm(void) {
     Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
     Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
     Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
-    pmFailCount = 0;
+    ag.pms5003.resetFailCount();
   } else {
-    pmFailCount++;
-    Serial.printf("PMS read failed: %d\r\n", pmFailCount);
-    if (pmFailCount >= 3) {
-      measurements.pm01_1 = utils::getInvalidPMS();
-      measurements.pm25_1 = utils::getInvalidPMS();
-      measurements.pm10_1 = utils::getInvalidPMS();
-      measurements.pm03PCount_1 = utils::getInvalidPMS();
+    ag.pms5003.updateFailCount();
+    Serial.printf("PMS read failed %d times\r\n", ag.pms5003.getFailCount());
+    if (ag.pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
+      measurements.pm01_1 = utils::getInvalidPmValue();
+      measurements.pm25_1 = utils::getInvalidPmValue();
+      measurements.pm10_1 = utils::getInvalidPmValue();
+      measurements.pm03PCount_1 = utils::getInvalidPmValue();
+    }
+
+    if(ag.pms5003.getFailCount() >= ag.pms5003.getFailCountMax()) {
+      Serial.printf("PMS failure count reach to max set %d, restarting...", ag.pms5003.getFailCountMax());
+      ESP.restart();
     }
   }
 }

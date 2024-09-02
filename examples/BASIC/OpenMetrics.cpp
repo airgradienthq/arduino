@@ -67,10 +67,10 @@ String OpenMetrics::getPayload(void) {
 
   float _temp = utils::getInvalidTemperature();
   float _hum = utils::getInvalidHumidity();
-  int pm01 = utils::getInvalidPMS();
-  int pm25 = utils::getInvalidPMS();
-  int pm10 = utils::getInvalidPMS();
-  int pm03PCount = utils::getInvalidPMS();
+  int pm01 = utils::getInvalidPmValue();
+  int pm25 = utils::getInvalidPmValue();
+  int pm10 = utils::getInvalidPmValue();
+  int pm03PCount = utils::getInvalidPmValue();
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
 
@@ -89,28 +89,28 @@ String OpenMetrics::getPayload(void) {
   }
 
   if (config.hasSensorPMS1) {
-    if (utils::isValidPMS(pm01)) {
+    if (utils::isValidPm(pm01)) {
       add_metric("pm1",
                  "PM1.0 concentration as measured by the AirGradient PMS "
                  "sensor, in micrograms per cubic meter",
                  "gauge", "ugm3");
       add_metric_point("", String(pm01));
     }
-    if (utils::isValidPMS(pm25)) {
+    if (utils::isValidPm(pm25)) {
       add_metric("pm2d5",
                  "PM2.5 concentration as measured by the AirGradient PMS "
                  "sensor, in micrograms per cubic meter",
                  "gauge", "ugm3");
       add_metric_point("", String(pm25));
     }
-    if (utils::isValidPMS(pm10)) {
+    if (utils::isValidPm(pm10)) {
       add_metric("pm10",
                  "PM10 concentration as measured by the AirGradient PMS "
                  "sensor, in micrograms per cubic meter",
                  "gauge", "ugm3");
       add_metric_point("", String(pm10));
     }
-    if (utils::isValidPMS03Count(pm03PCount)) {
+    if (utils::isValidPm03Count(pm03PCount)) {
       add_metric("pm0d3",
                  "PM0.3 concentration as measured by the AirGradient PMS "
                  "sensor, in number of particules per 100 milliliters",
