@@ -15,7 +15,7 @@
 #include "Main/utils.h"
 
 #ifndef GIT_VERSION
-#define GIT_VERSION "3.1.5-snap"
+#define GIT_VERSION "3.1.7-snap"
 #endif
 
 /**
