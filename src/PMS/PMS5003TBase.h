@@ -8,8 +8,8 @@ private:
 public:
   PMS5003TBase();
   ~PMS5003TBase();
-  float temperatureCompensated(float temp);
-  float humidityCompensated(float hum);
+  float compensateTemp(float temp);
+  float compensateHum(float hum);
 };
 
 #endif

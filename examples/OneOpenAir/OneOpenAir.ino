@@ -1057,9 +1057,9 @@ static void updatePm(void) {
       Serial.printf("[1] Temperature in C: %0.2f\r\n", measurements.temp_1);
       Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
       Serial.printf("[1] Temperature compensated in C: %0.2f\r\n",
-                    ag->pms5003t_1.temperatureCompensated(measurements.temp_1));
-      Serial.printf("[1] Relative Humidity compensated: %f\r\n",
-                    ag->pms5003t_1.humidityCompensated(measurements.hum_1));
+                    ag->pms5003t_1.compensateTemp(measurements.temp_1));
+      Serial.printf("[1] Relative Humidity compensated: %0.2f\r\n",
+                    ag->pms5003t_1.compensateHum(measurements.hum_1));
 
       ag->pms5003t_1.resetFailCount();
     } else {
@@ -1100,9 +1100,9 @@ static void updatePm(void) {
       Serial.printf("[2] Temperature in C: %0.2f\r\n", measurements.temp_2);
       Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
       Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
-                    ag->pms5003t_2.temperatureCompensated(measurements.temp_2));
-      Serial.printf("[2] Relative Humidity compensated: %d\r\n",
-                    ag->pms5003t_2.humidityCompensated(measurements.hum_2));
+                    ag->pms5003t_1.compensateTemp(measurements.temp_2));
+      Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
+                    ag->pms5003t_1.compensateHum(measurements.hum_2));
 
       ag->pms5003t_2.resetFailCount();
     } else {
