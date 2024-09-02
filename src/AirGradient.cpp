@@ -65,6 +65,10 @@ bool AirGradient::isOne(void) {
   return boardType == BoardType::ONE_INDOOR;
 }
 
+bool AirGradient::isOpenAir(void) { 
+  return boardType == BoardType::OPEN_AIR_OUTDOOR; 
+}
+
 bool AirGradient::isPro4_2(void) {
   return boardType == BoardType::DIY_PRO_INDOOR_V4_2;
 }

@@ -939,6 +939,9 @@ static void configUpdateHandle() {
 
     stateMachine.executeLedBarTest();
   }
+  else if(ag->isOpenAir()) {
+    stateMachine.executeLedBarTest();
+  }
 
   appDispHandler();
   appLedHandler();
