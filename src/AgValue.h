@@ -6,6 +6,9 @@
 
 class Measurements {
 private:
+  String pms5003FirmwareVersion(int fwCode);
+  String pms5003TFirmwareVersion(int fwCode);
+  String pms5003FirmwareVersionBase(String prefix, int fwCode);
 public:
   Measurements() {
     pm25_1 = -1;

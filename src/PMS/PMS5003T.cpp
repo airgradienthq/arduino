@@ -103,7 +103,7 @@ bool PMS5003T::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -167,13 +167,29 @@ float PMS5003T::getRelativeHumidity(void) {
 /**
  * @brief Correct PM2.5
  * 
+ * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
- * @return float 
+ * @return int 
  */
-float PMS5003T::compensated(int pm25, float humidity) {
-  return pms.compensated(pm25, humidity);
+int PMS5003T::compensate(int pm25, float humidity) {
+  return pms.compensate(pm25, humidity);
 }
+
+/**
+ * @brief Get module(s) firmware version
+ * 
+ * @return int Version code
+ */
+int PMS5003T::getFirmwareVersion(void) { return _ver; }
+
+/**
+ * @brief Get sensor error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMS5003T::getErrorCode(void) { return pms.getErrorCode(); }
 
 /**
  * @brief Check device initialized or not
@@ -216,3 +232,24 @@ void PMS5003T::handle(void) { pms.handle(); }
  */
 bool PMS5003T::isFailed(void) { return pms.isFailed(); }
 
+void PMS5003T::updateFailCount(void) {
+  pms.updateFailCount();
+}
+
+void PMS5003T::resetFailCount(void) {
+  pms.resetFailCount();
+}
+
+/**
+ * @brief Get fail count
+ * 
+ * @return int 
+ */
+int PMS5003T::getFailCount(void) { return pms.getFailCount(); }
+
+/**
+ * @brief Get fail count max
+ * 
+ * @return int 
+ */
+int PMS5003T::getFailCountMax(void) { return pms.getFailCountMax(); }

@@ -136,6 +136,14 @@ public:
   bool isOne(void);
 
   /**
+   * @brief Check that Airgradient object is OPEN_AIR
+   * 
+   * @return true 
+   * @return false 
+   */
+  bool isOpenAir(void);
+
+  /**
    * @brief Check that Airgradient object is DIY_PRO 4.2 indoor
    *
    * @return true Yes

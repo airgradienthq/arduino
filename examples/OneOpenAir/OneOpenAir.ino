@@ -88,7 +88,6 @@ static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
-static int pmFailCount = 0;
 static uint32_t factoryBtnPressTime = 0;
 static int getCO2FailCount = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
@@ -939,6 +938,9 @@ static void configUpdateHandle() {
 
     stateMachine.executeLedBarTest();
   }
+  else if(ag->isOpenAir()) {
+    stateMachine.executeLedBarTest();
+  }
 
   appDispHandler();
   appLedHandler();
@@ -1005,6 +1007,7 @@ static void updateTvoc(void) {
 }
 
 static void updatePm(void) {
+  bool restart = false;
   if (ag->isOne()) {
     if (ag->pms5003.isFailed() == false) {
       measurements.pm01_1 = ag->pms5003.getPm01Ae();
@@ -1017,15 +1020,19 @@ static void updatePm(void) {
       Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
       Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
       Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
-      pmFailCount = 0;
+      ag->pms5003.resetFailCount();
     } else {
-      pmFailCount++;
-      Serial.printf("PMS read failed: %d\r\n", pmFailCount);
-      if (pmFailCount >= 3) {
-        measurements.pm01_1 = utils::getInvalidPMS();
-        measurements.pm25_1 = utils::getInvalidPMS();
-        measurements.pm10_1 = utils::getInvalidPMS();
-        measurements.pm03PCount_1 = utils::getInvalidPMS();
+      ag->pms5003.updateFailCount();
+      Serial.printf("PMS read faile %d times\r\n", ag->pms5003.getFailCount());
+      if (ag->pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
+        measurements.pm01_1 = utils::getInvalidPmValue();
+        measurements.pm25_1 = utils::getInvalidPmValue();
+        measurements.pm10_1 = utils::getInvalidPmValue();
+        measurements.pm03PCount_1 = utils::getInvalidPmValue();
+      }
+
+      if (ag->pms5003.getFailCount() >= ag->pms5003.getFailCountMax()) {
+        restart = true;
       }
     }
   } else {
@@ -1049,16 +1056,29 @@ static void updatePm(void) {
       Serial.printf("[1] Temperature in C: %0.2f\r\n", measurements.temp_1);
       Serial.printf("[1] Relative Humidity: %d\r\n", measurements.hum_1);
       Serial.printf("[1] Temperature compensated in C: %0.2f\r\n",
-                    ag->pms5003t_1.temperatureCompensated(measurements.temp_1));
-      Serial.printf("[1] Relative Humidity compensated: %f\r\n",
-                    ag->pms5003t_1.humidityCompensated(measurements.hum_1));
+                    ag->pms5003t_1.compensateTemp(measurements.temp_1));
+      Serial.printf("[1] Relative Humidity compensated: %0.2f\r\n",
+                    ag->pms5003t_1.compensateHum(measurements.hum_1));
+
+      ag->pms5003t_1.resetFailCount();
     } else {
-      measurements.pm01_1 = utils::getInvalidPMS();
-      measurements.pm25_1 = utils::getInvalidPMS();
-      measurements.pm10_1 = utils::getInvalidPMS();
-      measurements.pm03PCount_1 = utils::getInvalidPMS();
-      measurements.temp_1 = utils::getInvalidTemperature();
-      measurements.hum_1 = utils::getInvalidHumidity();
+      if (configuration.hasSensorPMS1) {
+        ag->pms5003t_1.updateFailCount();
+        Serial.printf("[1] PMS read failed %d times\r\n", ag->pms5003t_1.getFailCount());
+
+        if (ag->pms5003t_1.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
+          measurements.pm01_1 = utils::getInvalidPmValue();
+          measurements.pm25_1 = utils::getInvalidPmValue();
+          measurements.pm10_1 = utils::getInvalidPmValue();
+          measurements.pm03PCount_1 = utils::getInvalidPmValue();
+          measurements.temp_1 = utils::getInvalidTemperature();
+          measurements.hum_1 = utils::getInvalidHumidity();
+        }
+
+        if (ag->pms5003t_1.getFailCount() >= ag->pms5003t_1.getFailCountMax()) {
+          restart = true;
+        }
+      }
     }
 
     if (configuration.hasSensorPMS2 && (ag->pms5003t_2.isFailed() == false)) {
@@ -1079,16 +1099,29 @@ static void updatePm(void) {
       Serial.printf("[2] Temperature in C: %0.2f\r\n", measurements.temp_2);
       Serial.printf("[2] Relative Humidity: %d\r\n", measurements.hum_2);
       Serial.printf("[2] Temperature compensated in C: %0.2f\r\n",
-                    ag->pms5003t_1.temperatureCompensated(measurements.temp_2));
-      Serial.printf("[2] Relative Humidity compensated: %d\r\n",
-                    ag->pms5003t_1.humidityCompensated(measurements.hum_2));
+                    ag->pms5003t_1.compensateTemp(measurements.temp_2));
+      Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
+                    ag->pms5003t_1.compensateHum(measurements.hum_2));
+
+      ag->pms5003t_2.resetFailCount();
     } else {
-      measurements.pm01_2 = utils::getInvalidPMS();
-      measurements.pm25_2 = utils::getInvalidPMS();
-      measurements.pm10_2 = utils::getInvalidPMS();
-      measurements.pm03PCount_2 = utils::getInvalidPMS();
-      measurements.temp_2 = utils::getInvalidTemperature();
-      measurements.hum_2 = utils::getInvalidHumidity();
+      if (configuration.hasSensorPMS2) {
+        ag->pms5003t_2.updateFailCount();
+        Serial.printf("[2] PMS read failed %d times\r\n", ag->pms5003t_2.getFailCount());
+
+        if (ag->pms5003t_2.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
+          measurements.pm01_2 = utils::getInvalidPmValue();
+          measurements.pm25_2 = utils::getInvalidPmValue();
+          measurements.pm10_2 = utils::getInvalidPmValue();
+          measurements.pm03PCount_2 = utils::getInvalidPmValue();
+          measurements.temp_2 = utils::getInvalidTemperature();
+          measurements.hum_2 = utils::getInvalidHumidity();
+        }
+
+        if (ag->pms5003t_2.getFailCount() >= ag->pms5003t_2.getFailCountMax()) {
+          restart = true;
+        }
+      }
     }
 
     if (configuration.hasSensorPMS1 && configuration.hasSensorPMS2 &&
@@ -1187,6 +1220,11 @@ static void updatePm(void) {
       }
       ag->sgp41.setCompensationTemperatureHumidity(temp, hum);
     }
+  }
+
+  if (restart) {
+    Serial.printf("PMS failure count reach to max set %d, restarting...", ag->pms5003.getFailCountMax());
+    ESP.restart();
   }
 }
 
