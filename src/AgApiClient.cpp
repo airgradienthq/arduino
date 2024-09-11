@@ -2,6 +2,13 @@
 #include "AgConfigure.h"
 #include "AirGradient.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+#ifdef ESP8266
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#else
+#include <HTTPClient.h>
+#endif
 
 AgApiClient::AgApiClient(Stream &debug, Configuration &config)
     : PrintLog(debug, "ApiClient"), config(config) {}
@@ -51,7 +58,7 @@ bool AgApiClient::fetchServerConfiguration(void) {
   }
 #else
   HTTPClient client;
-  _setHttpClientTimeout(&client);
+  client.setTimeout(timeoutMs);
   if (client.begin(uri) == false) {
     getConfigFailed = true;
     return false;
@@ -113,7 +120,7 @@ bool AgApiClient::postToServer(String data) {
 
   WiFiClient wifiClient;
   HTTPClient client;
-  _setHttpClientTimeout(&client);
+  client.setTimeout(timeoutMs);
   if (client.begin(wifiClient, uri.c_str()) == false) {
     logError("Init client failed");
     return false;
@@ -191,13 +198,4 @@ void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }
  */
 void AgApiClient::setTimeout(uint16_t timeoutMs) {
   this->timeoutMs = timeoutMs;
-}
-
-/**
- * @brief Set timeout to both connect to server and tcp connection timeout
- *
- */
-void AgApiClient::_setHttpClientTimeout(HTTPClient *httpClient) {
-  httpClient->setTimeout(timeoutMs);
-  httpClient->setConnectTimeout(timeoutMs);
 }
