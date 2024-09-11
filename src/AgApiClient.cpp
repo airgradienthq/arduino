@@ -107,9 +107,7 @@ bool AgApiClient::postToServer(String data) {
     return false;
   }
 
-  String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
-      "/measures";
+  String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
   // logInfo("Post uri: " + uri);
   // logInfo("Post data: " + data);
 
