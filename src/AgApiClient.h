@@ -16,6 +16,14 @@
 #include "Main/PrintLog.h"
 #include <Arduino.h>
 
+#ifdef ESP8266
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#else
+#include <HTTPClient.h>
+#endif
+
 class AgApiClient : public PrintLog {
 private:
   Configuration &config;
@@ -25,6 +33,9 @@ private:
   bool getConfigFailed;
   bool postToServerFailed;
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
+  uint16_t timeoutMs = 10000;           // Default set to 10s
+
+  void _setHttpClientTimeout(HTTPClient *httpClient);
 
 public:
   AgApiClient(Stream &stream, Configuration &config);
