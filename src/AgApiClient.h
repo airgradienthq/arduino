@@ -51,6 +51,7 @@ public:
   bool sendPing(int rssi, int bootCount);
   String getApiRoot() const;
   void setApiRoot(const String &apiRoot);
+  void setTimeout(uint16_t timeoutMs);
 };
 
 #endif /** _AG_API_CLIENT_H_ */

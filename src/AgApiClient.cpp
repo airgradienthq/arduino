@@ -185,6 +185,15 @@ String AgApiClient::getApiRoot() const { return apiRoot; }
 void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }
 
 /**
+ * @brief Set http request timeout. (Default: 10s)
+ *
+ * @param timeoutMs
+ */
+void AgApiClient::setTimeout(uint16_t timeoutMs) {
+  this->timeoutMs = timeoutMs;
+}
+
+/**
  * @brief Set timeout to both connect to server and tcp connection timeout
  *
  */
