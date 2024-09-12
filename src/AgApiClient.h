@@ -25,6 +25,7 @@ private:
   bool getConfigFailed;
   bool postToServerFailed;
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
+  uint16_t timeoutMs = 10000;           // Default set to 10s
 
 public:
   AgApiClient(Stream &stream, Configuration &config);
@@ -40,6 +41,7 @@ public:
   bool sendPing(int rssi, int bootCount);
   String getApiRoot() const;
   void setApiRoot(const String &apiRoot);
+  void setTimeout(uint16_t timeoutMs);
 };
 
 #endif /** _AG_API_CLIENT_H_ */
