@@ -98,7 +98,7 @@ bool PMS5003T::begin(void) {
     this->_serial->begin(9600, SERIAL_8N1, bsp->SenseAirS8.uart_rx_pin,
                          bsp->SenseAirS8.uart_tx_pin);
   }
-  if (pms.begin(this->_serial) == false) {
+  if (pms.begin(*this->_serial) == false) {
     AgLog("PMS failed");
     return false;
   }
@@ -192,6 +192,14 @@ int PMS5003T::getFirmwareVersion(void) { return _ver; }
 uint8_t PMS5003T::getErrorCode(void) { return pms.getErrorCode(); }
 
 /**
+ * @brief Is sensor connect to device
+ * 
+ * @return true Connected
+ * @return false Removed
+ */
+bool PMS5003T::connected(void) { return pms.connected(); }
+
+/**
  * @brief Check device initialized or not
  *
  * @return true Initialized
@@ -222,15 +230,7 @@ void PMS5003T::end(void) {
  * @brief Check and read PMS sensor data. This method should be callack from
  * loop process to continoue check sensor data if it's available
  */
-void PMS5003T::handle(void) { pms.handle(); }
-
-/**
- * @brief Get sensor status
- *
- * @return true No problem
- * @return false Communication timeout or sensor has removed
- */
-bool PMS5003T::isFailed(void) { return pms.isFailed(); }
+void PMS5003T::handle(void) { pms.readPackage(*this->_serial); }
 
 void PMS5003T::updateFailCount(void) {
   pms.updateFailCount();

@@ -288,6 +288,11 @@ void loop() {
   if (ag->isOne()) {
     if (configuration.hasSensorPMS1) {
       ag->pms5003.handle();
+      static bool pmsConnected = false;
+      if (pmsConnected != ag->pms5003.connected()) {
+        pmsConnected = ag->pms5003.connected();
+        Serial.printf("PMS sensor %s ", pmsConnected?"connected":"removed");
+      }
     }
   } else {
     if (configuration.hasSensorPMS1) {
@@ -1009,7 +1014,7 @@ static void updateTvoc(void) {
 static void updatePm(void) {
   bool restart = false;
   if (ag->isOne()) {
-    if (ag->pms5003.isFailed() == false) {
+    if (ag->pms5003.connected()) {
       measurements.pm01_1 = ag->pms5003.getPm01Ae();
       measurements.pm25_1 = ag->pms5003.getPm25Ae();
       measurements.pm10_1 = ag->pms5003.getPm10Ae();
@@ -1038,7 +1043,7 @@ static void updatePm(void) {
   } else {
     bool pmsResult_1 = false;
     bool pmsResult_2 = false;
-    if (configuration.hasSensorPMS1 && (ag->pms5003t_1.isFailed() == false)) {
+    if (configuration.hasSensorPMS1 && ag->pms5003t_1.connected()) {
       measurements.pm01_1 = ag->pms5003t_1.getPm01Ae();
       measurements.pm25_1 = ag->pms5003t_1.getPm25Ae();
       measurements.pm10_1 = ag->pms5003t_1.getPm10Ae();
@@ -1081,7 +1086,7 @@ static void updatePm(void) {
       }
     }
 
-    if (configuration.hasSensorPMS2 && (ag->pms5003t_2.isFailed() == false)) {
+    if (configuration.hasSensorPMS2 && ag->pms5003t_2.connected()) {
       measurements.pm01_2 = ag->pms5003t_2.getPm01Ae();
       measurements.pm25_2 = ag->pms5003t_2.getPm25Ae();
       measurements.pm10_2 = ag->pms5003t_2.getPm10Ae();

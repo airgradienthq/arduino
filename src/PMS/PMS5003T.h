@@ -21,7 +21,6 @@ public:
   void end(void);
 
   void handle(void);
-  bool isFailed(void);
   void updateFailCount(void);
   void resetFailCount(void);
   int getFailCount(void);
@@ -36,6 +35,7 @@ public:
   int compensate(int pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
+  bool connected(void);
 
 private:
   bool _isBegin = false;

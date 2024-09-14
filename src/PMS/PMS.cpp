@@ -8,145 +8,110 @@
  * @return true Sucecss
  * @return false Failure
  */
-bool PMSBase::begin(Stream *stream) {
-  this->stream = stream;
-
-  failed = true;
+bool PMSBase::begin(HardwareSerial& serial) {
   failCount = 0;
-  lastRead = 0; // To read buffer on handle without wait after 1.5sec
-
-  this->stream->flush();
+  _connected = false;
 
   // Run and check sensor data for 4sec
-  while (1) {
-    handle();
-    if (failed == false) {
-      return true;
+  serial.flush();
+
+  unsigned long lastInit = millis();
+  while (true) {
+    readPackage(serial);
+    if (_connected) {
+      break;
     }
 
     delay(1);
-    uint32_t ms = (uint32_t)(millis() - lastRead);
+    unsigned long ms = (unsigned long)(millis() - lastInit);
     if (ms >= 4000) {
       break;
     }
   }
-  return false;
+  return _connected;
 }
 
 /**
- * @brief Check and read sensor data then update variable.
- * Check result from method @isFailed before get value
+ * @brief Read PMS package send to device each 1sec
+ * 
+ * @param serial 
  */
-void PMSBase::handle() {
-  uint32_t ms;
-  if (lastRead == 0) {
-    lastRead = millis();
-    if (lastRead == 0) {
-      lastRead = 1;
-    }
-  } else {
-    ms = (uint32_t)(millis() - lastRead);
-    /**
-     * The PMS in Active mode sends an update data every 1 second. If we read
-     * exactly every 1 sec then we may or may not get an update (depending on
-     * timing tolerances). Hence we read every 2.5 seconds and expect 2 ..3
-     * updates,
-     */
-    if (ms < 2500) {
-      return;
-    }
-  }
-  bool result = false;
-  char buf[32];
-  int bufIndex;
-  int step = 0;
-  int len = 0;
-  int bcount = 0;
+void PMSBase::readPackage(HardwareSerial& serial) {
+  uint8_t delayCount = 0;
+  while (serial.available()) {
+    /** Get value */
+    uint8_t value = (uint8_t)serial.read();
 
-  while (stream->available()) {
-    char value = stream->read();
-    switch (step) {
-    case 0: {
+    /** Process receiving package... */
+    switch (readBufferIndex) {
+    case 0: /** Start byte 1 */
       if (value == 0x42) {
-        step = 1;
-        bufIndex = 0;
-        buf[bufIndex++] = value;
+        readBuffer[readBufferIndex++] = value;
       }
       break;
-    }
-    case 1: {
+    case 1: /** Start byte 2 */
       if (value == 0x4d) {
-        step = 2;
-        buf[bufIndex++] = value;
-        // Serial.println("Got 0x4d");
+        readBuffer[readBufferIndex++] = value;
       } else {
-        step = 0;
+        readBufferIndex = 0;
       }
       break;
-    }
-    case 2: {
-      buf[bufIndex++] = value;
-      if (bufIndex >= 4) {
-        len = toI16(&buf[2]);
-        if (len != 28) {
-          // Serial.printf("Got good bad len %d\r\n", len);
-          len += 4;
-          step = 3;
-        } else {
-          // Serial.println("Got good len");
-          step = 4;
+    case 2: /** Frame length */
+      if (value == 0x00) {
+        readBuffer[readBufferIndex++] = value;
+      } else {
+        readBufferIndex = 0;
+      }
+      break;
+    case 3: /** Frame length */
+      if (value == 0x1C) {
+        readBuffer[readBufferIndex++] = value;
+      } else {
+        readBufferIndex = 0;
+      }
+      break;
+    default: /** Data */
+      readBuffer[readBufferIndex++] = value;
+
+      /** Check that received full bufer */
+      if (readBufferIndex >= sizeof(readBuffer)) {
+        /** validata package */
+        if (validate(readBuffer)) {
+          _connected = true; /** Set connected status */
+
+          /** Parse data */
+          parse(readBuffer);
+
+          /** Set last received package */
+          lastPackage = millis();
+          if (lastPackage == 0) {
+            lastPackage = 1;
+          }
         }
+
+        /** Clear buffer index */
+        readBufferIndex = 0;
       }
-      break;
-    }
-    case 3: {
-      bufIndex++;
-      if (bufIndex >= len) {
-        step = 0;
-        // Serial.println("Bad lengh read all buffer");
-      }
-      break;
-    }
-    case 4: {
-      buf[bufIndex++] = value;
-      if (bufIndex >= 32) {
-        result |= validate(buf);
-        step = 0;
-        // Serial.println("Got data");
-      }
-      break;
-    }
-    default:
       break;
     }
 
-    // Reduce core panic: delay 1 ms each 32bytes data
-    bcount++;
-    if ((bcount % 32) == 0) {
-      delay(1);
+    /** Avoid task watchdog timer reset... */
+    delayCount++;
+    if(delayCount >= 32)
+    {
+     delay(1); 
     }
   }
 
-  if (result) {
-    lastRead = millis();
-    if (lastRead == 0) {
-      lastRead = 1;
-    }
-    failed = false;
-  } else {
-    if (ms > 5000) {
-      failed = true;
+  /** Check that sensor removed */
+  if (lastPackage) {
+    unsigned long ms = (unsigned long)(millis() - lastPackage);
+    if (ms >= 1500) {
+      lastPackage = 0;
+      _connected = false;
     }
   }
 }
-
-/**
- * @brief Check that PMS send is failed or disconnected
- *
- * @return true Failed
- * @return false No problem
- */
-bool PMSBase::isFailed(void) { return failed; }
 
 /**
  * @brief Increate number of fail
@@ -174,112 +139,114 @@ int PMSBase::getFailCountMax(void) { return failCountMax; }
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw0_1(void) { return toU16(&package[4]); }
+uint16_t PMSBase::getRaw0_1(void) { return pms_raw0_1; }
 
 /**
  * @brief Read PMS 2.5 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw2_5(void) { return toU16(&package[6]); }
+uint16_t PMSBase::getRaw2_5(void) { return pms_raw2_5; }
 
 /**
  * @brief Read PMS 10 ug/m3 with CF = 1 PM estimates
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getRaw10(void) { return toU16(&package[8]); }
+uint16_t PMSBase::getRaw10(void) { return pms_raw10; }
 
 /**
  * @brief Read PMS 0.1 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM0_1(void) { return toU16(&package[10]); }
+uint16_t PMSBase::getPM0_1(void) { return pms_pm0_1; }
 
 /**
  * @brief Read PMS 2.5 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM2_5(void) { return toU16(&package[12]); }
+uint16_t PMSBase::getPM2_5(void) { return pms_pm2_5; }
 
 /**
  * @brief Read PMS 10 ug/m3
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getPM10(void) { return toU16(&package[14]); }
+uint16_t PMSBase::getPM10(void) { return pms_pm10; }
 
 /**
  * @brief Get numnber concentrations over 0.3 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount0_3(void) { return toU16(&package[16]); }
+uint16_t PMSBase::getCount0_3(void) { return pms_count0_3; }
 
 /**
  * @brief Get numnber concentrations over 0.5 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount0_5(void) { return toU16(&package[18]); }
+uint16_t PMSBase::getCount0_5(void) { return pms_count0_5; }
 
 /**
  * @brief Get numnber concentrations over 1.0 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount1_0(void) { return toU16(&package[20]); }
+uint16_t PMSBase::getCount1_0(void) { return pms_count1_0; }
 
 /**
  * @brief Get numnber concentrations over 2.5 um/0.1L
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount2_5(void) { return toU16(&package[22]); }
+uint16_t PMSBase::getCount2_5(void) { return pms_count2_5; }
+
+bool PMSBase::connected(void) { return _connected; }
 
 /**
  * @brief Get numnber concentrations over 5.0 um/0.1L (only PMS5003)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount5_0(void) { return toU16(&package[24]); }
+uint16_t PMSBase::getCount5_0(void) { return pms_count5_0; }
 
 /**
  * @brief Get numnber concentrations over 10.0 um/0.1L (only PMS5003)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getCount10(void) { return toU16(&package[26]); }
+uint16_t PMSBase::getCount10(void) { return pms_count10; }
 
 /**
  * @brief Get temperature (only PMS5003T)
  *
  * @return uint16_t
  */
-int16_t PMSBase::getTemp(void) { return toI16(&package[24]); }
+int16_t PMSBase::getTemp(void) { return pms_temp; }
 
 /**
  * @brief Get humidity (only PMS5003T)
  *
  * @return uint16_t
  */
-uint16_t PMSBase::getHum(void) { return toU16(&package[26]); }
+uint16_t PMSBase::getHum(void) { return pms_hum; }
 
 /**
  * @brief Get firmware version code
  * 
  * @return uint8_t 
  */
-uint8_t PMSBase::getFirmwareVersion(void) { return package[28]; }
+uint8_t PMSBase::getFirmwareVersion(void) { return pms_firmwareVersion; }
 
 /**
  * @brief Ge PMS5003 error code
  * 
  * @return uint8_t 
  */
-uint8_t PMSBase::getErrorCode(void) { return package[29]; }
+uint8_t PMSBase::getErrorCode(void) { return pms_errorCode; }
 
 /**
  * @brief Convert PMS2.5 to US AQI unit
@@ -350,13 +317,13 @@ int PMSBase::compensate(int pm25, float humidity) {
  * @param buf bytes array (must be >= 2)
  * @return int16_t
  */
-int16_t PMSBase::toI16(char *buf) {
+int16_t PMSBase::toI16(const uint8_t *buf) {
   int16_t value = buf[0];
   value = (value << 8) | buf[1];
   return value;
 }
 
-uint16_t PMSBase::toU16(char *buf) {
+uint16_t PMSBase::toU16(const uint8_t *buf) {
   uint16_t value = buf[0];
   value = (value << 8) | buf[1];
   return value;
@@ -369,16 +336,32 @@ uint16_t PMSBase::toU16(char *buf) {
  * @return true Success
  * @return false Failed
  */
-bool PMSBase::validate(char *buf) {
+bool PMSBase::validate(const uint8_t *buf) {
   uint16_t sum = 0;
   for (int i = 0; i < 30; i++) {
     sum += buf[i];
   }
   if (sum == toU16(&buf[30])) {
-    for (int i = 0; i < 32; i++) {
-      package[i] = buf[i];
-    }
     return true;
   }
   return false;
+}
+
+void PMSBase::parse(const uint8_t *buf) {
+  pms_raw0_1 = toU16(&buf[4]);
+  pms_raw2_5 = toU16(&buf[6]);
+  pms_raw10 = toU16(&buf[8]);
+  pms_pm0_1 = toU16(&buf[10]);
+  pms_pm2_5 = toU16(&buf[12]);
+  pms_pm10 = toU16(&buf[14]);
+  pms_count0_3 = toU16(&buf[16]);
+  pms_count0_5 = toU16(&buf[18]);
+  pms_count1_0 = toU16(&buf[20]);
+  pms_count2_5 = toU16(&buf[22]);
+  pms_count5_0 = toU16(&buf[24]);
+  pms_count10 = toU16(&buf[26]);
+  pms_temp = toU16(&buf[24]);
+  pms_hum = toU16(&buf[26]);
+  pms_firmwareVersion = buf[28];
+  pms_errorCode = buf[29];
 }
