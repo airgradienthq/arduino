@@ -388,7 +388,7 @@ static void initMqtt(void) {
     return;
   }
 
-  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
+  if (mqttClient.begin(mqttUri)) {
     Serial.println("Connect to MQTT broker successful");
     createMqttTask();
   } else {
