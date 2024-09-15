@@ -697,7 +697,7 @@ static void oneIndoorInit(void) {
   ledBarEnabledUpdate();
 
   /** Show message init sensor */
-  oledDisplay.setText("Sensor", "initializing...", "");
+  oledDisplay.setText("Monitor", "initializing...", "");
 
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
@@ -778,27 +778,27 @@ static void openAirInit(void) {
     }
   }
 
-  /** Try to find the PMS on other difference port with S8 */
+  /** Attempt to detect PM sensors */
   if (fwMode == FW_MODE_O_1PST) {
     bool pmInitSuccess = false;
     if (serial0Available) {
       if (ag->pms5003t_1.begin(Serial0) == false) {
         configuration.hasSensorPMS1 = false;
-        Serial.println("PMS1 sensor not found");
+        Serial.println("No PM sensor detected on Serial0");
       } else {
         serial0Available = false;
         pmInitSuccess = true;
-        Serial.println("Found PMS 1 on Serial0");
+        Serial.println("Detected PM 1 on Serial0");
       }
     }
     if (pmInitSuccess == false) {
       if (serial1Available) {
         if (ag->pms5003t_1.begin(Serial1) == false) {
           configuration.hasSensorPMS1 = false;
-          Serial.println("PMS1 sensor not found");
+          Serial.println("No PM sensor detected on Serial1");
         } else {
           serial1Available = false;
-          Serial.println("Found PMS 1 on Serial1");
+          Serial.println("Detected PM 1 on Serial1");
         }
       }
     }
@@ -806,15 +806,15 @@ static void openAirInit(void) {
   } else {
     if (ag->pms5003t_1.begin(Serial0) == false) {
       configuration.hasSensorPMS1 = false;
-      Serial.println("PMS1 sensor not found");
+      Serial.println("No PM sensor detected on Serial0");
     } else {
-      Serial.println("Found PMS 1 on Serial0");
+      Serial.println("Detected PM 1 on Serial0");
     }
     if (ag->pms5003t_2.begin(Serial1) == false) {
       configuration.hasSensorPMS2 = false;
-      Serial.println("PMS2 sensor not found");
+      Serial.println("No PM sensor detected on Serial1");
     } else {
-      Serial.println("Found PMS 2 on Serial1");
+      Serial.println("Detected PM 2 on Serial1");
     }
 
     if (fwMode == FW_MODE_O_1PP) {
