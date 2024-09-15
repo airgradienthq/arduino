@@ -382,6 +382,12 @@ static void createMqttTask(void) {
 }
 
 static void initMqtt(void) {
+  String mqttUri = configuration.getMqttBrokerUri();
+  if (mqttUri.isEmpty()) {
+    Serial.println("MQTT is not configured, skip initialize mqtt client");
+    return;
+  }
+
   if (mqttClient.begin(configuration.getMqttBrokerUri())) {
     Serial.println("Connect to MQTT broker successful");
     createMqttTask();
