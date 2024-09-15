@@ -38,11 +38,14 @@ bool PMS5003::begin(HardwareSerial &serial) {
 PMS5003::PMS5003(BoardType def) : _boardDef(def) {}
 
 /**
- * Initializes the sensor.
+ * @brief Init sensor
+ *
+ * @return true Success
+ * @return false Failure
  */
 bool PMS5003::begin(void) {
   if (this->_isBegin) {
-    AgLog("Already initialized, call end() then try again");
+    AgLog("Initialized, call end() then try again");
     return true;
   }
 

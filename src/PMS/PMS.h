@@ -5,9 +5,6 @@
 
 #define PMS_FAIL_COUNT_SET_INVALID 3
 
-/**
- * Known to work with these sensors: Plantower PMS5003, Plantower PMS5003, Cubic PM2009X
- */
 class PMSBase {
 public:
   bool begin(Stream *stream);

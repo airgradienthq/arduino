@@ -72,7 +72,7 @@ bool WifiConnector::connect(void) {
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
   WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
   if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
-    disp.setText("Connecting to", "WiFi", "...");
+    disp.setText("Connect to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }

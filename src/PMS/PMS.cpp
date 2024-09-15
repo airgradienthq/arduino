@@ -2,48 +2,34 @@
 #include "../Main/BoardDef.h"
 
 /**
- * @brief Initializes the sensor and attempts to read data.
+ * @brief Init and check that sensor has connected
  *
  * @param stream UART stream
  * @return true Sucecss
  * @return false Failure
  */
 bool PMSBase::begin(Stream *stream) {
-  Serial.printf("initializing PM sensor\n");
   this->stream = stream;
 
   failed = true;
   failCount = 0;
   lastRead = 0; // To read buffer on handle without wait after 1.5sec
 
-  // empty first
-  int bytesCleared = 0;
-  while (this->stream->read() != -1) {
-    bytesCleared++;
-  }
-  Serial.printf("cleared %d byte(s)\n", bytesCleared);
-
-  // explicitly put the sensor into active mode, this seems to be be needed for the Cubic PM2009X
-  Serial.printf("setting active mode\n");
-  uint8_t activeModeCommand[] = { 0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71 };
-  size_t bytesWritten = this->stream->write(activeModeCommand, sizeof(activeModeCommand));
-  Serial.printf("%d byte(s) written\n", bytesWritten);
+  this->stream->flush();
 
   // Run and check sensor data for 4sec
   while (1) {
     handle();
     if (failed == false) {
-      Serial.printf("PM sensor initialized\n");
-      return true; 
+      return true;
     }
 
-    delay(10);
+    delay(1);
     uint32_t ms = (uint32_t)(millis() - lastRead);
     if (ms >= 4000) {
       break;
     }
   }
-  Serial.printf("PM sensor initialization failed\n");
   return false;
 }
 
