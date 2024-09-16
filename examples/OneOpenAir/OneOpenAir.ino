@@ -393,7 +393,7 @@ static void initMqtt(void) {
     Serial.println("Successfully connected to MQTT broker");
     createMqttTask();
   } else {
-    Serial.println("Connect to MQTT broker failed");
+    Serial.println("Connection to MQTT broker failed");
   }
 }
 

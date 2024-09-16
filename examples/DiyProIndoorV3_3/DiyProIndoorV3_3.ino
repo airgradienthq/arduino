@@ -274,7 +274,7 @@ static void initMqtt(void) {
   if (mqttClient.begin(mqttUri)) {
     Serial.println("Successfully connected to MQTT broker");
   } else {
-    Serial.println("Connect to MQTT broker failed");
+    Serial.println("Connection to MQTT broker failed");
   }
 }
 
