@@ -55,8 +55,10 @@ bool AgApiClient::fetchServerConfiguration(void) {
   HTTPClient client;
 #ifdef ESP8266
   WiFiClient wifiClient;
+  client.setTimeout(timeoutMs);
   if (client.begin(wifiClient, uri) == false) {
 #else
+  client.setTimeout(timeoutMs);
   if (client.begin(uri) == false) {
 #endif
     result = false;
@@ -126,9 +128,7 @@ bool AgApiClient::postToServer(String data) {
     return true;
   }
 
-  String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
-      "/measures";
+  String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
 
   /** Reset failed */
   postResult.bits.failed = 0b0;
@@ -137,6 +137,7 @@ bool AgApiClient::postToServer(String data) {
   HTTPClient client;
   bool result = true;  /** Process result */
   int retCode = 200;   /** POST return code */
+  client.setTimeout(timeoutMs);
   if (client.begin(wifiClient, uri.c_str()) == false) {
     logError("Init client failed");
     result = false;
@@ -285,3 +286,12 @@ bool AgApiClient::fetchConfigureRetry(void) {
  * @return uint16_t 
  */
 uint16_t AgApiClient::getRetryPeriod(void) { return retryPeriodMs; }
+
+/**
+ * @brief Set http request timeout. (Default: 10s)
+ *
+ * @param timeoutMs
+ */
+void AgApiClient::setTimeout(uint16_t timeoutMs) {
+  this->timeoutMs = timeoutMs;
+}

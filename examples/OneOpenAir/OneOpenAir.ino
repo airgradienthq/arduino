@@ -697,7 +697,7 @@ static void oneIndoorInit(void) {
   ledBarEnabledUpdate();
 
   /** Show message init sensor */
-  oledDisplay.setText("Sensor", "initializing...", "");
+  oledDisplay.setText("Monitor", "initializing...", "");
 
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
@@ -778,27 +778,27 @@ static void openAirInit(void) {
     }
   }
 
-  /** Try to find the PMS on other difference port with S8 */
+  /** Attempt to detect PM sensors */
   if (fwMode == FW_MODE_O_1PST) {
     bool pmInitSuccess = false;
     if (serial0Available) {
       if (ag->pms5003t_1.begin(Serial0) == false) {
         configuration.hasSensorPMS1 = false;
-        Serial.println("PMS1 sensor not found");
+        Serial.println("No PM sensor detected on Serial0");
       } else {
         serial0Available = false;
         pmInitSuccess = true;
-        Serial.println("Found PMS 1 on Serial0");
+        Serial.println("Detected PM 1 on Serial0");
       }
     }
     if (pmInitSuccess == false) {
       if (serial1Available) {
         if (ag->pms5003t_1.begin(Serial1) == false) {
           configuration.hasSensorPMS1 = false;
-          Serial.println("PMS1 sensor not found");
+          Serial.println("No PM sensor detected on Serial1");
         } else {
           serial1Available = false;
-          Serial.println("Found PMS 1 on Serial1");
+          Serial.println("Detected PM 1 on Serial1");
         }
       }
     }
@@ -806,15 +806,15 @@ static void openAirInit(void) {
   } else {
     if (ag->pms5003t_1.begin(Serial0) == false) {
       configuration.hasSensorPMS1 = false;
-      Serial.println("PMS1 sensor not found");
+      Serial.println("No PM sensor detected on Serial0");
     } else {
-      Serial.println("Found PMS 1 on Serial0");
+      Serial.println("Detected PM 1 on Serial0");
     }
     if (ag->pms5003t_2.begin(Serial1) == false) {
       configuration.hasSensorPMS2 = false;
-      Serial.println("PMS2 sensor not found");
+      Serial.println("No PM sensor detected on Serial1");
     } else {
-      Serial.println("Found PMS 2 on Serial1");
+      Serial.println("Detected PM 2 on Serial1");
     }
 
     if (fwMode == FW_MODE_O_1PP) {
@@ -1032,10 +1032,11 @@ static void updatePm(void) {
       Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
       Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
       Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
+      Serial.printf("PM firmware version: %d\r\n", ag->pms5003.getFirmwareVersion());
       ag->pms5003.resetFailCount();
     } else {
       ag->pms5003.updateFailCount();
-      Serial.printf("PMS read faile %d times\r\n", ag->pms5003.getFailCount());
+      Serial.printf("PMS read failed %d times\r\n", ag->pms5003.getFailCount());
       if (ag->pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
         measurements.pm01_1 = utils::getInvalidPmValue();
         measurements.pm25_1 = utils::getInvalidPmValue();
@@ -1071,6 +1072,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_1));
       Serial.printf("[1] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_1));
+      Serial.printf("[1] PM firmware version: %d\r\n", ag->pms5003t_1.getFirmwareVersion());
 
       ag->pms5003t_1.resetFailCount();
     } else {
@@ -1114,6 +1116,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_2));
       Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_2));
+      Serial.printf("[2] PM firmware version: %d\r\n", ag->pms5003t_2.getFirmwareVersion());
 
       ag->pms5003t_2.resetFailCount();
     } else {

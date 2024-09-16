@@ -23,6 +23,7 @@ private:
   String apiRoot = "http://hw.airgradient.com";
 
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
+  uint16_t timeoutMs = 10000;           // Default set to 10s
   const uint8_t postGetRetryCountMax = 3;
   const uint16_t retryPeriodMs = 5000;    /** ms */
   union GetPostResult {
@@ -50,6 +51,7 @@ public:
   bool sendPing(int rssi, int bootCount);
   String getApiRoot() const;
   void setApiRoot(const String &apiRoot);
+  void setTimeout(uint16_t timeoutMs);
   bool postToServerRetry(void);
   bool fetchConfigureRetry(void);
   uint16_t getRetryPeriod(void);
