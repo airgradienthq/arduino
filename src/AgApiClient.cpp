@@ -20,8 +20,9 @@ AgApiClient::~AgApiClient() {}
  *
  */
 void AgApiClient::begin(void) {
-  getConfigFailed = false;
-  postToServerFailed = false;
+  postResult.value = 0x00;
+  getResult.value = 0x00;
+
   logInfo("Init apiRoot: " + apiRoot);
   logInfo("begin");
 }
@@ -41,55 +42,71 @@ bool AgApiClient::fetchServerConfiguration(void) {
 
     // Clear server configuration failed flag, cause it's ignore but not
     // really failed
-    getConfigFailed = false;
+    getResult.value = 0;
     return false;
   }
 
   String uri = apiRoot + "/sensors/airgradient:" +
                ag->deviceId() + "/one/config";
 
+  int retCode = 200;
+  bool result = true;
   /** Init http client */
-#ifdef ESP8266
   HTTPClient client;
+#ifdef ESP8266
   WiFiClient wifiClient;
   if (client.begin(wifiClient, uri) == false) {
-    getConfigFailed = true;
-    return false;
-  }
 #else
-  HTTPClient client;
   if (client.begin(uri) == false) {
-    getConfigFailed = true;
-    return false;
-  }
 #endif
+    result = false;
+  }
 
   /** Get data */
-  int retCode = client.GET();
+  if (result) {
+    retCode = client.GET();
+    logInfo(String("GET: ") + uri);
+    logInfo(String("Return code: ") + String(retCode));
 
-  logInfo(String("GET: ") + uri);
-  logInfo(String("Return code: ") + String(retCode));
+    if (retCode != 200) {
+      client.end();
+      result = false;
+    }
+  }
 
-  if (retCode != 200) {
-    client.end();
-    getConfigFailed = true;
+  if (result) {
+    /** clear failed */
+    notAvailableOnDashboard = false;
+    getResult.value = 0x00;
+  } else {
+    /** Set retry flag */
+    getResult.bits.retry = 0b1;
 
     /** Return code 400 mean device not setup on cloud. */
     if (retCode == 400) {
       notAvailableOnDashboard = true;
+      getResult.bits.failed = 0b1;
+      getResult.value = 0x00;
+    } else {
+      if (getResult.bits.count < postGetRetryCountMax) {
+        getResult.bits.count = getResult.bits.count + 1;
+      }
     }
+
+    /** Set failed flag */
+    if (getResult.bits.count >= postGetRetryCountMax) {
+      getResult.bits.failed = 0b1;
+    }
+    if (getResult.bits.count > postGetRetryCountMax) {
+      getResult.bits.retry = 0b0;
+    }
+
     return false;
   }
-
-  /** clear failed */
-  getConfigFailed = false;
-  notAvailableOnDashboard = false;
 
   /** Get response string */
   String respContent = client.getString();
   client.end();
-
-  // logInfo("Get configuration: " + respContent);
 
   /** Parse configuration and return result */
   return config.parse(respContent, false);
@@ -109,38 +126,69 @@ bool AgApiClient::postToServer(String data) {
     return true;
   }
 
-  if (WiFi.isConnected() == false) {
-    return false;
-  }
-
   String uri =
       "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
       "/measures";
-  // logInfo("Post uri: " + uri);
-  // logInfo("Post data: " + data);
+
+  /** Reset failed */
+  postResult.bits.failed = 0b0;
 
   WiFiClient wifiClient;
   HTTPClient client;
+  bool result = true;  /** Process result */
+  int retCode = 200;   /** POST return code */
   if (client.begin(wifiClient, uri.c_str()) == false) {
     logError("Init client failed");
-    return false;
+    result = false;
   }
-  client.addHeader("content-type", "application/json");
-  int retCode = client.POST(data);
-  client.end();
 
-  logInfo(String("POST: ") + uri);
-  logInfo(String("DATA: ") + data);
-  logInfo(String("Return code: ") + String(retCode));
+  if (result) {
+    /** Send data */
+    client.addHeader("content-type", "application/json");
+    retCode = client.POST(data);
+    client.end();
 
-  if ((retCode == 200) || (retCode == 429)) {
-    postToServerFailed = false;
-    return true;
+    logInfo(String("POST: ") + uri);
+    logInfo(String("DATA: ") + data);
+    logInfo(String("Return code: ") + String(retCode));
+
+    if ((retCode == 200) || (retCode == 429)) {
+      postResult.value = 0;   /** Clear failed and retry flag. */
+      return true;
+    } else {
+      logError("Post response failed code: " + String(retCode));
+      result = false;
+    }
+  }
+
+  if (result) {
+    /** clear failed */
+    postResult.value = 0x00;
   } else {
-    logError("Post response failed code: " + String(retCode));
+    /** Set retry flag */
+    postResult.bits.retry = 0b1;
+
+    if (retCode == 400) {
+      /** Ignore retry if return code 400 */
+      postResult.value = 0;
+      postResult.bits.failed = 0b1;
+    } else {
+      /** Update retry count */
+      if (postResult.bits.count < postGetRetryCountMax) {
+        postResult.bits.count = postResult.bits.count + 1;
+      }
+    }
+
+    /** Set failed flag */
+    if (postResult.bits.count >= postGetRetryCountMax) {
+      postResult.bits.failed = 0b1;
+    }
+    if (postResult.bits.count > postGetRetryCountMax) {
+      postResult.bits.retry = 0b0;
+    }
   }
-  postToServerFailed = true;
-  return false;
+
+  return result;
 }
 
 /**
@@ -149,7 +197,9 @@ bool AgApiClient::postToServer(String data) {
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
+bool AgApiClient::isFetchConfigureFailed(void) {
+  return (getResult.bits.failed == 0b1);
+}
 
 /**
  * @brief Get failed status when post data to AirGradient cloud
@@ -157,7 +207,9 @@ bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::isPostToServerFailed(void) { return postToServerFailed; }
+bool AgApiClient::isPostToServerFailed(void) {
+  return (postResult.bits.failed == 0b1);
+}
 
 /**
  * @brief Get status device has available on dashboard or not. should get after
@@ -184,9 +236,52 @@ bool AgApiClient::sendPing(int rssi, int bootCount) {
   JSONVar root;
   root["wifi"] = rssi;
   root["boot"] = bootCount;
-  return postToServer(JSON.stringify(root));
+
+  bool result = postToServer(JSON.stringify(root));
+
+  /** Clear retry */
+  postResult.bits.count = 0;
+  postResult.bits.retry = 0;
+
+  return result;
 }
 
 String AgApiClient::getApiRoot() const { return apiRoot; }
 
 void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }
+
+/**
+ * @brief Is retry post to server. It's valid if postToServer return false
+ * 
+ * @return true 
+ * @return false 
+ */
+bool AgApiClient::postToServerRetry(void) {
+  if (postResult.bits.retry) {
+    logWarning("postToServer retry " + String(postResult.bits.count));
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief Is retry fetch the configuration. It's value if fetchConfigure return
+ * false
+ *
+ * @return true
+ * @return false
+ */
+bool AgApiClient::fetchConfigureRetry(void) {
+  if (getResult.bits.retry) {
+    logWarning("fetchConfiguration retry " + String(postResult.bits.count));
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief Get POST/GET retry period milliseconds
+ * 
+ * @return uint16_t 
+ */
+uint16_t AgApiClient::getRetryPeriod(void) { return retryPeriodMs; }

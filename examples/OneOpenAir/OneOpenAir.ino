@@ -862,8 +862,20 @@ static void failedHandler(String msg) {
 }
 
 static void configurationUpdateSchedule(void) {
+  if (wifiConnector.isConnected() == false) {
+    Serial.println("Ignore fetch configuration cause WiFi disconnected");
+    return;
+  }
+
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
+    configSchedule.setPeriod(SERVER_CONFIG_SYNC_INTERVAL);
+  } else {
+    if (apiClient.fetchConfigureRetry()) {
+      configSchedule.setPeriod(apiClient.getRetryPeriod());
+    } else {
+      configSchedule.setPeriod(SERVER_CONFIG_SYNC_INTERVAL);
+    }
   }
 }
 
@@ -1230,7 +1242,8 @@ static void updatePm(void) {
 
 static void sendDataToServer(void) {
   /** Ignore send data to server if postToAirGradient disabled */
-  if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
+  if (configuration.isPostDataToAirGradient() == false ||
+      configuration.isOfflineMode() || (wifiConnector.isConnected() == false)) {
     return;
   }
 
@@ -1242,6 +1255,13 @@ static void sendDataToServer(void) {
     Serial.println(
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
+    agApiPostSchedule.setPeriod(SERVER_SYNC_INTERVAL);
+  } else {
+    if (apiClient.postToServerRetry()) {
+      agApiPostSchedule.setPeriod(apiClient.getRetryPeriod());
+    } else {
+      agApiPostSchedule.setPeriod(SERVER_SYNC_INTERVAL);
+    }
   }
 
   measurements.bootCount++;

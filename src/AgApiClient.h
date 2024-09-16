@@ -22,9 +22,19 @@ private:
   AirGradient *ag;
   String apiRoot = "http://hw.airgradient.com";
 
-  bool getConfigFailed;
-  bool postToServerFailed;
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
+  const uint8_t postGetRetryCountMax = 3;
+  const uint16_t retryPeriodMs = 5000;    /** ms */
+  union GetPostResult {
+    struct {
+      uint8_t failed: 1;
+      uint8_t retry : 1;
+      uint8_t count : 6;
+    } bits;
+    uint8_t value;
+  };
+  GetPostResult postResult;
+  GetPostResult getResult;
 
 public:
   AgApiClient(Stream &stream, Configuration &config);
@@ -40,6 +50,9 @@ public:
   bool sendPing(int rssi, int bootCount);
   String getApiRoot() const;
   void setApiRoot(const String &apiRoot);
+  bool postToServerRetry(void);
+  bool fetchConfigureRetry(void);
+  uint16_t getRetryPeriod(void);
 };
 
 #endif /** _AG_API_CLIENT_H_ */

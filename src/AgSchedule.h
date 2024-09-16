@@ -5,16 +5,16 @@
 
 class AgSchedule {
 private:
-  int period;
+  unsigned int period;
   void (*handler)(void);
-  uint32_t count;
+  unsigned int count;
 
 public:
-  AgSchedule(int period, void (*handler)(void));
+  AgSchedule(unsigned int period, void (*handler)(void));
   ~AgSchedule();
   void run(void);
   void update(void);
-  void setPeriod(int period);
+  void setPeriod(unsigned int period);
 };
 
 #endif /** _AG_SCHEDULE_H_ */
