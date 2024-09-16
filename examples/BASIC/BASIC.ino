@@ -266,10 +266,17 @@ static void mdnsInit(void) {
 }
 
 static void initMqtt(void) {
-  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
-    Serial.println("Setup connect to MQTT broker successful");
+  String mqttUri = configuration.getMqttBrokerUri();
+  if (mqttUri.isEmpty()) {
+    Serial.println(
+        "MQTT is not configured, skipping initialization of MQTT client");
+    return;
+  }
+
+  if (mqttClient.begin(mqttUri)) {
+    Serial.println("Successfully connected to MQTT broker");
   } else {
-    Serial.println("setup Connect to MQTT broker failed");
+    Serial.println("Connect to MQTT broker failed");
   }
 }
 
