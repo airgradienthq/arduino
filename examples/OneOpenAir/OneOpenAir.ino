@@ -1020,10 +1020,11 @@ static void updatePm(void) {
       Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
       Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
       Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
+      Serial.printf("PM firmware version: %d\r\n", ag->pms5003.getFirmwareVersion());
       ag->pms5003.resetFailCount();
     } else {
       ag->pms5003.updateFailCount();
-      Serial.printf("PMS read faile %d times\r\n", ag->pms5003.getFailCount());
+      Serial.printf("PMS read failed %d times\r\n", ag->pms5003.getFailCount());
       if (ag->pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
         measurements.pm01_1 = utils::getInvalidPmValue();
         measurements.pm25_1 = utils::getInvalidPmValue();
@@ -1059,6 +1060,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_1));
       Serial.printf("[1] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_1));
+      Serial.printf("[1] PM firmware version: %d\r\n", ag->pms5003t_1.getFirmwareVersion());
 
       ag->pms5003t_1.resetFailCount();
     } else {
@@ -1102,6 +1104,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_2));
       Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_2));
+      Serial.printf("[2] PM firmware version: %d\r\n", ag->pms5003t_2.getFirmwareVersion());
 
       ag->pms5003t_2.resetFailCount();
     } else {

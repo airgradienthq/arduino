@@ -606,6 +606,7 @@ static void updatePm(void) {
     Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
     Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
     Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
+    Serial.printf("PM firmware version: %d\r\n", ag.pms5003.getFirmwareVersion());
     ag.pms5003.resetFailCount();
   } else {
     ag.pms5003.updateFailCount();
