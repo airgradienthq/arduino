@@ -130,8 +130,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
         }
       }
 
-      int pm25 = (ag->pms5003t_1.compensate(this->pm25_1, this->temp_1) +
-                  ag->pms5003t_2.compensate(this->pm25_2, this->temp_2)) /
+      int pm25 = (ag->pms5003t_1.compensate(this->pm25_1, this->hum_1) +
+                  ag->pms5003t_2.compensate(this->pm25_2, this->hum_2)) /
                  2;
       root["pm02Compensated"] = pm25;
     }
@@ -171,7 +171,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
         }
-        root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
+        root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
         if (!localServer) {
           root[json_prop_pmFirmware] =
               pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
@@ -212,7 +212,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
             }
           }
         }
-        root["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->temp_2);
+        root["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->hum_2);
         if(!localServer) {
           root[json_prop_pmFirmware] =
               pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
@@ -253,7 +253,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
+          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
           if(!localServer) {
             root[json_prop_pmFirmware] =
                 pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
@@ -291,7 +291,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
+          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
           if(!localServer) {
             root[json_prop_pmFirmware] =
                 pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
@@ -332,7 +332,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["channels"]["1"]["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->temp_1);
+          root["channels"]["1"]["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
         
           // PMS5003T version
           if(!localServer) {
@@ -374,7 +374,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
               }
             }
           }
-          root["channels"]["2"]["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->temp_2);
+          root["channels"]["2"]["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->hum_2);
           // PMS5003T version
           if(!localServer) {
             root["channels"]["2"][json_prop_pmFirmware] =
