@@ -141,7 +141,7 @@ void StateMachine::co2handleLeds(void) {
  *
  */
 void StateMachine::pm25handleLeds(void) {
-  int pm25Value = value.pm25_1;
+  int pm25Value = ag->pms5003.compensate(value.pm25_1, value.Humidity);
   if (pm25Value < 5) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
