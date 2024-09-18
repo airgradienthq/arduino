@@ -327,7 +327,7 @@ static void factoryConfigReset(void) {
             // }
 
             /** Reset WIFI */
-            WiFi.disconnect(true, true);
+            wifiConnector.reset();
 
             /** Reset local config */
             configuration.reset();
