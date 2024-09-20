@@ -424,7 +424,17 @@ void OledDisplay::setBrightness(int percent) {
       DISP()->setContrast((127 * percent) / 100);
     }
   } else if (ag->isBasic()) {
-    ag->display.setContrast((255 * percent) / 100);
+    if (percent == 0) {
+      isDisplayOff = true;
+
+      // Clear display.
+      ag->display.clear();
+      ag->display.show();
+    }
+    else {
+      isDisplayOff = false;
+      ag->display.setContrast((255 * percent) / 100);
+    }
   }
 }
 
