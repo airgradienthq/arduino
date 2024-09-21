@@ -71,6 +71,7 @@ void PMSBase::readPackage(HardwareSerial& serial) {
       }
       break;
     default: /** Data */
+    {
       readBuffer[readBufferIndex++] = value;
 
       /** Check that received full bufer */
@@ -94,12 +95,13 @@ void PMSBase::readPackage(HardwareSerial& serial) {
       }
       break;
     }
+    }
 
     /** Avoid task watchdog timer reset... */
     delayCount++;
-    if(delayCount >= 32)
-    {
-     delay(1); 
+    if (delayCount >= 32) {
+      delayCount = 0;
+      delay(1);
     }
   }
 
