@@ -298,11 +298,7 @@ void loop() {
     }
   }
 
-  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
-  if (configuration.isOfflineMode() ||
-      (configuration.isPostDataToAirGradient() == false)) {
-    watchdogFeedSchedule.run();
-  }
+  watchdogFeedSchedule.run();
 
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
@@ -1240,13 +1236,11 @@ static void sendDataToServer(void) {
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    ag->watchdog.reset();
     Serial.println();
     Serial.println(
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
-
   measurements.bootCount++;
 }
 
