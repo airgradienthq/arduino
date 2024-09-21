@@ -8,7 +8,7 @@
  * @return true Sucecss
  * @return false Failure
  */
-bool PMSBase::begin(HardwareSerial& serial) {
+bool PMSBase::begin(HardwareSerial &serial) {
   failCount = 0;
   _connected = false;
 
@@ -33,10 +33,10 @@ bool PMSBase::begin(HardwareSerial& serial) {
 
 /**
  * @brief Read PMS package send to device each 1sec
- * 
- * @param serial 
+ *
+ * @param serial
  */
-void PMSBase::readPackage(HardwareSerial& serial) {
+void PMSBase::readPackage(HardwareSerial &serial) {
   uint8_t delayCount = 0;
   while (serial.available()) {
     /** Get value */
@@ -117,7 +117,7 @@ void PMSBase::readPackage(HardwareSerial& serial) {
 
 /**
  * @brief Increate number of fail
- * 
+ *
  */
 void PMSBase::updateFailCount(void) {
   if (failCount < failCountMax) {
@@ -129,8 +129,8 @@ void PMSBase::resetFailCount(void) { failCount = 0; }
 
 /**
  * @brief Get number of fail
- * 
- * @return int 
+ *
+ * @return int
  */
 int PMSBase::getFailCount(void) { return failCount; }
 
@@ -238,15 +238,15 @@ uint16_t PMSBase::getHum(void) { return pms_hum; }
 
 /**
  * @brief Get firmware version code
- * 
- * @return uint8_t 
+ *
+ * @return uint8_t
  */
 uint8_t PMSBase::getFirmwareVersion(void) { return pms_firmwareVersion; }
 
 /**
  * @brief Ge PMS5003 error code
- * 
- * @return uint8_t 
+ *
+ * @return uint8_t
  */
 uint8_t PMSBase::getErrorCode(void) { return pms_errorCode; }
 
@@ -277,12 +277,12 @@ int PMSBase::pm25ToAQI(int pm02) {
 
 /**
  * @brief Correction PM2.5
- * 
+ *
  * Formula: https://www.airgradient.com/documentation/correction-algorithms/
- * 
+ *
  * @param pm25 Raw PM2.5 value
  * @param humidity Humidity value (%)
- * @return int 
+ * @return int
  */
 int PMSBase::compensate(int pm25, float humidity) {
   float value;
@@ -306,7 +306,7 @@ int PMSBase::compensate(int pm25, float humidity) {
     value = 2.966f + (0.69f * fpm25) + (8.84f * (1.e-4) * fpm25 * fpm25);
   }
 
-  if(value < 0) {
+  if (value < 0) {
     value = 0;
   }
 
