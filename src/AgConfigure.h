@@ -82,6 +82,7 @@ public:
   void setOfflineMode(bool offline);
   void setOfflineModeWithoutSave(bool offline);
   bool isLedBarModeChanged(void);
+  bool isMonitorDisplayCompensatedValues(void);
 };
 
 #endif /** _AG_CONFIG_H_ */
