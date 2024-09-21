@@ -1106,12 +1106,14 @@ void Configuration::toConfig(const char *buf) {
   }
 
   if (JSON.typeof_(jconfig[jprop_offlineMode]) != "boolean") {
+    changed = true;
     jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   }
 
   /** Validate monitorDisplayCompensatedValues */
   if (JSON.typeof_(jconfig[jprop_monitorDisplayCompensatedValues]) !=
       "boolean") {
+    changed = true;
     jconfig[jprop_monitorDisplayCompensatedValues] =
         jprop_monitorDisplayCompensatedValues_default;
   }
