@@ -971,7 +971,6 @@ static void updateDisplayAndLedBar(void) {
     state = AgStateMachineServerLost;
   }
 
-  Serial.printf("--- Notification state %d\n", state);
   stateMachine.displayHandle(state);
   stateMachine.handleLeds(state);
 }
