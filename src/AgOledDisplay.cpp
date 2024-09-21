@@ -10,36 +10,30 @@
  *
  * @param hasStatus
  */
-void OledDisplay::showTempHum(bool hasStatus, char* buf, int buf_size) {
+void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
+  /** Temperature */
   if (utils::isValidTemperature(value.Temperature)) {
     float t = 0.0f;
-    if(ag->isOpenAir() && config.isMonitorDisplayCompensatedValues()) {
-      if(config.isTemperatureUnitInF()) {
-        /** Compensate temperature */
-        t = ag->pms5003t_1.compensateTemp(value.Temperature);
-        /** Convert C to F */
-        t = (t * 9)/5.0f + 32.0f;
-      }
+    if (config.isTemperatureUnitInF()) {
+      t = utils::degreeC_To_F(value.Temperature);
     } else {
-
+      t = value.Temperature;
     }
-
 
     if (config.isTemperatureUnitInF()) {
-      float tempF = (value.Temperature * 9) / 5 + 32;
       if (hasStatus) {
-        snprintf(buf, buf_size, "%0.1f", tempF);
+        snprintf(buf, buf_size, "%0.1f", t);
       } else {
-        snprintf(buf, buf_size, "%0.1f°F", tempF);
+        snprintf(buf, buf_size, "%0.1f°F", t);
       }
     } else {
       if (hasStatus) {
-        snprintf(buf, buf_size, "%.1f", value.Temperature);
+        snprintf(buf, buf_size, "%.1f", t);
       } else {
-        snprintf(buf, buf_size, "%.1f°C", value.Temperature);
+        snprintf(buf, buf_size, "%.1f°C", t);
       }
     }
-  } else {
+  } else { /** Show invalid value */
     if (config.isTemperatureUnitInF()) {
       snprintf(buf, buf_size, "-°F");
     } else {
@@ -48,7 +42,7 @@ void OledDisplay::showTempHum(bool hasStatus, char* buf, int buf_size) {
   }
   DISP()->drawUTF8(1, 10, buf);
 
-  /** Show humidty */
+  /** Show humidity */
   if (utils::isValidHumidity(value.Humidity)) {
     snprintf(buf, buf_size, "%d%%", value.Humidity);
   } else {
@@ -318,21 +312,25 @@ void OledDisplay::showDashboard(const char *status) {
       /** Draw PM2.5 value */
       if (utils::isValidPm(value.pm25_1)) {
         int pm25 = value.pm25_1;
-        if (config.isPmStandardInUSAQI() &&
-            config.isMonitorDisplayCompensatedValues()) {
-          if (config.hasSensorSHT) {
-            pm25 = ag->pms5003.compensate(pm25, value.Humidity);
-          }
+
+        /** Compensate PM2.5 value. */
+        if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
+          pm25 = ag->pms5003.compensate(pm25, value.Humidity);
+          logInfo("PM2.5 compensate: " + String(pm25));
+        }
+
+        if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
           sprintf(strBuf, "%d", pm25);
         }
-      } else {
+      } else { /** Show invalid value. */
         sprintf(strBuf, "%s", "-");
       }
       DISP()->setFont(u8g2_font_t0_22b_tf);
       DISP()->drawStr(55, 48, strBuf);
 
+      /** Draw PM2.5 unit */
       DISP()->setFont(u8g2_font_t0_12_tf);
       if (config.isPmStandardInUSAQI()) {
         DISP()->drawUTF8(55, 61, "AQI");
@@ -379,6 +377,7 @@ void OledDisplay::showDashboard(const char *status) {
     if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
       pm25 = (int)ag->pms5003.compensate(pm25, value.Humidity);
     }
+
     ag->display.setCursor(0, 12);
     if (utils::isValidPm(pm25)) {
       snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", pm25);
@@ -390,8 +389,8 @@ void OledDisplay::showDashboard(const char *status) {
     /** Set temperature and humidity */
     if (utils::isValidTemperature(value.Temperature)) {
       if (config.isTemperatureUnitInF()) {
-        float tempF = (value.Temperature * 9) / 5 + 32;
-        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", tempF);
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F",
+                 utils::degreeC_To_F(value.Temperature));
       } else {
         snprintf(strBuf, sizeof(strBuf), "T:%0.f1 C", value.Temperature);
       }
