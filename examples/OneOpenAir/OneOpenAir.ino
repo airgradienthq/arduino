@@ -455,9 +455,7 @@ static void factoryConfigReset(void) {
 
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
-  Serial.println();
-  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
-  Serial.println();
+  Serial.println("External watchdog feed!");
 }
 
 static void ledBarEnabledUpdate(void) {
