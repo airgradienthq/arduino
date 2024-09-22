@@ -45,6 +45,11 @@ private:
 
   uint8_t readBuffer[package_size];
   uint8_t readBufferIndex = 0;
+
+  /**
+   * Save last time received package success. 0 to disable check package
+   * timeout.
+   */
   unsigned long lastPackage = 0;
   bool _connected;
 
