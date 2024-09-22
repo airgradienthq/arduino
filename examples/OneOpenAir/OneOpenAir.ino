@@ -98,9 +98,7 @@ static String fwNewVersion;
 static void boardInit(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
-static void appLedHandler(void);
-static void appDispHandler(void);
-static void oledDisplayLedBarSchedule(void);
+static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
 static void sendDataToServer(void);
@@ -118,7 +116,7 @@ static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -261,8 +259,8 @@ void setup() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
-  appLedHandler();
-  appDispHandler();
+  // Update display and led bar after finishing setup to show dashboard
+  updateDisplayAndLedBar();
 }
 
 void loop() {
@@ -449,7 +447,7 @@ static void factoryConfigReset(void) {
         /** Show current content cause reset ignore */
         factoryBtnPressTime = 0;
         if (ag->isOne()) {
-          appDispHandler();
+          updateDisplayAndLedBar();
         }
       }
     }
@@ -457,7 +455,7 @@ static void factoryConfigReset(void) {
     if (factoryBtnPressTime != 0) {
       if (ag->isOne()) {
         /** Restore last display content */
-        appDispHandler();
+        updateDisplayAndLedBar();
       }
     }
     factoryBtnPressTime = 0;
@@ -949,55 +947,39 @@ static void configUpdateHandle() {
     stateMachine.executeLedBarTest();
   }
 
-  appDispHandler();
-  appLedHandler();
+  // Update display and led bar notification based on updated configuration
+  updateDisplayAndLedBar();
 }
 
-static void appLedHandler(void) {
+static void updateDisplayAndLedBar(void) {
+  if (factoryBtnPressTime != 0) {
+    // Do not distrub factory reset sequence countdown
+    return;
+  }
+
+  if (configuration.isOfflineMode()) {
+    // Ignore network related status when in offline mode
+    stateMachine.displayHandle(AgStateMachineNormal);
+    stateMachine.handleLeds(AgStateMachineNormal);
+    return;
+  }
+
   AgStateMachineState state = AgStateMachineNormal;
-  if (configuration.isOfflineMode() == false) {
-    if (wifiConnector.isConnected() == false) {
-      state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
-      state = AgStateMachineSensorConfigFailed;
-    } else if (apiClient.isPostToServerFailed()) {
-      state = AgStateMachineServerLost;
+  if (wifiConnector.isConnected() == false) {
+    state = AgStateMachineWiFiLost;
+  } else if (apiClient.isFetchConfigureFailed()) {
+    state = AgStateMachineSensorConfigFailed;
+    if (apiClient.isNotAvailableOnDashboard()) {
+      stateMachine.displaySetAddToDashBoard();
+    } else {
+      stateMachine.displayClearAddToDashBoard();
     }
+  } else if (apiClient.isPostToServerFailed() && configuration.isPostDataToAirGradient()) {
+    state = AgStateMachineServerLost;
   }
 
+  stateMachine.displayHandle(state);
   stateMachine.handleLeds(state);
-}
-
-static void appDispHandler(void) {
-  if (ag->isOne()) {
-    AgStateMachineState state = AgStateMachineNormal;
-
-    /** Only show display status on online mode. */
-    if (configuration.isOfflineMode() == false) {
-      if (wifiConnector.isConnected() == false) {
-        state = AgStateMachineWiFiLost;
-      } else if (apiClient.isFetchConfigureFailed()) {
-        state = AgStateMachineSensorConfigFailed;
-        if (apiClient.isNotAvailableOnDashboard()) {
-          stateMachine.displaySetAddToDashBoard();
-        } else {
-          stateMachine.displayClearAddToDashBoard();
-        }
-      } else if (apiClient.isPostToServerFailed()) {
-        state = AgStateMachineServerLost;
-      }
-    }
-    stateMachine.displayHandle(state);
-  }
-}
-
-static void oledDisplayLedBarSchedule(void) {
-  if (ag->isOne()) {
-    if (factoryBtnPressTime == 0) {
-      appDispHandler();
-    }
-  }
-  appLedHandler();
 }
 
 static void updateTvoc(void) {
