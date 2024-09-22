@@ -495,7 +495,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineServerLost: {
-    disp.showDashboard("Server N/A");
+    disp.showDashboard("AG Server N/A");
     break;
   }
   case AgStateMachineSensorConfigFailed: {
@@ -504,7 +504,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ms >= 5000) {
         addToDashboardTime = millis();
         if (addToDashBoardToggle) {
-          disp.showDashboard("Add to Dashboard");
+          disp.showDashboard("Add to AG Dashb.");
         } else {
           disp.showDashboard(ag->deviceId().c_str());
         }
