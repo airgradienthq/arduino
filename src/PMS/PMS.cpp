@@ -4,7 +4,7 @@
 /**
  * @brief Initializes the sensor and attempts to read data.
  *
- * @param stream UART stream
+ * @param HardwareSerial UART stream
  * @return true Sucecss
  * @return false Failure
  */
@@ -13,7 +13,19 @@ bool PMSBase::begin(HardwareSerial &serial) {
   _connected = false;
 
   // Run and check sensor data for 4sec
+  int bytesCleared = serial.available();
   serial.flush();
+  if (bytesCleared) {
+    Serial.printf("cleared %d byte(s)\n", bytesCleared);
+  }
+
+  // explicitly put the sensor into active mode, this seems to be be needed for
+  // the Cubic PM2009X
+  Serial.printf("Setting active mode\n");
+  uint8_t activeModeCommand[] = {0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71};
+  size_t bytesWritten =
+      serial.write(activeModeCommand, sizeof(activeModeCommand));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
 
   unsigned long lastInit = millis();
   while (true) {
@@ -25,9 +37,15 @@ bool PMSBase::begin(HardwareSerial &serial) {
     delay(1);
     unsigned long ms = (unsigned long)(millis() - lastInit);
     if (ms >= 4000) {
+      Serial.println("Initialize PMS sensor: Timeout");
       break;
     }
   }
+
+  if (_connected) {
+    Serial.println("Initialize PMS sensor");
+  }
+
   return _connected;
 }
 
