@@ -16,7 +16,7 @@ private:
   Measurements &value;
   bool isDisplayOff = false;
 
-  void showTempHum(bool hasStatus);
+  void showTempHum(bool hasStatus, char* buf, int buf_size);
   void setCentralText(int y, String text);
   void setCentralText(int y, const char *text);
 
