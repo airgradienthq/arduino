@@ -596,7 +596,7 @@ static void updateTvoc(void) {
 }
 
 static void updatePm(void) {
-  if (ag.pms5003.isFailed() == false) {
+  if (ag.pms5003.connected()) {
     measurements.pm01_1 = ag.pms5003.getPm01Ae();
     measurements.pm25_1 = ag.pms5003.getPm25Ae();
     measurements.pm10_1 = ag.pms5003.getPm10Ae();

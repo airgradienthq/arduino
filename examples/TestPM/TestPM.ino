@@ -44,7 +44,7 @@ void loop() {
   if (ms >= 5000) {
     lastRead = millis();
 #ifdef ESP8266
-    if (ag.pms5003.isFailed() == false) {
+    if (ag.pms5003.connected()) {
       PM2 = ag.pms5003.getPm25Ae();
       Serial.printf("PM2.5 in ug/m3: %d\r\n", PM2);
       Serial.printf("PM2.5 in US AQI: %d\r\n",
