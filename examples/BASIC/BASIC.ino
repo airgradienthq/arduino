@@ -206,11 +206,7 @@ void loop() {
     tvocSchedule.run();
   }
 
-  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
-  if (configuration.isOfflineMode() ||
-      (configuration.isPostDataToAirGradient() == false)) {
-    watchdogFeedSchedule.run();
-  }
+  watchdogFeedSchedule.run();
 
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
@@ -282,9 +278,7 @@ static void initMqtt(void) {
 
 static void wdgFeedUpdate(void) {
   ag.watchdog.reset();
-  Serial.println();
-  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
-  Serial.println();
+  Serial.println("External watchdog feed!");
 }
 
 static bool sgp41Init(void) {
@@ -549,13 +543,11 @@ static void sendDataToServer(void) {
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           &ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    ag.watchdog.reset();
     Serial.println();
     Serial.println(
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
-
   measurements.bootCount++;
 }
 
