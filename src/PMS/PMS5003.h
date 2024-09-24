@@ -4,6 +4,9 @@
 #include "../Main/BoardDef.h"
 #include "PMS.h"
 #include "Stream.h"
+#ifdef ESP8266
+#include <SoftwareSerial.h>
+#endif
 
 /**
  * @brief The class define how to handle PMS5003 sensor bas on @ref PMS class
@@ -41,6 +44,7 @@ private:
 #if defined(ESP8266)
   Stream *_debugStream;
   const char *TAG = "PMS5003";
+  SoftwareSerial *_serial;
 #else
   HardwareSerial *_serial;
 #endif

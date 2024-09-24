@@ -10,8 +10,8 @@
  */
 class PMSBase {
 public:
-  bool begin(HardwareSerial& serial);
-  void readPackage(HardwareSerial& serial);
+  bool begin(Stream *stream);
+  void readPackage(Stream *stream);
   void updateFailCount(void);
   void resetFailCount(void);
   int getFailCount(void);

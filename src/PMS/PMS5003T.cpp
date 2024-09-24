@@ -67,11 +67,10 @@ bool PMS5003T::begin(void) {
   }
 
 #if defined(ESP8266)
-  bsp->Pms5003.uart_tx_pin;
-  SoftwareSerial *uart =
+  this->_serial =
       new SoftwareSerial(bsp->Pms5003.uart_tx_pin, bsp->Pms5003.uart_rx_pin);
-  uart->begin(9600);
-  if (pms.begin(uart) == false) {
+  this->_serial->begin(9600);
+  if (pms.begin(this->_serial) == false) {
     AgLog("PMS failed");
     return false;
   }
@@ -98,7 +97,7 @@ bool PMS5003T::begin(void) {
     this->_serial->begin(9600, SERIAL_8N1, bsp->SenseAirS8.uart_rx_pin,
                          bsp->SenseAirS8.uart_tx_pin);
   }
-  if (pms.begin(*this->_serial) == false) {
+  if (pms.begin(this->_serial) == false) {
     AgLog("PMS failed");
     return false;
   }
@@ -230,7 +229,7 @@ void PMS5003T::end(void) {
  * @brief Check and read PMS sensor data. This method should be callack from
  * loop process to continoue check sensor data if it's available
  */
-void PMS5003T::handle(void) { pms.readPackage(*this->_serial); }
+void PMS5003T::handle(void) { pms.readPackage(this->_serial); }
 
 void PMS5003T::updateFailCount(void) {
   pms.updateFailCount();
