@@ -40,6 +40,11 @@ public:
 
 private:
   static const uint8_t package_size = 32;
+
+  /** In normal package interval is 200-800ms, In case small changed on sensor
+   * it's will interval reach to 2.3sec
+   */
+  const uint16_t READ_PACKGE_TIMEOUT = 3000;   /** ms */
   const int failCountMax = 10;
   int failCount = 0;
 
@@ -52,6 +57,8 @@ private:
    */
   unsigned long lastPackage = 0;
   bool _connected;
+
+  unsigned long lastReadPackage = 0;
 
   uint16_t pms_raw0_1;
   uint16_t pms_raw2_5;

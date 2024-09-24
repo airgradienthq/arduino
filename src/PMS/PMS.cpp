@@ -37,6 +37,33 @@ bool PMSBase::begin(HardwareSerial &serial) {
  * @param serial
  */
 void PMSBase::readPackage(HardwareSerial &serial) {
+  /** If readPackage has process as period larger than READ_PACKAGE_TIMEOUT,
+   * should be clear the lastPackage and readBufferIndex */
+  if (lastReadPackage) {
+    unsigned long ms = (unsigned long)(millis() - lastReadPackage);
+    if (ms >= READ_PACKGE_TIMEOUT) {
+      /** Clear buffer */
+      readBufferIndex = 0;
+
+      /** Disable check read package timeout */
+      lastPackage = 0;
+
+      Serial.println("Last process timeout, clear buffer and last handle package");
+    }
+
+    lastReadPackage = millis();
+    if (!lastReadPackage) {
+      lastReadPackage = 1;
+    }
+  } else {
+    lastReadPackage = millis();
+    if (!lastReadPackage) {
+      lastReadPackage = 1;
+    }
+  }
+
+  /** Count to call delay() to release the while loop MCU resource for avoid the
+   * watchdog time reset */
   uint8_t delayCount = 0;
   while (serial.available()) {
     /** Get value */
@@ -108,7 +135,7 @@ void PMSBase::readPackage(HardwareSerial &serial) {
   /** Check that sensor removed */
   if (lastPackage) {
     unsigned long ms = (unsigned long)(millis() - lastPackage);
-    if (ms >= 1500) {
+    if (ms >= READ_PACKGE_TIMEOUT) {
       lastPackage = 0;
       _connected = false;
     }
