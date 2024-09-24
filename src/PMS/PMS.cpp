@@ -2,7 +2,7 @@
 #include "../Main/BoardDef.h"
 
 /**
- * @brief Init and check that sensor has connected
+ * @brief Initializes the sensor and attempts to read data.
  *
  * @param stream UART stream
  * @return true Sucecss

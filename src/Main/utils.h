@@ -24,6 +24,7 @@ public:
   static int getInvalidPmValue(void);
   static int getInvalidNOx(void);
   static int getInvalidVOC(void);
+  static float degreeC_To_F(float t);
 };
 
 

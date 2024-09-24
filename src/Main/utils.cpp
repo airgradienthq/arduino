@@ -87,3 +87,8 @@ int utils::getInvalidPmValue(void) { return INVALID_PMS; }
 int utils::getInvalidNOx(void) { return INVALID_NOX; }
 
 int utils::getInvalidVOC(void) { return INVALID_VOC; }
+
+float utils::degreeC_To_F(float t) {
+  /** (t * 9)/5 + 32 */
+  return t * 1.8f + 32.0f;
+}

@@ -98,9 +98,7 @@ static String fwNewVersion;
 static void boardInit(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
-static void appLedHandler(void);
-static void appDispHandler(void);
-static void oledDisplayLedBarSchedule(void);
+static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
 static void sendDataToServer(void);
@@ -118,7 +116,7 @@ static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 
-AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplayLedBarSchedule);
+AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
 AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
@@ -261,8 +259,8 @@ void setup() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
-  appLedHandler();
-  appDispHandler();
+  // Update display and led bar after finishing setup to show dashboard
+  updateDisplayAndLedBar();
 }
 
 void loop() {
@@ -303,11 +301,7 @@ void loop() {
     }
   }
 
-  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
-  if (configuration.isOfflineMode() ||
-      (configuration.isPostDataToAirGradient() == false)) {
-    watchdogFeedSchedule.run();
-  }
+  watchdogFeedSchedule.run();
 
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
@@ -387,11 +381,18 @@ static void createMqttTask(void) {
 }
 
 static void initMqtt(void) {
-  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
-    Serial.println("Connect to MQTT broker successful");
+  String mqttUri = configuration.getMqttBrokerUri();
+  if (mqttUri.isEmpty()) {
+    Serial.println(
+        "MQTT is not configured, skipping initialization of MQTT client");
+    return;
+  }
+
+  if (mqttClient.begin(mqttUri)) {
+    Serial.println("Successfully connected to MQTT broker");
     createMqttTask();
   } else {
-    Serial.println("Connect to MQTT broker failed");
+    Serial.println("Connection to MQTT broker failed");
   }
 }
 
@@ -447,7 +448,7 @@ static void factoryConfigReset(void) {
         /** Show current content cause reset ignore */
         factoryBtnPressTime = 0;
         if (ag->isOne()) {
-          appDispHandler();
+          updateDisplayAndLedBar();
         }
       }
     }
@@ -455,7 +456,7 @@ static void factoryConfigReset(void) {
     if (factoryBtnPressTime != 0) {
       if (ag->isOne()) {
         /** Restore last display content */
-        appDispHandler();
+        updateDisplayAndLedBar();
       }
     }
     factoryBtnPressTime = 0;
@@ -464,9 +465,7 @@ static void factoryConfigReset(void) {
 
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
-  Serial.println();
-  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
-  Serial.println();
+  Serial.println("External watchdog feed!");
 }
 
 static void ledBarEnabledUpdate(void) {
@@ -702,7 +701,7 @@ static void oneIndoorInit(void) {
   ledBarEnabledUpdate();
 
   /** Show message init sensor */
-  oledDisplay.setText("Sensor", "initializing...", "");
+  oledDisplay.setText("Monitor", "initializing...", "");
 
   /** Init sensor SGP41 */
   if (sgp41Init() == false) {
@@ -783,27 +782,27 @@ static void openAirInit(void) {
     }
   }
 
-  /** Try to find the PMS on other difference port with S8 */
+  /** Attempt to detect PM sensors */
   if (fwMode == FW_MODE_O_1PST) {
     bool pmInitSuccess = false;
     if (serial0Available) {
       if (ag->pms5003t_1.begin(Serial0) == false) {
         configuration.hasSensorPMS1 = false;
-        Serial.println("PMS1 sensor not found");
+        Serial.println("No PM sensor detected on Serial0");
       } else {
         serial0Available = false;
         pmInitSuccess = true;
-        Serial.println("Found PMS 1 on Serial0");
+        Serial.println("Detected PM 1 on Serial0");
       }
     }
     if (pmInitSuccess == false) {
       if (serial1Available) {
         if (ag->pms5003t_1.begin(Serial1) == false) {
           configuration.hasSensorPMS1 = false;
-          Serial.println("PMS1 sensor not found");
+          Serial.println("No PM sensor detected on Serial1");
         } else {
           serial1Available = false;
-          Serial.println("Found PMS 1 on Serial1");
+          Serial.println("Detected PM 1 on Serial1");
         }
       }
     }
@@ -811,15 +810,15 @@ static void openAirInit(void) {
   } else {
     if (ag->pms5003t_1.begin(Serial0) == false) {
       configuration.hasSensorPMS1 = false;
-      Serial.println("PMS1 sensor not found");
+      Serial.println("No PM sensor detected on Serial0");
     } else {
-      Serial.println("Found PMS 1 on Serial0");
+      Serial.println("Detected PM 1 on Serial0");
     }
     if (ag->pms5003t_2.begin(Serial1) == false) {
       configuration.hasSensorPMS2 = false;
-      Serial.println("PMS2 sensor not found");
+      Serial.println("No PM sensor detected on Serial1");
     } else {
-      Serial.println("Found PMS 2 on Serial1");
+      Serial.println("Detected PM 2 on Serial1");
     }
 
     if (fwMode == FW_MODE_O_1PP) {
@@ -947,55 +946,39 @@ static void configUpdateHandle() {
     stateMachine.executeLedBarTest();
   }
 
-  appDispHandler();
-  appLedHandler();
+  // Update display and led bar notification based on updated configuration
+  updateDisplayAndLedBar();
 }
 
-static void appLedHandler(void) {
+static void updateDisplayAndLedBar(void) {
+  if (factoryBtnPressTime != 0) {
+    // Do not distrub factory reset sequence countdown
+    return;
+  }
+
+  if (configuration.isOfflineMode()) {
+    // Ignore network related status when in offline mode
+    stateMachine.displayHandle(AgStateMachineNormal);
+    stateMachine.handleLeds(AgStateMachineNormal);
+    return;
+  }
+
   AgStateMachineState state = AgStateMachineNormal;
-  if (configuration.isOfflineMode() == false) {
-    if (wifiConnector.isConnected() == false) {
-      state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
-      state = AgStateMachineSensorConfigFailed;
-    } else if (apiClient.isPostToServerFailed()) {
-      state = AgStateMachineServerLost;
+  if (wifiConnector.isConnected() == false) {
+    state = AgStateMachineWiFiLost;
+  } else if (apiClient.isFetchConfigureFailed()) {
+    state = AgStateMachineSensorConfigFailed;
+    if (apiClient.isNotAvailableOnDashboard()) {
+      stateMachine.displaySetAddToDashBoard();
+    } else {
+      stateMachine.displayClearAddToDashBoard();
     }
+  } else if (apiClient.isPostToServerFailed() && configuration.isPostDataToAirGradient()) {
+    state = AgStateMachineServerLost;
   }
 
+  stateMachine.displayHandle(state);
   stateMachine.handleLeds(state);
-}
-
-static void appDispHandler(void) {
-  if (ag->isOne()) {
-    AgStateMachineState state = AgStateMachineNormal;
-
-    /** Only show display status on online mode. */
-    if (configuration.isOfflineMode() == false) {
-      if (wifiConnector.isConnected() == false) {
-        state = AgStateMachineWiFiLost;
-      } else if (apiClient.isFetchConfigureFailed()) {
-        state = AgStateMachineSensorConfigFailed;
-        if (apiClient.isNotAvailableOnDashboard()) {
-          stateMachine.displaySetAddToDashBoard();
-        } else {
-          stateMachine.displayClearAddToDashBoard();
-        }
-      } else if (apiClient.isPostToServerFailed()) {
-        state = AgStateMachineServerLost;
-      }
-    }
-    stateMachine.displayHandle(state);
-  }
-}
-
-static void oledDisplayLedBarSchedule(void) {
-  if (ag->isOne()) {
-    if (factoryBtnPressTime == 0) {
-      appDispHandler();
-    }
-  }
-  appLedHandler();
 }
 
 static void updateTvoc(void) {
@@ -1025,10 +1008,11 @@ static void updatePm(void) {
       Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
       Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
       Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
+      Serial.printf("PM firmware version: %d\r\n", ag->pms5003.getFirmwareVersion());
       ag->pms5003.resetFailCount();
     } else {
       ag->pms5003.updateFailCount();
-      Serial.printf("PMS read faile %d times\r\n", ag->pms5003.getFailCount());
+      Serial.printf("PMS read failed %d times\r\n", ag->pms5003.getFailCount());
       if (ag->pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
         measurements.pm01_1 = utils::getInvalidPmValue();
         measurements.pm25_1 = utils::getInvalidPmValue();
@@ -1064,6 +1048,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_1));
       Serial.printf("[1] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_1));
+      Serial.printf("[1] PM firmware version: %d\r\n", ag->pms5003t_1.getFirmwareVersion());
 
       ag->pms5003t_1.resetFailCount();
     } else {
@@ -1107,6 +1092,7 @@ static void updatePm(void) {
                     ag->pms5003t_1.compensateTemp(measurements.temp_2));
       Serial.printf("[2] Relative Humidity compensated: %0.2f\r\n",
                     ag->pms5003t_1.compensateHum(measurements.hum_2));
+      Serial.printf("[2] PM firmware version: %d\r\n", ag->pms5003t_2.getFirmwareVersion());
 
       ag->pms5003t_2.resetFailCount();
     } else {
@@ -1242,13 +1228,11 @@ static void sendDataToServer(void) {
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    ag->watchdog.reset();
     Serial.println();
     Serial.println(
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
-
   measurements.bootCount++;
 }
 

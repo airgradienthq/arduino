@@ -10,37 +10,43 @@
  *
  * @param hasStatus
  */
-void OledDisplay::showTempHum(bool hasStatus) {
-  char buf[16];
+void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
+  /** Temperature */
   if (utils::isValidTemperature(value.Temperature)) {
+    float t = 0.0f;
     if (config.isTemperatureUnitInF()) {
-      float tempF = (value.Temperature * 9) / 5 + 32;
+      t = utils::degreeC_To_F(value.Temperature);
+    } else {
+      t = value.Temperature;
+    }
+
+    if (config.isTemperatureUnitInF()) {
       if (hasStatus) {
-        snprintf(buf, sizeof(buf), "%0.1f", tempF);
+        snprintf(buf, buf_size, "%0.1f", t);
       } else {
-        snprintf(buf, sizeof(buf), "%0.1f°F", tempF);
+        snprintf(buf, buf_size, "%0.1f°F", t);
       }
     } else {
       if (hasStatus) {
-        snprintf(buf, sizeof(buf), "%.1f", value.Temperature);
+        snprintf(buf, buf_size, "%.1f", t);
       } else {
-        snprintf(buf, sizeof(buf), "%.1f°C", value.Temperature);
+        snprintf(buf, buf_size, "%.1f°C", t);
       }
     }
-  } else {
+  } else { /** Show invalid value */
     if (config.isTemperatureUnitInF()) {
-      snprintf(buf, sizeof(buf), "-°F");
+      snprintf(buf, buf_size, "-°F");
     } else {
-      snprintf(buf, sizeof(buf), "-°C");
+      snprintf(buf, buf_size, "-°C");
     }
   }
   DISP()->drawUTF8(1, 10, buf);
 
-  /** Show humidty */
+  /** Show humidity */
   if (utils::isValidHumidity(value.Humidity)) {
-    snprintf(buf, sizeof(buf), "%d%%", value.Humidity);
+    snprintf(buf, buf_size, "%d%%", value.Humidity);
   } else {
-    snprintf(buf, sizeof(buf), "-%%");
+    snprintf(buf, buf_size, "-%%");
   }
 
   if (value.Humidity > 99) {
@@ -261,7 +267,7 @@ void OledDisplay::showDashboard(const char *status) {
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
       if ((status == NULL) || (strlen(status) == 0)) {
-        showTempHum(false);
+        showTempHum(false, strBuf, sizeof(strBuf));
       } else {
         String strStatus = "Show status: " + String(status);
         logInfo(strStatus);
@@ -272,7 +278,7 @@ void OledDisplay::showDashboard(const char *status) {
         /** Show WiFi NA*/
         if (strcmp(status, "WiFi N/A") == 0) {
           DISP()->setFont(u8g2_font_t0_12_tf);
-          showTempHum(true);
+          showTempHum(true, strBuf, sizeof(strBuf));
         }
       }
 
@@ -304,29 +310,31 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
-      int pm25 = value.pm25_1;
-      if (config.hasSensorSHT) {
-        pm25 = ag->pms5003.compensate(pm25, value.Humidity);
-        logInfo("PM2.5:" + String(value.pm25_1) + String("Compensated:") + String(pm25));
-      }
-      DISP()->setFont(u8g2_font_t0_22b_tf);
-      if (config.isPmStandardInUSAQI()) {
-        if (utils::isValidPm(pm25)) {
+      if (utils::isValidPm(value.pm25_1)) {
+        int pm25 = value.pm25_1;
+
+        /** Compensate PM2.5 value. */
+        if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
+          pm25 = ag->pms5003.compensate(pm25, value.Humidity);
+          logInfo("PM2.5 compensate: " + String(pm25));
+        }
+
+        if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
-          sprintf(strBuf, "%s", "-");
+          sprintf(strBuf, "%d", pm25);
         }
-        DISP()->drawStr(55, 48, strBuf);
-        DISP()->setFont(u8g2_font_t0_12_tf);
+      } else { /** Show invalid value. */
+        sprintf(strBuf, "%s", "-");
+      }
+      DISP()->setFont(u8g2_font_t0_22b_tf);
+      DISP()->drawStr(55, 48, strBuf);
+
+      /** Draw PM2.5 unit */
+      DISP()->setFont(u8g2_font_t0_12_tf);
+      if (config.isPmStandardInUSAQI()) {
         DISP()->drawUTF8(55, 61, "AQI");
       } else {
-        if (utils::isValidPm(pm25)) {
-          sprintf(strBuf, "%d", pm25);
-        } else {
-          sprintf(strBuf, "%s", "-");
-        }
-        DISP()->drawStr(55, 48, strBuf);
-        DISP()->setFont(u8g2_font_t0_12_tf);
         DISP()->drawUTF8(55, 61, "ug/m³");
       }
 
@@ -355,20 +363,21 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.clear();
 
     /** Set CO2 */
-    if(utils::isValidCO2(value.CO2)) {
+    if (utils::isValidCO2(value.CO2)) {
       snprintf(strBuf, sizeof(strBuf), "CO2:%d", value.CO2);
     } else {
       snprintf(strBuf, sizeof(strBuf), "CO2:-");
     }
-    
+
     ag->display.setCursor(0, 0);
     ag->display.setText(strBuf);
 
     /** Set PM */
     int pm25 = value.pm25_1;
-    if(config.hasSensorSHT) {
+    if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
       pm25 = (int)ag->pms5003.compensate(pm25, value.Humidity);
     }
+
     ag->display.setCursor(0, 12);
     if (utils::isValidPm(pm25)) {
       snprintf(strBuf, sizeof(strBuf), "PM2.5:%d", pm25);
@@ -380,8 +389,8 @@ void OledDisplay::showDashboard(const char *status) {
     /** Set temperature and humidity */
     if (utils::isValidTemperature(value.Temperature)) {
       if (config.isTemperatureUnitInF()) {
-        float tempF = (value.Temperature * 9) / 5 + 32;
-        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", tempF);
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F",
+                 utils::degreeC_To_F(value.Temperature));
       } else {
         snprintf(strBuf, sizeof(strBuf), "T:%0.f1 C", value.Temperature);
       }
@@ -424,7 +433,17 @@ void OledDisplay::setBrightness(int percent) {
       DISP()->setContrast((127 * percent) / 100);
     }
   } else if (ag->isBasic()) {
-    ag->display.setContrast((255 * percent) / 100);
+    if (percent == 0) {
+      isDisplayOff = true;
+
+      // Clear display.
+      ag->display.clear();
+      ag->display.show();
+    }
+    else {
+      isDisplayOff = false;
+      ag->display.setContrast((255 * percent) / 100);
+    }
   }
 }
 
@@ -519,7 +538,7 @@ void OledDisplay::showRebooting(void) {
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
       // setCentralText(20, "Firmware Update");
-      setCentralText(40, "Reboot...");
+      setCentralText(40, "Rebooting...");
       // setCentralText(60, String("Retry after 24h"));
     } while (DISP()->nextPage());
   } else if (ag->isBasic()) {

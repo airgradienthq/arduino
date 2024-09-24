@@ -58,6 +58,7 @@ bool AgApiClient::fetchServerConfiguration(void) {
   }
 #else
   HTTPClient client;
+  client.setTimeout(timeoutMs);
   if (client.begin(uri) == false) {
     getConfigFailed = true;
     return false;
@@ -113,14 +114,13 @@ bool AgApiClient::postToServer(String data) {
     return false;
   }
 
-  String uri =
-      "http://hw.airgradient.com/sensors/airgradient:" + ag->deviceId() +
-      "/measures";
+  String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
   // logInfo("Post uri: " + uri);
   // logInfo("Post data: " + data);
 
   WiFiClient wifiClient;
   HTTPClient client;
+  client.setTimeout(timeoutMs);
   if (client.begin(wifiClient, uri.c_str()) == false) {
     logError("Init client failed");
     return false;
@@ -190,3 +190,12 @@ bool AgApiClient::sendPing(int rssi, int bootCount) {
 String AgApiClient::getApiRoot() const { return apiRoot; }
 
 void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }
+
+/**
+ * @brief Set http request timeout. (Default: 10s)
+ *
+ * @param timeoutMs
+ */
+void AgApiClient::setTimeout(uint16_t timeoutMs) {
+  this->timeoutMs = timeoutMs;
+}

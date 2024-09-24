@@ -204,11 +204,7 @@ void loop() {
     tvocSchedule.run();
   }
 
-  /** Auto reset watchdog timer if offline mode or postDataToAirGradient */
-  if (configuration.isOfflineMode() ||
-      (configuration.isPostDataToAirGradient() == false)) {
-    watchdogFeedSchedule.run();
-  }
+  watchdogFeedSchedule.run();
 
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
@@ -264,10 +260,17 @@ static void mdnsInit(void) {
 }
 
 static void initMqtt(void) {
-  if (mqttClient.begin(configuration.getMqttBrokerUri())) {
-    Serial.println("Setup connect to MQTT broker successful");
+  String mqttUri = configuration.getMqttBrokerUri();
+  if (mqttUri.isEmpty()) {
+    Serial.println(
+        "MQTT is not configured, skipping initialization of MQTT client");
+    return;
+  }
+
+  if (mqttClient.begin(mqttUri)) {
+    Serial.println("Successfully connected to MQTT broker");
   } else {
-    Serial.println("setup Connect to MQTT broker failed");
+    Serial.println("Connection to MQTT broker failed");
   }
 }
 
@@ -332,9 +335,7 @@ static void factoryConfigReset(void) {
 
 static void wdgFeedUpdate(void) {
   ag.watchdog.reset();
-  Serial.println();
-  Serial.println("Offline mode or isPostToAirGradient = false: watchdog reset");
-  Serial.println();
+  Serial.println("External watchdog feed!");
 }
 
 static bool sgp41Init(void) {
@@ -565,6 +566,7 @@ static void updatePm(void) {
     Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
     Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
     Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
+    Serial.printf("PM firmware version: %d\r\n", ag.pms5003.getFirmwareVersion());
     ag.pms5003.resetFailCount();
   } else {
     ag.pms5003.updateFailCount();
@@ -593,13 +595,11 @@ static void sendDataToServer(void) {
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
                                           &ag, &configuration);
   if (apiClient.postToServer(syncData)) {
-    ag.watchdog.reset();
     Serial.println();
     Serial.println(
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
-
   measurements.bootCount++;
 }
 

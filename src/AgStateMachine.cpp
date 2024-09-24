@@ -142,6 +142,10 @@ void StateMachine::co2handleLeds(void) {
  */
 void StateMachine::pm25handleLeds(void) {
   int pm25Value = value.pm25_1;
+  if (config.isMonitorDisplayCompensatedValues() && config.hasSensorSHT) {
+    pm25Value = ag->pms5003.compensate(value.pm25_1, value.Humidity);
+  }
+
   if (pm25Value < 5) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
@@ -495,7 +499,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineServerLost: {
-    disp.showDashboard("Server N/A");
+    disp.showDashboard("AG Server N/A");
     break;
   }
   case AgStateMachineSensorConfigFailed: {
@@ -504,7 +508,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ms >= 5000) {
         addToDashboardTime = millis();
         if (addToDashBoardToggle) {
-          disp.showDashboard("Add to Dashboard");
+          disp.showDashboard("Add to AG Dashb.");
         } else {
           disp.showDashboard(ag->deviceId().c_str());
         }
