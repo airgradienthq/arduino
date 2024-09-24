@@ -54,12 +54,12 @@ void loop() {
     }
 #else
     if (ag.getBoardType() == OPEN_AIR_OUTDOOR) {
-      if (ag.pms5003t_1.isFailed() == false) {
+      if (ag.pms5003t_1.connected()) {
         PM2 = ag.pms5003t_1.getPm25Ae();
         readResul = true;
       }
     } else {
-      if (ag.pms5003.isFailed() == false) {
+      if (ag.pms5003.connected()) {
         PM2 = ag.pms5003.getPm25Ae();
         readResul = true;
       }
