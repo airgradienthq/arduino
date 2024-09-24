@@ -11,8 +11,7 @@
 class PMSBase {
 public:
   bool begin(Stream *stream);
-  void handle();
-  bool isFailed(void);
+  void readPackage(Stream *stream);
   void updateFailCount(void);
   void resetFailCount(void);
   int getFailCount(void);
@@ -27,6 +26,7 @@ public:
   uint16_t getCount0_5(void);
   uint16_t getCount1_0(void);
   uint16_t getCount2_5(void);
+  bool connected(void);
 
   /** For PMS5003 */
   uint16_t getCount5_0(void);
@@ -42,17 +42,48 @@ public:
   int compensate(int pm25, float humidity);
 
 private:
-  Stream *stream;
-  char package[32];
-  int packageIndex;
-  bool failed = false;
-  uint32_t lastRead;
+  static const uint8_t package_size = 32;
+
+  /** In normal package interval is 200-800ms, In case small changed on sensor
+   * it's will interval reach to 2.3sec
+   */
+  const uint16_t READ_PACKGE_TIMEOUT = 3000;   /** ms */
   const int failCountMax = 10;
   int failCount = 0;
 
-  int16_t toI16(char *buf);
-  uint16_t toU16(char* buf);
-  bool validate(char *buf);
+  uint8_t readBuffer[package_size];
+  uint8_t readBufferIndex = 0;
+
+  /**
+   * Save last time received package success. 0 to disable check package
+   * timeout.
+   */
+  unsigned long lastPackage = 0;
+  bool _connected;
+
+  unsigned long lastReadPackage = 0;
+
+  uint16_t pms_raw0_1;
+  uint16_t pms_raw2_5;
+  uint16_t pms_raw10;
+  uint16_t pms_pm0_1;
+  uint16_t pms_pm2_5;
+  uint16_t pms_pm10;
+  uint16_t pms_count0_3;
+  uint16_t pms_count0_5;
+  uint16_t pms_count1_0;
+  uint16_t pms_count2_5;
+  uint16_t pms_count5_0;
+  uint16_t pms_count10;
+  int16_t  pms_temp;
+  uint16_t pms_hum;
+  uint8_t  pms_errorCode;
+  uint8_t  pms_firmwareVersion;
+
+  int16_t toI16(const uint8_t *buf);
+  uint16_t toU16(const uint8_t *buf);
+  bool validate(const uint8_t *buf);
+  void parse(const uint8_t* buf);
 };
 
 #endif /** _PMS5003_BASE_H_ */

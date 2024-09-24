@@ -3,7 +3,6 @@
 #include "../Main/utils.h"
 
 #if defined(ESP8266)
-#include <SoftwareSerial.h>
 /**
  * @brief Init sensor
  *
@@ -60,11 +59,10 @@ bool PMS5003::begin(void) {
   }
 
 #if defined(ESP8266)
-  bsp->Pms5003.uart_tx_pin;
-  SoftwareSerial *uart =
+  this->_serial =
       new SoftwareSerial(bsp->Pms5003.uart_tx_pin, bsp->Pms5003.uart_rx_pin);
-  uart->begin(9600);
-  if (pms.begin(uart) == false) {
+  this->_serial->begin(9600);
+  if (pms.begin(this->_serial) == false) {
     AgLog("PMS failed");
     return false;
   }
@@ -146,6 +144,14 @@ int PMS5003::getFirmwareVersion(void) { return _ver; }
 uint8_t PMS5003::getErrorCode(void) { return pms.getErrorCode(); }
 
 /**
+ * @brief Is sensor connect with device
+ * 
+ * @return true Connected
+ * @return false Removed
+ */
+bool PMS5003::connected(void) { return pms.connected(); }
+
+/**
  * @brief Check device initialized or not
  *
  * @return true Initialized
@@ -179,15 +185,7 @@ void PMS5003::end(void) {
  * @brief Check and read PMS sensor data. This method should be callack from
  * loop process to continoue check sensor data if it's available
  */
-void PMS5003::handle(void) { pms.handle(); }
-
-/**
- * @brief Get sensor status
- * 
- * @return true No problem
- * @return false Communication timeout or sensor has removed
- */
-bool PMS5003::isFailed(void) { return pms.isFailed(); }
+void PMS5003::handle(void) { pms.readPackage(this->_serial); }
 
 void PMS5003::updateFailCount(void) {
   pms.updateFailCount();

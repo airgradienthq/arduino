@@ -6,6 +6,9 @@
 #include "PMS5003TBase.h"
 #include "Stream.h"
 #include <HardwareSerial.h>
+#ifdef ESP8266
+#include <SoftwareSerial.h>
+#endif
 
 /**
  * @brief The class define how to handle PMS5003T sensor bas on @ref PMS class
@@ -21,7 +24,6 @@ public:
   void end(void);
 
   void handle(void);
-  bool isFailed(void);
   void updateFailCount(void);
   void resetFailCount(void);
   int getFailCount(void);
@@ -36,6 +38,7 @@ public:
   int compensate(int pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
+  bool connected(void);
 
 private:
   bool _isBegin = false;
@@ -47,6 +50,7 @@ private:
 #if defined(ESP8266)
   Stream *_debugStream;
   const char *TAG = "PMS5003T";
+  SoftwareSerial *_serial;
 #else
   HardwareSerial *_serial;
 #endif
