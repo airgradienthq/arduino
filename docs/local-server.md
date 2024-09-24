@@ -77,17 +77,21 @@ Compensated values apply correction algorithms to make the sensor values more ac
 With the path "/config" you can get the current configuration.
 ```json 
 {
-  "country": "US",
+  "country": "TH",
   "pmStandard": "ugm3",
   "ledBarMode": "pm",
-  "displayMode": "on",
-  "abcDays": 30,
+  "abcDays": 7,
   "tvocLearningOffset": 12,
   "noxLearningOffset": 12,
   "mqttBrokerUrl": "",
-  "temperatureUnit": "f",
-  "configurationControl": "both",
-  "postDataToAirGradient": true
+  "temperatureUnit": "c",
+  "configurationControl": "local",
+  "postDataToAirGradient": true,
+  "ledBarBrightness": 100,
+  "displayBrightness": 100,
+  "offlineMode": false,
+  "model": "I-9PSL",
+  "monitorDisplayCompensatedValues": true
 }
 ```
 
