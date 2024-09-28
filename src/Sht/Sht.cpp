@@ -119,6 +119,8 @@ void Sht::end(void) {
   }
   delete shtSensor();
   _isBegin = false;
+  lastMeasureFailed = 0;
+  measureFailed = false;
 #if defined(ESP8266)
   _debugStream = nullptr;
 #else
@@ -151,4 +153,36 @@ float Sht::getRelativeHumidity(void) {
  * @return true Success
  * @return false Failure
  */
-bool Sht::measure(void) { return shtSensor()->readSample(); }
+bool Sht::measure(void) {
+  if (shtSensor()->readSample()) {
+    /** Update last measure millis() value if measure success */
+    lastMeasureFailed = millis();
+    if (lastMeasureFailed == 0) {
+      lastMeasureFailed = 1;
+    }
+
+    /** Clear measure failed */
+    measureFailed = false;
+  } else {
+    /** Ignore if first run */
+    if (!lastMeasureFailed) {
+      lastMeasureFailed = millis();
+      if (!lastMeasureFailed) {
+        lastMeasureFailed = 1;
+      }
+    } else {
+      /** Only check if measure failed is not set */
+      if (!measureFailed) {
+        /** Check for measure failed expired timeout */
+        unsigned long ms = (unsigned long)(millis() - lastMeasureFailed);
+        if (ms >= measureFailedTimeout) {
+          measureFailed = true;
+          AgLog("Measure failed expired timeout: %ds",
+                measureFailedTimeout / 1000);
+        }
+      }
+    }
+  }
+
+  return (measureFailed == false);
+}
