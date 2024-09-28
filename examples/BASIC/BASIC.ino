@@ -49,7 +49,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000              /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 4000               /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 2000                /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000          /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 5000          /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000) /** ms */
 
