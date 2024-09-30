@@ -91,10 +91,10 @@ void StateMachine::co2handleLeds(void) {
   } else if (co2Value <= 2000) {
     /** OOOOO; 5 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 5);
   } else if (co2Value <= 2666) {
     /** RRRRRR; 6 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -113,15 +113,15 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
   } else if (co2Value <= 4000) {
-    /** PPPPPPPP; 8 */
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 3);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 4);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 5);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 6);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
-    ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
+    /** RRRRRRRR; 8 */
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 3);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+    ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
   } else { /** > 4000 */
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
