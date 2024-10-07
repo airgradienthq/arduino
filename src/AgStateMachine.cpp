@@ -149,7 +149,7 @@ void StateMachine::pm25handleLeds(void) {
   if (pm25Value <= 5) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
-  } else if (pm25Value <= 10) {
+  } else if (pm25Value <= 9) {
     /** GG; 2 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
@@ -188,7 +188,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
-  } else if (pm25Value <= 200) {
+  } else if (pm25Value <= 125) {
     /** RRRRRRRR; 8 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
@@ -198,7 +198,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
-  } else if (pm25Value <= 250) {
+  } else if (pm25Value <= 225) {
     /** PPPPPPPPP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 2);
@@ -209,7 +209,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
-  } else { /** > 250 */
+  } else { /** > 225 */
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 2);
