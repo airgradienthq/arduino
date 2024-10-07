@@ -162,7 +162,7 @@ void Configuration::defaultConfig(void) {
     jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
   }
   if (ag->isOne()) {
-    jconfig[jprop_ledBarMode] = jprop_ledBarBrightness_default;
+    jconfig[jprop_ledBarMode] = jprop_ledBarMode_default;
   }
   jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
