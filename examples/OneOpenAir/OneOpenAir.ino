@@ -1220,6 +1220,9 @@ static void updatePm(void) {
 }
 
 static void sendDataToServer(void) {
+  /** Increment bootcount when send measurements data is scheduled */
+  measurements.bootCount++;
+
   /** Ignore send data to server if postToAirGradient disabled */
   if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
     return;
@@ -1233,7 +1236,6 @@ static void sendDataToServer(void) {
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
-  measurements.bootCount++;
 }
 
 static void tempHumUpdate(void) {
