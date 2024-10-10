@@ -35,6 +35,41 @@ public:
   }
   ~Measurements() {}
 
+  // Generic struct for reading indication for respective value
+  struct Reading {
+    int counter; // How many reading attempts done
+    int success; // How many reading that success from each attempts
+    int max;     // Maximum reading attempt
+  };
+
+  // Reading type for sensor value that outputs float
+  struct FloatValue {
+    float lastValue; // Last reading value
+    float sumValues; // Total value of each reading
+    float avg;       // The last average calculation after maximum reading attempt reached
+    Reading read;
+  };
+
+  // Reading type for sensor value that outputs integer
+  struct IntegerValue {
+    int lastValue;           // Last reading value
+    unsigned long sumValues; // Total value of each reading
+    int avg;                 // The last average calculation after maximum reading attempt reached
+    Reading read;
+  };
+
+  FloatValue temperature;
+  FloatValue humidity;
+  IntegerValue co2;
+  IntegerValue tvoc;
+  IntegerValue tvoc_raw;
+  IntegerValue nox;
+  IntegerValue nox_raw;
+  IntegerValue pm_25;
+  IntegerValue pm_01;
+  IntegerValue pm_10;
+  IntegerValue pm_03_pc;
+
   float Temperature;
   int Humidity;
   int CO2;
