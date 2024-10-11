@@ -7,28 +7,28 @@
 
 class Measurements {
 private:
-  // Generic struct for reading indication for respective value
-  // TODO: Reading naming is confusing, because its not actually reading but updating with new value
-  struct Reading {
-    int counter; // How many reading attempts done
-    int success; // How many reading that success from each attempts
-    int max;     // Maximum reading attempt
+  // Generic struct for update indication for respective value
+  struct Update {
+    int counter; // How many update attempts done
+    int success; // How many update value that actually give valid value
+    int max;     // Maximum update before calculating average
   };
 
   // Reading type for sensor value that outputs float
   struct FloatValue {
-    float lastValue; // Last reading value
-    float sumValues; // Total value of each reading
-    float avg;       // The last average calculation after maximum reading attempt reached
-    Reading read;
+    float lastValue; // Last update value
+    float sumValues; // Total value from each update
+    float avg;       // The last average calculation after maximum update attempt reached
+    Update update;
   };
 
   // Reading type for sensor value that outputs integer
   struct IntegerValue {
-    int lastValue;           // Last reading value
-    unsigned long sumValues; // Total value of each reading // TODO: explain why unsigned long
-    int avg;                 // The last average calculation after maximum reading attempt reached
-    Reading read;
+    int lastValue;           // Last update value
+    unsigned long sumValues; // Total value from each update; unsigned long to accomodate TVOx and
+                             // NOx raw data
+    int avg;                 // The last average calculation after maximum update attempt reached
+    Update update;
   };
 
 public:
@@ -71,8 +71,29 @@ public:
     PM03,
   };
 
-  void updateValue(AgValueType type, int val);
-  void updateValue(AgValueType type, float val);
+  /**
+   * @brief update target type value with new value.
+   * Each AgValueType has last raw value and last average that are calculated based on max number of
+   * set This function is for AgValueType that use INT as the data type
+   *
+   * @param type (AgValueType) value type that will be updated
+   * @param val (int) the new value
+   * @return true if update counter reached and new average value is calculated
+   * @return false otherwise
+   */
+  bool updateValue(AgValueType type, int val);
+
+  /**
+   * @brief update target type value with new value.
+   * Each AgValueType has last raw value and last average that are calculated based on max number of
+   * set This function is for AgValueType that use FLOAT as the data type
+   *
+   * @param type (AgValueType) value type that will be updated
+   * @param val (float) the new value
+   * @return true if update counter reached and new average value is calculated
+   * @return false otherwise
+   */
+  bool updateValue(AgValueType type, float val);
 
   float Temperature;
   int Humidity;

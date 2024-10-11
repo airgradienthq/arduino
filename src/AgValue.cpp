@@ -79,7 +79,7 @@ String Measurements::agValueTypeStr(AgValueType type) {
   return str;
 }
 
-void Measurements::updateValue(AgValueType type, int val) {
+bool Measurements::updateValue(AgValueType type, int val) {
   // Define data point source
   IntegerValue *temporary = nullptr;
   float invalidValue = 0;
@@ -135,32 +135,35 @@ void Measurements::updateValue(AgValueType type, int val) {
   if (val != invalidValue) {
     temporary->lastValue = val;
     temporary->sumValues = temporary->sumValues + val;
-    temporary->read.success = temporary->read.success + 1;
+    temporary->update.success = temporary->update.success + 1;
   }
 
-  // Increment read counter
-  temporary->read.counter = temporary->read.counter + 1;
+  // Increment update.counter
+  temporary->update.counter = temporary->update.counter + 1;
 
   // Calculate value average when maximum set is reached
-  if (temporary->read.counter >= temporary->read.max) {
+  if (temporary->update.counter >= temporary->update.max) {
     // Calculate the average
-    temporary->avg = temporary->sumValues / temporary->read.success;
+    temporary->avg = temporary->sumValues / temporary->update.success;
 
     // This is just for notifying
-    int miss = temporary->read.max - temporary->read.success;
+    int miss = temporary->update.max - temporary->update.success;
     if (miss != 0) {
-      Serial.printf("%s reading miss %d out of %d update\n", agValueTypeStr(type), miss,
-                    temporary->read.max);
+      Serial.printf("%s update.ng miss %d out of %d update\n", agValueTypeStr(type), miss,
+                    temporary->update.max);
     }
 
-    // Resets the sum data and read variables
+    // Resets average related variable calculation
     temporary->sumValues = 0;
-    temporary->read.counter = 0;
-    temporary->read.success = 0;
+    temporary->update.counter = 0;
+    temporary->update.success = 0;
+    return true;
   }
+
+  return false;
 }
 
-void Measurements::updateValue(AgValueType type, float val) {
+bool Measurements::updateValue(AgValueType type, float val) {
   // Define data point source
   FloatValue *temporary = nullptr;
   float invalidValue = 0;
@@ -188,29 +191,32 @@ void Measurements::updateValue(AgValueType type, float val) {
   if (val != invalidValue) {
     temporary->lastValue = val;
     temporary->sumValues = temporary->sumValues + val;
-    temporary->read.success = temporary->read.success + 1;
+    temporary->update.success = temporary->update.success + 1;
   }
 
-  // Increment read counter
-  temporary->read.counter = temporary->read.counter + 1;
+  // Increment update.counter
+  temporary->update.counter = temporary->update.counter + 1;
 
   // Calculate value average when maximum set is reached
-  if (temporary->read.counter >= temporary->read.max) {
+  if (temporary->update.counter >= temporary->update.max) {
     // Calculate the average
-    temporary->avg = temporary->sumValues / temporary->read.success;
+    temporary->avg = temporary->sumValues / temporary->update.success;
 
     // This is just for notifying
-    int miss = temporary->read.max - temporary->read.success;
+    int miss = temporary->update.max - temporary->update.success;
     if (miss != 0) {
-      Serial.printf("%s reading miss %d out of %d update\n", agValueTypeStr(type), miss,
-                    temporary->read.max);
+      Serial.printf("%s update.ng miss %d out of %d update\n", agValueTypeStr(type), miss,
+                    temporary->update.max);
     }
 
-    // Resets the sum data and read variables
+    // Resets average related variable calculation
     temporary->sumValues = 0;
-    temporary->read.counter = 0;
-    temporary->read.success = 0;
+    temporary->update.counter = 0;
+    temporary->update.success = 0;
+    return true;
   }
+
+  return false;
 }
 
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
