@@ -11,7 +11,7 @@ private:
   struct Update {
     int counter; // How many update attempts done
     int success; // How many update value that actually give valid value
-    int max;     // Maximum update before calculating average
+    int max;     // Maximum update counter before calculating average
   };
 
   // Reading type for sensor value that outputs float
@@ -68,15 +68,21 @@ public:
     PM25,
     PM01,
     PM10,
-    PM03,
+    PM03_PC,
   };
 
-  void init();
+  /**
+   * @brief Set each AgValueType maximum update for a value type before calculate the average
+   *
+   * @param type the target value type to set
+   * @param max the maximum counter
+   */
+  void maxUpdate(AgValueType type, int max);
 
   /**
    * @brief update target type value with new value.
    * Each AgValueType has last raw value and last average that are calculated based on max number of
-   * set This function is for AgValueType that use INT as the data type
+   * update. This function is for AgValueType that use INT as the data type
    *
    * @param type (AgValueType) value type that will be updated
    * @param val (int) the new value
@@ -88,7 +94,7 @@ public:
   /**
    * @brief update target type value with new value.
    * Each AgValueType has last raw value and last average that are calculated based on max number of
-   * set This function is for AgValueType that use FLOAT as the data type
+   * update. This function is for AgValueType that use FLOAT as the data type
    *
    * @param type (AgValueType) value type that will be updated
    * @param val (float) the new value

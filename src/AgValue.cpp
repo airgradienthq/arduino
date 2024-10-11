@@ -5,7 +5,43 @@
 
 #define json_prop_pmFirmware     "firmware"
 
-void Measurements::init() {}
+void Measurements::maxUpdate(AgValueType type, int max) {
+  switch (type) {
+  case AgValueType::Temperature:
+    _temperature.update.max = max;
+    break;
+  case AgValueType::Humidity:
+    _humidity.update.max = max;
+    break;
+  case AgValueType::CO2:
+    _co2.update.max = max;
+    break;
+  case AgValueType::TVOC:
+    _tvoc.update.max = max;
+    break;
+  case AgValueType::TVOCRaw:
+    _tvoc_raw.update.max = max;
+    break;
+  case AgValueType::NOx:
+    _nox.update.max = max;
+    break;
+  case AgValueType::NOxRaw:
+    _nox_raw.update.max = max;
+    break;
+  case AgValueType::PM25:
+    _pm_25.update.max = max;
+    break;
+  case AgValueType::PM01:
+    _pm_01.update.max = max;
+    break;
+  case AgValueType::PM10:
+    _pm_10.update.max = max;
+    break;
+  case AgValueType::PM03_PC:
+    _pm_03_pc.update.max = max;
+    break;
+  };
+}
 
 bool Measurements::updateValue(AgValueType type, int val) {
   // Define data point source
@@ -44,7 +80,7 @@ bool Measurements::updateValue(AgValueType type, int val) {
     temporary = &_pm_10;
     invalidValue = utils::getInvalidPmValue();
     break;
-  case AgValueType::PM03:
+  case AgValueType::PM03_PC:
     temporary = &_pm_03_pc;
     invalidValue = utils::getInvalidPmValue();
     break;
@@ -568,7 +604,7 @@ String Measurements::agValueTypeStr(AgValueType type) {
   case AgValueType::PM10:
     str = "PM10";
     break;
-  case AgValueType::PM03:
+  case AgValueType::PM03_PC:
     str = "PM03";
     break;
   default:
