@@ -5,79 +5,7 @@
 
 #define json_prop_pmFirmware     "firmware"
 
-/**
- * @brief Get PMS5003 firmware version string
- * 
- * @param fwCode 
- * @return String
- */
-String Measurements::pms5003FirmwareVersion(int fwCode) {
-  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
-}
-
-/**
- * @brief Get PMS5003T firmware version string
- * 
- * @param fwCode 
- * @return String
- */
-String Measurements::pms5003TFirmwareVersion(int fwCode) {
-  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
-}
-
-/**
- * @brief Get firmware version string
- * 
- * @param prefix Prefix firmware string
- * @param fwCode Version code
- * @return string 
- */
-String Measurements::pms5003FirmwareVersionBase(String prefix, int fwCode) {
-  return prefix + String("-") + String(fwCode);
-}
-
-String Measurements::agValueTypeStr(AgValueType type) {
-  String str;
-  switch (type) {
-  case AgValueType::Temperature:
-    str = "Temperature";
-    break;
-  case AgValueType::Humidity:
-    str = "Humidity";
-    break;
-  case AgValueType::CO2:
-    str = "CO2";
-    break;
-  case AgValueType::TVOC:
-    str = "TVOC";
-    break;
-  case AgValueType::TVOCRaw:
-    str = "TVOCRaw";
-    break;
-  case AgValueType::NOx:
-    str = "NOx";
-    break;
-  case AgValueType::NOxRaw:
-    str = "NOxRaw";
-    break;
-  case AgValueType::PM25:
-    str = "PM25";
-    break;
-  case AgValueType::PM01:
-    str = "PM01";
-    break;
-  case AgValueType::PM10:
-    str = "PM10";
-    break;
-  case AgValueType::PM03:
-    str = "PM03";
-    break;
-  default:
-    break;
-  };
-
-  return str;
-}
+void Measurements::init() {}
 
 bool Measurements::updateValue(AgValueType type, int val) {
   // Define data point source
@@ -593,4 +521,59 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   }
 
   return JSON.stringify(root);
+}
+
+String Measurements::pms5003FirmwareVersion(int fwCode) {
+  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
+}
+
+String Measurements::pms5003TFirmwareVersion(int fwCode) {
+  return pms5003FirmwareVersionBase("PMS5003x", fwCode);
+}
+
+String Measurements::pms5003FirmwareVersionBase(String prefix, int fwCode) {
+  return prefix + String("-") + String(fwCode);
+}
+
+String Measurements::agValueTypeStr(AgValueType type) {
+  String str;
+  switch (type) {
+  case AgValueType::Temperature:
+    str = "Temperature";
+    break;
+  case AgValueType::Humidity:
+    str = "Humidity";
+    break;
+  case AgValueType::CO2:
+    str = "CO2";
+    break;
+  case AgValueType::TVOC:
+    str = "TVOC";
+    break;
+  case AgValueType::TVOCRaw:
+    str = "TVOCRaw";
+    break;
+  case AgValueType::NOx:
+    str = "NOx";
+    break;
+  case AgValueType::NOxRaw:
+    str = "NOxRaw";
+    break;
+  case AgValueType::PM25:
+    str = "PM25";
+    break;
+  case AgValueType::PM01:
+    str = "PM01";
+    break;
+  case AgValueType::PM10:
+    str = "PM10";
+    break;
+  case AgValueType::PM03:
+    str = "PM03";
+    break;
+  default:
+    break;
+  };
+
+  return str;
 }

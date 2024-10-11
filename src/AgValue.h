@@ -71,6 +71,8 @@ public:
     PM03,
   };
 
+  void init();
+
   /**
    * @brief update target type value with new value.
    * Each AgValueType has last raw value and last average that are calculated based on max number of
@@ -148,9 +150,32 @@ private:
   IntegerValue _pm_10;
   IntegerValue _pm_03_pc; // particle count 0.3
 
+  /**
+   * @brief Get PMS5003 firmware version string
+   *
+   * @param fwCode
+   * @return String
+   */
   String pms5003FirmwareVersion(int fwCode);
+  /**
+   * @brief Get PMS5003T firmware version string
+   *
+   * @param fwCode
+   * @return String
+   */
   String pms5003TFirmwareVersion(int fwCode);
+  /**
+   * @brief Get firmware version string
+   *
+   * @param prefix Prefix firmware string
+   * @param fwCode Version code
+   * @return string
+   */
   String pms5003FirmwareVersionBase(String prefix, int fwCode);
+
+  /**
+   * Convert AgValue Type to string representation of the value
+   */
   String agValueTypeStr(AgValueType type);
 };
 
