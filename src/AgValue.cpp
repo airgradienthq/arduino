@@ -1,7 +1,6 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
-#include "Main/utils.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
 #define json_prop_pmFirmware     "firmware"
@@ -35,6 +34,183 @@ String Measurements::pms5003TFirmwareVersion(int fwCode) {
  */
 String Measurements::pms5003FirmwareVersionBase(String prefix, int fwCode) {
   return prefix + String("-") + String(fwCode);
+}
+
+String Measurements::agValueTypeStr(AgValueType type) {
+  String str;
+  switch (type) {
+  case AgValueType::Temperature:
+    str = "Temperature";
+    break;
+  case AgValueType::Humidity:
+    str = "Humidity";
+    break;
+  case AgValueType::CO2:
+    str = "CO2";
+    break;
+  case AgValueType::TVOC:
+    str = "TVOC";
+    break;
+  case AgValueType::TVOCRaw:
+    str = "TVOCRaw";
+    break;
+  case AgValueType::NOx:
+    str = "NOx";
+    break;
+  case AgValueType::NOxRaw:
+    str = "NOxRaw";
+    break;
+  case AgValueType::PM25:
+    str = "PM25";
+    break;
+  case AgValueType::PM01:
+    str = "PM01";
+    break;
+  case AgValueType::PM10:
+    str = "PM10";
+    break;
+  case AgValueType::PM03:
+    str = "PM03";
+    break;
+  default:
+    break;
+  };
+
+  return str;
+}
+
+void Measurements::updateValue(AgValueType type, int val) {
+  // Define data point source
+  IntegerValue *temporary = nullptr;
+  float invalidValue = 0;
+  switch (type) {
+  case AgValueType::CO2:
+    temporary = &_co2;
+    invalidValue = utils::getInvalidCO2();
+    break;
+  case AgValueType::TVOC:
+    temporary = &_tvoc;
+    invalidValue = utils::getInvalidVOC();
+    break;
+  case AgValueType::TVOCRaw:
+    temporary = &_tvoc_raw;
+    invalidValue = utils::getInvalidVOC();
+    break;
+  case AgValueType::NOx:
+    temporary = &_nox;
+    invalidValue = utils::getInvalidNOx();
+    break;
+  case AgValueType::NOxRaw:
+    temporary = &_nox_raw;
+    invalidValue = utils::getInvalidNOx();
+    break;
+  case AgValueType::PM25:
+    temporary = &_pm_25;
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case AgValueType::PM01:
+    temporary = &_pm_01;
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case AgValueType::PM10:
+    temporary = &_pm_10;
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case AgValueType::PM03:
+    temporary = &_pm_03_pc;
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  default:
+    break;
+  };
+
+  // Sanity check if agvaluetype is defined for integer data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for integer data type\n", agValueTypeStr(type));
+    // TODO: Just assert?
+    return;
+  }
+
+  // Update new value when value provided is not the invalid one
+  if (val != invalidValue) {
+    temporary->lastValue = val;
+    temporary->sumValues = temporary->sumValues + val;
+    temporary->read.success = temporary->read.success + 1;
+  }
+
+  // Increment read counter
+  temporary->read.counter = temporary->read.counter + 1;
+
+  // Calculate value average when maximum set is reached
+  if (temporary->read.counter >= temporary->read.max) {
+    // Calculate the average
+    temporary->avg = temporary->sumValues / temporary->read.success;
+
+    // This is just for notifying
+    int miss = temporary->read.max - temporary->read.success;
+    if (miss != 0) {
+      Serial.printf("%s reading miss %d out of %d update\n", agValueTypeStr(type), miss,
+                    temporary->read.max);
+    }
+
+    // Resets the sum data and read variables
+    temporary->sumValues = 0;
+    temporary->read.counter = 0;
+    temporary->read.success = 0;
+  }
+}
+
+void Measurements::updateValue(AgValueType type, float val) {
+  // Define data point source
+  FloatValue *temporary = nullptr;
+  float invalidValue = 0;
+  switch (type) {
+  case AgValueType::Temperature:
+    temporary = &_temperature;
+    invalidValue = utils::getInvalidTemperature();
+    break;
+  case AgValueType::Humidity:
+    temporary = &_humidity;
+    invalidValue = utils::getInvalidHumidity();
+    break;
+  default:
+    break;
+  }
+
+  // Sanity check if agvaluetype is defined for float data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for float data type\n", agValueTypeStr(type));
+    // TODO: Just assert?
+    return;
+  }
+
+  // Update new value when value provided is not the invalid one
+  if (val != invalidValue) {
+    temporary->lastValue = val;
+    temporary->sumValues = temporary->sumValues + val;
+    temporary->read.success = temporary->read.success + 1;
+  }
+
+  // Increment read counter
+  temporary->read.counter = temporary->read.counter + 1;
+
+  // Calculate value average when maximum set is reached
+  if (temporary->read.counter >= temporary->read.max) {
+    // Calculate the average
+    temporary->avg = temporary->sumValues / temporary->read.success;
+
+    // This is just for notifying
+    int miss = temporary->read.max - temporary->read.success;
+    if (miss != 0) {
+      Serial.printf("%s reading miss %d out of %d update\n", agValueTypeStr(type), miss,
+                    temporary->read.max);
+    }
+
+    // Resets the sum data and read variables
+    temporary->sumValues = 0;
+    temporary->read.counter = 0;
+    temporary->read.success = 0;
+  }
 }
 
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,

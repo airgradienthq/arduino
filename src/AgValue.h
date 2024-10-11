@@ -1,14 +1,36 @@
 #ifndef _AG_VALUE_H_
 #define _AG_VALUE_H_
 
-#include <Arduino.h>
 #include "App/AppDef.h"
+#include "Main/utils.h"
+#include <Arduino.h>
 
 class Measurements {
 private:
-  String pms5003FirmwareVersion(int fwCode);
-  String pms5003TFirmwareVersion(int fwCode);
-  String pms5003FirmwareVersionBase(String prefix, int fwCode);
+  // Generic struct for reading indication for respective value
+  // TODO: Reading naming is confusing, because its not actually reading but updating with new value
+  struct Reading {
+    int counter; // How many reading attempts done
+    int success; // How many reading that success from each attempts
+    int max;     // Maximum reading attempt
+  };
+
+  // Reading type for sensor value that outputs float
+  struct FloatValue {
+    float lastValue; // Last reading value
+    float sumValues; // Total value of each reading
+    float avg;       // The last average calculation after maximum reading attempt reached
+    Reading read;
+  };
+
+  // Reading type for sensor value that outputs integer
+  struct IntegerValue {
+    int lastValue;           // Last reading value
+    unsigned long sumValues; // Total value of each reading // TODO: explain why unsigned long
+    int avg;                 // The last average calculation after maximum reading attempt reached
+    Reading read;
+  };
+
 public:
   Measurements() {
     pm25_1 = -1;
@@ -35,40 +57,22 @@ public:
   }
   ~Measurements() {}
 
-  // Generic struct for reading indication for respective value
-  struct Reading {
-    int counter; // How many reading attempts done
-    int success; // How many reading that success from each attempts
-    int max;     // Maximum reading attempt
+  enum class AgValueType {
+    Temperature,
+    Humidity,
+    CO2,
+    TVOC,
+    TVOCRaw,
+    NOx,
+    NOxRaw,
+    PM25,
+    PM01,
+    PM10,
+    PM03,
   };
 
-  // Reading type for sensor value that outputs float
-  struct FloatValue {
-    float lastValue; // Last reading value
-    float sumValues; // Total value of each reading
-    float avg;       // The last average calculation after maximum reading attempt reached
-    Reading read;
-  };
-
-  // Reading type for sensor value that outputs integer
-  struct IntegerValue {
-    int lastValue;           // Last reading value
-    unsigned long sumValues; // Total value of each reading
-    int avg;                 // The last average calculation after maximum reading attempt reached
-    Reading read;
-  };
-
-  FloatValue temperature;
-  FloatValue humidity;
-  IntegerValue co2;
-  IntegerValue tvoc;
-  IntegerValue tvoc_raw;
-  IntegerValue nox;
-  IntegerValue nox_raw;
-  IntegerValue pm_25;
-  IntegerValue pm_01;
-  IntegerValue pm_10;
-  IntegerValue pm_03_pc;
+  void updateValue(AgValueType type, int val);
+  void updateValue(AgValueType type, float val);
 
   float Temperature;
   int Humidity;
@@ -108,7 +112,25 @@ public:
   const int targetCount = 20;
   int bootCount;
 
-  String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void* _ag, void* _config);
+  String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void *_ag, void *_config);
+
+private:
+  FloatValue _temperature;
+  FloatValue _humidity;
+  IntegerValue _co2;
+  IntegerValue _tvoc;
+  IntegerValue _tvoc_raw;
+  IntegerValue _nox;
+  IntegerValue _nox_raw;
+  IntegerValue _pm_25;
+  IntegerValue _pm_01;
+  IntegerValue _pm_10;
+  IntegerValue _pm_03_pc; // particle count 0.3
+
+  String pms5003FirmwareVersion(int fwCode);
+  String pms5003TFirmwareVersion(int fwCode);
+  String pms5003FirmwareVersionBase(String prefix, int fwCode);
+  String agValueTypeStr(AgValueType type);
 };
 
 #endif /** _AG_VALUE_H_ */
