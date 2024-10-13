@@ -193,7 +193,7 @@ bool Measurements::updateValue(AgValueType type, float val, int ch) {
     // TODO: Need to check if SUCCESS == 0
     // Calculate the average
     temporary->avg = temporary->sumValues / temporary->update.success;
-    Serial.printf("%s{%d} count reached! Average value %0.2f\n", agValueTypeStr(type),
+    Serial.printf("%s{%d} count reached! Average value %0.2f\n", agValueTypeStr(type), ch,
                   temporary->avg);
 
     // This is just for notifying
