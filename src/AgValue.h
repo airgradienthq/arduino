@@ -86,10 +86,12 @@ public:
    *
    * @param type (AgValueType) value type that will be updated
    * @param val (int) the new value
+   * @param ch (int) the AgValueType channel, not every AgValueType has more than 1 channel.
+   * Currently maximum channel is 2. Default: 1 (channel 1)
    * @return true if update counter reached and new average value is calculated
    * @return false otherwise
    */
-  bool updateValue(AgValueType type, int val);
+  bool updateValue(AgValueType type, int val, int ch = 1);
 
   /**
    * @brief update target type value with new value.
@@ -98,10 +100,12 @@ public:
    *
    * @param type (AgValueType) value type that will be updated
    * @param val (float) the new value
+   * @param ch (int) the AgValueType channel, not every AgValueType has more than 1 channel.
+   * Currently maximum channel is 2. Default: 1 (channel 1)
    * @return true if update counter reached and new average value is calculated
    * @return false otherwise
    */
-  bool updateValue(AgValueType type, float val);
+  bool updateValue(AgValueType type, float val, int ch = 1);
 
   float Temperature;
   int Humidity;
@@ -144,17 +148,18 @@ public:
   String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void *_ag, void *_config);
 
 private:
-  FloatValue _temperature;
-  FloatValue _humidity;
+  // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
+  FloatValue _temperature[2];
+  FloatValue _humidity[2];
   IntegerValue _co2;
   IntegerValue _tvoc;
   IntegerValue _tvoc_raw;
   IntegerValue _nox;
   IntegerValue _nox_raw;
-  IntegerValue _pm_25;
-  IntegerValue _pm_01;
-  IntegerValue _pm_10;
-  IntegerValue _pm_03_pc; // particle count 0.3
+  IntegerValue _pm_25[2];
+  IntegerValue _pm_01[2];
+  IntegerValue _pm_10[2];
+  IntegerValue _pm_03_pc[2]; // particle count 0.3
 
   /**
    * @brief Get PMS5003 firmware version string

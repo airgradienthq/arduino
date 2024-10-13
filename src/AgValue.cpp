@@ -8,10 +8,12 @@
 void Measurements::maxUpdate(AgValueType type, int max) {
   switch (type) {
   case AgValueType::Temperature:
-    _temperature.update.max = max;
+    _temperature[0].update.max = max;
+    _temperature[1].update.max = max;
     break;
   case AgValueType::Humidity:
-    _humidity.update.max = max;
+    _humidity[0].update.max = max;
+    _humidity[1].update.max = max;
     break;
   case AgValueType::CO2:
     _co2.update.max = max;
@@ -29,21 +31,35 @@ void Measurements::maxUpdate(AgValueType type, int max) {
     _nox_raw.update.max = max;
     break;
   case AgValueType::PM25:
-    _pm_25.update.max = max;
+    _pm_25[0].update.max = max;
+    _pm_25[1].update.max = max;
     break;
   case AgValueType::PM01:
-    _pm_01.update.max = max;
+    _pm_01[0].update.max = max;
+    _pm_01[1].update.max = max;
     break;
   case AgValueType::PM10:
-    _pm_10.update.max = max;
+    _pm_10[0].update.max = max;
+    _pm_10[1].update.max = max;
     break;
   case AgValueType::PM03_PC:
-    _pm_03_pc.update.max = max;
+    _pm_03_pc[0].update.max = max;
+    _pm_03_pc[1].update.max = max;
     break;
   };
 }
 
-bool Measurements::updateValue(AgValueType type, int val) {
+bool Measurements::updateValue(AgValueType type, int val, int ch) {
+  // Validate channel
+  if (ch != 1 || ch != 2) {
+    Serial.printf(" Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
+    // TODO: Perhaps just do assert
+    return false;
+  }
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
   // Define data point source
   IntegerValue *temporary = nullptr;
   float invalidValue = 0;
@@ -69,19 +85,19 @@ bool Measurements::updateValue(AgValueType type, int val) {
     invalidValue = utils::getInvalidNOx();
     break;
   case AgValueType::PM25:
-    temporary = &_pm_25;
+    temporary = &_pm_25[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case AgValueType::PM01:
-    temporary = &_pm_01;
+    temporary = &_pm_01[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case AgValueType::PM10:
-    temporary = &_pm_10;
+    temporary = &_pm_10[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case AgValueType::PM03_PC:
-    temporary = &_pm_03_pc;
+    temporary = &_pm_03_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   default:
@@ -92,8 +108,11 @@ bool Measurements::updateValue(AgValueType type, int val) {
   if (temporary == nullptr) {
     Serial.printf("%s is not defined for integer data type\n", agValueTypeStr(type));
     // TODO: Just assert?
-    return;
+    return false;
   }
+
+  // Restore channel value for debugging purpose
+  ch = ch + 1;
 
   // Update new value when value provided is not the invalid one
   if (val != invalidValue) {
@@ -107,14 +126,17 @@ bool Measurements::updateValue(AgValueType type, int val) {
 
   // Calculate value average when maximum set is reached
   if (temporary->update.counter >= temporary->update.max) {
+    // TODO: Need to check if SUCCESS == 0, what should we do?
     // Calculate the average
     temporary->avg = temporary->sumValues / temporary->update.success;
+    Serial.printf("%s{%d} count reached! Average value %d\n", agValueTypeStr(type), ch,
+                  temporary->avg);
 
-    // This is just for notifying
+    // Notify if there's are invalid value when updating
     int miss = temporary->update.max - temporary->update.success;
     if (miss != 0) {
-      Serial.printf("%s update.ng miss %d out of %d update\n", agValueTypeStr(type), miss,
-                    temporary->update.max);
+      Serial.printf("%s{%d} has %d invalid value out of %d update\n", agValueTypeStr(type), ch,
+                    miss, temporary->update.max);
     }
 
     // Resets average related variable calculation
@@ -127,17 +149,27 @@ bool Measurements::updateValue(AgValueType type, int val) {
   return false;
 }
 
-bool Measurements::updateValue(AgValueType type, float val) {
+bool Measurements::updateValue(AgValueType type, float val, int ch) {
+  // Validate channel
+  if (ch != 1 || ch != 2) {
+    Serial.printf(" Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
+    // TODO: Perhaps just do assert
+    return false;
+  }
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
   // Define data point source
   FloatValue *temporary = nullptr;
   float invalidValue = 0;
   switch (type) {
   case AgValueType::Temperature:
-    temporary = &_temperature;
+    temporary = &_temperature[ch];
     invalidValue = utils::getInvalidTemperature();
     break;
   case AgValueType::Humidity:
-    temporary = &_humidity;
+    temporary = &_humidity[ch];
     invalidValue = utils::getInvalidHumidity();
     break;
   default:
@@ -148,8 +180,11 @@ bool Measurements::updateValue(AgValueType type, float val) {
   if (temporary == nullptr) {
     Serial.printf("%s is not defined for float data type\n", agValueTypeStr(type));
     // TODO: Just assert?
-    return;
+    return false;
   }
+
+  // Restore channel value for debugging purpose
+  ch = ch + 1;
 
   // Update new value when value provided is not the invalid one
   if (val != invalidValue) {
@@ -163,14 +198,17 @@ bool Measurements::updateValue(AgValueType type, float val) {
 
   // Calculate value average when maximum set is reached
   if (temporary->update.counter >= temporary->update.max) {
+    // TODO: Need to check if SUCCESS == 0
     // Calculate the average
     temporary->avg = temporary->sumValues / temporary->update.success;
+    Serial.printf("%s{%d} count reached! Average value %0.2f\n", agValueTypeStr(type),
+                  temporary->avg);
 
     // This is just for notifying
     int miss = temporary->update.max - temporary->update.success;
     if (miss != 0) {
-      Serial.printf("%s update.ng miss %d out of %d update\n", agValueTypeStr(type), miss,
-                    temporary->update.max);
+      Serial.printf("%s{%d} has %d invalid value out of %d update\n", agValueTypeStr(type), ch,
+                    miss, temporary->update.max);
     }
 
     // Resets average related variable calculation
