@@ -107,6 +107,26 @@ public:
    */
   bool updateValue(AgValueType type, float val, int ch = 1);
 
+  /**
+   * @brief Get the target measurement type value
+   *
+   * @param type measurement type that will be retrieve
+   * @param average true if expect last average value, false if expect last update value
+   * @param ch target type value channel
+   * @return int measurement type value
+   */
+  int getValue(AgValueType type, bool average = true, int ch = 1);
+
+  /**
+   * @brief Get the target measurement type value
+   *
+   * @param type measurement type that will be retrieve
+   * @param average true if expect last average value, false if expect last update value
+   * @param ch target type value channel
+   * @return float measurement type value
+   */
+  float getValueFloat(AgValueType type, bool average = true, int ch = 1);
+
   float Temperature;
   int Humidity;
   int CO2;

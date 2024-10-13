@@ -221,8 +221,87 @@ bool Measurements::updateValue(AgValueType type, float val, int ch) {
   return false;
 }
 
-String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
-                              void *_ag, void *_config) {
+int Measurements::getValue(AgValueType type, bool average, int ch) {
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source
+  IntegerValue *temporary = nullptr;
+  float invalidValue = 0;
+  switch (type) {
+  case AgValueType::CO2:
+    temporary = &_co2;
+    break;
+  case AgValueType::TVOC:
+    temporary = &_tvoc;
+    break;
+  case AgValueType::TVOCRaw:
+    temporary = &_tvoc_raw;
+    break;
+  case AgValueType::NOx:
+    temporary = &_nox;
+    break;
+  case AgValueType::NOxRaw:
+    temporary = &_nox_raw;
+    break;
+  case AgValueType::PM25:
+    temporary = &_pm_25[ch];
+    break;
+  case AgValueType::PM01:
+    temporary = &_pm_01[ch];
+    break;
+  case AgValueType::PM10:
+    temporary = &_pm_10[ch];
+    break;
+  case AgValueType::PM03_PC:
+    temporary = &_pm_03_pc[ch];
+    break;
+  default:
+    break;
+  };
+
+  // Sanity check if agvaluetype is defined for integer data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for integer data type\n", agValueTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  if (average) {
+    return temporary->avg;
+  }
+
+  return temporary->lastValue;
+}
+
+float Measurements::getValueFloat(AgValueType type, bool average, int ch) {
+  // Define data point source
+  FloatValue *temporary = nullptr;
+  switch (type) {
+  case AgValueType::Temperature:
+    temporary = &_temperature[ch];
+    break;
+  case AgValueType::Humidity:
+    temporary = &_humidity[ch];
+    break;
+  default:
+    break;
+  }
+
+  // Sanity check if agvaluetype is defined for float data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for float data type\n", agValueTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  if (average) {
+    return temporary->avg;
+  }
+
+  return temporary->lastValue;
+}
+
   AirGradient *ag = (AirGradient *)_ag;
   Configuration *config = (Configuration *)_config;
 
