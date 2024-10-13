@@ -728,3 +728,11 @@ String Measurements::agValueTypeStr(AgValueType type) {
 
   return str;
 }
+
+void Measurements::validateChannel(int ch) {
+  if (ch != 1 && ch != 2) {
+    Serial.printf("ERROR! Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
+    delay(1000);
+    assert(0);
+  }
+}
