@@ -300,6 +300,8 @@ float Measurements::getValueFloat(AgValueType type, bool average, int ch) {
   return temporary->lastValue;
 }
 
+String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi, void *_ag,
+                              void *_config) {
   AirGradient *ag = (AirGradient *)_ag;
   Configuration *config = (Configuration *)_config;
 
