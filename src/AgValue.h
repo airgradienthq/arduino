@@ -208,6 +208,12 @@ private:
    * Convert AgValue Type to string representation of the value
    */
   String agValueTypeStr(AgValueType type);
+
+  /**
+   * @brief check if provided channel is a valid channel or not
+   * abort program if invalid
+   */
+  void validateChannel(int ch);
 };
 
 #endif /** _AG_VALUE_H_ */

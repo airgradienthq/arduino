@@ -50,12 +50,8 @@ void Measurements::maxUpdate(AgValueType type, int max) {
 }
 
 bool Measurements::updateValue(AgValueType type, int val, int ch) {
-  // Validate channel
-  if (ch != 1 || ch != 2) {
-    Serial.printf(" Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
-    // TODO: Perhaps just do assert
-    return false;
-  }
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
 
   // Follow array indexing just for get address of the value type
   ch = ch - 1;
@@ -150,12 +146,8 @@ bool Measurements::updateValue(AgValueType type, int val, int ch) {
 }
 
 bool Measurements::updateValue(AgValueType type, float val, int ch) {
-  // Validate channel
-  if (ch != 1 || ch != 2) {
-    Serial.printf(" Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
-    // TODO: Perhaps just do assert
-    return false;
-  }
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
 
   // Follow array indexing just for get address of the value type
   ch = ch - 1;
@@ -222,6 +214,9 @@ bool Measurements::updateValue(AgValueType type, float val, int ch) {
 }
 
 int Measurements::getValue(AgValueType type, bool average, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
   // Follow array indexing just for get address of the value type
   ch = ch - 1;
 
@@ -275,6 +270,9 @@ int Measurements::getValue(AgValueType type, bool average, int ch) {
 }
 
 float Measurements::getValueFloat(AgValueType type, bool average, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
   // Define data point source
   FloatValue *temporary = nullptr;
   switch (type) {
