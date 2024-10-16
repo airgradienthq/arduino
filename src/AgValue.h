@@ -1,7 +1,10 @@
 #ifndef _AG_VALUE_H_
 #define _AG_VALUE_H_
 
+#include "AgConfigure.h"
+#include "AirGradient.h"
 #include "App/AppDef.h"
+#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 #include "Main/utils.h"
 #include <Arduino.h>
 
@@ -166,6 +169,8 @@ public:
   int bootCount;
 
   String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void *_ag, void *_config);
+  String toStringX(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
+                   Configuration &config);
 
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
@@ -214,6 +219,11 @@ private:
    * abort program if invalid
    */
   void validateChannel(int ch);
+
+  JSONVar buildOutdoor(bool localServer, AgFirmwareMode fwMode, AirGradient &ag,
+                       Configuration &config);
+  JSONVar buildIndoor(bool localServer, AirGradient &ag, Configuration &config);
+  JSONVar buildPMS(AirGradient &ag, int ch, bool allCh, bool withTempHum, bool compensate);
 };
 
 #endif /** _AG_VALUE_H_ */

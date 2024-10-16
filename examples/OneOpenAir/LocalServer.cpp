@@ -64,9 +64,8 @@ void LocalServer::_GET_metrics(void) {
 }
 
 void LocalServer::_GET_measure(void) {
-  server.send(
-      200, "application/json",
-      measure.toString(true, fwMode, wifiConnector.RSSI(), ag, &config));
+  String toSend = measure.toStringX(true, fwMode, wifiConnector.RSSI(), *ag, config);
+  server.send(200, "application/json", toSend);
 }
 
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }

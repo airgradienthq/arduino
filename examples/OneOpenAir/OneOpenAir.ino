@@ -373,8 +373,8 @@ static void createMqttTask(void) {
 
           /** Send data */
           if (mqttClient.isConnected()) {
-            String payload = measurements.toString(
-                true, fwMode, wifiConnector.RSSI(), ag, &configuration);
+            String payload =
+                measurements.toStringX(true, fwMode, wifiConnector.RSSI(), *ag, configuration);
             String topic = "airgradient/readings/" + ag->deviceId();
 
             if (mqttClient.publish(topic.c_str(), payload.c_str(),
@@ -1146,8 +1146,7 @@ static void sendDataToServer(void) {
     return;
   }
 
-  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
-                                          ag, &configuration);
+  String syncData = measurements.toStringX(false, fwMode, wifiConnector.RSSI(), *ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
     Serial.println(
