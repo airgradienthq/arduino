@@ -852,7 +852,7 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
     }
     // Add humidity
     if (utils::isValidHumidity(_humidity[0].avg)) {
-      indoor["rhum"] = _humidity[0].avg;
+      indoor["rhum"] = ag.round2(_humidity[0].avg);
       if (localServer) {
         indoor["rhumCompensated"] = ag.round2(_humidity[0].avg);
       }
