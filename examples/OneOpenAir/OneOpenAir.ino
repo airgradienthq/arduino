@@ -263,17 +263,17 @@ void setup() {
   updateDisplayAndLedBar();
 
   // NOTE: This is just a temporary, will do a proper set maximum value based on schedule interval
-  measurements.maxUpdate(Measurements::AgValueType::Temperature, 26);
-  measurements.maxUpdate(Measurements::AgValueType::Humidity, 26);
-  measurements.maxUpdate(Measurements::AgValueType::CO2, 13);
-  measurements.maxUpdate(Measurements::AgValueType::TVOC, 53);
-  measurements.maxUpdate(Measurements::AgValueType::TVOCRaw, 53);
-  measurements.maxUpdate(Measurements::AgValueType::NOx, 53);
-  measurements.maxUpdate(Measurements::AgValueType::NOxRaw, 53);
-  measurements.maxUpdate(Measurements::AgValueType::PM25, 26);
-  measurements.maxUpdate(Measurements::AgValueType::PM01, 26);
-  measurements.maxUpdate(Measurements::AgValueType::PM10, 26);
-  measurements.maxUpdate(Measurements::AgValueType::PM03_PC, 26);
+  measurements.maxUpdate(Measurements::Temperature, 26);
+  measurements.maxUpdate(Measurements::Humidity, 26);
+  measurements.maxUpdate(Measurements::CO2, 13);
+  measurements.maxUpdate(Measurements::TVOC, 53);
+  measurements.maxUpdate(Measurements::TVOCRaw, 53);
+  measurements.maxUpdate(Measurements::NOx, 53);
+  measurements.maxUpdate(Measurements::NOxRaw, 53);
+  measurements.maxUpdate(Measurements::PM25, 26);
+  measurements.maxUpdate(Measurements::PM01, 26);
+  measurements.maxUpdate(Measurements::PM10, 26);
+  measurements.maxUpdate(Measurements::PM03_PC, 26);
 }
 
 void loop() {
