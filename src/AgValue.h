@@ -35,32 +35,11 @@ private:
   };
 
 public:
-  Measurements() {
-    pm25_1 = -1;
-    pm01_1 = -1;
-    pm10_1 = -1;
-    pm03PCount_1 = -1;
-    temp_1 = -1001;
-    hum_1 = -1;
-
-    pm25_2 = -1;
-    pm01_2 = -1;
-    pm10_2 = -1;
-    pm03PCount_2 = -1;
-    temp_2 = -1001;
-    hum_2 = -1;
-
-    Temperature = -1001;
-    Humidity = -1;
-    CO2 = -1;
-    TVOC = -1;
-    TVOCRaw = -1;
-    NOx = -1;
-    NOxRaw = -1;
-  }
+  Measurements() {}
   ~Measurements() {}
 
-  enum class AgValueType {
+  // Enumeration for every AG measurements
+  enum MeasurementType {
     Temperature,
     Humidity,
     CO2,
@@ -75,40 +54,40 @@ public:
   };
 
   /**
-   * @brief Set each AgValueType maximum update for a value type before calculate the average
+   * @brief Set each MeasurementType maximum update before calculate the average
    *
-   * @param type the target value type to set
+   * @param type the target measurement type to set
    * @param max the maximum counter
    */
-  void maxUpdate(AgValueType type, int max);
+  void maxUpdate(MeasurementType, int max);
 
   /**
-   * @brief update target type value with new value.
-   * Each AgValueType has last raw value and last average that are calculated based on max number of
-   * update. This function is for AgValueType that use INT as the data type
+   * @brief update target measurement type with new value.
+   * Each MeasurementType has last raw value and last average that are calculated based on max
+   * number of update. This function is for MeasurementType that use INT as the data type
    *
-   * @param type (AgValueType) value type that will be updated
+   * @param type measurement type that will be updated
    * @param val (int) the new value
-   * @param ch (int) the AgValueType channel, not every AgValueType has more than 1 channel.
+   * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
    * @return true if update counter reached and new average value is calculated
    * @return false otherwise
    */
-  bool updateValue(AgValueType type, int val, int ch = 1);
+  bool update(MeasurementType type, int val, int ch = 1);
 
   /**
-   * @brief update target type value with new value.
-   * Each AgValueType has last raw value and last average that are calculated based on max number of
-   * update. This function is for AgValueType that use FLOAT as the data type
+   * @brief update target measurement type with new value.
+   * Each MeasurementType has last raw value and last average that are calculated based on max
+   * number of update. This function is for MeasurementType that use FLOAT as the data type
    *
-   * @param type (AgValueType) value type that will be updated
+   * @param type measurement type that will be updated
    * @param val (float) the new value
-   * @param ch (int) the AgValueType channel, not every AgValueType has more than 1 channel.
+   * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
    * @return true if update counter reached and new average value is calculated
    * @return false otherwise
    */
-  bool updateValue(AgValueType type, float val, int ch = 1);
+  bool update(MeasurementType type, float val, int ch = 1);
 
   /**
    * @brief Get the target measurement type value
@@ -118,7 +97,7 @@ public:
    * @param ch target type value channel
    * @return int measurement type value
    */
-  int getValue(AgValueType type, bool average = true, int ch = 1);
+  int get(MeasurementType type, bool average = true, int ch = 1);
 
   /**
    * @brief Get the target measurement type value
@@ -128,49 +107,13 @@ public:
    * @param ch target type value channel
    * @return float measurement type value
    */
-  float getValueFloat(AgValueType type, bool average = true, int ch = 1);
+  float getFloat(MeasurementType type, bool average = true, int ch = 1);
 
-  float Temperature;
-  int Humidity;
-  int CO2;
-  int TVOC;
-  int TVOCRaw;
-  int NOx;
-  int NOxRaw;
-
-  int pm25_1;
-  int pm01_1;
-  int pm10_1;
-  int pm03PCount_1;
-  float temp_1;
-  int hum_1;
-
-  int pm25_2;
-  int pm01_2;
-  int pm10_2;
-  int pm03PCount_2;
-  float temp_2;
-  int hum_2;
-
-  int pm1Value01;
-  int pm1Value25;
-  int pm1Value10;
-  int pm1PCount;
-  int pm1temp;
-  int pm1hum;
-  int pm2Value01;
-  int pm2Value25;
-  int pm2Value10;
-  int pm2PCount;
-  int pm2temp;
-  int pm2hum;
-  int countPosition;
-  const int targetCount = 20;
+  // TODO: update this to using setter
   int bootCount;
 
-  String toString(bool isLocal, AgFirmwareMode fwMode, int rssi, void *_ag, void *_config);
-  String toStringX(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
-                   Configuration &config);
+  String toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
+                  Configuration &config);
 
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
@@ -212,7 +155,7 @@ private:
   /**
    * Convert AgValue Type to string representation of the value
    */
-  String agValueTypeStr(AgValueType type);
+  String measurementTypeStr(MeasurementType type);
 
   /**
    * @brief check if provided channel is a valid channel or not

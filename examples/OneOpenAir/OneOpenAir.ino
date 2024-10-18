@@ -337,10 +337,10 @@ static void co2Update(void) {
 
   int value = ag->s8.getCo2();
   if (utils::isValidCO2(value)) {
-    measurements.updateValue(Measurements::AgValueType::CO2, value);
+    measurements.update(Measurements::CO2, value);
     // Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
   } else {
-    measurements.updateValue(Measurements::AgValueType::CO2, utils::getInvalidCO2());
+    measurements.update(Measurements::CO2, utils::getInvalidCO2());
   }
 }
 
@@ -374,7 +374,7 @@ static void createMqttTask(void) {
           /** Send data */
           if (mqttClient.isConnected()) {
             String payload =
-                measurements.toStringX(true, fwMode, wifiConnector.RSSI(), *ag, configuration);
+                measurements.toString(true, fwMode, wifiConnector.RSSI(), *ag, configuration);
             String topic = "airgradient/readings/" + ag->deviceId();
 
             if (mqttClient.publish(topic.c_str(), payload.c_str(),
@@ -999,10 +999,10 @@ static void updateTvoc(void) {
     return;
   }
 
-  measurements.updateValue(Measurements::AgValueType::TVOC, ag->sgp41.getTvocIndex());
-  measurements.updateValue(Measurements::AgValueType::TVOCRaw, ag->sgp41.getTvocRaw());
-  measurements.updateValue(Measurements::AgValueType::NOx, ag->sgp41.getNoxIndex());
-  measurements.updateValue(Measurements::AgValueType::NOxRaw, ag->sgp41.getNoxRaw());
+  measurements.update(Measurements::TVOC, ag->sgp41.getTvocIndex());
+  measurements.update(Measurements::TVOCRaw, ag->sgp41.getTvocRaw());
+  measurements.update(Measurements::NOx, ag->sgp41.getNoxIndex());
+  measurements.update(Measurements::NOxRaw, ag->sgp41.getNoxRaw());
 
   // Serial.println();
   // Serial.printf("TVOC index: %d\r\n", measurements.TVOC);
@@ -1013,11 +1013,10 @@ static void updateTvoc(void) {
 
 static void updatePMS5003() {
   if (ag->pms5003.connected()) {
-    measurements.updateValue(Measurements::AgValueType::PM01, ag->pms5003.getPm01Ae());
-    measurements.updateValue(Measurements::AgValueType::PM25, ag->pms5003.getPm25Ae());
-    measurements.updateValue(Measurements::AgValueType::PM10, ag->pms5003.getPm10Ae());
-    measurements.updateValue(Measurements::AgValueType::PM03_PC,
-                             ag->pms5003.getPm03ParticleCount());
+    measurements.update(Measurements::PM01, ag->pms5003.getPm01Ae());
+    measurements.update(Measurements::PM25, ag->pms5003.getPm25Ae());
+    measurements.update(Measurements::PM10, ag->pms5003.getPm10Ae());
+    measurements.update(Measurements::PM03_PC, ag->pms5003.getPm03ParticleCount());
 
     // Serial.println();
     // Serial.printf("PM1 ug/m3: %d\r\n", measurements.pm01_1);
@@ -1026,10 +1025,10 @@ static void updatePMS5003() {
     // Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
     // Serial.printf("PM firmware version: %d\r\n", ag->pms5003.getFirmwareVersion());
   } else {
-    measurements.updateValue(Measurements::AgValueType::PM01, utils::getInvalidPmValue());
-    measurements.updateValue(Measurements::AgValueType::PM25, utils::getInvalidPmValue());
-    measurements.updateValue(Measurements::AgValueType::PM10, utils::getInvalidPmValue());
-    measurements.updateValue(Measurements::AgValueType::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
   }
 }
 
@@ -1047,35 +1046,23 @@ static void updatePm(void) {
   int channel = 1;
   if (configuration.hasSensorPMS1) {
     if (ag->pms5003t_1.connected()) {
-      measurements.updateValue(Measurements::AgValueType::PM01, ag->pms5003t_1.getPm01Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM25, ag->pms5003t_1.getPm25Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM10, ag->pms5003t_1.getPm10Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM03_PC,
-                               ag->pms5003t_1.getPm03ParticleCount(), channel);
-      measurements.updateValue(Measurements::AgValueType::Temperature,
-                               ag->pms5003t_1.getTemperature(), channel);
-      measurements.updateValue(Measurements::AgValueType::Humidity,
-                               ag->pms5003t_1.getRelativeHumidity(), channel);
+      measurements.update(Measurements::PM01, ag->pms5003t_1.getPm01Ae(), channel);
+      measurements.update(Measurements::PM25, ag->pms5003t_1.getPm25Ae(), channel);
+      measurements.update(Measurements::PM10, ag->pms5003t_1.getPm10Ae(), channel);
+      measurements.update(Measurements::PM03_PC, ag->pms5003t_1.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::Temperature, ag->pms5003t_1.getTemperature(), channel);
+      measurements.update(Measurements::Humidity, ag->pms5003t_1.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
       newPMS2Value = true;
     } else {
       // PMS channel 1 now is not connected, update using invalid value
-      measurements.updateValue(Measurements::AgValueType::PM01, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM25, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM10, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM03_PC, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::Temperature,
-                               utils::getInvalidTemperature(), channel);
-      measurements.updateValue(Measurements::AgValueType::Humidity, utils::getInvalidHumidity(),
-                               channel);
+      measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
+      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
     }
   }
 
@@ -1083,35 +1070,23 @@ static void updatePm(void) {
   channel = 2;
   if (configuration.hasSensorPMS2) {
     if (ag->pms5003t_2.connected()) {
-      measurements.updateValue(Measurements::AgValueType::PM01, ag->pms5003t_2.getPm01Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM25, ag->pms5003t_2.getPm25Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM10, ag->pms5003t_2.getPm10Ae(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM03_PC,
-                               ag->pms5003t_2.getPm03ParticleCount(), channel);
-      measurements.updateValue(Measurements::AgValueType::Temperature,
-                               ag->pms5003t_2.getTemperature(), channel);
-      measurements.updateValue(Measurements::AgValueType::Humidity,
-                               ag->pms5003t_2.getRelativeHumidity(), channel);
+      measurements.update(Measurements::PM01, ag->pms5003t_2.getPm01Ae(), channel);
+      measurements.update(Measurements::PM25, ag->pms5003t_2.getPm25Ae(), channel);
+      measurements.update(Measurements::PM10, ag->pms5003t_2.getPm10Ae(), channel);
+      measurements.update(Measurements::PM03_PC, ag->pms5003t_2.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::Temperature, ag->pms5003t_2.getTemperature(), channel);
+      measurements.update(Measurements::Humidity, ag->pms5003t_2.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
       newPMS2Value = true;
     } else {
       // PMS channel channel now is not connected, update using invalid value
-      measurements.updateValue(Measurements::AgValueType::PM01, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM25, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM10, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::PM03_PC, utils::getInvalidPmValue(),
-                               channel);
-      measurements.updateValue(Measurements::AgValueType::Temperature,
-                               utils::getInvalidTemperature(), channel);
-      measurements.updateValue(Measurements::AgValueType::Humidity, utils::getInvalidHumidity(),
-                               channel);
+      measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
+      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
     }
   }
 
@@ -1119,20 +1094,20 @@ static void updatePm(void) {
     float temp, hum;
     if (newPMS1Value && newPMS2Value) {
       // Both PMS has new valid value
-      temp = (measurements.getValueFloat(Measurements::AgValueType::Temperature, false, 1) +
-              measurements.getValueFloat(Measurements::AgValueType::Temperature, false, 2)) /
+      temp = (measurements.getFloat(Measurements::Temperature, false, 1) +
+              measurements.getFloat(Measurements::Temperature, false, 2)) /
              2.0f;
-      hum = (measurements.getValueFloat(Measurements::AgValueType::Humidity, false, 1) +
-             measurements.getValueFloat(Measurements::AgValueType::Humidity, false, 2)) /
+      hum = (measurements.getFloat(Measurements::Humidity, false, 1) +
+             measurements.getFloat(Measurements::Humidity, false, 2)) /
             2.0f;
     } else if (newPMS1Value) {
       // Only PMS1 has new valid value
-      temp = measurements.getValueFloat(Measurements::AgValueType::Temperature, false, 1);
-      hum = measurements.getValueFloat(Measurements::AgValueType::Humidity, false, 1);
+      temp = measurements.getFloat(Measurements::Temperature, false, 1);
+      hum = measurements.getFloat(Measurements::Humidity, false, 1);
     } else {
       // Only PMS2 has new valid value
-      temp = measurements.getValueFloat(Measurements::AgValueType::Temperature, false, 2);
-      hum = measurements.getValueFloat(Measurements::AgValueType::Humidity, false, 2);
+      temp = measurements.getFloat(Measurements::Temperature, false, 2);
+      hum = measurements.getFloat(Measurements::Humidity, false, 2);
     }
 
     // Update compensation temperature and humidity for SGP41
@@ -1146,7 +1121,7 @@ static void sendDataToServer(void) {
     return;
   }
 
-  String syncData = measurements.toStringX(false, fwMode, wifiConnector.RSSI(), *ag, configuration);
+  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), *ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
     Serial.println(
@@ -1162,8 +1137,8 @@ static void tempHumUpdate(void) {
     float temp = ag->sht.getTemperature();
     float rhum = ag->sht.getRelativeHumidity();
 
-    measurements.updateValue(Measurements::AgValueType::Temperature, temp);
-    measurements.updateValue(Measurements::AgValueType::Humidity, rhum);
+    measurements.update(Measurements::Temperature, temp);
+    measurements.update(Measurements::Humidity, rhum);
 
     // Serial.printf("Temperature in C: %0.2f\n", temp);
     // Serial.printf("Relative Humidity: %d\n", rhum);
@@ -1175,9 +1150,8 @@ static void tempHumUpdate(void) {
       ag->sgp41.setCompensationTemperatureHumidity(temp, rhum);
     }
   } else {
-    measurements.updateValue(Measurements::AgValueType::Temperature,
-                             utils::getInvalidTemperature());
-    measurements.updateValue(Measurements::AgValueType::Humidity, utils::getInvalidHumidity());
+    measurements.update(Measurements::Temperature, utils::getInvalidTemperature());
+    measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
     Serial.println("SHT read failed");
   }
 }
