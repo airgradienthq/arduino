@@ -64,7 +64,7 @@ void LocalServer::_GET_metrics(void) {
 }
 
 void LocalServer::_GET_measure(void) {
-  String toSend = measure.toStringX(true, fwMode, wifiConnector.RSSI(), *ag, config);
+  String toSend = measure.toString(true, fwMode, wifiConnector.RSSI(), *ag, config);
   server.send(200, "application/json", toSend);
 }
 
