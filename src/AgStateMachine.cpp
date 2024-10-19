@@ -1,5 +1,6 @@
 #include "AgStateMachine.h"
 
+#define LED_TEST_BLINK_DELAY  50  /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
 #define LED_SLOW_BLINK_DELAY 1000 /** ms */
 #define LED_SHORT_BLINK_DELAY 500 /** ms */
@@ -7,11 +8,11 @@
 
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5 /** sec */
 
-#define RGB_COLOR_R 255, 0, 0     /** Red */
-#define RGB_COLOR_G 0, 255, 0     /** Green */
-#define RGB_COLOR_Y 255, 255, 0   /** Yellow */
-#define RGB_COLOR_O 255, 165, 0   /** Organge */
-#define RGB_COLOR_P 160, 32, 240  /** Purple */
+#define RGB_COLOR_R 255, 0, 0    /** Red */
+#define RGB_COLOR_G 0, 255, 0    /** Green */
+#define RGB_COLOR_Y 255, 150, 0  /** Yellow */
+#define RGB_COLOR_O 255, 40, 0  /** Orange */
+#define RGB_COLOR_P 180, 0, 255 /** Purple */
 
 /**
  * @brief Animation LED bar with color
@@ -141,6 +142,10 @@ void StateMachine::co2handleLeds(void) {
  */
 void StateMachine::pm25handleLeds(void) {
   int pm25Value = value.pm25_1;
+  if (config.isMonitorDisplayCompensatedValues() && config.hasSensorSHT) {
+    pm25Value = ag->pms5003.compensate(value.pm25_1, value.Humidity);
+  }
+
   if (pm25Value < 5) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
@@ -224,10 +229,13 @@ void StateMachine::co2Calibration(void) {
 
     /** Count down to 0 then start */
     for (int i = 0; i < SENSOR_CO2_CALIB_COUNTDOWN_MAX; i++) {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
         String str =
             "after " + String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec";
         disp.setText("Start CO2 calib", str.c_str(), "");
+      } else if (ag->isBasic()) {
+        String str = String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec";
+        disp.setText("CO2 Calib", "after", str.c_str());
       } else {
         logInfo("Start CO2 calib after " +
                 String(SENSOR_CO2_CALIB_COUNTDOWN_MAX - i) + " sec");
@@ -236,14 +244,16 @@ void StateMachine::co2Calibration(void) {
     }
 
     if (ag->s8.setBaselineCalibration()) {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
         disp.setText("Calibration", "success", "");
+      } else if (ag->isBasic()) {
+        disp.setText("CO2 Calib", "success", "");
       } else {
         logInfo("CO2 Calibration: success");
       }
       delay(1000);
-      if (ag->isOne()) {
-        disp.setText("Wait for", "calib finish", "...");
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+        disp.setText("Wait for", "calib done", "...");
       } else {
         logInfo("CO2 Calibration: Wait for calibration finish...");
       }
@@ -254,16 +264,18 @@ void StateMachine::co2Calibration(void) {
         delay(1000);
         count++;
       }
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
         String str = "after " + String(count);
-        disp.setText("Calib finish", str.c_str(), "sec");
+        disp.setText("Calib done", str.c_str(), "sec");
       } else {
         logInfo("CO2 Calibration: finish after " + String(count) + " sec");
       }
       delay(2000);
     } else {
-      if (ag->isOne()) {
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
         disp.setText("Calibration", "failure!!!", "");
+      } else if (ag->isBasic()) {
+        disp.setText("CO2 calib", "failure!!!", "");
       } else {
         logInfo("CO2 Calibration: failure!!!");
       }
@@ -279,15 +291,16 @@ void StateMachine::co2Calibration(void) {
       if (ag->s8.setAbcPeriod(config.getCO2CalibrationAbcDays() * 24)) {
         resultStr = "successful";
       }
-      String fromStr = String(curHour/24) + " days";
-      if(curHour == 0){
+      String fromStr = String(curHour / 24) + " days";
+      if (curHour == 0) {
         fromStr = "off";
       }
       String toStr = String(config.getCO2CalibrationAbcDays()) + " days";
-      if(config.getCO2CalibrationAbcDays() == 0) {
+      if (config.getCO2CalibrationAbcDays() == 0) {
         toStr = "off";
       }
-      String msg = "Setting S8 from " + fromStr + " to " + toStr + " " +  resultStr;
+      String msg =
+          "Setting S8 from " + fromStr + " to " + toStr + " " + resultStr;
       logInfo(msg);
     }
   } else {
@@ -297,44 +310,56 @@ void StateMachine::co2Calibration(void) {
 
 void StateMachine::ledBarTest(void) {
   if (config.isLedBarTestRequested()) {
-    if (config.getCountry() == "TH") {
-      uint32_t tstart = millis();
-      logInfo("Start run LED test for 2 min");
-      while (1) {
-        ledBarRunTest();
-        uint32_t ms = (uint32_t)(millis() - tstart);
-        if (ms >= (60 * 1000 * 2)) {
-          logInfo("LED test after 2 min finish");
-          break;
+    if (ag->isOne()) {
+      if (config.getCountry() == "TH") {
+        uint32_t tstart = millis();
+        logInfo("Start run LED test for 2 min");
+        while (1) {
+          ledBarRunTest();
+          uint32_t ms = (uint32_t)(millis() - tstart);
+          if (ms >= (60 * 1000 * 2)) {
+            logInfo("LED test after 2 min finish");
+            break;
+          }
         }
+      } else {
+        ledBarRunTest();
       }
-    } else {
+    }
+    else if(ag->isOpenAir()) {
       ledBarRunTest();
     }
   }
 }
 
-void StateMachine::ledBarPowerUpTest(void) {
-  ledBarRunTest();
-}
+void StateMachine::ledBarPowerUpTest(void) { ledBarRunTest(); }
 
 void StateMachine::ledBarRunTest(void) {
-  disp.setText("LED Test", "running", ".....");
-  runLedTest('r');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('g');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('b');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('w');
-  ag->ledBar.show();
-  delay(1000);
-  runLedTest('n');
-  ag->ledBar.show();
-  delay(1000);
+  if (ag->isOne()) {
+    disp.setText("LED Test", "running", ".....");
+    runLedTest('r');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('g');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('b');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('w');
+    ag->ledBar.show();
+    delay(1000);
+    runLedTest('n');
+    ag->ledBar.show();
+    delay(1000);
+  } else if (ag->isOpenAir()) {
+    for (int i = 0; i < 100; i++) {
+      ag->statusLed.setOn();
+      delay(LED_TEST_BLINK_DELAY);
+      ag->statusLed.setOff();
+      delay(LED_TEST_BLINK_DELAY);
+    }
+  }
 }
 
 void StateMachine::runLedTest(char color) {
@@ -398,8 +423,8 @@ StateMachine::~StateMachine() {}
  * @param state
  */
 void StateMachine::displayHandle(AgStateMachineState state) {
-  // Ignore handle if not ONE_INDOOR board
-  if (!ag->isOne()) {
+  // Ignore handle if not support display
+  if (!(ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic())) {
     if (state == AgStateMachineCo2Calibration) {
       co2Calibration();
     }
@@ -417,11 +442,17 @@ void StateMachine::displayHandle(AgStateMachineState state) {
   case AgStateMachineWiFiManagerMode:
   case AgStateMachineWiFiManagerPortalActive: {
     if (wifiConnectCountDown >= 0) {
-      String line1 = String(wifiConnectCountDown) + "s to connect";
-      String line2 = "to WiFi hotspot:";
-      String line3 = "\"airgradient-";
-      String line4 = ag->deviceId() + "\"";
-      disp.setText(line1, line2, line3, line4);
+      if (ag->isBasic()) {
+        String ssid = "\"airgradient-" + ag->deviceId() + "\"    " +
+                      String(wifiConnectCountDown) + String("s");
+        disp.setText("Connect tohotspot:", ssid.c_str(), "");
+      } else {
+        String line1 = String(wifiConnectCountDown) + "s to connect";
+        String line2 = "to WiFi hotspot:";
+        String line3 = "\"airgradient-";
+        String line4 = ag->deviceId() + "\"";
+        disp.setText(line1, line2, line3, line4);
+      }
       wifiConnectCountDown--;
     }
     break;
@@ -435,7 +466,12 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineWiFiOkServerConnecting: {
-    disp.setText("Connecting to", "Server", "...");
+    if (ag->isBasic()) {
+      disp.setText("Connecting", "to", "Server...");
+    } else {
+      disp.setText("Connecting to", "Server", "...");
+    }
+
     break;
   }
   case AgStateMachineWiFiOkServerConnected: {
@@ -451,7 +487,11 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
-    disp.setText("Monitor not", "setup on", "dashboard");
+    if (ag->isBasic()) {
+      disp.setText("Monitor", "not on", "dashboard");
+    } else {
+      disp.setText("Monitor not", "setup on", "dashboard");
+    }
     break;
   }
   case AgStateMachineWiFiLost: {
@@ -459,7 +499,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineServerLost: {
-    disp.showDashboard("Server N/A");
+    disp.showDashboard("AG Server N/A");
     break;
   }
   case AgStateMachineSensorConfigFailed: {
@@ -468,7 +508,7 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ms >= 5000) {
         addToDashboardTime = millis();
         if (addToDashBoardToggle) {
-          disp.showDashboard("Add to Dashboard");
+          disp.showDashboard("Add to AG Dashb.");
         } else {
           disp.showDashboard(ag->deviceId().c_str());
         }
@@ -502,7 +542,7 @@ void StateMachine::displayHandle(void) { displayHandle(dispState); }
  *
  */
 void StateMachine::displaySetAddToDashBoard(void) {
-  if(addToDashBoard == false) {
+  if (addToDashBoard == false) {
     addToDashboardTime = 0;
     addToDashBoardToggle = true;
   }
@@ -527,11 +567,18 @@ void StateMachine::displayWiFiConnectCountDown(int count) {
 void StateMachine::ledAnimationInit(void) { ledBarAnimationCount = -1; }
 
 /**
- * @brief Handle LED from state
+ * @brief Handle LED from state, only handle LED if board type is: One Indoor or
+ * Open Air
  *
  * @param state
  */
 void StateMachine::handleLeds(AgStateMachineState state) {
+  /** Ignore if board type if not ONE_INDOOR or OPEN_AIR_OUTDOOR */
+  if ((ag->getBoardType() != BoardType::ONE_INDOOR) &&
+      (ag->getBoardType() != BoardType::OPEN_AIR_OUTDOOR)) {
+    return;
+  }
+
   if (state > AgStateMachineNormal) {
     logError("ledHandle: state invalid");
     return;
@@ -545,7 +592,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiManagerMode: {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
-    /** Turn midle LED Color */
+    /** Turn middle LED Color */
     if (ag->isOne()) {
       ag->ledBar.setColor(0, 0, 255, ag->ledBar.getNumberOfLeds() / 2);
     } else {
@@ -685,7 +732,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     break;
   }
   case AgStateMachineSensorConfigFailed: {
-    /** Server is reachable but there is some conﬁguration issue to be fixed on
+    /** Server is reachable but there is some configuration issue to be fixed on
      * the server side */
     if (ag->isOne()) {
       ag->ledBar.setColor(139, 24, 248, 0);

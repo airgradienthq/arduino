@@ -41,7 +41,14 @@ String AirGradient::getVersion(void) { return GIT_VERSION; }
 BoardType AirGradient::getBoardType(void) { return boardType; }
 
 double AirGradient::round2(double value) {
-  return (int)(value * 100 + 0.5) / 100.0;
+  double ret;
+  if (value >= 0) {
+    ret = (int)(value * 100 + 0.5f);
+  } else {
+    ret = (int)(value * 100 - 0.5f);
+  }
+
+  return ret / 100;
 }
 
 String AirGradient::getBoardName(void) {
@@ -57,6 +64,20 @@ String AirGradient::getBoardName(void) {
 bool AirGradient::isOne(void) {
   return boardType == BoardType::ONE_INDOOR;
 }
+
+bool AirGradient::isOpenAir(void) { 
+  return boardType == BoardType::OPEN_AIR_OUTDOOR; 
+}
+
+bool AirGradient::isPro4_2(void) {
+  return boardType == BoardType::DIY_PRO_INDOOR_V4_2;
+}
+
+bool AirGradient::isPro3_3(void) { 
+  return boardType == BoardType::DIY_PRO_INDOOR_V3_3;
+}
+
+bool AirGradient::isBasic(void) { return boardType == BoardType::DIY_BASIC; }
 
 String AirGradient::deviceId(void) {
   String mac = WiFi.macAddress();

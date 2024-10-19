@@ -235,92 +235,168 @@ const BoardDef bsps[_BOARD_MAX] = {
             .name = "ONE_INDOOR",
         },
     /** OPEN_AIR_OUTDOOR */
-    [OPEN_AIR_OUTDOOR] = {
-        .SenseAirS8 =
-            {
-                .uart_tx_pin = 1,
-                .uart_rx_pin = 0,
+    [OPEN_AIR_OUTDOOR] =
+        {
+            .SenseAirS8 =
+                {
+                    .uart_tx_pin = 1,
+                    .uart_rx_pin = 0,
 #if defined(ESP8266)
-                .supported = false,
+                    .supported = false,
 #else
-                .supported = true,
+                    .supported = true,
 #endif
-            },
-        /** Use UART0 don't use define pin number */
-        .Pms5003 =
-            {
-                .uart_tx_pin = -1,
-                .uart_rx_pin = -1,
+                },
+            /** Use UART0 don't use define pin number */
+            .Pms5003 =
+                {
+                    .uart_tx_pin = -1,
+                    .uart_rx_pin = -1,
 #if defined(ESP8266)
-                .supported = false,
+                    .supported = false,
 #else
-                .supported = true,
+                    .supported = true,
 #endif
-            },
-        .I2C =
-            {
-                .sda_pin = 7,
-                .scl_pin = 6,
+                },
+            .I2C =
+                {
+                    .sda_pin = 7,
+                    .scl_pin = 6,
 #if defined(ESP8266)
-                .supported = false,
+                    .supported = false,
 #else
-                .supported = true,
+                    .supported = true,
 #endif
-            },
-        .SW =
-            {
+                },
+            .SW =
+                {
 #if defined(ESP8266)
-                .pin = -1,
-                .activeLevel = 1,
-                .supported = false,
+                    .pin = -1,
+                    .activeLevel = 1,
+                    .supported = false,
 #else
-                .pin = 9,
-                .activeLevel = 0,
-                .supported = true,
+                    .pin = 9,
+                    .activeLevel = 0,
+                    .supported = true,
 #endif
-            },
-        .LED =
-            {
+                },
+            .LED =
+                {
 #if defined(ESP8266)
-                .pin = -1,
-                .rgbNum = 0,
-                .onState = 0,
-                .supported = false,
-                .rgbSupported = false,
+                    .pin = -1,
+                    .rgbNum = 0,
+                    .onState = 0,
+                    .supported = false,
+                    .rgbSupported = false,
 #else
-                .pin = 10,
-                .rgbNum = 0,
-                .onState = 1,
-                .supported = true,
-                .rgbSupported = false,
+                    .pin = 10,
+                    .rgbNum = 0,
+                    .onState = 1,
+                    .supported = true,
+                    .rgbSupported = false,
 #endif
-            },
-        .OLED =
-            {
+                },
+            .OLED =
+                {
 #if defined(ESP8266)
-                .width = 0,
-                .height = 0,
-                .addr = 0,
-                .supported = false,
+                    .width = 0,
+                    .height = 0,
+                    .addr = 0,
+                    .supported = false,
 #else
-                .width = 128,
-                .height = 64,
-                .addr = 0x3C,
-                .supported = true,
+                    .width = 128,
+                    .height = 64,
+                    .addr = 0x3C,
+                    .supported = true,
 #endif
-            },
-        .WDG =
-            {
+                },
+            .WDG =
+                {
 #if defined(ESP8266)
-                .resetPin = -1,
-                .supported = false,
+                    .resetPin = -1,
+                    .supported = false,
 #else
-                .resetPin = 2,
-                .supported = true,
+                    .resetPin = 2,
+                    .supported = true,
 #endif
-            },
-        .name = "OPEN_AIR_OUTDOOR",
-    }};
+                },
+            .name = "OPEN_AIR_OUTDOOR",
+        },
+    /** DIY_PRO_INDOOR_V3_3 */
+    [DIY_PRO_INDOOR_V3_3] =
+        {
+            .SenseAirS8 =
+                {
+                    .uart_tx_pin = 2,
+                    .uart_rx_pin = 0,
+#if defined(ESP8266)
+                    .supported = true,
+#else
+                    .supported = false,
+#endif
+                },
+            .Pms5003 =
+                {
+                    .uart_tx_pin = 14,
+                    .uart_rx_pin = 12,
+#if defined(ESP8266)
+                    .supported = true,
+#else
+                    .supported = false,
+#endif
+                },
+            .I2C =
+                {
+                    .sda_pin = 4,
+                    .scl_pin = 5,
+#if defined(ESP8266)
+                    .supported = true,
+#else
+                    .supported = false,
+#endif
+                },
+            .SW =
+                {
+#if defined(ESP8266)
+                    .pin = -1, /** D7 */
+                    .activeLevel = 0,
+                    .supported = false,
+#else
+                    .pin = -1,
+                    .activeLevel = 1,
+                    .supported = false,
+#endif
+                },
+            .LED =
+                {
+                    .pin = -1,
+                    .rgbNum = 0,
+                    .onState = 0,
+                    .supported = false,
+                    .rgbSupported = false,
+                },
+            .OLED =
+                {
+#if defined(ESP8266)
+                    .width = 128,
+                    .height = 64,
+                    .addr = 0x3C,
+                    .supported = true,
+#else
+                    .width = 0,
+                    .height = 0,
+                    .addr = 0,
+                    .supported = false,
+#endif
+                },
+            .WDG =
+                {
+                    .resetPin = -1,
+                    .supported = false,
+                },
+            .name = "DIY_PRO_INDOOR_V3_3",
+        },
+};
 
 /**
  * @brief Get Board Support Package
@@ -337,9 +413,9 @@ const BoardDef *getBoardDef(BoardType def) {
 
 /**
  * @brief Get the Board Name
- * 
+ *
  * @param type BoarType
- * @return const char* 
+ * @return const char*
  */
 const char *getBoardDefName(BoardType type) {
   if (type >= _BOARD_MAX) {

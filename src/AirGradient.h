@@ -12,9 +12,10 @@
 #include "S8/S8.h"
 #include "Sgp41/Sgp41.h"
 #include "Sht/Sht.h"
+#include "Main/utils.h"
 
 #ifndef GIT_VERSION
-#define GIT_VERSION "snapshot"
+#define GIT_VERSION "3.1.9-snap"
 #endif
 
 /**
@@ -133,6 +134,37 @@ public:
    * @return false No
    */
   bool isOne(void);
+
+  /**
+   * @brief Check that Airgradient object is OPEN_AIR
+   * 
+   * @return true 
+   * @return false 
+   */
+  bool isOpenAir(void);
+
+  /**
+   * @brief Check that Airgradient object is DIY_PRO 4.2 indoor
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isPro4_2(void);
+  /**
+   * @brief Check that Airgradient object is DIY_PRO 3.7 indoor
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isPro3_3(void);
+
+  /**
+   * @brief Check that Airgradient object is DIY_BASIC
+   *
+   * @return true Yes
+   * @return false No
+   */
+  bool isBasic(void);
 
   /**
    * @brief Get device Id

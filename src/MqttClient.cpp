@@ -1,11 +1,19 @@
-#ifdef ESP32
-
 #include "MqttClient.h"
+#include "Libraries/pubsubclient-2.8/src/PubSubClient.h"
 
+#ifdef ESP32
 static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data);
+#else
+#define CLIENT() ((PubSubClient *)client)
+#endif
 
-MqttClient::MqttClient(Stream &debugLog) : PrintLog(debugLog, "MqttClient") {}
+MqttClient::MqttClient(Stream &debugLog) : PrintLog(debugLog, "MqttClient") {
+#ifdef ESP32
+#else
+  client = NULL;
+#endif
+}
 
 MqttClient::~MqttClient() {}
 
@@ -22,6 +30,7 @@ bool MqttClient::begin(String uri) {
   this->uri = uri;
   logInfo("Init uri: " + uri);
 
+#ifdef ESP32
   /** config esp_mqtt client */
   esp_mqtt_client_config_t config = {
       .uri = this->uri.c_str(),
@@ -45,6 +54,108 @@ bool MqttClient::begin(String uri) {
     logError("Client start failed");
     return false;
   }
+#else
+  // mqtt://<Username>:<Password>@<Host>:<Port>
+  bool hasUser = false;
+  for (unsigned int i = 0; i < this->uri.length(); i++) {
+    if (this->uri[i] == '@') {
+      hasUser = true;
+      break;
+    }
+  }
+
+  user = "";
+  password = "";
+  server = "";
+  port = 0;
+
+  char *serverPort = NULL;
+  char *buf = (char *)this->uri.c_str();
+  if (hasUser) {
+    // mqtt://<Username>:<Password>@<Host>:<Port>
+    char *userPass = strtok(buf, "@");
+    serverPort = strtok(NULL, "@");
+
+    if (userPass == NULL) {
+      logError("User and Password invalid");
+      return false;
+    } else {
+      if ((userPass[5] == '/') && (userPass[6] == '/')) { /** Check mqtt:// */
+        userPass = &userPass[7];
+      } else if ((userPass[6] == '/') &&
+                 (userPass[7] == '/')) { /** Check mqtts:// */
+        userPass = &userPass[8];
+      } else {
+        logError("Server invalid");
+        return false;
+      }
+
+      buf = strtok(userPass, ":");
+      if (buf == NULL) {
+        logError("User invalid");
+        return false;
+      }
+      user = String(buf);
+
+      buf = strtok(NULL, "@");
+      if (buf == NULL) {
+        logError("Password invalid");
+        return false;
+      }
+      password = String(buf);
+
+      logInfo("Username: " + user);
+      logInfo("Password: " + password);
+    }
+
+    if (serverPort == NULL) {
+      logError("Server and port invalid");
+      return false;
+    }
+  } else {
+    // mqtt://<Host>:<Port>
+    if ((buf[5] == '/') && (buf[6] == '/')) { /** Check mqtt:// */
+      serverPort = &buf[7];
+    } else if ((buf[6] == '/') && (buf[7] == '/')) { /** Check mqtts:// */
+      serverPort = &buf[8];
+    } else {
+      logError("Server invalid");
+      return false;
+    }
+  }
+
+  if (serverPort == NULL) {
+    logError("Server and port invalid");
+    return false;
+  }
+
+  buf = strtok(serverPort, ":");
+  if (buf == NULL) {
+    logError("Server invalid");
+    return false;
+  }
+  server = String(buf);
+  logInfo("Server: " + server);
+
+  buf = strtok(NULL, ":");
+  if (buf == NULL) {
+    logError("Port invalid");
+    return false;
+  }
+  port = (uint16_t)String(buf).toInt();
+  logInfo("Port: " + String(port));
+
+  if (client == NULL) {
+    client = new PubSubClient(__wifiClient);
+    if (client == NULL) {
+      return false;
+    }
+  }
+
+  CLIENT()->setServer(server.c_str(), port);
+  CLIENT()->setBufferSize(1024);
+  connected = false;
+#endif
 
   isBegin = true;
   connectionFailedCount = 0;
@@ -56,12 +167,16 @@ void MqttClient::end(void) {
     logWarning("Already end, call 'begin' and try again");
     return;
   }
-
+#ifdef ESP32
   esp_mqtt_client_disconnect(client);
   esp_mqtt_client_stop(client);
   esp_mqtt_client_destroy(client);
   client = NULL;
+#else
+  CLIENT()->disconnect();
+#endif
   isBegin = false;
+  this->uri = "";
 
   logInfo("end");
 }
@@ -86,10 +201,17 @@ bool MqttClient::publish(const char *topic, const char *payload, int len) {
     return false;
   }
 
+#ifdef ESP32
   if (esp_mqtt_client_publish(client, topic, payload, len, 0, 0) == ESP_OK) {
     logInfo("Publish success");
     return true;
   }
+#else
+  if (CLIENT()->publish(topic, payload)) {
+    logInfo("Publish success");
+    return true;
+  }
+#endif
   logError("Publish failed");
   return false;
 }
@@ -114,7 +236,9 @@ bool MqttClient::isCurrentUri(String &uri) {
  * @return true Connected
  * @return false Disconnected
  */
-bool MqttClient::isConnected(void) { return connected; }
+bool MqttClient::isConnected(void) {
+  return connected;
+}
 
 /**
  * @brief Get number of connection failed
@@ -123,6 +247,35 @@ bool MqttClient::isConnected(void) { return connected; }
  */
 int MqttClient::getConnectionFailedCount(void) { return connectionFailedCount; }
 
+#ifdef ESP8266
+bool MqttClient::connect(String id) {
+  if (isBegin == false) {
+    return false;
+  }
+
+  if (this->uri.isEmpty()) {
+    return false;
+  }
+
+  connected = false;
+  if (user.isEmpty()) {
+    logInfo("Connect without auth");
+    if(CLIENT()->connect(id.c_str())) {
+      connected = true;
+    }
+    return connected;
+  }
+  return CLIENT()->connect(id.c_str(), user.c_str(), password.c_str());
+}
+void MqttClient::handle(void) {
+  if (isBegin == false) {
+    return;
+  }
+  CLIENT()->loop();
+}
+#endif
+
+#ifdef ESP32
 static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                  int32_t event_id, void *event_data) {
   MqttClient *mqtt = (MqttClient *)handler_args;
@@ -164,5 +317,4 @@ static void __mqtt_event_handler(void *handler_args, esp_event_base_t base,
     break;
   }
 }
-
-#endif /** ESP32 */
+#endif

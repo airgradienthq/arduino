@@ -1,5 +1,6 @@
 #include "PMS5003T.h"
 #include "Arduino.h"
+#include "../Main/utils.h"
 
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
@@ -66,11 +67,10 @@ bool PMS5003T::begin(void) {
   }
 
 #if defined(ESP8266)
-  bsp->Pms5003.uart_tx_pin;
-  SoftwareSerial *uart =
+  this->_serial =
       new SoftwareSerial(bsp->Pms5003.uart_tx_pin, bsp->Pms5003.uart_rx_pin);
-  uart->begin(9600);
-  if (pms.begin(uart) == false) {
+  this->_serial->begin(9600);
+  if (pms.begin(this->_serial) == false) {
     AgLog("PMS failed");
     return false;
   }
@@ -102,7 +102,7 @@ bool PMS5003T::begin(void) {
     return false;
   }
 #endif
-
+  _ver = pms.getFirmwareVersion();
   this->_isBegin = true;
   return true;
 }
@@ -133,7 +133,9 @@ int PMS5003T::getPm10Ae(void) { return pms.getPM10(); }
  *
  * @return int PM 0.3 Count index
  */
-int PMS5003T::getPm03ParticleCount(void) { return pms.getCount0_3(); }
+int PMS5003T::getPm03ParticleCount(void) {
+  return pms.getCount0_3();
+}
 
 /**
  * @brief Convert PM2.5 to US AQI
@@ -149,7 +151,7 @@ int PMS5003T::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
  * @return float Degree Celcius
  */
 float PMS5003T::getTemperature(void) {
-  return pms.getTemp()/10.0f;
+  return pms.getTemp() / 10.0f;
 }
 
 /**
@@ -158,8 +160,43 @@ float PMS5003T::getTemperature(void) {
  * @return float Percent (%)
  */
 float PMS5003T::getRelativeHumidity(void) {
-  return pms.getHum()/10.0f;
+  return pms.getHum() / 10.0f;
 }
+
+/**
+ * @brief Correct PM2.5
+ * 
+ * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param humidity Humidity value
+ * @return int 
+ */
+int PMS5003T::compensate(int pm25, float humidity) {
+  return pms.compensate(pm25, humidity);
+}
+
+/**
+ * @brief Get module(s) firmware version
+ * 
+ * @return int Version code
+ */
+int PMS5003T::getFirmwareVersion(void) { return _ver; }
+
+/**
+ * @brief Get sensor error code
+ * 
+ * @return uint8_t 
+ */
+uint8_t PMS5003T::getErrorCode(void) { return pms.getErrorCode(); }
+
+/**
+ * @brief Is sensor connect to device
+ * 
+ * @return true Connected
+ * @return false Removed
+ */
+bool PMS5003T::connected(void) { return pms.connected(); }
 
 /**
  * @brief Check device initialized or not
@@ -192,13 +229,26 @@ void PMS5003T::end(void) {
  * @brief Check and read PMS sensor data. This method should be callack from
  * loop process to continoue check sensor data if it's available
  */
-void PMS5003T::handle(void) { pms.handle(); }
+void PMS5003T::handle(void) { pms.readPackage(this->_serial); }
+
+void PMS5003T::updateFailCount(void) {
+  pms.updateFailCount();
+}
+
+void PMS5003T::resetFailCount(void) {
+  pms.resetFailCount();
+}
 
 /**
- * @brief Get sensor status
- *
- * @return true No problem
- * @return false Communication timeout or sensor has removed
+ * @brief Get fail count
+ * 
+ * @return int 
  */
-bool PMS5003T::isFailed(void) { return pms.isFailed(); }
+int PMS5003T::getFailCount(void) { return pms.getFailCount(); }
 
+/**
+ * @brief Get fail count max
+ * 
+ * @return int 
+ */
+int PMS5003T::getFailCountMax(void) { return pms.getFailCountMax(); }

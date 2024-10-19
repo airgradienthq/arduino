@@ -13,7 +13,6 @@
  */
 void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-#ifdef ESP32
 /**
  * @brief Construct a new Ag Wi Fi Connector:: Ag Wi Fi Connector object
  *
@@ -24,9 +23,6 @@ void WifiConnector::setAirGradient(AirGradient *ag) { this->ag = ag; }
 WifiConnector::WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm,
                              Configuration &config)
     : PrintLog(log, "WifiConnector"), disp(disp), sm(sm), config(config) {}
-#else
-WifiConnector::WifiConnector(Stream &log) : PrintLog(log, "WiFiConnector") {}
-#endif
 
 WifiConnector::~WifiConnector() {}
 
@@ -45,24 +41,44 @@ bool WifiConnector::connect(void) {
     }
   }
 
+  WiFi.begin();
+  String wifiSSID = WIFI()->getWiFiSSID(true);
+  if (wifiSSID.isEmpty()) {
+    logInfo("Connected WiFi is empty, connect to default wifi \"" +
+            String(this->defaultSsid) + String("\""));
+
+    /** Set wifi connect */
+    WiFi.begin(this->defaultSsid, this->defaultPassword);
+
+    /** Wait for wifi connect to AP */
+    int count = 0;
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      count++;
+      if (count >= 15) {
+        logError("Try connect to default wifi \"" + String(this->defaultSsid) +
+                 String("\" failed"));
+        break;
+      }
+    }
+  }
+
   WIFI()->setConfigPortalBlocking(false);
   WIFI()->setConnectTimeout(15);
   WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
-#ifdef ESP32
   WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
   WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
   WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
-  WIFI()->setConfigPortalTimeoutCallback([this](){});
-  if (ag->isOne()) {
+  WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
     disp.setText("Connecting to", "WiFi", "...");
   } else {
     logInfo("Connecting to WiFi...");
   }
   ssid = "airgradient-" + ag->deviceId();
-#else
-  ssid = "AG-" + String(ESP.getChipId(), HEX);
-#endif
+
+  // ssid = "AG-" + String(ESP.getChipId(), HEX);
   WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
 
   WiFiManagerParameter postToAg("chbPostToAg",
@@ -78,6 +94,8 @@ bool WifiConnector::connect(void) {
 
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
 
+  logInfo("Wait for configure portal");
+
 #ifdef ESP32
   // Task handle WiFi connection.
   xTaskCreate(
@@ -85,6 +103,7 @@ bool WifiConnector::connect(void) {
         WifiConnector *connector = (WifiConnector *)obj;
         while (connector->_wifiConfigPortalActive()) {
           connector->_wifiProcess();
+          vTaskDelay(1);
         }
         vTaskDelete(NULL);
       },
@@ -139,10 +158,14 @@ bool WifiConnector::connect(void) {
 
     delay(1); // avoid watchdog timer reset.
   }
+#else
+  _wifiProcess();
+#endif
+
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
     sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
-    if (ag->isOne()) {
+    if (ag->isOne() || ag->isPro4_2() || ag->isPro3_3() || ag->isBasic()) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
     delay(6000);
@@ -160,9 +183,7 @@ bool WifiConnector::connect(void) {
     }
     hasPortalConfig = false;
   }
-#else
-  _wifiProcess();
-#endif
+
   return true;
 }
 
@@ -177,24 +198,6 @@ void WifiConnector::disconnect(void) {
   }
 }
 
-#ifdef ESP32
-#else
-void WifiConnector::displayShowText(String ln1, String ln2, String ln3) {
-  char buf[9];
-  ag->display.clear();
-
-  ag->display.setCursor(1, 1);
-  ag->display.setText(ln1);
-  ag->display.setCursor(1, 19);
-  ag->display.setText(ln2);
-  ag->display.setCursor(1, 37);
-  ag->display.setText(ln3);
-
-  ag->display.show();
-  delay(100);
-}
-#endif
-
 /**
  * @brief Has wifi STA connected to WIFI softAP (this device)
  *
@@ -205,7 +208,6 @@ bool WifiConnector::wifiClientConnected(void) {
   return WiFi.softAPgetStationNum() ? true : false;
 }
 
-#ifdef ESP32
 /**
  * @brief Handle WiFiManage softAP setup completed callback
  *
@@ -247,7 +249,7 @@ bool WifiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
 void WifiConnector::_wifiTimeoutCallback(void) { connectorTimeout = true; }
-#endif
+
 /**
  * @brief Process WiFiManager connection
  *
@@ -256,33 +258,67 @@ void WifiConnector::_wifiProcess() {
 #ifdef ESP32
   WIFI()->process();
 #else
-  int count = WIFI_CONNECT_COUNTDOWN_MAX;
-  displayShowText(String(WIFI_CONNECT_COUNTDOWN_MAX) + " sec", "SSID:", ssid);
+  /** Wait for WiFi connect and show LED, display status */
+  uint32_t dispPeriod = millis();
+  uint32_t ledPeriod = millis();
+  bool clientConnectChanged = false;
+  AgStateMachineState stateOld = sm.getDisplayState();
+
   while (WIFI()->getConfigPortalActive()) {
     WIFI()->process();
 
-    uint32_t lastTime = millis();
-    uint32_t ms = (uint32_t)(millis() - lastTime);
-    if (ms >= 1000) {
-      lastTime = millis();
+    if (WiFi.isConnected() == false) {
+      /** Display countdown */
+      uint32_t ms;
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+        ms = (uint32_t)(millis() - dispPeriod);
+        if (ms >= 1000) {
+          dispPeriod = millis();
+          sm.displayHandle();
+          logInfo("displayHandle state: " + String(sm.getDisplayState()));
+        } else {
+          if (stateOld != sm.getDisplayState()) {
+            stateOld = sm.getDisplayState();
+            sm.displayHandle();
+          }
+        }
+      }
 
-      displayShowText(String(count) + " sec", "SSID:", ssid);
+      /** LED animations */
+      ms = (uint32_t)(millis() - ledPeriod);
+      if (ms >= 100) {
+        ledPeriod = millis();
+        sm.handleLeds();
+      }
 
-      count--;
-
-      // Timeout
-      if (count == 0) {
-        break;
+      /** Check for client connect to change led color */
+      bool clientConnected = wifiClientConnected();
+      if (clientConnected != clientConnectChanged) {
+        clientConnectChanged = clientConnected;
+        if (clientConnectChanged) {
+          sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
+        } else {
+          sm.ledAnimationInit();
+          sm.handleLeds(AgStateMachineWiFiManagerMode);
+          if (ag->isOne()) {
+            sm.displayHandle(AgStateMachineWiFiManagerMode);
+          }
+        }
       }
     }
+
+    delay(1);
   }
 
-  if (!WiFi.isConnected()) {
-    displayShowText("Booting", "offline", "mode");
-    Serial.println("failed to connect and hit timeout");
-    delay(2500);
-  } else {
-    hasConfig = true;
+  // TODO This is for basic
+  if (ag->getBoardType() == DIY_BASIC) {
+    if (!WiFi.isConnected()) {
+      // disp.setText("Booting", "offline", "mode");
+      Serial.println("failed to connect and hit timeout");
+      delay(2500);
+    } else {
+      hasConfig = true;
+    }
   }
 #endif
 }
@@ -307,8 +343,6 @@ void WifiConnector::handle(void) {
   if (ms >= 10000) {
     lastRetry = millis();
     WiFi.reconnect();
-
-    // Serial.printf("Re-Connect WiFi\r\n");
     logInfo("Re-Connect WiFi");
   }
 }
@@ -326,7 +360,16 @@ bool WifiConnector::isConnected(void) { return WiFi.isConnected(); }
  * this method
  *
  */
-void WifiConnector::reset(void) { WIFI()->resetSettings(); }
+void WifiConnector::reset(void) { 
+  if(this->wifi == NULL) {
+    this->wifi = new WiFiManager();
+    if(this->wifi == NULL){
+      logInfo("reset failed");
+      return;
+    }
+  }
+  WIFI()->resetSettings(); 
+}
 
 /**
  * @brief Get wifi RSSI
@@ -344,7 +387,7 @@ String WifiConnector::localIpStr(void) { return WiFi.localIP().toString(); }
 
 /**
  * @brief Get status that wifi has configurated
- * 
+ *
  * @return true Configurated
  * @return false Not Configurated
  */
@@ -357,8 +400,16 @@ bool WifiConnector::hasConfigurated(void) {
 
 /**
  * @brief Get WiFi connection porttal timeout.
- * 
- * @return true 
- * @return false 
+ *
+ * @return true
+ * @return false
  */
 bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
+
+/**
+ * @brief Set wifi connect to default WiFi
+ * 
+ */
+void WifiConnector::setDefault(void) {
+  WiFi.begin("airgradient", "cleanair");
+}

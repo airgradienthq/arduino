@@ -41,21 +41,23 @@ JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(offlineMode);
+JSON_PROP_DEF(monitorDisplayCompensatedValues);
 
-#define jprop_model_default                 ""
-#define jprop_country_default               ""
-#define jprop_pmStandard_default            getPMStandardString(false)
-#define jprop_ledBarMode_default            getLedBarModeName(LedBarMode::LedBarModeCO2)
-#define jprop_abcDays_default               8
-#define jprop_tvocLearningOffset_default    12
-#define jprop_noxLearningOffset_default     12
-#define jprop_mqttBrokerUrl_default         ""
-#define jprop_temperatureUnit_default       "c"
-#define jprop_configurationControl_default  String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
-#define jprop_postDataToAirGradient_default true
-#define jprop_ledBarBrightness_default      100
-#define jprop_displayBrightness_default     100
-#define jprop_offlineMode_default           false
+#define jprop_model_default                           ""
+#define jprop_country_default                         "TH"
+#define jprop_pmStandard_default                      getPMStandardString(false)
+#define jprop_ledBarMode_default                      getLedBarModeName(LedBarMode::LedBarModeCO2)
+#define jprop_abcDays_default                         8
+#define jprop_tvocLearningOffset_default              12
+#define jprop_noxLearningOffset_default               12
+#define jprop_mqttBrokerUrl_default                   ""
+#define jprop_temperatureUnit_default                 "c"
+#define jprop_configurationControl_default            String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
+#define jprop_postDataToAirGradient_default           true
+#define jprop_ledBarBrightness_default                100
+#define jprop_displayBrightness_default               100
+#define jprop_offlineMode_default                     false
+#define jprop_monitorDisplayCompensatedValues_default false
 
 JSONVar jconfig;
 
@@ -153,14 +155,21 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
-  jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
-  jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
-  jconfig[jprop_ledBarMode] = jprop_ledBarBrightness_default;
+  if (ag->isOne()) {
+    jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
+  }
+  if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2() || ag->isBasic()) {
+    jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
+  }
+  if (ag->isOne()) {
+    jconfig[jprop_ledBarMode] = jprop_ledBarMode_default;
+  }
   jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
   jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
   jconfig[jprop_abcDays] = jprop_abcDays_default;
   jconfig[jprop_model] = jprop_model_default;
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
+  jconfig[jprop_monitorDisplayCompensatedValues] = jprop_monitorDisplayCompensatedValues_default;
 
   saveConfig();
 }
@@ -235,7 +244,10 @@ bool Configuration::parse(String data, bool isLocal) {
   bool changed = false;
 
   /** Get ConfigurationControl */
-  String lasCtrl = jconfig[jprop_configurationControl];
+  String lastCtrl = jconfig[jprop_configurationControl];
+  const char *msg = "Monitor set to accept only configuration from the "
+                    "cloud. Use property configurationControl to change.";
+
   if (isLocal) {
     if (JSON.typeof_(root[jprop_configurationControl]) == "string") {
       String ctrl = root[jprop_configurationControl];
@@ -248,9 +260,21 @@ bool Configuration::parse(String data, bool isLocal) {
           ctrl ==
               String(CONFIGURATION_CONTROL_NAME
                          [ConfigurationControl::ConfigurationControlCloud])) {
-        if (ctrl != lasCtrl) {
+        if (ctrl != lastCtrl) {
           jconfig[jprop_configurationControl] = ctrl;
-          changed = true;
+          saveConfig();
+          configLogInfo(String(jprop_configurationControl), lastCtrl,
+                        jconfig[jprop_configurationControl]);
+        }
+
+        /** Return failed if new "configurationControl" new and old is "cloud" */
+        if (ctrl == String(CONFIGURATION_CONTROL_NAME [ConfigurationControl::ConfigurationControlCloud])) {
+          if(ctrl != lastCtrl) {
+            return true;
+          } else {
+            failedMessage = String(msg);
+            return false;
+          }
         }
       } else {
         failedMessage =
@@ -267,18 +291,11 @@ bool Configuration::parse(String data, bool isLocal) {
       }
     }
 
-    if (changed) {
-      changed = false;
-      saveConfig();
-      configLogInfo(String(jprop_configurationControl), lasCtrl,
-                    jconfig[jprop_configurationControl]);
-    }
-
+    /** Ignore all configuration value if 'configurationControl' is 'cloud' */
     if (jconfig[jprop_configurationControl] ==
         String(CONFIGURATION_CONTROL_NAME
                    [ConfigurationControl::ConfigurationControlCloud])) {
-      failedMessage = "Monitor set to accept only configuration from the "
-                      "cloud. Use property configurationControl to change.";
+      failedMessage = String(msg);
       jsonInvalid();
       return false;
     }
@@ -614,15 +631,39 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
-  if (JSON.typeof_(root["targetFirmware"]) == "string") {
-    String newVer = root["targetFirmware"];
-    String curVer = String(GIT_VERSION);
-    if (curVer != newVer) {
-      logInfo("Detected new firmware version: " + newVer);
-      otaNewFirmwareVersion = newVer;
-      udpated = true;
-    } else {
-      otaNewFirmwareVersion = String("");
+  if (JSON.typeof_(root[jprop_monitorDisplayCompensatedValues]) == "boolean") {
+    bool value = root[jprop_monitorDisplayCompensatedValues];
+    bool oldValue = jconfig[jprop_monitorDisplayCompensatedValues];
+    if (value != oldValue) {
+      changed = true;
+      jconfig[jprop_monitorDisplayCompensatedValues] = value;
+
+      configLogInfo(String(jprop_monitorDisplayCompensatedValues),
+                    String(oldValue ? "true" : "false"),
+                    String(value ? "true" : "false"));
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_monitorDisplayCompensatedValues],
+                        "boolean")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_monitorDisplayCompensatedValues), "boolean");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  if (ag->getBoardType() == ONE_INDOOR ||
+      ag->getBoardType() == OPEN_AIR_OUTDOOR) {
+    if (JSON.typeof_(root["targetFirmware"]) == "string") {
+      String newVer = root["targetFirmware"];
+      String curVer = String(GIT_VERSION);
+      if (curVer != newVer) {
+        logInfo("Detected new firmware version: " + newVer);
+        otaNewFirmwareVersion = newVer;
+        udpated = true;
+      } else {
+        otaNewFirmwareVersion = String("");
+      }
     }
   }
 
@@ -1065,12 +1106,16 @@ void Configuration::toConfig(const char *buf) {
   }
 
   if (JSON.typeof_(jconfig[jprop_offlineMode]) != "boolean") {
-    isInvalid = true;
-  } else {
-    isInvalid = false;
+    changed = true;
+    jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   }
-  if (isInvalid) {
-    jconfig[jprop_offlineMode] = false;
+
+  /** Validate monitorDisplayCompensatedValues */
+  if (JSON.typeof_(jconfig[jprop_monitorDisplayCompensatedValues]) !=
+      "boolean") {
+    changed = true;
+    jconfig[jprop_monitorDisplayCompensatedValues] =
+        jprop_monitorDisplayCompensatedValues_default;
   }
 
   if (changed) {
@@ -1154,6 +1199,10 @@ bool Configuration::isLedBarModeChanged(void) {
   bool changed = _ledBarModeChanged;
   _ledBarModeChanged = false;
   return changed;
+}
+
+bool Configuration::isMonitorDisplayCompensatedValues(void) { 
+  return jconfig[jprop_monitorDisplayCompensatedValues];
 }
 
 bool Configuration::isDisplayBrightnessChanged(void) {

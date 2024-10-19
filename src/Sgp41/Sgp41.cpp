@@ -2,6 +2,7 @@
 #include "../Libraries/SensirionSGP41/src/SensirionI2CSgp41.h"
 #include "../Libraries/Sensirion_Gas_Index_Algorithm/src/NOxGasIndexAlgorithm.h"
 #include "../Libraries/Sensirion_Gas_Index_Algorithm/src/VOCGasIndexAlgorithm.h"
+#include "../Main/utils.h"
 
 #define sgpSensor() ((SensirionI2CSgp41 *)(this->_sensor))
 #define vocAlgorithm() ((VOCGasIndexAlgorithm *)(this->_vocAlgorithm))
@@ -66,6 +67,7 @@ bool Sgp41::begin(TwoWire &wire) {
   }
 
   onConditioning = true;
+  _handleFailCount = 0;
 #ifdef ESP32
   /** Create task */
   xTaskCreate(
@@ -104,9 +106,25 @@ void Sgp41::handle(void) {
     } else {
       uint16_t srawVoc, srawNox;
       if (getRawSignal(srawVoc, srawNox)) {
+        tvocRaw = srawVoc;
+        noxRaw = srawNox;
         nox = noxAlgorithm()->process(srawNox);
         tvoc = vocAlgorithm()->process(srawVoc);
+
+        _handleFailCount = 0;
         // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+      } else {
+        if(_handleFailCount < 5) {
+          _handleFailCount++;
+          AgLog("Polling SGP41 failed: %d", _handleFailCount);
+        }
+
+        if (_handleFailCount >= 5) {
+          tvocRaw = utils::getInvalidVOC();
+          tvoc = utils::getInvalidVOC();
+          noxRaw = utils::getInvalidNOx();
+          nox = utils::getInvalidNOx();
+        }
       }
     }
   }
@@ -139,7 +157,21 @@ void Sgp41::_handle(void) {
       noxRaw = srawNox;
       nox = noxAlgorithm()->process(srawNox);
       tvoc = vocAlgorithm()->process(srawVoc);
+
+      _handleFailCount = 0;
       // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
+    } else {
+      if(_handleFailCount < 5) {
+        _handleFailCount++;
+        AgLog("Polling SGP41 failed: %d", _handleFailCount);
+      }
+
+      if (_handleFailCount >= 5) {
+        tvocRaw = utils::getInvalidVOC();
+        tvoc = utils::getInvalidVOC();
+        noxRaw = utils::getInvalidNOx();
+        nox = utils::getInvalidNOx();
+      }
     }
   }
 }
@@ -174,7 +206,7 @@ void Sgp41::end(void) {
  */
 int Sgp41::getTvocIndex(void) {
   if (onConditioning) {
-    return -1;
+    return utils::getInvalidVOC();
   }
   return tvoc;
 }
@@ -186,7 +218,7 @@ int Sgp41::getTvocIndex(void) {
  */
 int Sgp41::getNoxIndex(void) {
   if (onConditioning) {
-    return -1;
+    return utils::getInvalidNOx();
   }
   return nox;
 }

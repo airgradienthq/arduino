@@ -116,6 +116,9 @@ void LedBar::setColor(uint8_t red, uint8_t green, uint8_t blue) {
  */
 void LedBar::show(void) {
   // Ignore update the LED if LED bar disabled
+  if(this->isBegin() == false) {
+    return;
+  }
   if (enabled == false) {
     return;
   }

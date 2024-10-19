@@ -16,7 +16,7 @@ private:
   Measurements &value;
   bool isDisplayOff = false;
 
-  void showTempHum(bool hasStatus);
+  void showTempHum(bool hasStatus, char* buf, int buf_size);
   void setCentralText(int y, String text);
   void setCentralText(int y, const char *text);
 
@@ -36,12 +36,16 @@ public:
   void showDashboard(void);
   void showDashboard(const char *status);
   void setBrightness(int percent);
+#ifdef ESP32
   void showFirmwareUpdateVersion(String version);
   void showFirmwareUpdateProgress(int percent);
   void showFirmwareUpdateSuccess(int count);
   void showFirmwareUpdateFailed(void);
   void showFirmwareUpdateSkipped(void);
   void showFirmwareUpdateUpToDate(void);
+#else
+
+#endif
   void showRebooting(void);
 };
 
