@@ -62,7 +62,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 4000      /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000 /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000 /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60*60*1000)   /** ms */
 
@@ -115,6 +115,7 @@ static void firmwareCheckForUpdate(void);
 static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
+static int calculateMaxPeriod(int updateInterval);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
@@ -165,6 +166,32 @@ void setup() {
 
   /** Init sensor */
   boardInit();
+
+  /* Set max period for each measurement type based on sensor update interval*/
+  if (configuration.hasSensorSHT) {
+    /// Max period for SHT sensors measurements
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+  } else {
+    /// Temp and hum data retrieved from PMS5003T sensor
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  }
+  /// Max period for S8 sensors measurements
+  measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
+  /// Max period for SGP sensors measurements
+  measurements.maxPeriod(Measurements::TVOC, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::TVOCRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOx, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOxRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  /// Max period for PMS sensors measurements
+  measurements.maxPeriod(Measurements::PM25, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM01, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM10, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM03_PC, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
 
   /** Connecting wifi */
   bool connectToWifi = false;
@@ -261,19 +288,6 @@ void setup() {
 
   // Update display and led bar after finishing setup to show dashboard
   updateDisplayAndLedBar();
-
-  // NOTE: This is just a temporary, will do a proper set maximum value based on schedule interval
-  measurements.maxUpdate(Measurements::Temperature, 26);
-  measurements.maxUpdate(Measurements::Humidity, 26);
-  measurements.maxUpdate(Measurements::CO2, 13);
-  measurements.maxUpdate(Measurements::TVOC, 53);
-  measurements.maxUpdate(Measurements::TVOCRaw, 53);
-  measurements.maxUpdate(Measurements::NOx, 53);
-  measurements.maxUpdate(Measurements::NOxRaw, 53);
-  measurements.maxUpdate(Measurements::PM25, 26);
-  measurements.maxUpdate(Measurements::PM01, 26);
-  measurements.maxUpdate(Measurements::PM10, 26);
-  measurements.maxUpdate(Measurements::PM03_PC, 26);
 }
 
 void loop() {
@@ -1154,4 +1168,8 @@ static void tempHumUpdate(void) {
     measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
     Serial.println("SHT read failed");
   }
+}
+
+int calculateMaxPeriod(int updateInterval) {
+  return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.1)) / updateInterval;
 }
