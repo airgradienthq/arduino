@@ -106,11 +106,19 @@ public:
    */
   float getFloat(MeasurementType type, int ch = 1);
 
-  // TODO: update this to using setter
-  int bootCount;
-
+  /**
+   * build json payload for every measurements
+   */
   String toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
                   Configuration &config);
+
+  /**
+   * Set to true if want to debug every update value
+   */
+  void setDebug(bool debug);
+
+  // TODO: update this to use setter
+  int bootCount;
 
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
@@ -125,6 +133,8 @@ private:
   IntegerValue _pm_01[2];
   IntegerValue _pm_10[2];
   IntegerValue _pm_03_pc[2]; // particle count 0.3
+
+  bool _debug = false;
 
   /**
    * @brief Get PMS5003 firmware version string

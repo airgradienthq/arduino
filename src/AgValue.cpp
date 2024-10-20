@@ -132,7 +132,9 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   // Calculate average based on how many elements on the list
   temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
-  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  if (_debug) {
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  }
 
   return true;
 }
@@ -193,7 +195,9 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
 
   // Calculate average based on how many elements on the list
   temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
-  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  if (_debug) {
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  }
 
   return true;
 }
@@ -398,7 +402,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   }
 
   String result = JSON.stringify(root);
-  Serial.printf("\n----\n %s \n-----\n", result.c_str());
+  Serial.printf("\n---- PAYLOAD\n %s \n-----\n", result.c_str());
   return result;
 }
 
@@ -725,3 +729,5 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
   return pms;
 }
+
+void Measurements::setDebug(bool debug) { _debug = debug; }
