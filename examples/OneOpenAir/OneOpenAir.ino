@@ -1094,20 +1094,20 @@ static void updatePm(void) {
     float temp, hum;
     if (newPMS1Value && newPMS2Value) {
       // Both PMS has new valid value
-      temp = (measurements.getFloat(Measurements::Temperature, false, 1) +
-              measurements.getFloat(Measurements::Temperature, false, 2)) /
+      temp = (measurements.getFloat(Measurements::Temperature, 1) +
+              measurements.getFloat(Measurements::Temperature, 2)) /
              2.0f;
-      hum = (measurements.getFloat(Measurements::Humidity, false, 1) +
-             measurements.getFloat(Measurements::Humidity, false, 2)) /
+      hum = (measurements.getFloat(Measurements::Humidity, 1) +
+             measurements.getFloat(Measurements::Humidity, 2)) /
             2.0f;
     } else if (newPMS1Value) {
       // Only PMS1 has new valid value
-      temp = measurements.getFloat(Measurements::Temperature, false, 1);
-      hum = measurements.getFloat(Measurements::Humidity, false, 1);
+      temp = measurements.getFloat(Measurements::Temperature, 1);
+      hum = measurements.getFloat(Measurements::Humidity, 1);
     } else {
       // Only PMS2 has new valid value
-      temp = measurements.getFloat(Measurements::Temperature, false, 2);
-      hum = measurements.getFloat(Measurements::Humidity, false, 2);
+      temp = measurements.getFloat(Measurements::Temperature, 2);
+      hum = measurements.getFloat(Measurements::Humidity, 2);
     }
 
     // Update compensation temperature and humidity for SGP41

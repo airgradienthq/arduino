@@ -12,7 +12,7 @@
  */
 void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
   /** Temperature */
-  float temp = value.getFloat(Measurements::Temperature, false);
+  float temp = value.getFloat(Measurements::Temperature);
   if (utils::isValidTemperature(temp)) {
     float t = 0.0f;
     if (config.isTemperatureUnitInF()) {
@@ -44,7 +44,7 @@ void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
   DISP()->drawUTF8(1, 10, buf);
 
   /** Show humidity */
-  int rhum = (int)value.getFloat(Measurements::Humidity, false);
+  int rhum = (int)value.getFloat(Measurements::Humidity);
   if (utils::isValidHumidity(rhum)) {
     snprintf(buf, buf_size, "%d%%", rhum);
   } else {
@@ -292,7 +292,7 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawUTF8(1, 27, "CO2");
 
       DISP()->setFont(u8g2_font_t0_22b_tf);
-      int co2 = value.get(Measurements::CO2, false);
+      int co2 = value.get(Measurements::CO2);
       if (utils::isValidCO2(co2)) {
         sprintf(strBuf, "%d", co2);
       } else {
@@ -313,11 +313,11 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
-      int pm25 = value.get(Measurements::PM25, false);
+      int pm25 = value.get(Measurements::PM25);
       if (utils::isValidPm(pm25)) {
         /** Compensate PM2.5 value. */
         if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
-          pm25 = ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity, false));
+          pm25 = ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity));
           logInfo("PM2.5 compensate: " + String(pm25));
         }
 
@@ -345,7 +345,7 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(100, 27, "VOC:");
 
       /** Draw tvocIndexvalue */
-      int tvoc = value.get(Measurements::TVOC, false);
+      int tvoc = value.get(Measurements::TVOC);
       if (utils::isValidVOC(tvoc)) {
         sprintf(strBuf, "%d", tvoc);
       } else {
@@ -354,7 +354,7 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(100, 39, strBuf);
 
       /** Draw NOx label */
-      int nox = value.get(Measurements::NOx, false);
+      int nox = value.get(Measurements::NOx);
       DISP()->drawStr(100, 53, "NOx:");
       if (utils::isValidNOx(nox)) {
         sprintf(strBuf, "%d", nox);
@@ -367,7 +367,7 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.clear();
 
     /** Set CO2 */
-    int co2 = value.get(Measurements::CO2, false);
+    int co2 = value.get(Measurements::CO2);
     if (utils::isValidCO2(co2)) {
       snprintf(strBuf, sizeof(strBuf), "CO2:%d", co2);
     } else {
@@ -378,9 +378,9 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setText(strBuf);
 
     /** Set PM */
-    int pm25 = value.get(Measurements::PM25, false);
+    int pm25 = value.get(Measurements::PM25);
     if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
-      pm25 = (int)ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity, false));
+      pm25 = (int)ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity));
     }
 
     ag->display.setCursor(0, 12);
@@ -392,7 +392,7 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setText(strBuf);
 
     /** Set temperature and humidity */
-    float temp = value.getFloat(Measurements::Temperature, false);
+    float temp = value.getFloat(Measurements::Temperature);
     if (utils::isValidTemperature(temp)) {
       if (config.isTemperatureUnitInF()) {
         snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", utils::degreeC_To_F(temp));
@@ -410,7 +410,7 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setCursor(0, 24);
     ag->display.setText(strBuf);
 
-    int rhum = (int)value.getFloat(Measurements::Humidity, false);
+    int rhum = (int)value.getFloat(Measurements::Humidity);
     if (utils::isValidHumidity(rhum)) {
       snprintf(strBuf, sizeof(strBuf), "H:%d %%", rhum);
     } else {
