@@ -4,7 +4,7 @@
 
 #define json_prop_pmFirmware     "firmware"
 
-void Measurements::maxUpdate(MeasurementType type, int max) {
+void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
   case Temperature:
     _temperature[0].update.max = max;

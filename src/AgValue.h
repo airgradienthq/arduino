@@ -58,7 +58,7 @@ public:
    * @param type the target measurement type to set
    * @param max the maximum period length
    */
-  void maxUpdate(MeasurementType, int max);
+  void maxPeriod(MeasurementType, int max);
 
   /**
    * @brief update target measurement type with new value.
