@@ -116,6 +116,7 @@ static void otaHandlerCallback(OtaState state, String mesasge);
 static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 static int calculateMaxPeriod(int updateInterval);
+static void setMeasurementMaxPeriod();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
@@ -166,32 +167,7 @@ void setup() {
 
   /** Init sensor */
   boardInit();
-
-  /* Set max period for each measurement type based on sensor update interval*/
-  if (configuration.hasSensorSHT) {
-    /// Max period for SHT sensors measurements
-    measurements.maxPeriod(Measurements::Temperature,
-                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
-    measurements.maxPeriod(Measurements::Humidity,
-                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
-  } else {
-    /// Temp and hum data retrieved from PMS5003T sensor
-    measurements.maxPeriod(Measurements::Temperature,
-                           calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-    measurements.maxPeriod(Measurements::Humidity, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  }
-  /// Max period for S8 sensors measurements
-  measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
-  /// Max period for SGP sensors measurements
-  measurements.maxPeriod(Measurements::TVOC, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::TVOCRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::NOx, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::NOxRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  /// Max period for PMS sensors measurements
-  measurements.maxPeriod(Measurements::PM25, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM01, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM10, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM03_PC, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  setMeasurementMaxPeriod();
 
   /** Connecting wifi */
   bool connectToWifi = false;
@@ -1167,6 +1143,35 @@ static void tempHumUpdate(void) {
     measurements.update(Measurements::Temperature, utils::getInvalidTemperature());
     measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
     Serial.println("SHT read failed");
+  }
+}
+
+/* Set max period for each measurement type based on sensor update interval*/
+void setMeasurementMaxPeriod() {
+  /// Max period for S8 sensors measurements
+  measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
+  /// Max period for SGP sensors measurements
+  measurements.maxPeriod(Measurements::TVOC, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::TVOCRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOx, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOxRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  /// Max period for PMS sensors measurements
+  measurements.maxPeriod(Measurements::PM25, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM01, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM10, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM03_PC, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  // Temperature and Humidity
+  if (configuration.hasSensorSHT) {
+    /// Max period for SHT sensors measurements
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+  } else {
+    /// Temp and hum data retrieved from PMS5003T sensor
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
   }
 }
 
