@@ -131,8 +131,8 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
   }
 
   // Calculate average based on how many elements on the list
-  temporary->avg = temporary->sumValues / (float)temporary->listValues.size();
-  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->avg);
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
+  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
 
   return true;
 }
@@ -192,8 +192,8 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   }
 
   // Calculate average based on how many elements on the list
-  temporary->avg = temporary->sumValues / (float)temporary->listValues.size();
-  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->avg);
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
+  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
 
   return true;
 }
@@ -254,7 +254,7 @@ int Measurements::get(MeasurementType type, bool average, int ch) {
 
   if (average) {
     // TODO: This now is average value, need to update this
-    return temporary->avg;
+    return temporary->update.avg;
   }
 
   return temporary->listValues.back();
@@ -293,7 +293,7 @@ float Measurements::getFloat(MeasurementType type, bool average, int ch) {
   }
 
   if (average) {
-    return temporary->avg;
+    return temporary->update.avg;
   }
 
   return temporary->listValues.back();
@@ -373,23 +373,23 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   }
 
   // CO2
-  if (config.hasSensorS8 && utils::isValidCO2(_co2.avg)) {
-    root["rco2"] = ag.round2(_co2.avg);
+  if (config.hasSensorS8 && utils::isValidCO2(_co2.update.avg)) {
+    root["rco2"] = ag.round2(_co2.update.avg);
   }
 
   /// TVOx and NOx
   if (config.hasSensorSGP) {
-    if (utils::isValidVOC(_tvoc.avg)) {
-      root["tvocIndex"] = ag.round2(_tvoc.avg);
+    if (utils::isValidVOC(_tvoc.update.avg)) {
+      root["tvocIndex"] = ag.round2(_tvoc.update.avg);
     }
-    if (utils::isValidVOC(_tvoc_raw.avg)) {
-      root["tvocRaw"] = ag.round2(_tvoc_raw.avg);
+    if (utils::isValidVOC(_tvoc_raw.update.avg)) {
+      root["tvocRaw"] = ag.round2(_tvoc_raw.update.avg);
     }
-    if (utils::isValidNOx(_nox.avg)) {
-      root["noxIndex"] = ag.round2(_nox.avg);
+    if (utils::isValidNOx(_nox.update.avg)) {
+      root["noxIndex"] = ag.round2(_nox.update.avg);
     }
-    if (utils::isValidNOx(_nox_raw.avg)) {
-      root["noxRaw"] = ag.round2(_nox_raw.avg);
+    if (utils::isValidNOx(_nox_raw.update.avg)) {
+      root["noxRaw"] = ag.round2(_nox_raw.update.avg);
     }
   }
 
@@ -467,25 +467,25 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
 
   if (config.hasSensorSHT) {
     // Add temperature
-    if (utils::isValidTemperature(_temperature[0].avg)) {
-      indoor["atmp"] = ag.round2(_temperature[0].avg);
+    if (utils::isValidTemperature(_temperature[0].update.avg)) {
+      indoor["atmp"] = ag.round2(_temperature[0].update.avg);
       if (localServer) {
-        indoor["atmpCompensated"] = ag.round2(_temperature[0].avg);
+        indoor["atmpCompensated"] = ag.round2(_temperature[0].update.avg);
       }
     }
     // Add humidity
-    if (utils::isValidHumidity(_humidity[0].avg)) {
-      indoor["rhum"] = ag.round2(_humidity[0].avg);
+    if (utils::isValidHumidity(_humidity[0].update.avg)) {
+      indoor["rhum"] = ag.round2(_humidity[0].update.avg);
       if (localServer) {
-        indoor["rhumCompensated"] = ag.round2(_humidity[0].avg);
+        indoor["rhumCompensated"] = ag.round2(_humidity[0].update.avg);
       }
     }
   }
 
   // Add pm25 compensated value only if PM2.5 and humidity value is valid
-  if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].avg)) {
-    if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].avg)) {
-      int pm25 = ag.pms5003.compensate(_pm_25[0].avg, _humidity[0].avg);
+  if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
+    if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
+      int pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
       if (utils::isValidPm(pm25)) {
         indoor["pm02Compensated"] = pm25;
       }
@@ -507,38 +507,38 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     // Follow array indexing just for get address of the value type
     ch = ch - 1;
 
-    if (utils::isValidPm(_pm_01[ch].avg)) {
-      pms["pm01"] = ag.round2(_pm_01[ch].avg);
+    if (utils::isValidPm(_pm_01[ch].update.avg)) {
+      pms["pm01"] = ag.round2(_pm_01[ch].update.avg);
     }
-    if (utils::isValidPm(_pm_25[ch].avg)) {
-      pms["pm02"] = ag.round2(_pm_25[ch].avg);
+    if (utils::isValidPm(_pm_25[ch].update.avg)) {
+      pms["pm02"] = ag.round2(_pm_25[ch].update.avg);
     }
-    if (utils::isValidPm(_pm_10[ch].avg)) {
-      pms["pm10"] = ag.round2(_pm_10[ch].avg);
+    if (utils::isValidPm(_pm_10[ch].update.avg)) {
+      pms["pm10"] = ag.round2(_pm_10[ch].update.avg);
     }
-    if (utils::isValidPm03Count(_pm_03_pc[ch].avg)) {
-      pms["pm003Count"] = ag.round2(_pm_03_pc[ch].avg);
+    if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
+      pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
     }
 
     if (withTempHum) {
       float _vc;
       // Set temperature if valid
-      if (utils::isValidTemperature(_temperature[ch].avg)) {
-        pms["atmp"] = ag.round2(_temperature[ch].avg);
+      if (utils::isValidTemperature(_temperature[ch].update.avg)) {
+        pms["atmp"] = ag.round2(_temperature[ch].update.avg);
         // Compensate temperature when flag is set
         if (compensate) {
-          _vc = ag.pms5003t_1.compensateTemp(_temperature[ch].avg);
+          _vc = ag.pms5003t_1.compensateTemp(_temperature[ch].update.avg);
           if (utils::isValidTemperature(_vc)) {
             pms["atmpCompensated"] = ag.round2(_vc);
           }
         }
       }
       // Set humidity if valid
-      if (utils::isValidHumidity(_humidity[ch].avg)) {
-        pms["rhum"] = ag.round2(_humidity[ch].avg);
+      if (utils::isValidHumidity(_humidity[ch].update.avg)) {
+        pms["rhum"] = ag.round2(_humidity[ch].update.avg);
         // Compensate relative humidity when flag is set
         if (compensate) {
-          _vc = ag.pms5003t_1.compensateHum(_humidity[ch].avg);
+          _vc = ag.pms5003t_1.compensateHum(_humidity[ch].update.avg);
           if (utils::isValidTemperature(_vc)) {
             pms["rhumCompensated"] = ag.round2(_vc);
           }
@@ -547,10 +547,11 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
       // Add pm25 compensated value only if PM2.5 and humidity value is valid
       if (compensate) {
-        if (utils::isValidPm(_pm_25[ch].avg) && utils::isValidHumidity(_humidity[ch].avg)) {
+        if (utils::isValidPm(_pm_25[ch].update.avg) &&
+            utils::isValidHumidity(_humidity[ch].update.avg)) {
           // Note: the pms5003t object is not matter either for channel 1 or 2, compensate points to
           // the same base function
-          int pm25 = ag.pms5003t_1.compensate(_pm_25[ch].avg, _humidity[ch].avg);
+          int pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
           if (utils::isValidPm(pm25)) {
             pms["pm02Compensated"] = pm25;
           }
@@ -564,139 +565,141 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
   // Handle both channel with average, if one of the channel not valid, use another one
   /// PM01
-  if (utils::isValidPm(_pm_01[0].avg) && utils::isValidPm(_pm_01[1].avg)) {
-    float avg = (_pm_01[0].avg + _pm_01[1].avg) / 2.0f;
+  if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
+    float avg = (_pm_01[0].update.avg + _pm_01[1].update.avg) / 2.0f;
     pms["pm01"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].avg);
-    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].avg);
-  } else if (utils::isValidPm(_pm_01[0].avg)) {
-    pms["pm01"] = ag.round2(_pm_01[0].avg);
-    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].avg);
-  } else if (utils::isValidPm(_pm_01[1].avg)) {
-    pms["pm01"] = ag.round2(_pm_01[1].avg);
-    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].avg);
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
+  } else if (utils::isValidPm(_pm_01[0].update.avg)) {
+    pms["pm01"] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
+  } else if (utils::isValidPm(_pm_01[1].update.avg)) {
+    pms["pm01"] = ag.round2(_pm_01[1].update.avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
   }
 
   /// PM2.5
-  if (utils::isValidPm(_pm_25[0].avg) && utils::isValidPm(_pm_25[1].avg)) {
-    float avg = (_pm_25[0].avg + _pm_25[1].avg) / 2.0f;
+  if (utils::isValidPm(_pm_25[0].update.avg) && utils::isValidPm(_pm_25[1].update.avg)) {
+    float avg = (_pm_25[0].update.avg + _pm_25[1].update.avg) / 2.0f;
     pms["pm02"] = ag.round2(avg);
-    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].avg);
-    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].avg);
-  } else if (utils::isValidPm(_pm_25[0].avg)) {
-    pms["pm02"] = ag.round2(_pm_25[0].avg);
-    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].avg);
-  } else if (utils::isValidPm(_pm_25[1].avg)) {
-    pms["pm02"] = ag.round2(_pm_25[1].avg);
-    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].avg);
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
+  } else if (utils::isValidPm(_pm_25[0].update.avg)) {
+    pms["pm02"] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
+  } else if (utils::isValidPm(_pm_25[1].update.avg)) {
+    pms["pm02"] = ag.round2(_pm_25[1].update.avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
   }
 
   /// PM10
-  if (utils::isValidPm(_pm_10[0].avg) && utils::isValidPm(_pm_10[1].avg)) {
-    float avg = (_pm_10[0].avg + _pm_10[1].avg) / 2.0f;
+  if (utils::isValidPm(_pm_10[0].update.avg) && utils::isValidPm(_pm_10[1].update.avg)) {
+    float avg = (_pm_10[0].update.avg + _pm_10[1].update.avg) / 2.0f;
     pms["pm10"] = ag.round2(avg);
-    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].avg);
-    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].avg);
-  } else if (utils::isValidPm(_pm_10[0].avg)) {
-    pms["pm10"] = ag.round2(_pm_10[0].avg);
-    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].avg);
-  } else if (utils::isValidPm(_pm_10[1].avg)) {
-    pms["pm10"] = ag.round2(_pm_10[1].avg);
-    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].avg);
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
+  } else if (utils::isValidPm(_pm_10[0].update.avg)) {
+    pms["pm10"] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
+  } else if (utils::isValidPm(_pm_10[1].update.avg)) {
+    pms["pm10"] = ag.round2(_pm_10[1].update.avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
   }
 
   /// PM03 particle count
-  if (utils::isValidPm03Count(_pm_03_pc[0].avg) && utils::isValidPm03Count(_pm_03_pc[1].avg)) {
-    float avg = (_pm_03_pc[0].avg + _pm_03_pc[1].avg) / 2.0f;
+  if (utils::isValidPm03Count(_pm_03_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
+    float avg = (_pm_03_pc[0].update.avg + _pm_03_pc[1].update.avg) / 2.0f;
     pms["pm003Count"] = ag.round2(avg);
-    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
-    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
-  } else if (utils::isValidPm(_pm_03_pc[0].avg)) {
-    pms["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
-    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
-  } else if (utils::isValidPm(_pm_03_pc[1].avg)) {
-    pms["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
-    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_03_pc[0].update.avg)) {
+    pms["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_03_pc[1].update.avg)) {
+    pms["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
   }
 
   if (withTempHum) {
     /// Temperature
-    if (utils::isValidTemperature(_temperature[0].avg) &&
-        utils::isValidTemperature(_temperature[1].avg)) {
+    if (utils::isValidTemperature(_temperature[0].update.avg) &&
+        utils::isValidTemperature(_temperature[1].update.avg)) {
 
-      float temperature = (_temperature[0].avg + _temperature[1].avg) / 2.0f;
+      float temperature = (_temperature[0].update.avg + _temperature[1].update.avg) / 2.0f;
       pms["atmp"] = ag.round2(temperature);
-      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].avg);
-      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].avg);
+      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate both temperature channel
         float temp = ag.pms5003t_1.compensateTemp(temperature);
-        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].avg);
-        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].avg);
+        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
+        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
         pms["atmpCompensated"] = ag.round2(temp);
         pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
         pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
       }
 
-    } else if (utils::isValidTemperature(_temperature[0].avg)) {
-      pms["atmp"] = ag.round2(_temperature[0].avg);
-      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].avg);
+    } else if (utils::isValidTemperature(_temperature[0].update.avg)) {
+      pms["atmp"] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
 
       if (compensate) {
         // Compensate channel 1
-        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].avg);
+        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
         pms["atmpCompensated"] = ag.round2(temp1);
         pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
       }
 
-    } else if (utils::isValidTemperature(_temperature[1].avg)) {
-      pms["atmp"] = ag.round2(_temperature[1].avg);
-      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].avg);
+    } else if (utils::isValidTemperature(_temperature[1].update.avg)) {
+      pms["atmp"] = ag.round2(_temperature[1].update.avg);
+      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate channel 2
-        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].avg);
+        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
         pms["atmpCompensated"] = ag.round2(temp2);
         pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
       }
     }
 
     /// Relative humidity
-    if (utils::isValidHumidity(_humidity[0].avg) && utils::isValidHumidity(_humidity[1].avg)) {
-      float humidity = (_humidity[0].avg + _humidity[1].avg) / 2.0f;
+    if (utils::isValidHumidity(_humidity[0].update.avg) &&
+        utils::isValidHumidity(_humidity[1].update.avg)) {
+      float humidity = (_humidity[0].update.avg + _humidity[1].update.avg) / 2.0f;
       pms["rhum"] = ag.round2(humidity);
-      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].avg);
-      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].avg);
+      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate both humidity channel
         float hum = ag.pms5003t_1.compensateHum(humidity);
-        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].avg);
-        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].avg);
+        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
+        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
         pms["rhumCompensated"] = ag.round2(hum);
         pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
         pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
       }
 
-    } else if (utils::isValidHumidity(_humidity[0].avg)) {
-      pms["rhum"] = ag.round2(_humidity[0].avg);
-      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].avg);
+    } else if (utils::isValidHumidity(_humidity[0].update.avg)) {
+      pms["rhum"] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 1
-        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].avg);
+        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
         pms["rhumCompensated"] = ag.round2(hum1);
         pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
       }
 
-    } else if (utils::isValidHumidity(_humidity[1].avg)) {
-      pms["rhum"] = ag.round2(_humidity[1].avg);
-      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].avg);
+    } else if (utils::isValidHumidity(_humidity[1].update.avg)) {
+      pms["rhum"] = ag.round2(_humidity[1].update.avg);
+      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 2
-        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].avg);
+        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
         pms["rhumCompensated"] = ag.round2(hum2);
         pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
       }
@@ -707,12 +710,14 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
       /// First get both channel compensated value
       int pm25_comp1 = utils::getInvalidPmValue();
       int pm25_comp2 = utils::getInvalidPmValue();
-      if (utils::isValidPm(_pm_25[0].avg) && utils::isValidHumidity(_humidity[0].avg)) {
-        pm25_comp1 = ag.pms5003t_1.compensate(_pm_25[0].avg, _humidity[0].avg);
+      if (utils::isValidPm(_pm_25[0].update.avg) &&
+          utils::isValidHumidity(_humidity[0].update.avg)) {
+        pm25_comp1 = ag.pms5003t_1.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
         pms["channels"]["1"]["pm02Compensated"] = pm25_comp1;
       }
-      if (utils::isValidPm(_pm_25[1].avg) && utils::isValidHumidity(_humidity[1].avg)) {
-        pm25_comp2 = ag.pms5003t_2.compensate(_pm_25[1].avg, _humidity[1].avg);
+      if (utils::isValidPm(_pm_25[1].update.avg) &&
+          utils::isValidHumidity(_humidity[1].update.avg)) {
+        pm25_comp2 = ag.pms5003t_2.compensate(_pm_25[1].update.avg, _humidity[1].update.avg);
         pms["channels"]["2"]["pm02Compensated"] = pm25_comp2;
       }
 

@@ -15,13 +15,13 @@ private:
   struct Update {
     int invalidCounter; // Counting on how many invalid value that are passed to update function
     int max;            // Maximum elements on the list
+    float avg;          // Moving average value, updated every update function called
   };
 
   // Reading type for sensor value that outputs float
   struct FloatValue {
     float sumValues; // Total value from each update
     std::vector<float> listValues; // List of update value that are kept
-    float avg;                     // Moving average value, updated every update function called
     Update update;
   };
 
@@ -30,7 +30,6 @@ private:
     unsigned long sumValues; // Total value from each update; unsigned long to accomodate TVOx and
                              // NOx raw data
     std::vector<int> listValues; // List of update value that are kept
-    float avg;                   // Moving average value, updated every update function called
     Update update;
   };
 
