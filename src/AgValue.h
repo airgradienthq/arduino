@@ -14,7 +14,7 @@ private:
   // Generic struct for update indication for respective value
   struct Update {
     int invalidCounter; // Counting on how many invalid value that are passed to update function
-    int max;            // Maximum elements on the list
+    int max;            // Maximum length of the period of the moving average
     float avg;          // Moving average value, updated every update function called
   };
 
@@ -53,60 +53,58 @@ public:
   };
 
   /**
-   * @brief Set each MeasurementType maximum update before calculate the average
+   * @brief Set each MeasurementType maximum period length for moving average
    *
    * @param type the target measurement type to set
-   * @param max the maximum counter
+   * @param max the maximum period length
    */
   void maxUpdate(MeasurementType, int max);
 
   /**
    * @brief update target measurement type with new value.
-   * Each MeasurementType has last raw value and last average that are calculated based on max
-   * number of update. This function is for MeasurementType that use INT as the data type
+   * Each MeasurementType has last raw value and moving average value based on max period
+   * This function is for MeasurementType that use INT as the data type
    *
    * @param type measurement type that will be updated
    * @param val (int) the new value
    * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
-   * @return true if update counter reached and new average value is calculated
-   * @return false otherwise
+   * @return false if new value invalid consecutively reach threshold
+   * @return true otherwise
    */
   bool update(MeasurementType type, int val, int ch = 1);
 
   /**
    * @brief update target measurement type with new value.
-   * Each MeasurementType has last raw value and last average that are calculated based on max
-   * number of update. This function is for MeasurementType that use FLOAT as the data type
+   * Each MeasurementType has last raw value and moving average value based on max period
+   * This function is for MeasurementType that use FLOAT as the data type
    *
    * @param type measurement type that will be updated
    * @param val (float) the new value
    * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
-   * @return true if update counter reached and new average value is calculated
-   * @return false otherwise
+   * @return false if new value invalid consecutively reach threshold
+   * @return true otherwise
    */
   bool update(MeasurementType type, float val, int ch = 1);
 
   /**
-   * @brief Get the target measurement type value
+   * @brief Get the target measurement latest value
    *
    * @param type measurement type that will be retrieve
-   * @param average true if expect last average value, false if expect last update value
    * @param ch target type value channel
    * @return int measurement type value
    */
-  int get(MeasurementType type, bool average = true, int ch = 1);
+  int get(MeasurementType type, int ch = 1);
 
   /**
-   * @brief Get the target measurement type value
+   * @brief Get the target measurement latest value
    *
    * @param type measurement type that will be retrieve
-   * @param average true if expect last average value, false if expect last update value
    * @param ch target type value channel
    * @return float measurement type value
    */
-  float getFloat(MeasurementType type, bool average = true, int ch = 1);
+  float getFloat(MeasurementType type, int ch = 1);
 
   // TODO: update this to using setter
   int bootCount;

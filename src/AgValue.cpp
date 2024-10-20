@@ -198,7 +198,7 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   return true;
 }
 
-int Measurements::get(MeasurementType type, bool average, int ch) {
+int Measurements::get(MeasurementType type, int ch) {
   // Sanity check to validate channel, assert if invalid
   validateChannel(ch);
 
@@ -252,15 +252,10 @@ int Measurements::get(MeasurementType type, bool average, int ch) {
     return 0;
   }
 
-  if (average) {
-    // TODO: This now is average value, need to update this
-    return temporary->update.avg;
-  }
-
   return temporary->listValues.back();
 }
 
-float Measurements::getFloat(MeasurementType type, bool average, int ch) {
+float Measurements::getFloat(MeasurementType type, int ch) {
   // Sanity check to validate channel, assert if invalid
   validateChannel(ch);
 
@@ -290,10 +285,6 @@ float Measurements::getFloat(MeasurementType type, bool average, int ch) {
   if (temporary->listValues.empty()) {
     // Values still empty, return 0
     return 0;
-  }
-
-  if (average) {
-    return temporary->update.avg;
   }
 
   return temporary->listValues.back();
