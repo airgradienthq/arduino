@@ -169,6 +169,9 @@ void setup() {
   boardInit();
   setMeasurementMaxPeriod();
 
+  // Uncomment below line to print every measurements reading update
+  // measurements.setDebug(true);
+
   /** Connecting wifi */
   bool connectToWifi = false;
   if (ag->isOne()) {

@@ -480,9 +480,9 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
   // Add pm25 compensated value only if PM2.5 and humidity value is valid
   if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
     if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
-      int pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
+      float pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
       if (utils::isValidPm(pm25)) {
-        indoor["pm02Compensated"] = pm25;
+        indoor["pm02Compensated"] = ag.round2(pm25);
       }
     }
   }
@@ -546,9 +546,10 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
             utils::isValidHumidity(_humidity[ch].update.avg)) {
           // Note: the pms5003t object is not matter either for channel 1 or 2, compensate points to
           // the same base function
-          int pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
+          // TODO: Need to use compensated humidity?
+          float pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
           if (utils::isValidPm(pm25)) {
-            pms["pm02Compensated"] = pm25;
+            pms["pm02Compensated"] = ag.round2(pm25);
           }
         }
       }
@@ -703,26 +704,26 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     if (compensate) {
       // Add pm25 compensated value
       /// First get both channel compensated value
-      int pm25_comp1 = utils::getInvalidPmValue();
-      int pm25_comp2 = utils::getInvalidPmValue();
+      float pm25_comp1 = utils::getInvalidPmValue();
+      float pm25_comp2 = utils::getInvalidPmValue();
       if (utils::isValidPm(_pm_25[0].update.avg) &&
           utils::isValidHumidity(_humidity[0].update.avg)) {
         pm25_comp1 = ag.pms5003t_1.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
-        pms["channels"]["1"]["pm02Compensated"] = pm25_comp1;
+        pms["channels"]["1"]["pm02Compensated"] = ag.round2(pm25_comp1);
       }
       if (utils::isValidPm(_pm_25[1].update.avg) &&
           utils::isValidHumidity(_humidity[1].update.avg)) {
         pm25_comp2 = ag.pms5003t_2.compensate(_pm_25[1].update.avg, _humidity[1].update.avg);
-        pms["channels"]["2"]["pm02Compensated"] = pm25_comp2;
+        pms["channels"]["2"]["pm02Compensated"] = ag.round2(pm25_comp2);
       }
 
       /// Get average or one of the channel compensated value if only one channel is valid
       if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
         pms["pm02Compensated"] = ag.round2((pm25_comp1 / pm25_comp2) / 2.0f);
       } else if (utils::isValidPm(pm25_comp1)) {
-        pms["pm02Compensated"] = pm25_comp1;
+        pms["pm02Compensated"] = ag.round2(pm25_comp1);
       } else if (utils::isValidPm(pm25_comp2)) {
-        pms["pm02Compensated"] = pm25_comp2;
+        pms["pm02Compensated"] = ag.round2(pm25_comp2);
       }
     }
   }

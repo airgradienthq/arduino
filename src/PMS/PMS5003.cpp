@@ -118,16 +118,14 @@ int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 
 /**
  * @brief Correct PM2.5
- * 
+ *
  * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
- * 
+ *
  * @param pm25 PM2.5 raw value
  * @param humidity Humidity value
- * @return int 
+ * @return compensated value in float
  */
-int PMS5003::compensate(int pm25, float humidity) {
-  return pms.compensate(pm25, humidity);
-}
+float PMS5003::compensate(float pm25, float humidity) { return pms.compensate(pm25, humidity); }
 
 /**
  * @brief Get sensor firmware version
