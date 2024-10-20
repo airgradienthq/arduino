@@ -7,30 +7,30 @@
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 #include "Main/utils.h"
 #include <Arduino.h>
+#include <vector>
 
 class Measurements {
 private:
   // Generic struct for update indication for respective value
   struct Update {
-    int counter; // How many update attempts done
-    int success; // How many update value that actually give valid value
-    int max;     // Maximum update counter before calculating average
+    int invalidCounter; // Counting on how many invalid value that are passed to update function
+    int max;            // Maximum elements on the list
   };
 
   // Reading type for sensor value that outputs float
   struct FloatValue {
-    float lastValue; // Last update value
     float sumValues; // Total value from each update
-    float avg;       // The last average calculation after maximum update attempt reached
+    std::vector<float> listValues; // List of update value that are kept
+    float avg;                     // Moving average value, updated every update function called
     Update update;
   };
 
   // Reading type for sensor value that outputs integer
   struct IntegerValue {
-    int lastValue;           // Last update value
     unsigned long sumValues; // Total value from each update; unsigned long to accomodate TVOx and
                              // NOx raw data
-    int avg;                 // The last average calculation after maximum update attempt reached
+    std::vector<int> listValues; // List of update value that are kept
+    float avg;                   // Moving average value, updated every update function called
     Update update;
   };
 

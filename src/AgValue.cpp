@@ -109,39 +109,32 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
   // Restore channel value for debugging purpose
   ch = ch + 1;
 
-  // Update new value when value provided is not the invalid one
-  if (val != invalidValue) {
-    temporary->lastValue = val;
-    temporary->sumValues = temporary->sumValues + val;
-    temporary->update.success = temporary->update.success + 1;
+  if (val == invalidValue) {
+    temporary->update.invalidCounter++;
+    // TODO: Need to check if its more than threshold, to create some indication. Maybe reference to
+    // max element?
+    return false;
   }
 
-  // Increment update.counter
-  temporary->update.counter = temporary->update.counter + 1;
+  // Reset invalid counter when update new valid value
+  temporary->update.invalidCounter = 0;
 
-  // Calculate value average when maximum set is reached
-  if (temporary->update.counter >= temporary->update.max) {
-    // TODO: Need to check if SUCCESS == 0, what should we do?
-    // Calculate the average
-    temporary->avg = temporary->sumValues / temporary->update.success;
-    Serial.printf("%s{%d} count reached! Average value %d\n", measurementTypeStr(type), ch,
-                  temporary->avg);
-
-    // Notify if there's are invalid value when updating
-    int miss = temporary->update.max - temporary->update.success;
-    if (miss != 0) {
-      Serial.printf("%s{%d} has %d invalid value out of %d update\n", measurementTypeStr(type), ch,
-                    miss, temporary->update.max);
-    }
-
-    // Resets average related variable calculation
-    temporary->sumValues = 0;
-    temporary->update.counter = 0;
-    temporary->update.success = 0;
-    return true;
+  // Add new value to the end of the list
+  temporary->listValues.push_back(val);
+  // Sum the new value
+  temporary->sumValues = temporary->sumValues + val;
+  // Remove the oldest value on the list when the list exceed max elements
+  if (temporary->listValues.size() > temporary->update.max) {
+    auto it = temporary->listValues.begin();
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
   }
 
-  return false;
+  // Calculate average based on how many elements on the list
+  temporary->avg = temporary->sumValues / (float)temporary->listValues.size();
+  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->avg);
+
+  return true;
 }
 
 bool Measurements::update(MeasurementType type, float val, int ch) {
@@ -177,39 +170,32 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   // Restore channel value for debugging purpose
   ch = ch + 1;
 
-  // Update new value when value provided is not the invalid one
-  if (val != invalidValue) {
-    temporary->lastValue = val;
-    temporary->sumValues = temporary->sumValues + val;
-    temporary->update.success = temporary->update.success + 1;
+  if (val == invalidValue) {
+    temporary->update.invalidCounter++;
+    // TODO: Need to check if its more than threshold, to create some indication. Maybe reference to
+    // max element?
+    return false;
   }
 
-  // Increment update.counter
-  temporary->update.counter = temporary->update.counter + 1;
+  // Reset invalid counter when update new valid value
+  temporary->update.invalidCounter = 0;
 
-  // Calculate value average when maximum set is reached
-  if (temporary->update.counter >= temporary->update.max) {
-    // TODO: Need to check if SUCCESS == 0
-    // Calculate the average
-    temporary->avg = temporary->sumValues / temporary->update.success;
-    Serial.printf("%s{%d} count reached! Average value %0.2f\n", measurementTypeStr(type), ch,
-                  temporary->avg);
-
-    // This is just for notifying
-    int miss = temporary->update.max - temporary->update.success;
-    if (miss != 0) {
-      Serial.printf("%s{%d} has %d invalid value out of %d update\n", measurementTypeStr(type), ch,
-                    miss, temporary->update.max);
-    }
-
-    // Resets average related variable calculation
-    temporary->sumValues = 0;
-    temporary->update.counter = 0;
-    temporary->update.success = 0;
-    return true;
+  // Add new value to the end of the list
+  temporary->listValues.push_back(val);
+  // Sum the new value
+  temporary->sumValues = temporary->sumValues + val;
+  // Remove the oldest value on the list when the list exceed max elements
+  if (temporary->listValues.size() > temporary->update.max) {
+    auto it = temporary->listValues.begin();
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
   }
 
-  return false;
+  // Calculate average based on how many elements on the list
+  temporary->avg = temporary->sumValues / (float)temporary->listValues.size();
+  Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->avg);
+
+  return true;
 }
 
 int Measurements::get(MeasurementType type, bool average, int ch) {
@@ -261,11 +247,17 @@ int Measurements::get(MeasurementType type, bool average, int ch) {
     return false;
   }
 
+  if (temporary->listValues.empty()) {
+    // Values still empty, return 0
+    return 0;
+  }
+
   if (average) {
+    // TODO: This now is average value, need to update this
     return temporary->avg;
   }
 
-  return temporary->lastValue;
+  return temporary->listValues.back();
 }
 
 float Measurements::getFloat(MeasurementType type, bool average, int ch) {
@@ -295,11 +287,16 @@ float Measurements::getFloat(MeasurementType type, bool average, int ch) {
     return false;
   }
 
+  if (temporary->listValues.empty()) {
+    // Values still empty, return 0
+    return 0;
+  }
+
   if (average) {
     return temporary->avg;
   }
 
-  return temporary->lastValue;
+  return temporary->listValues.back();
 }
 
 String Measurements::pms5003FirmwareVersion(int fwCode) {
@@ -377,22 +374,22 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   // CO2
   if (config.hasSensorS8 && utils::isValidCO2(_co2.avg)) {
-    root["rco2"] = _co2.avg;
+    root["rco2"] = ag.round2(_co2.avg);
   }
 
   /// TVOx and NOx
   if (config.hasSensorSGP) {
     if (utils::isValidVOC(_tvoc.avg)) {
-      root["tvocIndex"] = _tvoc.avg;
+      root["tvocIndex"] = ag.round2(_tvoc.avg);
     }
     if (utils::isValidVOC(_tvoc_raw.avg)) {
-      root["tvocRaw"] = _tvoc_raw.avg;
+      root["tvocRaw"] = ag.round2(_tvoc_raw.avg);
     }
     if (utils::isValidNOx(_nox.avg)) {
-      root["noxIndex"] = _nox.avg;
+      root["noxIndex"] = ag.round2(_nox.avg);
     }
     if (utils::isValidNOx(_nox_raw.avg)) {
-      root["noxRaw"] = _nox_raw.avg;
+      root["noxRaw"] = ag.round2(_nox_raw.avg);
     }
   }
 
@@ -511,16 +508,16 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     ch = ch - 1;
 
     if (utils::isValidPm(_pm_01[ch].avg)) {
-      pms["pm01"] = _pm_01[ch].avg;
+      pms["pm01"] = ag.round2(_pm_01[ch].avg);
     }
     if (utils::isValidPm(_pm_25[ch].avg)) {
-      pms["pm02"] = _pm_25[ch].avg;
+      pms["pm02"] = ag.round2(_pm_25[ch].avg);
     }
     if (utils::isValidPm(_pm_10[ch].avg)) {
-      pms["pm10"] = _pm_10[ch].avg;
+      pms["pm10"] = ag.round2(_pm_10[ch].avg);
     }
     if (utils::isValidPm03Count(_pm_03_pc[ch].avg)) {
-      pms["pm003Count"] = _pm_03_pc[ch].avg;
+      pms["pm003Count"] = ag.round2(_pm_03_pc[ch].avg);
     }
 
     if (withTempHum) {
@@ -568,58 +565,58 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
   // Handle both channel with average, if one of the channel not valid, use another one
   /// PM01
   if (utils::isValidPm(_pm_01[0].avg) && utils::isValidPm(_pm_01[1].avg)) {
-    float avg = (_pm_01[0].avg + _pm_01[1].avg) / 2;
+    float avg = (_pm_01[0].avg + _pm_01[1].avg) / 2.0f;
     pms["pm01"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01"] = _pm_01[0].avg;
-    pms["channels"]["2"]["pm01"] = _pm_01[1].avg;
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].avg);
   } else if (utils::isValidPm(_pm_01[0].avg)) {
-    pms["pm01"] = _pm_01[0].avg;
-    pms["channels"]["1"]["pm01"] = _pm_01[0].avg;
+    pms["pm01"] = ag.round2(_pm_01[0].avg);
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].avg);
   } else if (utils::isValidPm(_pm_01[1].avg)) {
-    pms["pm01"] = _pm_01[1].avg;
-    pms["channels"]["2"]["pm01"] = _pm_01[1].avg;
+    pms["pm01"] = ag.round2(_pm_01[1].avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].avg);
   }
 
   /// PM2.5
   if (utils::isValidPm(_pm_25[0].avg) && utils::isValidPm(_pm_25[1].avg)) {
     float avg = (_pm_25[0].avg + _pm_25[1].avg) / 2.0f;
     pms["pm02"] = ag.round2(avg);
-    pms["channels"]["1"]["pm02"] = _pm_25[0].avg;
-    pms["channels"]["2"]["pm02"] = _pm_25[1].avg;
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].avg);
   } else if (utils::isValidPm(_pm_25[0].avg)) {
-    pms["pm02"] = _pm_25[0].avg;
-    pms["channels"]["1"]["pm02"] = _pm_25[0].avg;
+    pms["pm02"] = ag.round2(_pm_25[0].avg);
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].avg);
   } else if (utils::isValidPm(_pm_25[1].avg)) {
-    pms["pm02"] = _pm_25[1].avg;
-    pms["channels"]["2"]["pm02"] = _pm_25[1].avg;
+    pms["pm02"] = ag.round2(_pm_25[1].avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].avg);
   }
 
   /// PM10
   if (utils::isValidPm(_pm_10[0].avg) && utils::isValidPm(_pm_10[1].avg)) {
     float avg = (_pm_10[0].avg + _pm_10[1].avg) / 2.0f;
     pms["pm10"] = ag.round2(avg);
-    pms["channels"]["1"]["pm10"] = _pm_10[0].avg;
-    pms["channels"]["2"]["pm10"] = _pm_10[1].avg;
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].avg);
   } else if (utils::isValidPm(_pm_10[0].avg)) {
-    pms["pm10"] = _pm_10[0].avg;
-    pms["channels"]["1"]["pm10"] = _pm_10[0].avg;
+    pms["pm10"] = ag.round2(_pm_10[0].avg);
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].avg);
   } else if (utils::isValidPm(_pm_10[1].avg)) {
-    pms["pm10"] = _pm_10[1].avg;
-    pms["channels"]["2"]["pm10"] = _pm_10[1].avg;
+    pms["pm10"] = ag.round2(_pm_10[1].avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].avg);
   }
 
   /// PM03 particle count
   if (utils::isValidPm03Count(_pm_03_pc[0].avg) && utils::isValidPm03Count(_pm_03_pc[1].avg)) {
     float avg = (_pm_03_pc[0].avg + _pm_03_pc[1].avg) / 2.0f;
     pms["pm003Count"] = ag.round2(avg);
-    pms["channels"]["1"]["pm003Count"] = _pm_03_pc[0].avg;
-    pms["channels"]["2"]["pm003Count"] = _pm_03_pc[1].avg;
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
   } else if (utils::isValidPm(_pm_03_pc[0].avg)) {
-    pms["pm003Count"] = _pm_03_pc[0].avg;
-    pms["channels"]["1"]["pm003Count"] = _pm_03_pc[0].avg;
+    pms["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].avg);
   } else if (utils::isValidPm(_pm_03_pc[1].avg)) {
-    pms["pm003Count"] = _pm_03_pc[1].avg;
-    pms["channels"]["2"]["pm003Count"] = _pm_03_pc[1].avg;
+    pms["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].avg);
   }
 
   if (withTempHum) {
@@ -721,7 +718,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
       /// Get average or one of the channel compensated value if only one channel is valid
       if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
-        pms["pm02Compensated"] = (int)((pm25_comp1 / pm25_comp2) / 2);
+        pms["pm02Compensated"] = ag.round2((pm25_comp1 / pm25_comp2) / 2.0f);
       } else if (utils::isValidPm(pm25_comp1)) {
         pms["pm02Compensated"] = pm25_comp1;
       } else if (utils::isValidPm(pm25_comp2)) {
