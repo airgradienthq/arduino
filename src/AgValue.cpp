@@ -111,9 +111,16 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   if (val == invalidValue) {
     temporary->update.invalidCounter++;
-    // TODO: Need to check if its more than threshold, to create some indication. Maybe reference to
-    // max element?
-    return false;
+    if (temporary->update.invalidCounter >= temporary->update.max) {
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
+                    "to invalid!",
+                    measurementTypeStr(type), ch, temporary->update.max);
+      temporary->update.avg = invalidValue;
+      return false;
+    }
+
+    // Still consider updating value to valid
+    return true;
   }
 
   // Reset invalid counter when update new valid value
@@ -174,9 +181,16 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
 
   if (val == invalidValue) {
     temporary->update.invalidCounter++;
-    // TODO: Need to check if its more than threshold, to create some indication. Maybe reference to
-    // max element?
-    return false;
+    if (temporary->update.invalidCounter >= temporary->update.max) {
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
+                    "to invalid!",
+                    measurementTypeStr(type), ch, temporary->update.max);
+      temporary->update.avg = invalidValue;
+      return false;
+    }
+
+    // Still consider updating value to valid
+    return true;
   }
 
   // Reset invalid counter when update new valid value

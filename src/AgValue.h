@@ -69,7 +69,7 @@ public:
    * @param val (int) the new value
    * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
-   * @return false if new value invalid consecutively reach threshold
+   * @return false if new value invalid consecutively reach threshold (max period)
    * @return true otherwise
    */
   bool update(MeasurementType type, int val, int ch = 1);
@@ -83,7 +83,7 @@ public:
    * @param val (float) the new value
    * @param ch (int) the MeasurementType channel, not every MeasurementType has more than 1 channel.
    * Currently maximum channel is 2. Default: 1 (channel 1)
-   * @return false if new value invalid consecutively reach threshold
+   * @return false if new value invalid consecutively reach threshold (max period)
    * @return true otherwise
    */
   bool update(MeasurementType type, float val, int ch = 1);
