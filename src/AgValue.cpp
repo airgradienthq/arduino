@@ -546,7 +546,6 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
             utils::isValidHumidity(_humidity[ch].update.avg)) {
           // Note: the pms5003t object is not matter either for channel 1 or 2, compensate points to
           // the same base function
-          // TODO: Need to use compensated humidity?
           float pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
           if (utils::isValidPm(pm25)) {
             pms["pm02Compensated"] = ag.round2(pm25);
@@ -719,7 +718,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
       /// Get average or one of the channel compensated value if only one channel is valid
       if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
-        pms["pm02Compensated"] = ag.round2((pm25_comp1 / pm25_comp2) / 2.0f);
+        pms["pm02Compensated"] = ag.round2((pm25_comp1 + pm25_comp2) / 2.0f);
       } else if (utils::isValidPm(pm25_comp1)) {
         pms["pm02Compensated"] = ag.round2(pm25_comp1);
       } else if (utils::isValidPm(pm25_comp2)) {
