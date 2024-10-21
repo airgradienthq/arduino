@@ -39,7 +39,7 @@ public:
   uint8_t getErrorCode(void);
 
   int pm25ToAQI(int pm02);
-  int compensate(int pm25, float humidity);
+  float compensate(float pm25, float humidity);
 
 private:
   static const uint8_t package_size = 32;

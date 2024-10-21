@@ -73,19 +73,30 @@ String OpenMetrics::getPayload(void) {
   int pm03PCount = utils::getInvalidPmValue();
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
+  int tvoc = utils::getInvalidVOC();
+  int tvoc_raw = utils::getInvalidVOC();
+  int nox = utils::getInvalidNOx();
+  int nox_raw = utils::getInvalidNOx();
 
   if (config.hasSensorSHT) {
-    _temp = measure.Temperature;
-    _hum = measure.Humidity;
+    _temp = measure.getFloat(Measurements::Temperature);
+    _hum = measure.getFloat(Measurements::Humidity);
     atmpCompensated = _temp;
     ahumCompensated = _hum;
   }
 
   if (config.hasSensorPMS1) {
-    pm01 = measure.pm01_1;
-    pm25 = measure.pm25_1;
-    pm10 = measure.pm10_1;
-    pm03PCount = measure.pm03PCount_1;
+    pm01 = measure.get(Measurements::PM01);
+    pm25 = measure.get(Measurements::PM25);
+    pm10 = measure.get(Measurements::PM10);
+    pm03PCount = measure.get(Measurements::PM03_PC);
+  }
+
+  if (config.hasSensorSGP) {
+    tvoc = measure.get(Measurements::TVOC);
+    tvoc_raw = measure.get(Measurements::TVOCRaw);
+    nox = measure.get(Measurements::NOx);
+    nox_raw = measure.get(Measurements::NOxRaw);
   }
 
   if (config.hasSensorPMS1) {
@@ -120,33 +131,33 @@ String OpenMetrics::getPayload(void) {
   }
 
   if (config.hasSensorSGP) {
-    if (utils::isValidVOC(measure.TVOC)) {
+    if (utils::isValidVOC(tvoc)) {
       add_metric("tvoc_index",
                  "The processed Total Volatile Organic Compounds (TVOC) index "
                  "as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.TVOC));
+      add_metric_point("", String(tvoc));
     }
-    if (utils::isValidVOC(measure.TVOCRaw)) {
+    if (utils::isValidVOC(tvoc_raw)) {
       add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.TVOCRaw));
+      add_metric_point("", String(tvoc_raw));
     }
-    if (utils::isValidNOx(measure.NOx)) {
+    if (utils::isValidNOx(nox)) {
       add_metric("nox_index",
                  "The processed Nitrous Oxide (NOx) index as measured by the "
                  "AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.NOx));
+      add_metric_point("", String(nox));
     }
-    if (utils::isValidNOx(measure.NOxRaw)) {
+    if (utils::isValidNOx(nox_raw)) {
       add_metric("nox_raw",
                  "The raw input value to the Nitrous Oxide (NOx) index as "
                  "measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.NOxRaw));
+      add_metric_point("", String(nox_raw));
     }
   }
 

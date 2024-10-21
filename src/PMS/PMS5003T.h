@@ -35,7 +35,7 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
-  int compensate(int pm25, float humidity);
+  float compensate(float pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
   bool connected(void);
