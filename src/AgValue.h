@@ -42,14 +42,14 @@ public:
     Temperature,
     Humidity,
     CO2,
-    TVOC,
+    TVOC, // index value
     TVOCRaw,
-    NOx,
+    NOx, // index value
     NOxRaw,
     PM25,
     PM01,
     PM10,
-    PM03_PC,
+    PM03_PC, // Particle count
   };
 
   /**
@@ -125,9 +125,9 @@ private:
   FloatValue _temperature[2];
   FloatValue _humidity[2];
   IntegerValue _co2;
-  IntegerValue _tvoc;
+  IntegerValue _tvoc; // Index value
   IntegerValue _tvoc_raw;
-  IntegerValue _nox;
+  IntegerValue _nox; // Index value
   IntegerValue _nox_raw;
   IntegerValue _pm_25[2];
   IntegerValue _pm_01[2];

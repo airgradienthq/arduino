@@ -89,7 +89,6 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
 static uint32_t factoryBtnPressTime = 0;
-static int getCO2FailCount = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
@@ -324,14 +323,13 @@ void loop() {
 
 static void co2Update(void) {
   if (!configuration.hasSensorS8) {
-    // Device don't have SHT sensor
+    // Device don't have S8 sensor
     return;
   }
 
   int value = ag->s8.getCo2();
   if (utils::isValidCO2(value)) {
     measurements.update(Measurements::CO2, value);
-    // Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
   } else {
     measurements.update(Measurements::CO2, utils::getInvalidCO2());
   }
@@ -996,12 +994,6 @@ static void updateTvoc(void) {
   measurements.update(Measurements::TVOCRaw, ag->sgp41.getTvocRaw());
   measurements.update(Measurements::NOx, ag->sgp41.getNoxIndex());
   measurements.update(Measurements::NOxRaw, ag->sgp41.getNoxRaw());
-
-  // Serial.println();
-  // Serial.printf("TVOC index: %d\r\n", measurements.TVOC);
-  // Serial.printf("TVOC raw: %d\r\n", measurements.TVOCRaw);
-  // Serial.printf("NOx index: %d\r\n", measurements.NOx);
-  // Serial.printf("NOx raw: %d\r\n", measurements.NOxRaw);
 }
 
 static void updatePMS5003() {
@@ -1010,13 +1002,6 @@ static void updatePMS5003() {
     measurements.update(Measurements::PM25, ag->pms5003.getPm25Ae());
     measurements.update(Measurements::PM10, ag->pms5003.getPm10Ae());
     measurements.update(Measurements::PM03_PC, ag->pms5003.getPm03ParticleCount());
-
-    // Serial.println();
-    // Serial.printf("PM1 ug/m3: %d\r\n", measurements.pm01_1);
-    // Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
-    // Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
-    // Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
-    // Serial.printf("PM firmware version: %d\r\n", ag->pms5003.getFirmwareVersion());
   } else {
     measurements.update(Measurements::PM01, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25, utils::getInvalidPmValue());
@@ -1132,11 +1117,6 @@ static void tempHumUpdate(void) {
 
     measurements.update(Measurements::Temperature, temp);
     measurements.update(Measurements::Humidity, rhum);
-
-    // Serial.printf("Temperature in C: %0.2f\n", temp);
-    // Serial.printf("Relative Humidity: %d\n", rhum);
-    // Serial.printf("Temperature compensated in C: %0.2f\n", temp);
-    // Serial.printf("Relative Humidity compensated: %0.2f\n", rhum);
 
     // Update compensation temperature and humidity for SGP41
     if (configuration.hasSensorSGP) {
