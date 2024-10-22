@@ -12,10 +12,15 @@
  */
 class Sht {
 private:
+  const int measureFailedTimeout = 30 * 1000; /** ms */
   BoardType _boardType;
   bool _isBegin = false;
   void *_sensor;
   const BoardDef *_bsp = NULL;
+
+  /** Hold the last call "measure" method by millis() */
+  unsigned int lastMeasureFailed = 0;
+  bool measureFailed = false;
 #if defined(ESP8266)
   Stream *_debugStream = nullptr;
   const char *TAG = "SHT";
