@@ -590,8 +590,30 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     if (utils::isValidPm(_pm_10[ch].update.avg)) {
       pms["pm10"] = ag.round2(_pm_10[ch].update.avg);
     }
+    if (utils::isValidPm(_pm_01_sp[ch].update.avg)) {
+      pms["pm01_sp"] = ag.round2(_pm_01_sp[ch].update.avg);
+    }
+    if (utils::isValidPm(_pm_25_sp[ch].update.avg)) {
+      pms["pm02_sp"] = ag.round2(_pm_25_sp[ch].update.avg);
+    }
+    if (utils::isValidPm(_pm_10_sp[ch].update.avg)) {
+      pms["pm10_sp"] = ag.round2(_pm_10_sp[ch].update.avg);
+    }
     if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
       pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
+    }
+    if (utils::isValidPm03Count(_pm_01_pc[ch].update.avg)) {
+      pms["pm01Count"] = ag.round2(_pm_01_pc[ch].update.avg);
+    }
+    if (utils::isValidPm03Count(_pm_25_pc[ch].update.avg)) {
+      pms["pm02Count"] = ag.round2(_pm_25_pc[ch].update.avg);
+    }
+    if (_pm_10_pc[ch].listValues.empty() == false) {
+      // Only include pm10 count when values available on its list
+      // If not, means no pm10_pc available from the sensor
+      if (utils::isValidPm03Count(_pm_10_pc[ch].update.avg)) {
+        pms["pm10Count"] = ag.round2(_pm_10_pc[ch].update.avg);
+      }
     }
 
     if (withTempHum) {
@@ -637,8 +659,9 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     return pms;
   };
 
-  // Handle both channel with average, if one of the channel not valid, use another one
-  /// PM01
+  /** Handle both channel with average, if one of the channel not valid, use another one */
+
+  /// PM1.0 atmospheric environment
   if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
     float avg = (_pm_01[0].update.avg + _pm_01[1].update.avg) / 2.0f;
     pms["pm01"] = ag.round2(avg);
@@ -652,7 +675,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
   }
 
-  /// PM2.5
+  /// PM2.5 atmospheric environment
   if (utils::isValidPm(_pm_25[0].update.avg) && utils::isValidPm(_pm_25[1].update.avg)) {
     float avg = (_pm_25[0].update.avg + _pm_25[1].update.avg) / 2.0f;
     pms["pm02"] = ag.round2(avg);
@@ -666,7 +689,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
   }
 
-  /// PM10
+  /// PM10 atmospheric environment
   if (utils::isValidPm(_pm_10[0].update.avg) && utils::isValidPm(_pm_10[1].update.avg)) {
     float avg = (_pm_10[0].update.avg + _pm_10[1].update.avg) / 2.0f;
     pms["pm10"] = ag.round2(avg);
@@ -680,7 +703,49 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
   }
 
-  /// PM03 particle count
+  /// PM1.0 standard particle
+  if (utils::isValidPm(_pm_01_sp[0].update.avg) && utils::isValidPm(_pm_01_sp[1].update.avg)) {
+    float avg = (_pm_01_sp[0].update.avg + _pm_01_sp[1].update.avg) / 2.0f;
+    pms["pm01_sp"] = ag.round2(avg);
+    pms["channels"]["1"]["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["2"]["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
+  } else if (utils::isValidPm(_pm_01_sp[0].update.avg)) {
+    pms["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["1"]["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
+  } else if (utils::isValidPm(_pm_01_sp[1].update.avg)) {
+    pms["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms["channels"]["2"]["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
+  }
+
+  /// PM2.5 standard particle
+  if (utils::isValidPm(_pm_25_sp[0].update.avg) && utils::isValidPm(_pm_25_sp[1].update.avg)) {
+    float avg = (_pm_25_sp[0].update.avg + _pm_25_sp[1].update.avg) / 2.0f;
+    pms["pm02_sp"] = ag.round2(avg);
+    pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["2"]["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
+  } else if (utils::isValidPm(_pm_25_sp[0].update.avg)) {
+    pms["pm01_sp"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
+  } else if (utils::isValidPm(_pm_25_sp[1].update.avg)) {
+    pms["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms["channels"]["2"]["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
+  }
+
+  /// PM10 standard particle
+  if (utils::isValidPm(_pm_10_sp[0].update.avg) && utils::isValidPm(_pm_10_sp[1].update.avg)) {
+    float avg = (_pm_10_sp[0].update.avg + _pm_10_sp[1].update.avg) / 2.0f;
+    pms["pm10_sp"] = ag.round2(avg);
+    pms["channels"]["1"]["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["2"]["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
+  } else if (utils::isValidPm(_pm_10_sp[0].update.avg)) {
+    pms["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["1"]["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
+  } else if (utils::isValidPm(_pm_10_sp[1].update.avg)) {
+    pms["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms["channels"]["2"]["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
+  }
+
+  /// PM003 particle count
   if (utils::isValidPm03Count(_pm_03_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
     float avg = (_pm_03_pc[0].update.avg + _pm_03_pc[1].update.avg) / 2.0f;
@@ -694,6 +759,53 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
     pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
   }
+
+  /// PM1.0 particle count
+  if (utils::isValidPm03Count(_pm_01_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
+    float avg = (_pm_01_pc[0].update.avg + _pm_01_pc[1].update.avg) / 2.0f;
+    pms["pm01Count"] = ag.round2(avg);
+    pms["channels"]["1"]["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["2"]["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_01_pc[0].update.avg)) {
+    pms["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["1"]["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_01_pc[1].update.avg)) {
+    pms["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
+    pms["channels"]["2"]["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
+  }
+
+  /// PM2.5 particle count
+  if (utils::isValidPm03Count(_pm_25_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_25_pc[1].update.avg)) {
+    float avg = (_pm_25_pc[0].update.avg + _pm_25_pc[1].update.avg) / 2.0f;
+    pms["pm25Count"] = ag.round2(avg);
+    pms["channels"]["1"]["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["2"]["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_25_pc[0].update.avg)) {
+    pms["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["1"]["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_25_pc[1].update.avg)) {
+    pms["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
+    pms["channels"]["2"]["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
+  }
+
+  // NOTE: No need for particle count 10. When allCh is true, basically monitor using PM5003T, which
+  // don't have PC 10
+  // /// PM10 particle count
+  // if (utils::isValidPm03Count(_pm_10_pc[0].update.avg) &&
+  //     utils::isValidPm03Count(_pm_10_pc[1].update.avg)) {
+  //   float avg = (_pm_10_pc[0].update.avg + _pm_10_pc[1].update.avg) / 2.0f;
+  //   pms["pm10Count"] = ag.round2(avg);
+  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
+  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
+  // } else if (utils::isValidPm(_pm_10_pc[0].update.avg)) {
+  //   pms["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
+  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
+  // } else if (utils::isValidPm(_pm_10_pc[1].update.avg)) {
+  //   pms["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
+  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
+  // }
 
   if (withTempHum) {
     /// Temperature
