@@ -399,20 +399,26 @@ bool PMSBase::validate(const uint8_t *buf) {
 }
 
 void PMSBase::parse(const uint8_t *buf) {
+  // Standard particle
   pms_raw0_1 = toU16(&buf[4]);
   pms_raw2_5 = toU16(&buf[6]);
   pms_raw10 = toU16(&buf[8]);
+  // atmospheric
   pms_pm0_1 = toU16(&buf[10]);
   pms_pm2_5 = toU16(&buf[12]);
   pms_pm10 = toU16(&buf[14]);
+
+  // particle count
   pms_count0_3 = toU16(&buf[16]);
   pms_count0_5 = toU16(&buf[18]);
   pms_count1_0 = toU16(&buf[20]);
   pms_count2_5 = toU16(&buf[22]);
-  pms_count5_0 = toU16(&buf[24]);
-  pms_count10 = toU16(&buf[26]);
-  pms_temp = toU16(&buf[24]);
-  pms_hum = toU16(&buf[26]);
+  pms_count5_0 = toU16(&buf[24]); // PMS5003 only
+  pms_count10 = toU16(&buf[26]);  // PMS5003 only
+
+  // Others
+  pms_temp = toU16(&buf[24]); // PMS5003T only
+  pms_hum = toU16(&buf[26]);  // PMS5003T only
   pms_firmwareVersion = buf[28];
   pms_errorCode = buf[29];
 }
