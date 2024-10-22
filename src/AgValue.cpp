@@ -41,9 +41,33 @@ void Measurements::maxPeriod(MeasurementType type, int max) {
     _pm_10[0].update.max = max;
     _pm_10[1].update.max = max;
     break;
+  case PM01_SP:
+    _pm_01_sp[0].update.max = max;
+    _pm_01_sp[1].update.max = max;
+    break;
+  case PM25_SP:
+    _pm_25_sp[0].update.max = max;
+    _pm_25_sp[1].update.max = max;
+    break;
+  case PM10_SP:
+    _pm_10_sp[0].update.max = max;
+    _pm_10_sp[1].update.max = max;
+    break;
   case PM03_PC:
     _pm_03_pc[0].update.max = max;
     _pm_03_pc[1].update.max = max;
+    break;
+  case PM01_PC:
+    _pm_01_pc[0].update.max = max;
+    _pm_01_pc[1].update.max = max;
+    break;
+  case PM25_PC:
+    _pm_25_pc[0].update.max = max;
+    _pm_25_pc[1].update.max = max;
+    break;
+  case PM10_PC:
+    _pm_10_pc[0].update.max = max;
+    _pm_10_pc[1].update.max = max;
     break;
   };
 }
@@ -91,8 +115,32 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
     temporary = &_pm_10[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
+  case PM01_SP:
+    temporary = &_pm_01_sp[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM25_SP:
+    temporary = &_pm_25_sp[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM10_SP:
+    temporary = &_pm_10_sp[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
   case PM03_PC:
     temporary = &_pm_03_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM01_PC:
+    temporary = &_pm_01_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM25_PC:
+    temporary = &_pm_25_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM10_PC:
+    temporary = &_pm_10_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   default:
@@ -344,16 +392,34 @@ String Measurements::measurementTypeStr(MeasurementType type) {
     str = "NOxRaw";
     break;
   case PM25:
-    str = "PM25";
+    str = "PM25_AE";
     break;
   case PM01:
-    str = "PM01";
+    str = "PM1_AE";
     break;
   case PM10:
-    str = "PM10";
+    str = "PM10_AE";
+    break;
+  case PM25_SP:
+    str = "PM25_SP";
+    break;
+  case PM01_SP:
+    str = "PM1_SP";
+    break;
+  case PM10_SP:
+    str = "PM10_SP";
     break;
   case PM03_PC:
-    str = "PM03";
+    str = "PM003_PC";
+    break;
+  case PM01_PC:
+    str = "PM01_PC";
+    break;
+  case PM25_PC:
+    str = "PM25_PC";
+    break;
+  case PM10_PC:
+    str = "PM10_PC";
     break;
   default:
     break;

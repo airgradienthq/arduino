@@ -1001,12 +1001,24 @@ static void updatePMS5003() {
     measurements.update(Measurements::PM01, ag->pms5003.getPm01Ae());
     measurements.update(Measurements::PM25, ag->pms5003.getPm25Ae());
     measurements.update(Measurements::PM10, ag->pms5003.getPm10Ae());
+    measurements.update(Measurements::PM01_SP, ag->pms5003.getPm01Sp());
+    measurements.update(Measurements::PM25_SP, ag->pms5003.getPm25Sp());
+    measurements.update(Measurements::PM10_SP, ag->pms5003.getPm10Sp());
     measurements.update(Measurements::PM03_PC, ag->pms5003.getPm03ParticleCount());
+    measurements.update(Measurements::PM01_PC, ag->pms5003.getPm01ParticleCount());
+    measurements.update(Measurements::PM25_PC, ag->pms5003.getPm25ParticleCount());
+    measurements.update(Measurements::PM10_PC, ag->pms5003.getPm10ParticleCount());
   } else {
     measurements.update(Measurements::PM01, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25, utils::getInvalidPmValue());
     measurements.update(Measurements::PM10, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue());
     measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_PC, utils::getInvalidPmValue());
   }
 }
 
@@ -1027,18 +1039,28 @@ static void updatePm(void) {
       measurements.update(Measurements::PM01, ag->pms5003t_1.getPm01Ae(), channel);
       measurements.update(Measurements::PM25, ag->pms5003t_1.getPm25Ae(), channel);
       measurements.update(Measurements::PM10, ag->pms5003t_1.getPm10Ae(), channel);
+      measurements.update(Measurements::PM01_SP, ag->pms5003t_1.getPm01Sp(), channel);
+      measurements.update(Measurements::PM25_SP, ag->pms5003t_1.getPm25Sp(), channel);
+      measurements.update(Measurements::PM10_SP, ag->pms5003t_1.getPm10Sp(), channel);
       measurements.update(Measurements::PM03_PC, ag->pms5003t_1.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM01_PC, ag->pms5003t_1.getPm01ParticleCount(), channel);
+      measurements.update(Measurements::PM25_PC, ag->pms5003t_1.getPm25ParticleCount(), channel);
       measurements.update(Measurements::Temperature, ag->pms5003t_1.getTemperature(), channel);
       measurements.update(Measurements::Humidity, ag->pms5003t_1.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
-      newPMS2Value = true;
+      newPMS1Value = true;
     } else {
       // PMS channel 1 now is not connected, update using invalid value
       measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
       measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
     }
@@ -1051,18 +1073,28 @@ static void updatePm(void) {
       measurements.update(Measurements::PM01, ag->pms5003t_2.getPm01Ae(), channel);
       measurements.update(Measurements::PM25, ag->pms5003t_2.getPm25Ae(), channel);
       measurements.update(Measurements::PM10, ag->pms5003t_2.getPm10Ae(), channel);
+      measurements.update(Measurements::PM01_SP, ag->pms5003t_2.getPm01Sp(), channel);
+      measurements.update(Measurements::PM25_SP, ag->pms5003t_2.getPm25Sp(), channel);
+      measurements.update(Measurements::PM10_SP, ag->pms5003t_2.getPm10Sp(), channel);
       measurements.update(Measurements::PM03_PC, ag->pms5003t_2.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM01_PC, ag->pms5003t_2.getPm01ParticleCount(), channel);
+      measurements.update(Measurements::PM25_PC, ag->pms5003t_2.getPm25ParticleCount(), channel);
       measurements.update(Measurements::Temperature, ag->pms5003t_2.getTemperature(), channel);
       measurements.update(Measurements::Humidity, ag->pms5003t_2.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
       newPMS2Value = true;
     } else {
-      // PMS channel channel now is not connected, update using invalid value
+      // PMS channel 2 now is not connected, update using invalid value
       measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
       measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
     }
@@ -1133,18 +1165,31 @@ static void tempHumUpdate(void) {
 
 /* Set max period for each measurement type based on sensor update interval*/
 void setMeasurementMaxPeriod() {
+  int max;
+
   /// Max period for S8 sensors measurements
   measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
+
   /// Max period for SGP sensors measurements
-  measurements.maxPeriod(Measurements::TVOC, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::TVOCRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::NOx, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::NOxRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  max = calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL);
+  measurements.maxPeriod(Measurements::TVOC, max);
+  measurements.maxPeriod(Measurements::TVOCRaw, max);
+  measurements.maxPeriod(Measurements::NOx, max);
+  measurements.maxPeriod(Measurements::NOxRaw, max);
+
   /// Max period for PMS sensors measurements
-  measurements.maxPeriod(Measurements::PM25, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM01, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM10, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-  measurements.maxPeriod(Measurements::PM03_PC, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  max = calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL);
+  measurements.maxPeriod(Measurements::PM25, max);
+  measurements.maxPeriod(Measurements::PM01, max);
+  measurements.maxPeriod(Measurements::PM10, max);
+  measurements.maxPeriod(Measurements::PM25_SP, max);
+  measurements.maxPeriod(Measurements::PM01_SP, max);
+  measurements.maxPeriod(Measurements::PM10_SP, max);
+  measurements.maxPeriod(Measurements::PM03_PC, max);
+  measurements.maxPeriod(Measurements::PM01_PC, max);
+  measurements.maxPeriod(Measurements::PM25_PC, max);
+  measurements.maxPeriod(Measurements::PM10_PC, max);
+
   // Temperature and Humidity
   if (configuration.hasSensorSHT) {
     /// Max period for SHT sensors measurements

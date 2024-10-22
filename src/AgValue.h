@@ -46,10 +46,16 @@ public:
     TVOCRaw,
     NOx, // index value
     NOxRaw,
-    PM25,
-    PM01,
-    PM10,
-    PM03_PC, // Particle count
+    PM01,    // PM1.0 under atmospheric environment
+    PM25,    // PM2.5 under athompheric environment
+    PM10,    // PM10 under atmospheric environment
+    PM01_SP, // PM1.0 standard particle
+    PM25_SP, // PM2.5 standard particle
+    PM10_SP, // PM10 standard particle
+    PM03_PC, // Particle 0.3 count
+    PM01_PC, // Particle 1.0 count
+    PM25_PC, // Particle 2.5 count
+    PM10_PC, // Particle 10 count
   };
 
   /**
@@ -129,10 +135,16 @@ private:
   IntegerValue _tvoc_raw;
   IntegerValue _nox; // Index value
   IntegerValue _nox_raw;
-  IntegerValue _pm_25[2];
-  IntegerValue _pm_01[2];
-  IntegerValue _pm_10[2];
+  IntegerValue _pm_01[2];    // pm 1.0 atmospheric environment
+  IntegerValue _pm_25[2];    // pm 2.5 atmospheric environment
+  IntegerValue _pm_10[2];    // pm 10 atmospheric environment
+  IntegerValue _pm_01_sp[2]; // pm 1.0 standard particle
+  IntegerValue _pm_25_sp[2]; // pm 2.5 standard particle
+  IntegerValue _pm_10_sp[2]; // pm 10 standard particle
   IntegerValue _pm_03_pc[2]; // particle count 0.3
+  IntegerValue _pm_01_pc[2]; // particle count 1.0
+  IntegerValue _pm_25_pc[2]; // particle count 2.5
+  IntegerValue _pm_10_pc[2]; // particle count 10
 
   bool _debug = false;
 
