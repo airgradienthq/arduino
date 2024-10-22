@@ -57,7 +57,7 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   // Define data point source
   IntegerValue *temporary = nullptr;
-  float invalidValue = 0;
+  int invalidValue = 0;
   switch (type) {
   case CO2:
     temporary = &_co2;
@@ -225,7 +225,6 @@ int Measurements::get(MeasurementType type, int ch) {
 
   // Define data point source
   IntegerValue *temporary = nullptr;
-  float invalidValue = 0;
   switch (type) {
   case CO2:
     temporary = &_co2;
