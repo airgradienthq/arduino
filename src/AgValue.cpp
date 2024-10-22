@@ -724,7 +724,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
     pms["channels"]["2"]["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[0].update.avg)) {
-    pms["pm01_sp"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
     pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[1].update.avg)) {
     pms["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);

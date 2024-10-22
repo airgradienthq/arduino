@@ -50,12 +50,18 @@ You get the following response:
 |-----------------------------------|---------|----------------------------------------------------------------------------------------|
 | `serialno`                        | String  | Serial Number of the monitor                                                           |
 | `wifi`                            | Number  | WiFi signal strength                                                                   |
-| `pm01`                            | Number  | PM1 in ug/m3                                                                           |
-| `pm02`                            | Number  | PM2.5 in ug/m3                                                                         |
-| `pm10`                            | Number  | PM10 in ug/m3                                                                          |
+| `pm01`                            | Number  | PM1.0 in ug/m3 (atmospheric environment)                                               |
+| `pm02`                            | Number  | PM2.5 in ug/m3 (atmospheric environment)                                               |
+| `pm10`                            | Number  | PM10 in ug/m3 (atmospheric environment)                                                |
 | `pm02Compensated`                 | Number  | PM2.5 in ug/m3 with correction applied (from fw version 3.1.4 onwards)                 |
+| `pm01_sp`                         | Number  | PM1.0 in ug/m3 (standard particle)                                                     |
+| `pm02_sp`                         | Number  | PM2.5 in ug/m3 (standard particle)                                                     |
+| `pm10_sp`                         | Number  | PM10 in ug/m3 (standard particle)                                                      |
 | `rco2`                            | Number  | CO2 in ppm                                                                             |
-| `pm003Count`                      | Number  | Particle count per dL                                                                  |
+| `pm003Count`                      | Number  | Particle count 0.3um per dL                                                            |
+| `pm01Count`                       | Number  | Particle count 1.0um per dL                                                            |
+| `pm25Count`                       | Number  | Particle count 2.5um per dL                                                            |
+| `pm10Count`                       | Number  | Particle count 10um per dL                                                             |
 | `atmp`                            | Number  | Temperature in Degrees Celsius                                                         |
 | `atmpCompensated`                 | Number  | Temperature in Degrees Celsius with correction applied                                 |
 | `rhum`                            | Number  | Relative Humidity                                                                      |
