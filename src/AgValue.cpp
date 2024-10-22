@@ -1,414 +1,746 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
-#include "Main/utils.h"
-#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
 #define json_prop_pmFirmware     "firmware"
 
-/**
- * @brief Get PMS5003 firmware version string
- * 
- * @param fwCode 
- * @return String
- */
+void Measurements::maxPeriod(MeasurementType type, int max) {
+  switch (type) {
+  case Temperature:
+    _temperature[0].update.max = max;
+    _temperature[1].update.max = max;
+    break;
+  case Humidity:
+    _humidity[0].update.max = max;
+    _humidity[1].update.max = max;
+    break;
+  case CO2:
+    _co2.update.max = max;
+    break;
+  case TVOC:
+    _tvoc.update.max = max;
+    break;
+  case TVOCRaw:
+    _tvoc_raw.update.max = max;
+    break;
+  case NOx:
+    _nox.update.max = max;
+    break;
+  case NOxRaw:
+    _nox_raw.update.max = max;
+    break;
+  case PM25:
+    _pm_25[0].update.max = max;
+    _pm_25[1].update.max = max;
+    break;
+  case PM01:
+    _pm_01[0].update.max = max;
+    _pm_01[1].update.max = max;
+    break;
+  case PM10:
+    _pm_10[0].update.max = max;
+    _pm_10[1].update.max = max;
+    break;
+  case PM03_PC:
+    _pm_03_pc[0].update.max = max;
+    _pm_03_pc[1].update.max = max;
+    break;
+  };
+}
+
+bool Measurements::update(MeasurementType type, int val, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source
+  IntegerValue *temporary = nullptr;
+  int invalidValue = 0;
+  switch (type) {
+  case CO2:
+    temporary = &_co2;
+    invalidValue = utils::getInvalidCO2();
+    break;
+  case TVOC:
+    temporary = &_tvoc;
+    invalidValue = utils::getInvalidVOC();
+    break;
+  case TVOCRaw:
+    temporary = &_tvoc_raw;
+    invalidValue = utils::getInvalidVOC();
+    break;
+  case NOx:
+    temporary = &_nox;
+    invalidValue = utils::getInvalidNOx();
+    break;
+  case NOxRaw:
+    temporary = &_nox_raw;
+    invalidValue = utils::getInvalidNOx();
+    break;
+  case PM25:
+    temporary = &_pm_25[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM01:
+    temporary = &_pm_01[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM10:
+    temporary = &_pm_10[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM03_PC:
+    temporary = &_pm_03_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  default:
+    break;
+  };
+
+  // Sanity check if measurement type is defined for integer data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  // Restore channel value for debugging purpose
+  ch = ch + 1;
+
+  if (val == invalidValue) {
+    temporary->update.invalidCounter++;
+    if (temporary->update.invalidCounter >= temporary->update.max) {
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
+                    "to invalid!",
+                    measurementTypeStr(type), ch, temporary->update.max);
+      temporary->update.avg = invalidValue;
+      return false;
+    }
+
+    // Still consider updating value to valid
+    return true;
+  }
+
+  // Reset invalid counter when update new valid value
+  temporary->update.invalidCounter = 0;
+
+  // Add new value to the end of the list
+  temporary->listValues.push_back(val);
+  // Sum the new value
+  temporary->sumValues = temporary->sumValues + val;
+  // Remove the oldest value on the list when the list exceed max elements
+  if (temporary->listValues.size() > temporary->update.max) {
+    auto it = temporary->listValues.begin();
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
+  }
+
+  // Calculate average based on how many elements on the list
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
+  if (_debug) {
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  }
+
+  return true;
+}
+
+bool Measurements::update(MeasurementType type, float val, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source
+  FloatValue *temporary = nullptr;
+  float invalidValue = 0;
+  switch (type) {
+  case Temperature:
+    temporary = &_temperature[ch];
+    invalidValue = utils::getInvalidTemperature();
+    break;
+  case Humidity:
+    temporary = &_humidity[ch];
+    invalidValue = utils::getInvalidHumidity();
+    break;
+  default:
+    break;
+  }
+
+  // Sanity check if measurement type is defined for float data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  // Restore channel value for debugging purpose
+  ch = ch + 1;
+
+  if (val == invalidValue) {
+    temporary->update.invalidCounter++;
+    if (temporary->update.invalidCounter >= temporary->update.max) {
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
+                    "to invalid!",
+                    measurementTypeStr(type), ch, temporary->update.max);
+      temporary->update.avg = invalidValue;
+      return false;
+    }
+
+    // Still consider updating value to valid
+    return true;
+  }
+
+  // Reset invalid counter when update new valid value
+  temporary->update.invalidCounter = 0;
+
+  // Add new value to the end of the list
+  temporary->listValues.push_back(val);
+  // Sum the new value
+  temporary->sumValues = temporary->sumValues + val;
+  // Remove the oldest value on the list when the list exceed max elements
+  if (temporary->listValues.size() > temporary->update.max) {
+    auto it = temporary->listValues.begin();
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
+  }
+
+  // Calculate average based on how many elements on the list
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
+  if (_debug) {
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+  }
+
+  return true;
+}
+
+int Measurements::get(MeasurementType type, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source
+  IntegerValue *temporary = nullptr;
+  switch (type) {
+  case CO2:
+    temporary = &_co2;
+    break;
+  case TVOC:
+    temporary = &_tvoc;
+    break;
+  case TVOCRaw:
+    temporary = &_tvoc_raw;
+    break;
+  case NOx:
+    temporary = &_nox;
+    break;
+  case NOxRaw:
+    temporary = &_nox_raw;
+    break;
+  case PM25:
+    temporary = &_pm_25[ch];
+    break;
+  case PM01:
+    temporary = &_pm_01[ch];
+    break;
+  case PM10:
+    temporary = &_pm_10[ch];
+    break;
+  case PM03_PC:
+    temporary = &_pm_03_pc[ch];
+    break;
+  default:
+    break;
+  };
+
+  // Sanity check if measurement type is defined for integer data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  if (temporary->listValues.empty()) {
+    // Values still empty, return 0
+    return 0;
+  }
+
+  return temporary->listValues.back();
+}
+
+float Measurements::getFloat(MeasurementType type, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source
+  FloatValue *temporary = nullptr;
+  switch (type) {
+  case Temperature:
+    temporary = &_temperature[ch];
+    break;
+  case Humidity:
+    temporary = &_humidity[ch];
+    break;
+  default:
+    break;
+  }
+
+  // Sanity check if measurement type is defined for float data type or not
+  if (temporary == nullptr) {
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type));
+    // TODO: Just assert?
+    return false;
+  }
+
+  if (temporary->listValues.empty()) {
+    // Values still empty, return 0
+    return 0;
+  }
+
+  return temporary->listValues.back();
+}
+
 String Measurements::pms5003FirmwareVersion(int fwCode) {
   return pms5003FirmwareVersionBase("PMS5003x", fwCode);
 }
 
-/**
- * @brief Get PMS5003T firmware version string
- * 
- * @param fwCode 
- * @return String
- */
 String Measurements::pms5003TFirmwareVersion(int fwCode) {
   return pms5003FirmwareVersionBase("PMS5003x", fwCode);
 }
 
-/**
- * @brief Get firmware version string
- * 
- * @param prefix Prefix firmware string
- * @param fwCode Version code
- * @return string 
- */
 String Measurements::pms5003FirmwareVersionBase(String prefix, int fwCode) {
   return prefix + String("-") + String(fwCode);
 }
 
-String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
-                              void *_ag, void *_config) {
-  AirGradient *ag = (AirGradient *)_ag;
-  Configuration *config = (Configuration *)_config;
+String Measurements::measurementTypeStr(MeasurementType type) {
+  String str;
+  switch (type) {
+  case Temperature:
+    str = "Temperature";
+    break;
+  case Humidity:
+    str = "Humidity";
+    break;
+  case CO2:
+    str = "CO2";
+    break;
+  case TVOC:
+    str = "TVOC";
+    break;
+  case TVOCRaw:
+    str = "TVOCRaw";
+    break;
+  case NOx:
+    str = "NOx";
+    break;
+  case NOxRaw:
+    str = "NOxRaw";
+    break;
+  case PM25:
+    str = "PM25";
+    break;
+  case PM01:
+    str = "PM01";
+    break;
+  case PM10:
+    str = "PM10";
+    break;
+  case PM03_PC:
+    str = "PM03";
+    break;
+  default:
+    break;
+  };
 
+  return str;
+}
+
+void Measurements::validateChannel(int ch) {
+  if (ch != 1 && ch != 2) {
+    Serial.printf("ERROR! Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
+    delay(1000);
+    assert(0);
+  }
+}
+
+String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
+                              Configuration &config) {
   JSONVar root;
-  root["wifi"] = rssi;
-  if (localServer) {
-    root["serialno"] = ag->deviceId();
-  }
 
-  if (config->hasSensorS8 && utils::isValidCO2(this->CO2)) {
-    root["rco2"] = this->CO2;
-  }
-
-  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
-    if (config->hasSensorPMS1) {
-      if (utils::isValidPm(this->pm01_1)) {
-        root["pm01"] = this->pm01_1;
-      }
-      if (utils::isValidPm(this->pm25_1)) {
-        root["pm02"] = this->pm25_1;
-      }
-      if (utils::isValidPm(this->pm10_1)) {
-        root["pm10"] = this->pm10_1;
-      }
-      if (utils::isValidPm03Count(this->pm03PCount_1)) {
-        root["pm003Count"] = this->pm03PCount_1;
-      }
-      if (!localServer) {
-
-        root[json_prop_pmFirmware] =
-            this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
-      }
-    }
-
-    if (config->hasSensorSHT) {
-      if (utils::isValidTemperature(this->Temperature)) {
-        root["atmp"] = ag->round2(this->Temperature);
-        if (localServer) {
-          root["atmpCompensated"] = ag->round2(this->Temperature);
-        }
-      }
-      if (utils::isValidHumidity(this->Humidity)) {
-        root["rhum"] = this->Humidity;
-        if (localServer) {
-          root["rhumCompensated"] = this->Humidity;
-        }
-      }
-    }
-
-    if (config->hasSensorSHT && config->hasSensorPMS1) {
-      int pm25 = ag->pms5003.compensate(this->pm25_1, this->Humidity);
-      if (pm25 >= 0) {
-        root["pm02Compensated"] = pm25;
-      }
-    }
-
+  if (ag.isOne() || (ag.isPro4_2()) || ag.isPro3_3() || ag.isBasic()) {
+    root = buildIndoor(localServer, ag, config);
   } else {
-    if (config->hasSensorPMS1 && config->hasSensorPMS2) {
-      if (utils::isValidPm(this->pm01_1) && utils::isValidPm(this->pm01_2)) {
-        root["pm01"] = ag->round2((this->pm01_1 + this->pm01_2) / 2.0f);
-      }
-      if (utils::isValidPm(this->pm25_1) && utils::isValidPm(this->pm25_2)) {
-        root["pm02"] = ag->round2((this->pm25_1 + this->pm25_2) / 2.0f);
-      }
-      if (utils::isValidPm(this->pm10_1) && utils::isValidPm(this->pm10_2)) {
-        root["pm10"] = ag->round2((this->pm10_1 + this->pm10_2) / 2.0f);
-      }
-      if (utils::isValidPm(this->pm03PCount_1) && utils::isValidPm(this->pm03PCount_2)) {
-        root["pm003Count"] = ag->round2((this->pm03PCount_1 + this->pm03PCount_2) / 2.0f);
-      }
+    root = buildOutdoor(localServer, fwMode, ag, config);
+  }
 
-      float val;
-      if (utils::isValidTemperature(this->temp_1) && utils::isValidTemperature(this->temp_1)) {
-        root["atmp"] = ag->round2((this->temp_1 + this->temp_2) / 2.0f);
-        if (localServer) {
-          val = ag->pms5003t_2.compensateTemp((this->temp_1 + this->temp_2) / 2.0f);
-          if (utils::isValidTemperature(val)) {
-            root["atmpCompensated"] = ag->round2(val);
-          }
-        }
-      }
-      if (utils::isValidHumidity(this->hum_1) && utils::isValidHumidity(this->hum_1)) {
-        root["rhum"] = ag->round2((this->hum_1 + this->hum_2) / 2.0f);
-        if (localServer) {
-          val = ag->pms5003t_2.compensateHum((this->hum_1 + this->hum_2) / 2.0f);
-          if (utils::isValidHumidity(val)) {
-            root["rhumCompensated"] = (int)val;
-          }
-        }
-      }
+  // CO2
+  if (config.hasSensorS8 && utils::isValidCO2(_co2.update.avg)) {
+    root["rco2"] = ag.round2(_co2.update.avg);
+  }
 
-      int pm25 = (ag->pms5003t_1.compensate(this->pm25_1, this->hum_1) +
-                  ag->pms5003t_2.compensate(this->pm25_2, this->hum_2)) /
-                 2;
-      root["pm02Compensated"] = pm25;
+  /// TVOx and NOx
+  if (config.hasSensorSGP) {
+    if (utils::isValidVOC(_tvoc.update.avg)) {
+      root["tvocIndex"] = ag.round2(_tvoc.update.avg);
     }
-
-    if (fwMode == FW_MODE_O_1PS || fwMode == FW_MODE_O_1PST) {
-      float val;
-      if (config->hasSensorPMS1) {
-        if (utils::isValidPm(this->pm01_1)) {
-          root["pm01"] = this->pm01_1;
-        }
-        if (utils::isValidPm(this->pm25_1)) {
-          root["pm02"] = this->pm25_1;
-        }
-        if (utils::isValidPm(this->pm10_1)) {
-          root["pm10"] = this->pm10_1;
-        }
-        if (utils::isValidPm03Count(this->pm03PCount_1)) {
-          root["pm003Count"] = this->pm03PCount_1;
-        }
-        if (utils::isValidTemperature(this->temp_1)) {
-          root["atmp"] = ag->round2(this->temp_1);
-
-          if (localServer) {
-            val = ag->pms5003t_1.compensateTemp(this->temp_1);
-            if (utils::isValidTemperature(val)) {
-              root["atmpCompensated"] = ag->round2(val);
-            }
-          }
-        }
-        if (utils::isValidHumidity(this->hum_1)) {
-          root["rhum"] = this->hum_1;
-
-          if (localServer) {
-            val = ag->pms5003t_1.compensateHum(this->hum_1);
-            if (utils::isValidHumidity(val)) {
-              root["rhumCompensated"] = (int)val;
-            }
-          }
-        }
-        root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
-        if (!localServer) {
-          root[json_prop_pmFirmware] =
-              pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
-        }
-      }
-      if (config->hasSensorPMS2) {
-        if(utils::isValidPm(this->pm01_2)) {
-          root["pm01"] = this->pm01_2;
-        }
-        if(utils::isValidPm(this->pm25_2)) {
-          root["pm02"] = this->pm25_2;
-        }
-        if(utils::isValidPm(this->pm10_2)) {
-          root["pm10"] = this->pm10_2;
-        }
-        if(utils::isValidPm03Count(this->pm03PCount_2)) {
-          root["pm003Count"] = this->pm03PCount_2;
-        }
-
-        float val;
-        if (utils::isValidTemperature(this->temp_2)) {
-          root["atmp"] = ag->round2(this->temp_2);
-
-          if (localServer) {
-            val = ag->pms5003t_2.compensateTemp(this->temp_2);
-            if (utils::isValidTemperature(val)) {
-              root["atmpCompensated"] = ag->round2(val);
-            }
-          }
-        }
-        if(utils::isValidHumidity(this->hum_2)) {
-          root["rhum"] = this->hum_2;
-
-          if (localServer) {
-            val = ag->pms5003t_2.compensateHum(this->hum_2);
-            if (utils::isValidHumidity(val)) {
-              root["rhumCompensated"] = (int)val;
-            }
-          }
-        }
-        root["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->hum_2);
-        if(!localServer) {
-          root[json_prop_pmFirmware] =
-              pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
-        }
-      }
-    } else {
-      if (fwMode == FW_MODE_O_1P) {
-        float val;
-        if (config->hasSensorPMS1) {
-          if (utils::isValidPm(this->pm01_1)) {
-            root["pm01"] = this->pm01_1;
-          }
-          if (utils::isValidPm(this->pm25_1)) {
-            root["pm02"] = this->pm25_1;
-          }
-          if (utils::isValidPm(this->pm10_1)) {
-            root["pm10"] = this->pm10_1;
-          }
-          if (utils::isValidPm03Count(this->pm03PCount_1)) {
-            root["pm003Count"] = this->pm03PCount_1;
-          }
-          if (utils::isValidTemperature(this->temp_1)) {
-            root["atmp"] = ag->round2(this->temp_1);
-
-            if (localServer) {
-              val = ag->pms5003t_1.compensateTemp(this->temp_1);
-              if (utils::isValidTemperature(val)) {
-                root["atmpCompensated"] = ag->round2(val);
-              }
-            }
-          }
-          if (utils::isValidHumidity(this->hum_1)) {
-            root["rhum"] = this->hum_1;
-            if(localServer) {
-              val = ag->pms5003t_1.compensateHum(this->hum_1);
-              if(utils::isValidHumidity(val)) {
-                root["rhumCompensated"] = (int)val;
-              }
-            }
-          }
-          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
-          if(!localServer) {
-            root[json_prop_pmFirmware] =
-                pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
-          }
-        } else if (config->hasSensorPMS2) {
-          if(utils::isValidPm(this->pm01_2)) {
-            root["pm01"] = this->pm01_2;
-          }
-          if(utils::isValidPm(this->pm25_2)) {
-            root["pm02"] = this->pm25_2;
-          }
-          if(utils::isValidPm(this->pm10_2)) {
-            root["pm10"] = this->pm10_2;
-          }
-          if(utils::isValidPm03Count(this->pm03PCount_2)) {
-            root["pm003Count"] = this->pm03PCount_2;
-          }
-          if (utils::isValidTemperature(this->temp_2)) {
-            root["atmp"] = ag->round2(this->temp_2);
-            if (localServer) {
-
-              val = ag->pms5003t_1.compensateTemp(this->temp_2);
-              if (utils::isValidTemperature(val)) {
-                root["atmpCompensated"] = ag->round2(val);
-              }
-            }
-          }
-          if (utils::isValidHumidity(this->hum_2)) {
-            root["rhum"] = this->hum_2;
-
-            if(localServer) {
-              val = ag->pms5003t_1.compensateHum(this->hum_2);
-              if(utils::isValidHumidity(val)) {
-                root["rhumCompensated"] = (int)val;
-              }
-            }
-          }
-          root["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
-          if(!localServer) {
-            root[json_prop_pmFirmware] =
-                pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
-          }
-        }
-      } else {
-        float val;
-        if (config->hasSensorPMS1) {
-          if(utils::isValidPm(this->pm01_1)) {
-            root["channels"]["1"]["pm01"] = this->pm01_1;
-          }
-          if(utils::isValidPm(this->pm25_1)) {
-            root["channels"]["1"]["pm02"] = this->pm25_1;
-          }
-          if(utils::isValidPm(this->pm10_1)) {
-            root["channels"]["1"]["pm10"] = this->pm10_1;
-          }
-          if (utils::isValidPm03Count(this->pm03PCount_1)) {
-            root["channels"]["1"]["pm003Count"] = this->pm03PCount_1;
-          }
-          if(utils::isValidTemperature(this->temp_1)) {
-            root["channels"]["1"]["atmp"] = ag->round2(this->temp_1);
-
-            if (localServer) {
-              val = ag->pms5003t_1.compensateTemp(this->temp_1);
-              if (utils::isValidTemperature(val)) {
-                root["channels"]["1"]["atmpCompensated"] = ag->round2(val);
-              }
-            }
-          }
-          if (utils::isValidHumidity(this->hum_1)) {
-            root["channels"]["1"]["rhum"] = this->hum_1;
-
-            if (localServer) {
-              val = ag->pms5003t_1.compensateHum(this->hum_1);
-              if (utils::isValidHumidity(val)) {
-                root["channels"]["1"]["rhumCompensated"] = (int)val;
-              }
-            }
-          }
-          root["channels"]["1"]["pm02Compensated"] = ag->pms5003t_1.compensate(this->pm25_1, this->hum_1);
-        
-          // PMS5003T version
-          if(!localServer) {
-            root["channels"]["1"][json_prop_pmFirmware] =
-                pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
-          }
-        }
-        if (config->hasSensorPMS2) {
-          float val;
-          if (utils::isValidPm(this->pm01_2)) {
-            root["channels"]["2"]["pm01"] = this->pm01_2;
-          }
-          if (utils::isValidPm(this->pm25_2)) {
-            root["channels"]["2"]["pm02"] = this->pm25_2;
-          }
-          if (utils::isValidPm(this->pm10_2)) {
-            root["channels"]["2"]["pm10"] = this->pm10_2;
-          }
-          if (utils::isValidPm03Count(this->pm03PCount_2)) {
-            root["channels"]["2"]["pm003Count"] = this->pm03PCount_2;
-          }
-          if (utils::isValidTemperature(this->temp_2)) {
-            root["channels"]["2"]["atmp"] = ag->round2(this->temp_2);
-
-            if (localServer) {
-              val = ag->pms5003t_1.compensateTemp(this->temp_2);
-              if (utils::isValidTemperature(val)) {
-                root["channels"]["2"]["atmpCompensated"] = ag->round2(val);
-              }
-            }
-          }
-          if (utils::isValidHumidity(this->hum_2)) {
-            root["channels"]["2"]["rhum"] = this->hum_2;
-
-            if (localServer) {
-              val = ag->pms5003t_1.compensateHum(this->hum_2);
-              if (utils::isValidHumidity(val)) {
-                root["channels"]["2"]["rhumCompensated"] = (int)val;
-              }
-            }
-          }
-          root["channels"]["2"]["pm02Compensated"] = ag->pms5003t_2.compensate(this->pm25_2, this->hum_2);
-          // PMS5003T version
-          if(!localServer) {
-            root["channels"]["2"][json_prop_pmFirmware] =
-                pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
-          }
-        }
-      }
+    if (utils::isValidVOC(_tvoc_raw.update.avg)) {
+      root["tvocRaw"] = ag.round2(_tvoc_raw.update.avg);
+    }
+    if (utils::isValidNOx(_nox.update.avg)) {
+      root["noxIndex"] = ag.round2(_nox.update.avg);
+    }
+    if (utils::isValidNOx(_nox_raw.update.avg)) {
+      root["noxRaw"] = ag.round2(_nox_raw.update.avg);
     }
   }
 
-  if (config->hasSensorSGP) {
-    if (utils::isValidVOC(this->TVOC)) {
-      root["tvocIndex"] = this->TVOC;
-    }
-    if (utils::isValidVOC(this->TVOCRaw)) {
-      root["tvocRaw"] = this->TVOCRaw;
-    }
-    if (utils::isValidNOx(this->NOx)) {
-      root["noxIndex"] = this->NOx;
-    }
-    if (utils::isValidNOx(this->NOxRaw)) {
-      root["noxRaw"] = this->NOxRaw;
-    }
-  }
   root["boot"] = bootCount;
   root["bootCount"] = bootCount;
+  root["wifi"] = rssi;
 
   if (localServer) {
-    if (ag->isOne()) {
-      root["ledMode"] = config->getLedBarModeName();
+    if (ag.isOne()) {
+      root["ledMode"] = config.getLedBarModeName();
     }
-    root["firmware"] = ag->getVersion();
+    root["serialno"] = ag.deviceId();
+    root["firmware"] = ag.getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
   }
 
-  return JSON.stringify(root);
+  String result = JSON.stringify(root);
+  Serial.printf("\n---- PAYLOAD\n %s \n-----\n", result.c_str());
+  return result;
 }
+
+JSONVar Measurements::buildOutdoor(bool localServer, AgFirmwareMode fwMode, AirGradient &ag,
+                                   Configuration &config) {
+  JSONVar outdoor;
+  if (fwMode == FW_MODE_O_1P || fwMode == FW_MODE_O_1PS || fwMode == FW_MODE_O_1PST) {
+    // buildPMS params:
+    /// Because only have 1 PMS, allCh is set to false
+    /// But enable temp hum from PMS
+    /// compensated values if requested by local server
+    /// Set ch based on hasSensorPMSx
+    if (config.hasSensorPMS1) {
+      outdoor = buildPMS(ag, 1, false, true, localServer);
+      if (!localServer) {
+        outdoor[json_prop_pmFirmware] = pms5003TFirmwareVersion(ag.pms5003t_1.getFirmwareVersion());
+      }
+    } else {
+      outdoor = buildPMS(ag, 2, false, true, localServer);
+      if (!localServer) {
+        outdoor[json_prop_pmFirmware] = pms5003TFirmwareVersion(ag.pms5003t_2.getFirmwareVersion());
+      }
+    }
+  } else {
+    // FW_MODE_O_1PPT && FW_MODE_O_1PP: Outdoor monitor that have 2 PMS sensor
+    // buildPMS params:
+    /// Have 2 PMS sensor, allCh is set to true (ch params ignored)
+    /// Enable temp hum from PMS
+    /// compensated values if requested by local server
+    outdoor = buildPMS(ag, 1, true, true, localServer);
+    // PMS5003T version
+    if (!localServer) {
+      outdoor["channels"]["1"][json_prop_pmFirmware] =
+          pms5003TFirmwareVersion(ag.pms5003t_1.getFirmwareVersion());
+      outdoor["channels"]["2"][json_prop_pmFirmware] =
+          pms5003TFirmwareVersion(ag.pms5003t_2.getFirmwareVersion());
+    }
+  }
+
+  return outdoor;
+}
+
+JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configuration &config) {
+  JSONVar indoor;
+
+  if (config.hasSensorPMS1) {
+    // buildPMS params:
+    /// PMS channel 1 (indoor only have 1 PMS; hence allCh false)
+    /// Not include temperature and humidity from PMS sensor
+    /// Not include compensated calculation
+    indoor = buildPMS(ag, 1, false, false, false);
+    if (!localServer) {
+      // Indoor is using PMS5003
+      indoor[json_prop_pmFirmware] = this->pms5003FirmwareVersion(ag.pms5003.getFirmwareVersion());
+    }
+  }
+
+  if (config.hasSensorSHT) {
+    // Add temperature
+    if (utils::isValidTemperature(_temperature[0].update.avg)) {
+      indoor["atmp"] = ag.round2(_temperature[0].update.avg);
+      if (localServer) {
+        indoor["atmpCompensated"] = ag.round2(_temperature[0].update.avg);
+      }
+    }
+    // Add humidity
+    if (utils::isValidHumidity(_humidity[0].update.avg)) {
+      indoor["rhum"] = ag.round2(_humidity[0].update.avg);
+      if (localServer) {
+        indoor["rhumCompensated"] = ag.round2(_humidity[0].update.avg);
+      }
+    }
+  }
+
+  // Add pm25 compensated value only if PM2.5 and humidity value is valid
+  if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
+    if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
+      float pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
+      if (utils::isValidPm(pm25)) {
+        indoor["pm02Compensated"] = ag.round2(pm25);
+      }
+    }
+  }
+
+  return indoor;
+}
+
+JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTempHum,
+                               bool compensate) {
+  JSONVar pms;
+
+  // When only one of the channel
+  if (allCh == false) {
+    // Sanity check to validate channel, assert if invalid
+    validateChannel(ch);
+
+    // Follow array indexing just for get address of the value type
+    ch = ch - 1;
+
+    if (utils::isValidPm(_pm_01[ch].update.avg)) {
+      pms["pm01"] = ag.round2(_pm_01[ch].update.avg);
+    }
+    if (utils::isValidPm(_pm_25[ch].update.avg)) {
+      pms["pm02"] = ag.round2(_pm_25[ch].update.avg);
+    }
+    if (utils::isValidPm(_pm_10[ch].update.avg)) {
+      pms["pm10"] = ag.round2(_pm_10[ch].update.avg);
+    }
+    if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
+      pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
+    }
+
+    if (withTempHum) {
+      float _vc;
+      // Set temperature if valid
+      if (utils::isValidTemperature(_temperature[ch].update.avg)) {
+        pms["atmp"] = ag.round2(_temperature[ch].update.avg);
+        // Compensate temperature when flag is set
+        if (compensate) {
+          _vc = ag.pms5003t_1.compensateTemp(_temperature[ch].update.avg);
+          if (utils::isValidTemperature(_vc)) {
+            pms["atmpCompensated"] = ag.round2(_vc);
+          }
+        }
+      }
+      // Set humidity if valid
+      if (utils::isValidHumidity(_humidity[ch].update.avg)) {
+        pms["rhum"] = ag.round2(_humidity[ch].update.avg);
+        // Compensate relative humidity when flag is set
+        if (compensate) {
+          _vc = ag.pms5003t_1.compensateHum(_humidity[ch].update.avg);
+          if (utils::isValidTemperature(_vc)) {
+            pms["rhumCompensated"] = ag.round2(_vc);
+          }
+        }
+      }
+
+      // Add pm25 compensated value only if PM2.5 and humidity value is valid
+      if (compensate) {
+        if (utils::isValidPm(_pm_25[ch].update.avg) &&
+            utils::isValidHumidity(_humidity[ch].update.avg)) {
+          // Note: the pms5003t object is not matter either for channel 1 or 2, compensate points to
+          // the same base function
+          float pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
+          if (utils::isValidPm(pm25)) {
+            pms["pm02Compensated"] = ag.round2(pm25);
+          }
+        }
+      }
+    }
+
+    // Directly return the json object
+    return pms;
+  };
+
+  // Handle both channel with average, if one of the channel not valid, use another one
+  /// PM01
+  if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
+    float avg = (_pm_01[0].update.avg + _pm_01[1].update.avg) / 2.0f;
+    pms["pm01"] = ag.round2(avg);
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
+  } else if (utils::isValidPm(_pm_01[0].update.avg)) {
+    pms["pm01"] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
+  } else if (utils::isValidPm(_pm_01[1].update.avg)) {
+    pms["pm01"] = ag.round2(_pm_01[1].update.avg);
+    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
+  }
+
+  /// PM2.5
+  if (utils::isValidPm(_pm_25[0].update.avg) && utils::isValidPm(_pm_25[1].update.avg)) {
+    float avg = (_pm_25[0].update.avg + _pm_25[1].update.avg) / 2.0f;
+    pms["pm02"] = ag.round2(avg);
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
+  } else if (utils::isValidPm(_pm_25[0].update.avg)) {
+    pms["pm02"] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
+  } else if (utils::isValidPm(_pm_25[1].update.avg)) {
+    pms["pm02"] = ag.round2(_pm_25[1].update.avg);
+    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
+  }
+
+  /// PM10
+  if (utils::isValidPm(_pm_10[0].update.avg) && utils::isValidPm(_pm_10[1].update.avg)) {
+    float avg = (_pm_10[0].update.avg + _pm_10[1].update.avg) / 2.0f;
+    pms["pm10"] = ag.round2(avg);
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
+  } else if (utils::isValidPm(_pm_10[0].update.avg)) {
+    pms["pm10"] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
+  } else if (utils::isValidPm(_pm_10[1].update.avg)) {
+    pms["pm10"] = ag.round2(_pm_10[1].update.avg);
+    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
+  }
+
+  /// PM03 particle count
+  if (utils::isValidPm03Count(_pm_03_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
+    float avg = (_pm_03_pc[0].update.avg + _pm_03_pc[1].update.avg) / 2.0f;
+    pms["pm003Count"] = ag.round2(avg);
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_03_pc[0].update.avg)) {
+    pms["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_03_pc[1].update.avg)) {
+    pms["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+  }
+
+  if (withTempHum) {
+    /// Temperature
+    if (utils::isValidTemperature(_temperature[0].update.avg) &&
+        utils::isValidTemperature(_temperature[1].update.avg)) {
+
+      float temperature = (_temperature[0].update.avg + _temperature[1].update.avg) / 2.0f;
+      pms["atmp"] = ag.round2(temperature);
+      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
+
+      if (compensate) {
+        // Compensate both temperature channel
+        float temp = ag.pms5003t_1.compensateTemp(temperature);
+        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
+        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
+        pms["atmpCompensated"] = ag.round2(temp);
+        pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
+        pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
+      }
+
+    } else if (utils::isValidTemperature(_temperature[0].update.avg)) {
+      pms["atmp"] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
+
+      if (compensate) {
+        // Compensate channel 1
+        float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
+        pms["atmpCompensated"] = ag.round2(temp1);
+        pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
+      }
+
+    } else if (utils::isValidTemperature(_temperature[1].update.avg)) {
+      pms["atmp"] = ag.round2(_temperature[1].update.avg);
+      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
+
+      if (compensate) {
+        // Compensate channel 2
+        float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
+        pms["atmpCompensated"] = ag.round2(temp2);
+        pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
+      }
+    }
+
+    /// Relative humidity
+    if (utils::isValidHumidity(_humidity[0].update.avg) &&
+        utils::isValidHumidity(_humidity[1].update.avg)) {
+      float humidity = (_humidity[0].update.avg + _humidity[1].update.avg) / 2.0f;
+      pms["rhum"] = ag.round2(humidity);
+      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
+
+      if (compensate) {
+        // Compensate both humidity channel
+        float hum = ag.pms5003t_1.compensateHum(humidity);
+        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
+        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
+        pms["rhumCompensated"] = ag.round2(hum);
+        pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
+        pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
+      }
+
+    } else if (utils::isValidHumidity(_humidity[0].update.avg)) {
+      pms["rhum"] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
+
+      if (compensate) {
+        // Compensate humidity channel 1
+        float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
+        pms["rhumCompensated"] = ag.round2(hum1);
+        pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
+      }
+
+    } else if (utils::isValidHumidity(_humidity[1].update.avg)) {
+      pms["rhum"] = ag.round2(_humidity[1].update.avg);
+      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
+
+      if (compensate) {
+        // Compensate humidity channel 2
+        float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
+        pms["rhumCompensated"] = ag.round2(hum2);
+        pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
+      }
+    }
+
+    if (compensate) {
+      // Add pm25 compensated value
+      /// First get both channel compensated value
+      float pm25_comp1 = utils::getInvalidPmValue();
+      float pm25_comp2 = utils::getInvalidPmValue();
+      if (utils::isValidPm(_pm_25[0].update.avg) &&
+          utils::isValidHumidity(_humidity[0].update.avg)) {
+        pm25_comp1 = ag.pms5003t_1.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
+        pms["channels"]["1"]["pm02Compensated"] = ag.round2(pm25_comp1);
+      }
+      if (utils::isValidPm(_pm_25[1].update.avg) &&
+          utils::isValidHumidity(_humidity[1].update.avg)) {
+        pm25_comp2 = ag.pms5003t_2.compensate(_pm_25[1].update.avg, _humidity[1].update.avg);
+        pms["channels"]["2"]["pm02Compensated"] = ag.round2(pm25_comp2);
+      }
+
+      /// Get average or one of the channel compensated value if only one channel is valid
+      if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
+        pms["pm02Compensated"] = ag.round2((pm25_comp1 + pm25_comp2) / 2.0f);
+      } else if (utils::isValidPm(pm25_comp1)) {
+        pms["pm02Compensated"] = ag.round2(pm25_comp1);
+      } else if (utils::isValidPm(pm25_comp2)) {
+        pms["pm02Compensated"] = ag.round2(pm25_comp2);
+      }
+    }
+  }
+
+  return pms;
+}
+
+void Measurements::setDebug(bool debug) { _debug = debug; }

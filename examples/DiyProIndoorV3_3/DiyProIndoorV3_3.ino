@@ -49,9 +49,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000              /** ms */
 #define SENSOR_CO2_UPDATE_INTERVAL 4000               /** ms */
 #define SENSOR_PM_UPDATE_INTERVAL 2000                /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 2000          /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000          /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000            /** ms */
-#define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000) /** ms */
 
 static AirGradient ag(DIY_PRO_INDOOR_V3_3);
 static Configuration configuration(Serial);
@@ -68,7 +67,6 @@ static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static MqttClient mqttClient(Serial);
 
-static int getCO2FailCount = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_33PS;
 
 static String fwNewVersion;
@@ -90,6 +88,8 @@ static void wdgFeedUpdate(void);
 static bool sgp41Init(void);
 static void wifiFactoryConfigure(void);
 static void mqttHandle(void);
+static int calculateMaxPeriod(int updateInterval);
+static void setMeasurementMaxPeriod();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, oledDisplaySchedule);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
@@ -130,6 +130,10 @@ void setup() {
 
   /** Init sensor */
   boardInit();
+  setMeasurementMaxPeriod();
+
+  // Uncomment below line to print every measurements reading update
+  // measurements.setDebug(true);
 
   /** Connecting wifi */
   bool connectToWifi = false;
@@ -228,17 +232,16 @@ void loop() {
 }
 
 static void co2Update(void) {
+  if (!configuration.hasSensorS8) {
+    // Device don't have S8 sensor
+    return;
+  }
+
   int value = ag.s8.getCo2();
   if (utils::isValidCO2(value)) {
-    measurements.CO2 = value;
-    getCO2FailCount = 0;
-    Serial.printf("CO2 (ppm): %d\r\n", measurements.CO2);
+    measurements.update(Measurements::CO2, value);
   } else {
-    getCO2FailCount++;
-    Serial.printf("Get CO2 failed: %d\r\n", getCO2FailCount);
-    if (getCO2FailCount >= 3) {
-      measurements.CO2 = utils::getInvalidCO2();
-    }
+    measurements.update(Measurements::CO2, utils::getInvalidCO2());
   }
 }
 
@@ -370,8 +373,7 @@ static void mqttHandle(void) {
   }
 
   if (mqttClient.isConnected()) {
-    String payload = measurements.toString(true, fwMode, wifiConnector.RSSI(),
-                                           &ag, &configuration);
+    String payload = measurements.toString(true, fwMode, wifiConnector.RSSI(), ag, configuration);
     String topic = "airgradient/readings/" + ag.deviceId();
     if (mqttClient.publish(topic.c_str(), payload.c_str(), payload.length())) {
       Serial.println("MQTT sync success");
@@ -542,46 +544,27 @@ static void oledDisplaySchedule(void) {
 }
 
 static void updateTvoc(void) {
-  measurements.TVOC = ag.sgp41.getTvocIndex();
-  measurements.TVOCRaw = ag.sgp41.getTvocRaw();
-  measurements.NOx = ag.sgp41.getNoxIndex();
-  measurements.NOxRaw = ag.sgp41.getNoxRaw();
+  if (!configuration.hasSensorSGP) {
+    return;
+  }
 
-  Serial.println();
-  Serial.printf("TVOC index: %d\r\n", measurements.TVOC);
-  Serial.printf("TVOC raw: %d\r\n", measurements.TVOCRaw);
-  Serial.printf("NOx index: %d\r\n", measurements.NOx);
-  Serial.printf("NOx raw: %d\r\n", measurements.NOxRaw);
+  measurements.update(Measurements::TVOC, ag.sgp41.getTvocIndex());
+  measurements.update(Measurements::TVOCRaw, ag.sgp41.getTvocRaw());
+  measurements.update(Measurements::NOx, ag.sgp41.getNoxIndex());
+  measurements.update(Measurements::NOxRaw, ag.sgp41.getNoxRaw());
 }
 
 static void updatePm(void) {
   if (ag.pms5003.connected()) {
-    measurements.pm01_1 = ag.pms5003.getPm01Ae();
-    measurements.pm25_1 = ag.pms5003.getPm25Ae();
-    measurements.pm10_1 = ag.pms5003.getPm10Ae();
-    measurements.pm03PCount_1 = ag.pms5003.getPm03ParticleCount();
-
-    Serial.println();
-    Serial.printf("PM1 ug/m3: %d\r\n", measurements.pm01_1);
-    Serial.printf("PM2.5 ug/m3: %d\r\n", measurements.pm25_1);
-    Serial.printf("PM10 ug/m3: %d\r\n", measurements.pm10_1);
-    Serial.printf("PM0.3 Count: %d\r\n", measurements.pm03PCount_1);
-    Serial.printf("PM firmware version: %d\r\n", ag.pms5003.getFirmwareVersion());
-    ag.pms5003.resetFailCount();
+    measurements.update(Measurements::PM01, ag.pms5003.getPm01Ae());
+    measurements.update(Measurements::PM25, ag.pms5003.getPm25Ae());
+    measurements.update(Measurements::PM10, ag.pms5003.getPm10Ae());
+    measurements.update(Measurements::PM03_PC, ag.pms5003.getPm03ParticleCount());
   } else {
-    ag.pms5003.updateFailCount();
-    Serial.printf("PMS read failed %d times\r\n", ag.pms5003.getFailCount());
-    if (ag.pms5003.getFailCount() >= PMS_FAIL_COUNT_SET_INVALID) {
-      measurements.pm01_1 = utils::getInvalidPmValue();
-      measurements.pm25_1 = utils::getInvalidPmValue();
-      measurements.pm10_1 = utils::getInvalidPmValue();
-      measurements.pm03PCount_1 = utils::getInvalidPmValue();
-    }
-
-    if(ag.pms5003.getFailCount() >= ag.pms5003.getFailCountMax()) {
-      Serial.printf("PMS failure count reach to max set %d, restarting...", ag.pms5003.getFailCountMax());
-      ESP.restart();
-    }
+    measurements.update(Measurements::PM01, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
   }
 }
 
@@ -595,8 +578,7 @@ static void sendDataToServer(void) {
     return;
   }
 
-  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(),
-                                          &ag, &configuration);
+  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
     Serial.println(
@@ -606,26 +588,54 @@ static void sendDataToServer(void) {
 }
 
 static void tempHumUpdate(void) {
-  delay(100);
   if (ag.sht.measure()) {
-    measurements.Temperature = ag.sht.getTemperature();
-    measurements.Humidity = ag.sht.getRelativeHumidity();
+    float temp = ag.sht.getTemperature();
+    float rhum = ag.sht.getRelativeHumidity();
 
-    Serial.printf("Temperature in C: %0.2f\r\n", measurements.Temperature);
-    Serial.printf("Relative Humidity: %d\r\n", measurements.Humidity);
-    Serial.printf("Temperature compensated in C: %0.2f\r\n",
-                  measurements.Temperature);
-    Serial.printf("Relative Humidity compensated: %d\r\n",
-                  measurements.Humidity);
+    measurements.update(Measurements::Temperature, temp);
+    measurements.update(Measurements::Humidity, rhum);
 
     // Update compensation temperature and humidity for SGP41
     if (configuration.hasSensorSGP) {
-      ag.sgp41.setCompensationTemperatureHumidity(measurements.Temperature,
-                                                  measurements.Humidity);
+      ag.sgp41.setCompensationTemperatureHumidity(temp, rhum);
     }
   } else {
+    measurements.update(Measurements::Temperature, utils::getInvalidTemperature());
+    measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
     Serial.println("SHT read failed");
-    measurements.Temperature = utils::getInvalidTemperature();
-    measurements.Humidity = utils::getInvalidHumidity();
   }
+}
+
+/* Set max period for each measurement type based on sensor update interval*/
+void setMeasurementMaxPeriod() {
+  /// Max period for S8 sensors measurements
+  measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
+  /// Max period for SGP sensors measurements
+  measurements.maxPeriod(Measurements::TVOC, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::TVOCRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOx, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::NOxRaw, calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL));
+  /// Max period for PMS sensors measurements
+  measurements.maxPeriod(Measurements::PM25, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM01, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM10, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::PM03_PC, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  // Temperature and Humidity
+  if (configuration.hasSensorSHT) {
+    /// Max period for SHT sensors measurements
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity,
+                           calculateMaxPeriod(SENSOR_TEMP_HUM_UPDATE_INTERVAL));
+  } else {
+    /// Temp and hum data retrieved from PMS5003T sensor
+    measurements.maxPeriod(Measurements::Temperature,
+                           calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+  }
+}
+
+int calculateMaxPeriod(int updateInterval) {
+  // 0.5 is 50% reduced interval for max period
+  return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.5)) / updateInterval;
 }
