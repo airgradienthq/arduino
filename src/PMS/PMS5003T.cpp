@@ -108,49 +108,49 @@ bool PMS5003T::begin(void) {
 }
 
 /**
- * @brief Read PM1.0 must call this function after @ref readData success
+ * @brief Read PM1.0
  *
  * @return int PM1.0 index (atmospheric environment)
  */
 int PMS5003T::getPm01Ae(void) { return pms.getPM0_1(); }
 
 /**
- * @brief Read PM2.5 must call this function after @ref readData success
+ * @brief Read PM2.5
  *
  * @return int PM2.5 index (atmospheric environment)
  */
 int PMS5003T::getPm25Ae(void) { return pms.getPM2_5(); }
 
 /**
- * @brief Read PM10.0 must call this function after @ref readData success
+ * @brief Read PM10.0
  *
  * @return int PM10.0 index (atmospheric environment)
  */
 int PMS5003T::getPm10Ae(void) { return pms.getPM10(); }
 
 /**
- * @brief Read PM1.0 must call this function after @ref readData success
+ * @brief Read PM1.0
  *
  * @return int PM1.0 index (standard particle)
  */
 int PMS5003T::getPm01Sp(void) { return pms.getRaw0_1(); }
 
 /**
- * @brief Read PM2.5 must call this function after @ref readData success
+ * @brief Read PM2.5
  *
  * @return int PM2.5 index (standard particle)
  */
 int PMS5003T::getPm25Sp(void) { return pms.getRaw2_5(); }
 
 /**
- * @brief Read PM10 must call this function after @ref readData success
+ * @brief Read PM10
  *
  * @return int PM10 index (standard particle)
  */
 int PMS5003T::getPm10Sp(void) { return pms.getRaw10(); }
 
 /**
- * @brief Read particle 0.3 count must call this function after @ref readData success
+ * @brief Read particle 0.3 count
  *
  * @return int particle 0.3 count index
  */
@@ -159,14 +159,14 @@ int PMS5003T::getPm03ParticleCount(void) {
 }
 
 /**
- * @brief Read particle 1.0 count must call this function after @ref readData success
+ * @brief Read particle 1.0 count
  *
  * @return int particle 1.0 count index
  */
 int PMS5003T::getPm01ParticleCount(void) { return pms.getCount1_0(); }
 
 /**
- * @brief Read particle 2.5 count must call this function after @ref readData success
+ * @brief Read particle 2.5 count
  *
  * @return int particle 2.5 count index
  */

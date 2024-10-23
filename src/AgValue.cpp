@@ -659,7 +659,8 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     return pms;
   };
 
-  /** Handle both channel with average, if one of the channel not valid, use another one */
+  /** Handle both channels by averaging their values; if one channel's value is not valid, skip
+   * averaging and use the valid value from the other channel */
 
   /// PM1.0 atmospheric environment
   if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
