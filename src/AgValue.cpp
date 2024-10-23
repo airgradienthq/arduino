@@ -81,6 +81,7 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   // Define data point source
   IntegerValue *temporary = nullptr;
+  // Act as reference invalid value respective to target measurements
   int invalidValue = 0;
   switch (type) {
   case CO2:
@@ -203,6 +204,7 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
 
   // Define data point source
   FloatValue *temporary = nullptr;
+  // Act as reference invalid value respective to target measurements
   float invalidValue = 0;
   switch (type) {
   case Temperature:
