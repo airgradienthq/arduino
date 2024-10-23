@@ -591,13 +591,13 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
       pms["pm10"] = ag.round2(_pm_10[ch].update.avg);
     }
     if (utils::isValidPm(_pm_01_sp[ch].update.avg)) {
-      pms["pm01_sp"] = ag.round2(_pm_01_sp[ch].update.avg);
+      pms["pm01Standard"] = ag.round2(_pm_01_sp[ch].update.avg);
     }
     if (utils::isValidPm(_pm_25_sp[ch].update.avg)) {
-      pms["pm02_sp"] = ag.round2(_pm_25_sp[ch].update.avg);
+      pms["pm02Standard"] = ag.round2(_pm_25_sp[ch].update.avg);
     }
     if (utils::isValidPm(_pm_10_sp[ch].update.avg)) {
-      pms["pm10_sp"] = ag.round2(_pm_10_sp[ch].update.avg);
+      pms["pm10Standard"] = ag.round2(_pm_10_sp[ch].update.avg);
     }
     if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
       pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
@@ -706,43 +706,43 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
   /// PM1.0 standard particle
   if (utils::isValidPm(_pm_01_sp[0].update.avg) && utils::isValidPm(_pm_01_sp[1].update.avg)) {
     float avg = (_pm_01_sp[0].update.avg + _pm_01_sp[1].update.avg) / 2.0f;
-    pms["pm01_sp"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["2"]["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms["pm01Standard"] = ag.round2(avg);
+    pms["channels"]["1"]["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["2"]["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[0].update.avg)) {
-    pms["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["1"]["pm01_sp"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["1"]["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[1].update.avg)) {
-    pms["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
-    pms["channels"]["2"]["pm01_sp"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms["channels"]["2"]["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
   }
 
   /// PM2.5 standard particle
   if (utils::isValidPm(_pm_25_sp[0].update.avg) && utils::isValidPm(_pm_25_sp[1].update.avg)) {
     float avg = (_pm_25_sp[0].update.avg + _pm_25_sp[1].update.avg) / 2.0f;
-    pms["pm02_sp"] = ag.round2(avg);
-    pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["2"]["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms["pm02Standard"] = ag.round2(avg);
+    pms["channels"]["1"]["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["2"]["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[0].update.avg)) {
-    pms["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["1"]["pm02_sp"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["1"]["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[1].update.avg)) {
-    pms["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
-    pms["channels"]["2"]["pm02_sp"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms["channels"]["2"]["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
   }
 
   /// PM10 standard particle
   if (utils::isValidPm(_pm_10_sp[0].update.avg) && utils::isValidPm(_pm_10_sp[1].update.avg)) {
     float avg = (_pm_10_sp[0].update.avg + _pm_10_sp[1].update.avg) / 2.0f;
-    pms["pm10_sp"] = ag.round2(avg);
-    pms["channels"]["1"]["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["2"]["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms["pm10Standard"] = ag.round2(avg);
+    pms["channels"]["1"]["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["2"]["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[0].update.avg)) {
-    pms["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["1"]["pm10_sp"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["1"]["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[1].update.avg)) {
-    pms["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
-    pms["channels"]["2"]["pm10_sp"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms["channels"]["2"]["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
   }
 
   /// PM003 particle count
