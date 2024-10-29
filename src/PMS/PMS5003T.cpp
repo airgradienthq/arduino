@@ -159,6 +159,13 @@ int PMS5003T::getPm03ParticleCount(void) {
 }
 
 /**
+ * @brief Read particle 0.5 count
+ *
+ * @return int particle 0.5 count index
+ */
+int PMS5003T::getPm05ParticleCount(void) { return pms.getCount0_5(); }
+
+/**
  * @brief Read particle 1.0 count
  *
  * @return int particle 1.0 count index

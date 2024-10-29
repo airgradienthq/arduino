@@ -1005,8 +1005,10 @@ static void updatePMS5003() {
     measurements.update(Measurements::PM25_SP, ag->pms5003.getPm25Sp());
     measurements.update(Measurements::PM10_SP, ag->pms5003.getPm10Sp());
     measurements.update(Measurements::PM03_PC, ag->pms5003.getPm03ParticleCount());
+    measurements.update(Measurements::PM05_PC, ag->pms5003.getPm05ParticleCount());
     measurements.update(Measurements::PM01_PC, ag->pms5003.getPm01ParticleCount());
     measurements.update(Measurements::PM25_PC, ag->pms5003.getPm25ParticleCount());
+    measurements.update(Measurements::PM5_PC, ag->pms5003.getPm5ParticleCount());
     measurements.update(Measurements::PM10_PC, ag->pms5003.getPm10ParticleCount());
   } else {
     measurements.update(Measurements::PM01, utils::getInvalidPmValue());
@@ -1016,8 +1018,10 @@ static void updatePMS5003() {
     measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue());
     measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue());
     measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM10_PC, utils::getInvalidPmValue());
   }
 }
@@ -1043,6 +1047,7 @@ static void updatePm(void) {
       measurements.update(Measurements::PM25_SP, ag->pms5003t_1.getPm25Sp(), channel);
       measurements.update(Measurements::PM10_SP, ag->pms5003t_1.getPm10Sp(), channel);
       measurements.update(Measurements::PM03_PC, ag->pms5003t_1.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM05_PC, ag->pms5003t_1.getPm05ParticleCount(), channel);
       measurements.update(Measurements::PM01_PC, ag->pms5003t_1.getPm01ParticleCount(), channel);
       measurements.update(Measurements::PM25_PC, ag->pms5003t_1.getPm25ParticleCount(), channel);
       measurements.update(Measurements::Temperature, ag->pms5003t_1.getTemperature(), channel);
@@ -1059,6 +1064,7 @@ static void updatePm(void) {
       measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
@@ -1077,6 +1083,7 @@ static void updatePm(void) {
       measurements.update(Measurements::PM25_SP, ag->pms5003t_2.getPm25Sp(), channel);
       measurements.update(Measurements::PM10_SP, ag->pms5003t_2.getPm10Sp(), channel);
       measurements.update(Measurements::PM03_PC, ag->pms5003t_2.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM05_PC, ag->pms5003t_2.getPm05ParticleCount(), channel);
       measurements.update(Measurements::PM01_PC, ag->pms5003t_2.getPm01ParticleCount(), channel);
       measurements.update(Measurements::PM25_PC, ag->pms5003t_2.getPm25ParticleCount(), channel);
       measurements.update(Measurements::Temperature, ag->pms5003t_2.getTemperature(), channel);
@@ -1093,6 +1100,7 @@ static void updatePm(void) {
       measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
+      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
       measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
@@ -1186,8 +1194,10 @@ void setMeasurementMaxPeriod() {
   measurements.maxPeriod(Measurements::PM01_SP, max);
   measurements.maxPeriod(Measurements::PM10_SP, max);
   measurements.maxPeriod(Measurements::PM03_PC, max);
+  measurements.maxPeriod(Measurements::PM05_PC, max);
   measurements.maxPeriod(Measurements::PM01_PC, max);
   measurements.maxPeriod(Measurements::PM25_PC, max);
+  measurements.maxPeriod(Measurements::PM5_PC, max);
   measurements.maxPeriod(Measurements::PM10_PC, max);
 
   // Temperature and Humidity

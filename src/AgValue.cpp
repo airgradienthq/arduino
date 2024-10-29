@@ -57,6 +57,10 @@ void Measurements::maxPeriod(MeasurementType type, int max) {
     _pm_03_pc[0].update.max = max;
     _pm_03_pc[1].update.max = max;
     break;
+  case PM05_PC:
+    _pm_05_pc[0].update.max = max;
+    _pm_05_pc[1].update.max = max;
+    break;
   case PM01_PC:
     _pm_01_pc[0].update.max = max;
     _pm_01_pc[1].update.max = max;
@@ -64,6 +68,10 @@ void Measurements::maxPeriod(MeasurementType type, int max) {
   case PM25_PC:
     _pm_25_pc[0].update.max = max;
     _pm_25_pc[1].update.max = max;
+    break;
+  case PM5_PC:
+    _pm_5_pc[0].update.max = max;
+    _pm_5_pc[1].update.max = max;
     break;
   case PM10_PC:
     _pm_10_pc[0].update.max = max;
@@ -132,12 +140,20 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
     temporary = &_pm_03_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
+  case PM05_PC:
+    temporary = &_pm_05_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
   case PM01_PC:
     temporary = &_pm_01_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case PM25_PC:
     temporary = &_pm_25_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM5_PC:
+    temporary = &_pm_5_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case PM10_PC:
@@ -162,8 +178,8 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
       Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
-                    "to invalid!",
-                    measurementTypeStr(type), ch, temporary->update.max);
+                    "to invalid!\n",
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -233,8 +249,8 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
       Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
-                    "to invalid!",
-                    measurementTypeStr(type), ch, temporary->update.max);
+                    "to invalid!\n",
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -414,11 +430,17 @@ String Measurements::measurementTypeStr(MeasurementType type) {
   case PM03_PC:
     str = "PM003_PC";
     break;
+  case PM05_PC:
+    str = "PM005_PC";
+    break;
   case PM01_PC:
     str = "PM01_PC";
     break;
   case PM25_PC:
     str = "PM25_PC";
+    break;
+  case PM5_PC:
+    str = "PM05_PC";
     break;
   case PM10_PC:
     str = "PM10_PC";
@@ -604,11 +626,21 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
       pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
     }
+    if (utils::isValidPm03Count(_pm_05_pc[ch].update.avg)) {
+      pms["pm005Count"] = ag.round2(_pm_05_pc[ch].update.avg);
+    }
     if (utils::isValidPm03Count(_pm_01_pc[ch].update.avg)) {
       pms["pm01Count"] = ag.round2(_pm_01_pc[ch].update.avg);
     }
     if (utils::isValidPm03Count(_pm_25_pc[ch].update.avg)) {
       pms["pm02Count"] = ag.round2(_pm_25_pc[ch].update.avg);
+    }
+    if (_pm_5_pc[ch].listValues.empty() == false) {
+      // Only include pm5.0 count when values available on its list
+      // If not, means no pm5_pc available from the sensor
+      if (utils::isValidPm03Count(_pm_5_pc[ch].update.avg)) {
+        pms["pm05Count"] = ag.round2(_pm_5_pc[ch].update.avg);
+      }
     }
     if (_pm_10_pc[ch].listValues.empty() == false) {
       // Only include pm10 count when values available on its list
@@ -763,6 +795,20 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
   }
 
+  /// PM0.5 particle count
+  if (utils::isValidPm03Count(_pm_05_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_05_pc[1].update.avg)) {
+    float avg = (_pm_05_pc[0].update.avg + _pm_05_pc[1].update.avg) / 2.0f;
+    pms["pm005Count"] = ag.round2(avg);
+    pms["channels"]["1"]["pm005Count"] = ag.round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["2"]["pm005Count"] = ag.round2(_pm_05_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_05_pc[0].update.avg)) {
+    pms["pm005Count"] = ag.round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["1"]["pm005Count"] = ag.round2(_pm_05_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_05_pc[1].update.avg)) {
+    pms["pm005Count"] = ag.round2(_pm_05_pc[1].update.avg);
+    pms["channels"]["2"]["pm005Count"] = ag.round2(_pm_05_pc[1].update.avg);
+  }
   /// PM1.0 particle count
   if (utils::isValidPm03Count(_pm_01_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
@@ -793,22 +839,8 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms["channels"]["2"]["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
   }
 
-  // NOTE: No need for particle count 10. When allCh is true, basically monitor using PM5003T, which
-  // don't have PC 10
-  // /// PM10 particle count
-  // if (utils::isValidPm03Count(_pm_10_pc[0].update.avg) &&
-  //     utils::isValidPm03Count(_pm_10_pc[1].update.avg)) {
-  //   float avg = (_pm_10_pc[0].update.avg + _pm_10_pc[1].update.avg) / 2.0f;
-  //   pms["pm10Count"] = ag.round2(avg);
-  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  // } else if (utils::isValidPm(_pm_10_pc[0].update.avg)) {
-  //   pms["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  // } else if (utils::isValidPm(_pm_10_pc[1].update.avg)) {
-  //   pms["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  // }
+  // NOTE: No need for particle count 5.0 and 10. When allCh is true, basically monitor using
+  // PM5003T, which don't have PC 5.0 and 10
 
   if (withTempHum) {
     /// Temperature
