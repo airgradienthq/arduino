@@ -151,6 +151,7 @@ void PMSBase::readPackage(Stream *serial) {
     if (ms >= READ_PACKGE_TIMEOUT) {
       lastPackage = 0;
       _connected = false;
+      Serial.println("PMS disconnected");
     }
   }
 }
