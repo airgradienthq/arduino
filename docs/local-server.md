@@ -62,8 +62,8 @@ You get the following response:
 | `pm005Count`                      | Number  | Particle count 0.5um per dL                                                            |
 | `pm01Count`                       | Number  | Particle count 1.0um per dL                                                            |
 | `pm25Count`                       | Number  | Particle count 2.5um per dL                                                            |
-| `pm05Count`                       | Number  | Particle count 5.0um per dL                                                            |
-| `pm10Count`                       | Number  | Particle count 10um per dL (only for indoor monitor)                                                             |
+| `pm05Count`                       | Number  | Particle count 5.0um per dL (only for indoor monitor)                                  |
+| `pm10Count`                       | Number  | Particle count 10um per dL (only for indoor monitor)                                   |
 | `atmp`                            | Number  | Temperature in Degrees Celsius                                                         |
 | `atmpCompensated`                 | Number  | Temperature in Degrees Celsius with correction applied                                 |
 | `rhum`                            | Number  | Relative Humidity                                                                      |
