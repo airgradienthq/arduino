@@ -5,8 +5,18 @@
 #include "Main/PrintLog.h"
 #include "AirGradient.h"
 #include <Arduino.h>
+#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
 class Configuration : public PrintLog {
+public:
+  struct PMCorrection {
+    PMCorrectionAlgorithm algorithm;
+    int intercept;
+    int scalingFactor;
+    bool useEPA; // EPA 2021
+    bool changed;
+  };
+
 private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
@@ -19,10 +29,13 @@ private:
   String otaNewFirmwareVersion;
   bool _offlineMode = false;
   bool _ledBarModeChanged = false;
+  PMCorrection pmCorrection;
 
   AirGradient* ag;
 
   String getLedBarModeName(LedBarMode mode);
+  PMCorrectionAlgorithm matchPmAlgorithm(String algorithm);
+  bool parsePmCorrection(JSONVar &json);
   void saveConfig(void);
   void loadConfig(void);
   void defaultConfig(void);
