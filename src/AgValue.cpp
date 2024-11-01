@@ -20,6 +20,11 @@
 #define json_prop_tempCompensated "atmpCompensated"
 #define json_prop_rhum "rhum"
 #define json_prop_rhumCompensated "rhumCompensated"
+#define json_prop_tvoc "tvocIndex"
+#define json_prop_tvocRaw "tvocRaw"
+#define json_prop_nox "noxIndex"
+#define json_prop_noxRaw "noxRaw"
+#define json_prop_co2 "rco2"
 
 void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
@@ -489,22 +494,22 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   // CO2
   if (config.hasSensorS8 && utils::isValidCO2(_co2.update.avg)) {
-    root["rco2"] = ag.round2(_co2.update.avg);
+    root[json_prop_co2] = ag.round2(_co2.update.avg);
   }
 
   /// TVOx and NOx
   if (config.hasSensorSGP) {
     if (utils::isValidVOC(_tvoc.update.avg)) {
-      root["tvocIndex"] = ag.round2(_tvoc.update.avg);
+      root[json_prop_tvoc] = ag.round2(_tvoc.update.avg);
     }
     if (utils::isValidVOC(_tvoc_raw.update.avg)) {
-      root["tvocRaw"] = ag.round2(_tvoc_raw.update.avg);
+      root[json_prop_tvocRaw] = ag.round2(_tvoc_raw.update.avg);
     }
     if (utils::isValidNOx(_nox.update.avg)) {
-      root["noxIndex"] = ag.round2(_nox.update.avg);
+      root[json_prop_nox] = ag.round2(_nox.update.avg);
     }
     if (utils::isValidNOx(_nox_raw.update.avg)) {
-      root["noxRaw"] = ag.round2(_nox_raw.update.avg);
+      root[json_prop_noxRaw] = ag.round2(_nox_raw.update.avg);
     }
   }
 
