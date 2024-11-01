@@ -3,6 +3,28 @@
 #include "AirGradient.h"
 
 #define json_prop_pmFirmware     "firmware"
+#define json_prop_pm01Ae "pm01"
+#define json_prop_pm25Ae "pm02"
+#define json_prop_pm10Ae "pm10"
+#define json_prop_pm01Sp "pm01Standard"
+#define json_prop_pm25Sp "pm02Standard"
+#define json_prop_pm10Sp "pm10Standard"
+#define json_prop_pm25Compensated "pm02Compensated"
+#define json_prop_pm03Count "pm003Count"
+#define json_prop_pm05Count "pm005Count"
+#define json_prop_pm1Count "pm01Count"
+#define json_prop_pm25Count "pm02Count"
+#define json_prop_pm5Count "pm50Count"
+#define json_prop_pm10Count "pm10Count"
+#define json_prop_temp "atmp"
+#define json_prop_tempCompensated "atmpCompensated"
+#define json_prop_rhum "rhum"
+#define json_prop_rhumCompensated "rhumCompensated"
+#define json_prop_tvoc "tvocIndex"
+#define json_prop_tvocRaw "tvocRaw"
+#define json_prop_nox "noxIndex"
+#define json_prop_noxRaw "noxRaw"
+#define json_prop_co2 "rco2"
 
 void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
@@ -57,6 +79,10 @@ void Measurements::maxPeriod(MeasurementType type, int max) {
     _pm_03_pc[0].update.max = max;
     _pm_03_pc[1].update.max = max;
     break;
+  case PM05_PC:
+    _pm_05_pc[0].update.max = max;
+    _pm_05_pc[1].update.max = max;
+    break;
   case PM01_PC:
     _pm_01_pc[0].update.max = max;
     _pm_01_pc[1].update.max = max;
@@ -64,6 +90,10 @@ void Measurements::maxPeriod(MeasurementType type, int max) {
   case PM25_PC:
     _pm_25_pc[0].update.max = max;
     _pm_25_pc[1].update.max = max;
+    break;
+  case PM5_PC:
+    _pm_5_pc[0].update.max = max;
+    _pm_5_pc[1].update.max = max;
     break;
   case PM10_PC:
     _pm_10_pc[0].update.max = max;
@@ -132,12 +162,20 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
     temporary = &_pm_03_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
+  case PM05_PC:
+    temporary = &_pm_05_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
   case PM01_PC:
     temporary = &_pm_01_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case PM25_PC:
     temporary = &_pm_25_pc[ch];
+    invalidValue = utils::getInvalidPmValue();
+    break;
+  case PM5_PC:
+    temporary = &_pm_5_pc[ch];
     invalidValue = utils::getInvalidPmValue();
     break;
   case PM10_PC:
@@ -162,8 +200,8 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
       Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
-                    "to invalid!",
-                    measurementTypeStr(type), ch, temporary->update.max);
+                    "to invalid!\n",
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -233,8 +271,8 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
       Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
-                    "to invalid!",
-                    measurementTypeStr(type), ch, temporary->update.max);
+                    "to invalid!\n",
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -414,11 +452,17 @@ String Measurements::measurementTypeStr(MeasurementType type) {
   case PM03_PC:
     str = "PM003_PC";
     break;
+  case PM05_PC:
+    str = "PM005_PC";
+    break;
   case PM01_PC:
     str = "PM01_PC";
     break;
   case PM25_PC:
     str = "PM25_PC";
+    break;
+  case PM5_PC:
+    str = "PM05_PC";
     break;
   case PM10_PC:
     str = "PM10_PC";
@@ -450,22 +494,22 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
 
   // CO2
   if (config.hasSensorS8 && utils::isValidCO2(_co2.update.avg)) {
-    root["rco2"] = ag.round2(_co2.update.avg);
+    root[json_prop_co2] = ag.round2(_co2.update.avg);
   }
 
   /// TVOx and NOx
   if (config.hasSensorSGP) {
     if (utils::isValidVOC(_tvoc.update.avg)) {
-      root["tvocIndex"] = ag.round2(_tvoc.update.avg);
+      root[json_prop_tvoc] = ag.round2(_tvoc.update.avg);
     }
     if (utils::isValidVOC(_tvoc_raw.update.avg)) {
-      root["tvocRaw"] = ag.round2(_tvoc_raw.update.avg);
+      root[json_prop_tvocRaw] = ag.round2(_tvoc_raw.update.avg);
     }
     if (utils::isValidNOx(_nox.update.avg)) {
-      root["noxIndex"] = ag.round2(_nox.update.avg);
+      root[json_prop_nox] = ag.round2(_nox.update.avg);
     }
     if (utils::isValidNOx(_nox_raw.update.avg)) {
-      root["noxRaw"] = ag.round2(_nox_raw.update.avg);
+      root[json_prop_noxRaw] = ag.round2(_nox_raw.update.avg);
     }
   }
 
@@ -544,16 +588,16 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
   if (config.hasSensorSHT) {
     // Add temperature
     if (utils::isValidTemperature(_temperature[0].update.avg)) {
-      indoor["atmp"] = ag.round2(_temperature[0].update.avg);
+      indoor[json_prop_temp] = ag.round2(_temperature[0].update.avg);
       if (localServer) {
-        indoor["atmpCompensated"] = ag.round2(_temperature[0].update.avg);
+        indoor[json_prop_tempCompensated] = ag.round2(_temperature[0].update.avg);
       }
     }
     // Add humidity
     if (utils::isValidHumidity(_humidity[0].update.avg)) {
-      indoor["rhum"] = ag.round2(_humidity[0].update.avg);
+      indoor[json_prop_rhum] = ag.round2(_humidity[0].update.avg);
       if (localServer) {
-        indoor["rhumCompensated"] = ag.round2(_humidity[0].update.avg);
+        indoor[json_prop_rhumCompensated] = ag.round2(_humidity[0].update.avg);
       }
     }
   }
@@ -563,7 +607,7 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
     if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
       float pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
       if (utils::isValidPm(pm25)) {
-        indoor["pm02Compensated"] = ag.round2(pm25);
+        indoor[json_prop_pm25Compensated] = ag.round2(pm25);
       }
     }
   }
@@ -584,37 +628,47 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     ch = ch - 1;
 
     if (utils::isValidPm(_pm_01[ch].update.avg)) {
-      pms["pm01"] = ag.round2(_pm_01[ch].update.avg);
+      pms[json_prop_pm01Ae] = ag.round2(_pm_01[ch].update.avg);
     }
     if (utils::isValidPm(_pm_25[ch].update.avg)) {
-      pms["pm02"] = ag.round2(_pm_25[ch].update.avg);
+      pms[json_prop_pm25Ae] = ag.round2(_pm_25[ch].update.avg);
     }
     if (utils::isValidPm(_pm_10[ch].update.avg)) {
-      pms["pm10"] = ag.round2(_pm_10[ch].update.avg);
+      pms[json_prop_pm10Ae] = ag.round2(_pm_10[ch].update.avg);
     }
     if (utils::isValidPm(_pm_01_sp[ch].update.avg)) {
-      pms["pm01Standard"] = ag.round2(_pm_01_sp[ch].update.avg);
+      pms[json_prop_pm01Sp] = ag.round2(_pm_01_sp[ch].update.avg);
     }
     if (utils::isValidPm(_pm_25_sp[ch].update.avg)) {
-      pms["pm02Standard"] = ag.round2(_pm_25_sp[ch].update.avg);
+      pms[json_prop_pm25Sp] = ag.round2(_pm_25_sp[ch].update.avg);
     }
     if (utils::isValidPm(_pm_10_sp[ch].update.avg)) {
-      pms["pm10Standard"] = ag.round2(_pm_10_sp[ch].update.avg);
+      pms[json_prop_pm10Sp] = ag.round2(_pm_10_sp[ch].update.avg);
     }
     if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
-      pms["pm003Count"] = ag.round2(_pm_03_pc[ch].update.avg);
+      pms[json_prop_pm03Count] = ag.round2(_pm_03_pc[ch].update.avg);
+    }
+    if (utils::isValidPm03Count(_pm_05_pc[ch].update.avg)) {
+      pms[json_prop_pm05Count] = ag.round2(_pm_05_pc[ch].update.avg);
     }
     if (utils::isValidPm03Count(_pm_01_pc[ch].update.avg)) {
-      pms["pm01Count"] = ag.round2(_pm_01_pc[ch].update.avg);
+      pms[json_prop_pm1Count] = ag.round2(_pm_01_pc[ch].update.avg);
     }
     if (utils::isValidPm03Count(_pm_25_pc[ch].update.avg)) {
-      pms["pm02Count"] = ag.round2(_pm_25_pc[ch].update.avg);
+      pms[json_prop_pm25Count] = ag.round2(_pm_25_pc[ch].update.avg);
+    }
+    if (_pm_5_pc[ch].listValues.empty() == false) {
+      // Only include pm5.0 count when values available on its list
+      // If not, means no pm5_pc available from the sensor
+      if (utils::isValidPm03Count(_pm_5_pc[ch].update.avg)) {
+        pms[json_prop_pm5Count] = ag.round2(_pm_5_pc[ch].update.avg);
+      }
     }
     if (_pm_10_pc[ch].listValues.empty() == false) {
       // Only include pm10 count when values available on its list
       // If not, means no pm10_pc available from the sensor
       if (utils::isValidPm03Count(_pm_10_pc[ch].update.avg)) {
-        pms["pm10Count"] = ag.round2(_pm_10_pc[ch].update.avg);
+        pms[json_prop_pm10Count] = ag.round2(_pm_10_pc[ch].update.avg);
       }
     }
 
@@ -622,23 +676,23 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
       float _vc;
       // Set temperature if valid
       if (utils::isValidTemperature(_temperature[ch].update.avg)) {
-        pms["atmp"] = ag.round2(_temperature[ch].update.avg);
+        pms[json_prop_temp] = ag.round2(_temperature[ch].update.avg);
         // Compensate temperature when flag is set
         if (compensate) {
           _vc = ag.pms5003t_1.compensateTemp(_temperature[ch].update.avg);
           if (utils::isValidTemperature(_vc)) {
-            pms["atmpCompensated"] = ag.round2(_vc);
+            pms[json_prop_tempCompensated] = ag.round2(_vc);
           }
         }
       }
       // Set humidity if valid
       if (utils::isValidHumidity(_humidity[ch].update.avg)) {
-        pms["rhum"] = ag.round2(_humidity[ch].update.avg);
+        pms[json_prop_rhum] = ag.round2(_humidity[ch].update.avg);
         // Compensate relative humidity when flag is set
         if (compensate) {
           _vc = ag.pms5003t_1.compensateHum(_humidity[ch].update.avg);
           if (utils::isValidTemperature(_vc)) {
-            pms["rhumCompensated"] = ag.round2(_vc);
+            pms[json_prop_rhumCompensated] = ag.round2(_vc);
           }
         }
       }
@@ -651,7 +705,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
           // the same base function
           float pm25 = ag.pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
           if (utils::isValidPm(pm25)) {
-            pms["pm02Compensated"] = ag.round2(pm25);
+            pms[json_prop_pm25Compensated] = ag.round2(pm25);
           }
         }
       }
@@ -667,148 +721,148 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
   /// PM1.0 atmospheric environment
   if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
     float avg = (_pm_01[0].update.avg + _pm_01[1].update.avg) / 2.0f;
-    pms["pm01"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
-    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
+    pms[json_prop_pm01Ae] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm01Ae] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["2"][json_prop_pm01Ae] = ag.round2(_pm_01[1].update.avg);
   } else if (utils::isValidPm(_pm_01[0].update.avg)) {
-    pms["pm01"] = ag.round2(_pm_01[0].update.avg);
-    pms["channels"]["1"]["pm01"] = ag.round2(_pm_01[0].update.avg);
+    pms[json_prop_pm01Ae] = ag.round2(_pm_01[0].update.avg);
+    pms["channels"]["1"][json_prop_pm01Ae] = ag.round2(_pm_01[0].update.avg);
   } else if (utils::isValidPm(_pm_01[1].update.avg)) {
-    pms["pm01"] = ag.round2(_pm_01[1].update.avg);
-    pms["channels"]["2"]["pm01"] = ag.round2(_pm_01[1].update.avg);
+    pms[json_prop_pm01Ae] = ag.round2(_pm_01[1].update.avg);
+    pms["channels"]["2"][json_prop_pm01Ae] = ag.round2(_pm_01[1].update.avg);
   }
 
   /// PM2.5 atmospheric environment
   if (utils::isValidPm(_pm_25[0].update.avg) && utils::isValidPm(_pm_25[1].update.avg)) {
     float avg = (_pm_25[0].update.avg + _pm_25[1].update.avg) / 2.0f;
-    pms["pm02"] = ag.round2(avg);
-    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
-    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
+    pms[json_prop_pm25Ae] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm25Ae] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["2"][json_prop_pm25Ae] = ag.round2(_pm_25[1].update.avg);
   } else if (utils::isValidPm(_pm_25[0].update.avg)) {
-    pms["pm02"] = ag.round2(_pm_25[0].update.avg);
-    pms["channels"]["1"]["pm02"] = ag.round2(_pm_25[0].update.avg);
+    pms[json_prop_pm25Ae] = ag.round2(_pm_25[0].update.avg);
+    pms["channels"]["1"][json_prop_pm25Ae] = ag.round2(_pm_25[0].update.avg);
   } else if (utils::isValidPm(_pm_25[1].update.avg)) {
-    pms["pm02"] = ag.round2(_pm_25[1].update.avg);
-    pms["channels"]["2"]["pm02"] = ag.round2(_pm_25[1].update.avg);
+    pms[json_prop_pm25Ae] = ag.round2(_pm_25[1].update.avg);
+    pms["channels"]["2"][json_prop_pm25Ae] = ag.round2(_pm_25[1].update.avg);
   }
 
   /// PM10 atmospheric environment
   if (utils::isValidPm(_pm_10[0].update.avg) && utils::isValidPm(_pm_10[1].update.avg)) {
     float avg = (_pm_10[0].update.avg + _pm_10[1].update.avg) / 2.0f;
-    pms["pm10"] = ag.round2(avg);
-    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
-    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
+    pms[json_prop_pm10Ae] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm10Ae] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["2"][json_prop_pm10Ae] = ag.round2(_pm_10[1].update.avg);
   } else if (utils::isValidPm(_pm_10[0].update.avg)) {
-    pms["pm10"] = ag.round2(_pm_10[0].update.avg);
-    pms["channels"]["1"]["pm10"] = ag.round2(_pm_10[0].update.avg);
+    pms[json_prop_pm10Ae] = ag.round2(_pm_10[0].update.avg);
+    pms["channels"]["1"][json_prop_pm10Ae] = ag.round2(_pm_10[0].update.avg);
   } else if (utils::isValidPm(_pm_10[1].update.avg)) {
-    pms["pm10"] = ag.round2(_pm_10[1].update.avg);
-    pms["channels"]["2"]["pm10"] = ag.round2(_pm_10[1].update.avg);
+    pms[json_prop_pm10Ae] = ag.round2(_pm_10[1].update.avg);
+    pms["channels"]["2"][json_prop_pm10Ae] = ag.round2(_pm_10[1].update.avg);
   }
 
   /// PM1.0 standard particle
   if (utils::isValidPm(_pm_01_sp[0].update.avg) && utils::isValidPm(_pm_01_sp[1].update.avg)) {
     float avg = (_pm_01_sp[0].update.avg + _pm_01_sp[1].update.avg) / 2.0f;
-    pms["pm01Standard"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["2"]["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms[json_prop_pm01Sp] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm01Sp] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm01Sp] = ag.round2(_pm_01_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[0].update.avg)) {
-    pms["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["1"]["pm01Standard"] = ag.round2(_pm_01_sp[0].update.avg);
+    pms[json_prop_pm01Sp] = ag.round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm01Sp] = ag.round2(_pm_01_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[1].update.avg)) {
-    pms["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
-    pms["channels"]["2"]["pm01Standard"] = ag.round2(_pm_01_sp[1].update.avg);
+    pms[json_prop_pm01Sp] = ag.round2(_pm_01_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm01Sp] = ag.round2(_pm_01_sp[1].update.avg);
   }
 
   /// PM2.5 standard particle
   if (utils::isValidPm(_pm_25_sp[0].update.avg) && utils::isValidPm(_pm_25_sp[1].update.avg)) {
     float avg = (_pm_25_sp[0].update.avg + _pm_25_sp[1].update.avg) / 2.0f;
-    pms["pm02Standard"] = ag.round2(avg);
-    pms["channels"]["1"]["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["2"]["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms[json_prop_pm25Sp] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm25Sp] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm25Sp] = ag.round2(_pm_25_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[0].update.avg)) {
-    pms["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["1"]["pm02Standard"] = ag.round2(_pm_25_sp[0].update.avg);
+    pms[json_prop_pm25Sp] = ag.round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm25Sp] = ag.round2(_pm_25_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[1].update.avg)) {
-    pms["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
-    pms["channels"]["2"]["pm02Standard"] = ag.round2(_pm_25_sp[1].update.avg);
+    pms[json_prop_pm25Sp] = ag.round2(_pm_25_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm25Sp] = ag.round2(_pm_25_sp[1].update.avg);
   }
 
   /// PM10 standard particle
   if (utils::isValidPm(_pm_10_sp[0].update.avg) && utils::isValidPm(_pm_10_sp[1].update.avg)) {
     float avg = (_pm_10_sp[0].update.avg + _pm_10_sp[1].update.avg) / 2.0f;
-    pms["pm10Standard"] = ag.round2(avg);
-    pms["channels"]["1"]["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["2"]["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms[json_prop_pm10Sp] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm10Sp] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm10Sp] = ag.round2(_pm_10_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[0].update.avg)) {
-    pms["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["1"]["pm10Standard"] = ag.round2(_pm_10_sp[0].update.avg);
+    pms[json_prop_pm10Sp] = ag.round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm10Sp] = ag.round2(_pm_10_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[1].update.avg)) {
-    pms["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
-    pms["channels"]["2"]["pm10Standard"] = ag.round2(_pm_10_sp[1].update.avg);
+    pms[json_prop_pm10Sp] = ag.round2(_pm_10_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm10Sp] = ag.round2(_pm_10_sp[1].update.avg);
   }
 
   /// PM003 particle count
   if (utils::isValidPm03Count(_pm_03_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
     float avg = (_pm_03_pc[0].update.avg + _pm_03_pc[1].update.avg) / 2.0f;
-    pms["pm003Count"] = ag.round2(avg);
-    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
-    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+    pms[json_prop_pm03Count] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
   } else if (utils::isValidPm(_pm_03_pc[0].update.avg)) {
-    pms["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
-    pms["channels"]["1"]["pm003Count"] = ag.round2(_pm_03_pc[0].update.avg);
+    pms[json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
   } else if (utils::isValidPm(_pm_03_pc[1].update.avg)) {
-    pms["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
-    pms["channels"]["2"]["pm003Count"] = ag.round2(_pm_03_pc[1].update.avg);
+    pms[json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
   }
 
+  /// PM0.5 particle count
+  if (utils::isValidPm03Count(_pm_05_pc[0].update.avg) &&
+      utils::isValidPm03Count(_pm_05_pc[1].update.avg)) {
+    float avg = (_pm_05_pc[0].update.avg + _pm_05_pc[1].update.avg) / 2.0f;
+    pms[json_prop_pm05Count] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
+  } else if (utils::isValidPm(_pm_05_pc[0].update.avg)) {
+    pms[json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
+  } else if (utils::isValidPm(_pm_05_pc[1].update.avg)) {
+    pms[json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
+  }
   /// PM1.0 particle count
   if (utils::isValidPm03Count(_pm_01_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
     float avg = (_pm_01_pc[0].update.avg + _pm_01_pc[1].update.avg) / 2.0f;
-    pms["pm01Count"] = ag.round2(avg);
-    pms["channels"]["1"]["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
-    pms["channels"]["2"]["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
+    pms[json_prop_pm1Count] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
   } else if (utils::isValidPm(_pm_01_pc[0].update.avg)) {
-    pms["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
-    pms["channels"]["1"]["pm01Count"] = ag.round2(_pm_01_pc[0].update.avg);
+    pms[json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
   } else if (utils::isValidPm(_pm_01_pc[1].update.avg)) {
-    pms["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
-    pms["channels"]["2"]["pm01Count"] = ag.round2(_pm_01_pc[1].update.avg);
+    pms[json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
   }
 
   /// PM2.5 particle count
   if (utils::isValidPm03Count(_pm_25_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_25_pc[1].update.avg)) {
     float avg = (_pm_25_pc[0].update.avg + _pm_25_pc[1].update.avg) / 2.0f;
-    pms["pm25Count"] = ag.round2(avg);
-    pms["channels"]["1"]["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
-    pms["channels"]["2"]["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
+    pms[json_prop_pm25Count] = ag.round2(avg);
+    pms["channels"]["1"][json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
   } else if (utils::isValidPm(_pm_25_pc[0].update.avg)) {
-    pms["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
-    pms["channels"]["1"]["pm25Count"] = ag.round2(_pm_25_pc[0].update.avg);
+    pms[json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
   } else if (utils::isValidPm(_pm_25_pc[1].update.avg)) {
-    pms["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
-    pms["channels"]["2"]["pm25Count"] = ag.round2(_pm_25_pc[1].update.avg);
+    pms[json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
   }
 
-  // NOTE: No need for particle count 10. When allCh is true, basically monitor using PM5003T, which
-  // don't have PC 10
-  // /// PM10 particle count
-  // if (utils::isValidPm03Count(_pm_10_pc[0].update.avg) &&
-  //     utils::isValidPm03Count(_pm_10_pc[1].update.avg)) {
-  //   float avg = (_pm_10_pc[0].update.avg + _pm_10_pc[1].update.avg) / 2.0f;
-  //   pms["pm10Count"] = ag.round2(avg);
-  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  // } else if (utils::isValidPm(_pm_10_pc[0].update.avg)) {
-  //   pms["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  //   pms["channels"]["1"]["pm10Count"] = ag.round2(_pm_10_pc[0].update.avg);
-  // } else if (utils::isValidPm(_pm_10_pc[1].update.avg)) {
-  //   pms["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  //   pms["channels"]["2"]["pm10Count"] = ag.round2(_pm_10_pc[1].update.avg);
-  // }
+  // NOTE: No need for particle count 5.0 and 10. When allCh is true, basically monitor using
+  // PM5003T, which don't have PC 5.0 and 10
 
   if (withTempHum) {
     /// Temperature
@@ -816,40 +870,40 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
         utils::isValidTemperature(_temperature[1].update.avg)) {
 
       float temperature = (_temperature[0].update.avg + _temperature[1].update.avg) / 2.0f;
-      pms["atmp"] = ag.round2(temperature);
-      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
-      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
+      pms[json_prop_temp] = ag.round2(temperature);
+      pms["channels"]["1"][json_prop_temp] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["2"][json_prop_temp] = ag.round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate both temperature channel
         float temp = ag.pms5003t_1.compensateTemp(temperature);
         float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
         float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
-        pms["atmpCompensated"] = ag.round2(temp);
-        pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
-        pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
+        pms[json_prop_tempCompensated] = ag.round2(temp);
+        pms["channels"]["1"][json_prop_tempCompensated] = ag.round2(temp1);
+        pms["channels"]["2"][json_prop_tempCompensated] = ag.round2(temp2);
       }
 
     } else if (utils::isValidTemperature(_temperature[0].update.avg)) {
-      pms["atmp"] = ag.round2(_temperature[0].update.avg);
-      pms["channels"]["1"]["atmp"] = ag.round2(_temperature[0].update.avg);
+      pms[json_prop_temp] = ag.round2(_temperature[0].update.avg);
+      pms["channels"]["1"][json_prop_temp] = ag.round2(_temperature[0].update.avg);
 
       if (compensate) {
         // Compensate channel 1
         float temp1 = ag.pms5003t_1.compensateTemp(_temperature[0].update.avg);
-        pms["atmpCompensated"] = ag.round2(temp1);
-        pms["channels"]["1"]["atmpCompensated"] = ag.round2(temp1);
+        pms[json_prop_tempCompensated] = ag.round2(temp1);
+        pms["channels"]["1"][json_prop_tempCompensated] = ag.round2(temp1);
       }
 
     } else if (utils::isValidTemperature(_temperature[1].update.avg)) {
-      pms["atmp"] = ag.round2(_temperature[1].update.avg);
-      pms["channels"]["2"]["atmp"] = ag.round2(_temperature[1].update.avg);
+      pms[json_prop_temp] = ag.round2(_temperature[1].update.avg);
+      pms["channels"]["2"][json_prop_temp] = ag.round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate channel 2
         float temp2 = ag.pms5003t_2.compensateTemp(_temperature[1].update.avg);
-        pms["atmpCompensated"] = ag.round2(temp2);
-        pms["channels"]["2"]["atmpCompensated"] = ag.round2(temp2);
+        pms[json_prop_tempCompensated] = ag.round2(temp2);
+        pms["channels"]["2"][json_prop_tempCompensated] = ag.round2(temp2);
       }
     }
 
@@ -857,40 +911,40 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     if (utils::isValidHumidity(_humidity[0].update.avg) &&
         utils::isValidHumidity(_humidity[1].update.avg)) {
       float humidity = (_humidity[0].update.avg + _humidity[1].update.avg) / 2.0f;
-      pms["rhum"] = ag.round2(humidity);
-      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
-      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
+      pms[json_prop_rhum] = ag.round2(humidity);
+      pms["channels"]["1"][json_prop_rhum] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["2"][json_prop_rhum] = ag.round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate both humidity channel
         float hum = ag.pms5003t_1.compensateHum(humidity);
         float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
         float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
-        pms["rhumCompensated"] = ag.round2(hum);
-        pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
-        pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
+        pms[json_prop_rhumCompensated] = ag.round2(hum);
+        pms["channels"]["1"][json_prop_rhumCompensated] = ag.round2(hum1);
+        pms["channels"]["2"][json_prop_rhumCompensated] = ag.round2(hum2);
       }
 
     } else if (utils::isValidHumidity(_humidity[0].update.avg)) {
-      pms["rhum"] = ag.round2(_humidity[0].update.avg);
-      pms["channels"]["1"]["rhum"] = ag.round2(_humidity[0].update.avg);
+      pms[json_prop_rhum] = ag.round2(_humidity[0].update.avg);
+      pms["channels"]["1"][json_prop_rhum] = ag.round2(_humidity[0].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 1
         float hum1 = ag.pms5003t_1.compensateHum(_humidity[0].update.avg);
-        pms["rhumCompensated"] = ag.round2(hum1);
-        pms["channels"]["1"]["rhumCompensated"] = ag.round2(hum1);
+        pms[json_prop_rhumCompensated] = ag.round2(hum1);
+        pms["channels"]["1"][json_prop_rhumCompensated] = ag.round2(hum1);
       }
 
     } else if (utils::isValidHumidity(_humidity[1].update.avg)) {
-      pms["rhum"] = ag.round2(_humidity[1].update.avg);
-      pms["channels"]["2"]["rhum"] = ag.round2(_humidity[1].update.avg);
+      pms[json_prop_rhum] = ag.round2(_humidity[1].update.avg);
+      pms["channels"]["2"][json_prop_rhum] = ag.round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 2
         float hum2 = ag.pms5003t_2.compensateHum(_humidity[1].update.avg);
-        pms["rhumCompensated"] = ag.round2(hum2);
-        pms["channels"]["2"]["rhumCompensated"] = ag.round2(hum2);
+        pms[json_prop_rhumCompensated] = ag.round2(hum2);
+        pms["channels"]["2"][json_prop_rhumCompensated] = ag.round2(hum2);
       }
     }
 
@@ -902,21 +956,21 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
       if (utils::isValidPm(_pm_25[0].update.avg) &&
           utils::isValidHumidity(_humidity[0].update.avg)) {
         pm25_comp1 = ag.pms5003t_1.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
-        pms["channels"]["1"]["pm02Compensated"] = ag.round2(pm25_comp1);
+        pms["channels"]["1"][json_prop_pm25Compensated] = ag.round2(pm25_comp1);
       }
       if (utils::isValidPm(_pm_25[1].update.avg) &&
           utils::isValidHumidity(_humidity[1].update.avg)) {
         pm25_comp2 = ag.pms5003t_2.compensate(_pm_25[1].update.avg, _humidity[1].update.avg);
-        pms["channels"]["2"]["pm02Compensated"] = ag.round2(pm25_comp2);
+        pms["channels"]["2"][json_prop_pm25Compensated] = ag.round2(pm25_comp2);
       }
 
       /// Get average or one of the channel compensated value if only one channel is valid
       if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
-        pms["pm02Compensated"] = ag.round2((pm25_comp1 + pm25_comp2) / 2.0f);
+        pms[json_prop_pm25Compensated] = ag.round2((pm25_comp1 + pm25_comp2) / 2.0f);
       } else if (utils::isValidPm(pm25_comp1)) {
-        pms["pm02Compensated"] = ag.round2(pm25_comp1);
+        pms[json_prop_pm25Compensated] = ag.round2(pm25_comp1);
       } else if (utils::isValidPm(pm25_comp2)) {
-        pms["pm02Compensated"] = ag.round2(pm25_comp2);
+        pms[json_prop_pm25Compensated] = ag.round2(pm25_comp2);
       }
     }
   }

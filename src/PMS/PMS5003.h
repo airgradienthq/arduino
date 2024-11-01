@@ -35,8 +35,10 @@ public:
   int getPm10Sp(void);
   // Particle count
   int getPm03ParticleCount(void);
+  int getPm05ParticleCount(void);
   int getPm01ParticleCount(void);
   int getPm25ParticleCount(void);
+  int getPm5ParticleCount(void);
   int getPm10ParticleCount(void);
 
   int convertPm25ToUsAqi(int pm25);

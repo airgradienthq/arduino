@@ -53,8 +53,10 @@ public:
     PM25_SP, // PM2.5 standard particle
     PM10_SP, // PM10 standard particle
     PM03_PC, // Particle 0.3 count
+    PM05_PC, // Particle 0.5 count
     PM01_PC, // Particle 1.0 count
     PM25_PC, // Particle 2.5 count
+    PM5_PC,  // Particle 5.0 count
     PM10_PC, // Particle 10 count
   };
 
@@ -142,8 +144,10 @@ private:
   IntegerValue _pm_25_sp[2]; // pm 2.5 standard particle
   IntegerValue _pm_10_sp[2]; // pm 10 standard particle
   IntegerValue _pm_03_pc[2]; // particle count 0.3
+  IntegerValue _pm_05_pc[2]; // particle count 0.5
   IntegerValue _pm_01_pc[2]; // particle count 1.0
   IntegerValue _pm_25_pc[2]; // particle count 2.5
+  IntegerValue _pm_5_pc[2];  // particle count 5.0
   IntegerValue _pm_10_pc[2]; // particle count 10
 
   bool _debug = false;
