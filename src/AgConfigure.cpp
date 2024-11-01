@@ -1,5 +1,4 @@
 #include "AgConfigure.h"
-#include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 #if ESP32
 #include "FS.h"
 #include "SPIFFS.h"
@@ -54,6 +53,7 @@ JSON_PROP_DEF(co2CalibrationRequested);
 JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(offlineMode);
 JSON_PROP_DEF(monitorDisplayCompensatedValues);
+JSON_PROP_DEF(corrections);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
@@ -114,7 +114,7 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   return Unknown;
 }
 
-bool Configuration::parsePmCorrection(JSONVar &json) {
+bool Configuration::updatePmCorrection(JSONVar &json) {
   if (!json.hasOwnProperty("corrections")) {
     // TODO: need to response message?
     Serial.println("corrections not found");
@@ -777,7 +777,9 @@ bool Configuration::parse(String data, bool isLocal) {
   }
 
   // Corrections
-  if (parsePmCorrection(root)) {
+  if (updatePmCorrection(root)) {
+    // Deep copy corrections from root to jconfig, so it will be saved later
+    jconfig[jprop_corrections] = JSON.parse(JSON.stringify(root["corrections"])); 
     changed = true;
   }
 
@@ -1231,6 +1233,15 @@ void Configuration::toConfig(const char *buf) {
     jconfig[jprop_monitorDisplayCompensatedValues] =
         jprop_monitorDisplayCompensatedValues_default;
   }
+
+
+  // Set default first before parsing local config
+  pmCorrection.algorithm = PMCorrectionAlgorithm::None;
+  pmCorrection.intercept = 0;
+  pmCorrection.scalingFactor = 0;
+  pmCorrection.useEPA = false;
+  // Load correction from saved config
+  updatePmCorrection(jconfig);
 
   if (changed) {
     saveConfig();

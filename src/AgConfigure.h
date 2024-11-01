@@ -35,7 +35,7 @@ private:
 
   String getLedBarModeName(LedBarMode mode);
   PMCorrectionAlgorithm matchPmAlgorithm(String algorithm);
-  bool parsePmCorrection(JSONVar &json);
+  bool updatePmCorrection(JSONVar &json);
   void saveConfig(void);
   void loadConfig(void);
   void defaultConfig(void);
