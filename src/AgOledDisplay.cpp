@@ -313,6 +313,7 @@ void OledDisplay::showDashboard(const char *status) {
       DISP()->drawStr(55, 27, "PM2.5");
 
       /** Draw PM2.5 value */
+
       int pm25 = value.get(Measurements::PM25);
       if (utils::isValidPm(pm25)) {
         if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
@@ -376,8 +377,8 @@ void OledDisplay::showDashboard(const char *status) {
 
     /** Set PM */
     int pm25 = value.get(Measurements::PM25);
-    if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
-      pm25 = (int)ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity));
+    if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+      pm25 = (int)value.getCorrectedPM25(*ag, config);
     }
 
     ag->display.setCursor(0, 12);
