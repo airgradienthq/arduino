@@ -314,11 +314,10 @@ void OledDisplay::showDashboard(const char *status) {
 
       /** Draw PM2.5 value */
       int pm25 = value.get(Measurements::PM25);
-      if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-        pm25 = (int)value.getCorrectedPM25(*ag, config);
-      }
-
       if (utils::isValidPm(pm25)) {
+        if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+          pm25 = (int)value.getCorrectedPM25(*ag, config);
+        }
         if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
