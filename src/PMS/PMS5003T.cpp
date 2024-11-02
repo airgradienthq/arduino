@@ -205,6 +205,10 @@ float PMS5003T::getRelativeHumidity(void) {
   return pms.getHum() / 10.0f;
 }
 
+float PMS5003T::slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept) {
+  return pms.slrCorrection(pm25, pm003Count, scalingFactor, intercept);
+}
+
 /**
  * @brief Correct PM2.5
  *

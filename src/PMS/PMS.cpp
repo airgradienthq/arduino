@@ -314,6 +314,36 @@ int PMSBase::pm25ToAQI(int pm02) {
     return 500;
 }
 
+
+/**
+ * @brief SLR correction for PM2.5 
+ * 
+ * Reference: https://www.airgradient.com/blog/low-readings-from-pms5003/
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param pm003Count PM0.3 count
+ * @param scalingFactor Scaling factor
+ * @param intercept Intercept
+ * @return float Calibrated PM2.5 value
+ */
+float PMSBase::slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept) {
+  float calibrated;
+
+  float lowCalibrated = (scalingFactor * pm003Count) + intercept;
+  if (lowCalibrated < 31) {
+    calibrated = lowCalibrated;
+  } else {
+    calibrated = pm25;
+  }
+
+  // No negative value for pm2.5
+  if (calibrated < 0) {
+    return 0.0;
+  }
+
+  return calibrated;
+}
+
 /**
  * @brief Correction PM2.5
  *

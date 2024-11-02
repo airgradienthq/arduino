@@ -45,6 +45,7 @@ public:
   int convertPm25ToUsAqi(int pm25);
   float getTemperature(void);
   float getRelativeHumidity(void);
+  float slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept);
   float compensate(float pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
