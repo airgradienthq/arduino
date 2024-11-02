@@ -136,6 +136,8 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
     return false;
   }
 
+  // TODO: Need to have data type check, with error message response if invalid 
+
   // Check algorithm
   String algorithm = pm02["correctionAlgorithm"];
   PMCorrectionAlgorithm algo = matchPmAlgorithm(algorithm);
@@ -149,7 +151,10 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   // But first check if pmCorrection different from algo
   if (algo == None || algo == EPA_2021) {
     if (pmCorrection.algorithm != algo) {
+      // Deep copy corrections from root to jconfig, so it will be saved later
       jconfig[jprop_corrections]["pm02"]["correctionAlgorithm"] = algorithm;
+      jconfig[jprop_corrections]["pm02"]["slr"] = JSON.parse("{}"); // Clear slr
+      // Update pmCorrection with new values
       pmCorrection.algorithm = algo;
       pmCorrection.changed = true;
       logInfo("PM2.5 correction updated");
