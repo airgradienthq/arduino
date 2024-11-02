@@ -11,8 +11,8 @@ class Configuration : public PrintLog {
 public:
   struct PMCorrection {
     PMCorrectionAlgorithm algorithm;
-    int intercept;
-    int scalingFactor;
+    float intercept;
+    float scalingFactor;
     bool useEPA; // EPA 2021
     bool changed;
   };
@@ -97,6 +97,7 @@ public:
   bool isLedBarModeChanged(void);
   bool isMonitorDisplayCompensatedValues(void);
   bool isPMCorrectionChanged(void);
+  bool isPMCorrectionEnabled(void);
   PMCorrection getPMCorrection(void);
 };
 

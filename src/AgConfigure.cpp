@@ -134,13 +134,13 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   }
 
   // Check algorithm
-  const char *algorithm = (const char *)pm02["correctionAlgorithm"];
+  String algorithm = pm02["correctionAlgorithm"];
   PMCorrectionAlgorithm algo = matchPmAlgorithm(algorithm);
   if (algo == Unknown) {
-    Serial.println("Unknown algorithm");
+    logInfo("Unknown algorithm");
     return false;
   }
-  Serial.printf("Correction algorithm: %s\n", algorithm);
+  logInfo("Correction algorithm: " + algorithm);
 
   // If algo is None or EPA_2021, no need to check slr
   // But first check if pmCorrection different from algo
@@ -149,7 +149,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
       jconfig[jprop_corrections]["pm02"]["correctionAlgorithm"] = algorithm;
       pmCorrection.algorithm = algo;
       pmCorrection.changed = true;
-      Serial.println("PM2.5 correction updated");
+      logInfo("PM2.5 correction updated");
       return true;
     }
 
@@ -180,7 +180,6 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // Deep copy corrections from root to jconfig, so it will be saved later
   jconfig[jprop_corrections] = corrections;
-  Serial.println("Correction copied");
 
   // Update pmCorrection with new values
   pmCorrection.algorithm = algo;
@@ -190,7 +189,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   pmCorrection.changed = true;
 
   // Correction values were updated
-  Serial.println("PM2.5 correction updated");
+  logInfo("PM2.5 correction updated");
   return true;
 }
 
@@ -1351,6 +1350,16 @@ bool Configuration::isPMCorrectionChanged(void) {
   return changed;
 }
 
-PMCorrection Configuration::getPMCorrection(void) {
+/**
+ * @brief Check if PM correction is enabled 
+ * 
+ * @return true if PM correction algorithm is not None, otherwise false
+ */
+bool Configuration::isPMCorrectionEnabled(void) {
+  PMCorrection pmCorrection = getPMCorrection();
+  return pmCorrection.algorithm != PMCorrectionAlgorithm::None;
+}
+
+Configuration::PMCorrection Configuration::getPMCorrection(void) {
   return pmCorrection;
 }
