@@ -638,10 +638,9 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
   // Add pm25 compensated value only if PM2.5 and humidity value is valid
   if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
     if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
-      float pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
-      if (utils::isValidPm(pm25)) {
-        indoor[json_prop_pm25Compensated] = ag.round2(pm25);
-      }
+      // Correction using moving average value
+      float tmp = getCorrectedPM25(ag, config, true);
+      indoor[json_prop_pm25Compensated] = ag.round2(tmp);
     }
   }
 
