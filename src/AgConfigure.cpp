@@ -103,15 +103,18 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // Loop through all algorithm names in the PM_CORRECTION_ALGORITHM_NAMES array
   // If the input string matches an algorithm name, return the corresponding enum value
   // Else return Unknown
-  for (int idx = 0;
-       idx < sizeof(PM_CORRECTION_ALGORITHM_NAMES) / sizeof(PM_CORRECTION_ALGORITHM_NAMES[0]);
-       idx++) {
-    if (algorithm == PM_CORRECTION_ALGORITHM_NAMES[idx]) {
-      return (PMCorrectionAlgorithm)idx;
+
+  const size_t enumSize = SLR_PMS5003_20240104 + 1; // Get the actual size of the enum
+  PMCorrectionAlgorithm result = PMCorrectionAlgorithm::Unknown;
+  
+  // Loop through enum values
+  for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
+    if (algorithm == PM_CORRECTION_ALGORITHM_NAMES[enumVal]) {
+      result = static_cast<PMCorrectionAlgorithm>(enumVal);
     }
   }
 
-  return Unknown;
+  return result;
 }
 
 bool Configuration::updatePmCorrection(JSONVar &json) {
@@ -171,9 +174,13 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
     return false;
   }
 
+  // arduino_json doesn't support float type, need to cast to double first
+  float intercept = (float)((double)slr["intercept"]);
+  float scalingFactor = (float)((double)slr["scalingFactor"]);
+
   // Compare with current pmCorrection
-  if (pmCorrection.algorithm == algo && pmCorrection.intercept == (double)slr["intercept"] &&
-      pmCorrection.scalingFactor == (double)slr["scalingFactor"] &&
+  if (pmCorrection.algorithm == algo && pmCorrection.intercept == intercept &&
+      pmCorrection.scalingFactor == scalingFactor &&
       pmCorrection.useEPA == (bool)slr["useEpa2021"]) {
     return false; // No changes needed
   }
@@ -183,8 +190,8 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // Update pmCorrection with new values
   pmCorrection.algorithm = algo;
-  pmCorrection.intercept = (double)slr["intercept"];
-  pmCorrection.scalingFactor = (double)slr["scalingFactor"];
+  pmCorrection.intercept = intercept;
+  pmCorrection.scalingFactor = scalingFactor;
   pmCorrection.useEPA = (bool)slr["useEpa2021"];
   pmCorrection.changed = true;
 
