@@ -146,6 +146,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   // But first check if pmCorrection different from algo
   if (algo == None || algo == EPA_2021) {
     if (pmCorrection.algorithm != algo) {
+      jconfig[jprop_corrections]["pm02"]["correctionAlgorithm"] = algorithm;
       pmCorrection.algorithm = algo;
       pmCorrection.changed = true;
       Serial.println("PM2.5 correction updated");
@@ -176,6 +177,10 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
       pmCorrection.useEPA == (bool)slr["useEpa2021"]) {
     return false; // No changes needed
   }
+
+  // Deep copy corrections from root to jconfig, so it will be saved later
+  jconfig[jprop_corrections] = corrections;
+  Serial.println("Correction copied");
 
   // Update pmCorrection with new values
   pmCorrection.algorithm = algo;
@@ -778,8 +783,6 @@ bool Configuration::parse(String data, bool isLocal) {
 
   // Corrections
   if (updatePmCorrection(root)) {
-    // Deep copy corrections from root to jconfig, so it will be saved later
-    jconfig[jprop_corrections] = JSON.parse(JSON.stringify(root["corrections"])); 
     changed = true;
   }
 
