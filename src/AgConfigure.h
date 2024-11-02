@@ -96,6 +96,8 @@ public:
   void setOfflineModeWithoutSave(bool offline);
   bool isLedBarModeChanged(void);
   bool isMonitorDisplayCompensatedValues(void);
+  bool isPMCorrectionChanged(void);
+  PMCorrection getPMCorrection(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

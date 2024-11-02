@@ -1344,3 +1344,13 @@ String Configuration::newFirmwareVersion(void) {
   otaNewFirmwareVersion = String("");
   return newFw;
 }
+
+bool Configuration::isPMCorrectionChanged(void) {
+  bool changed = pmCorrection.changed;
+  pmCorrection.changed = false;
+  return changed;
+}
+
+PMCorrection Configuration::getPMCorrection(void) {
+  return pmCorrection;
+}
