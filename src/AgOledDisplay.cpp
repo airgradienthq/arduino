@@ -314,13 +314,11 @@ void OledDisplay::showDashboard(const char *status) {
 
       /** Draw PM2.5 value */
       int pm25 = value.get(Measurements::PM25);
-      if (utils::isValidPm(pm25)) {
-        /** Compensate PM2.5 value. */
-        if (config.hasSensorSHT && config.isMonitorDisplayCompensatedValues()) {
-          pm25 = ag->pms5003.compensate(pm25, value.getFloat(Measurements::Humidity));
-          logInfo("PM2.5 compensate: " + String(pm25));
-        }
+      if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+        pm25 = (int)value.getCorrectedPM25(*ag, config);
+      }
 
+      if (utils::isValidPm(pm25)) {
         if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
         } else {
