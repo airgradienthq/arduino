@@ -773,7 +773,7 @@ bool Configuration::parse(String data, bool isLocal) {
       if (curVer != newVer) {
         logInfo("Detected new firmware version: " + newVer);
         otaNewFirmwareVersion = newVer;
-        udpated = true;
+        updated = true;
       } else {
         otaNewFirmwareVersion = String("");
       }
@@ -786,12 +786,12 @@ bool Configuration::parse(String data, bool isLocal) {
   }
 
   if (changed) {
-    udpated = true;
+    updated = true;
     saveConfig();
     printConfig();
   } else {
     if (ledBarTestRequested || co2CalibrationRequested) {
-      udpated = true;
+      updated = true;
     }
   }
   return true;
@@ -978,8 +978,8 @@ String Configuration::getModel(void) {
 }
 
 bool Configuration::isUpdated(void) {
-  bool updated = this->udpated;
-  this->udpated = false;
+  bool updated = this->updated;
+  this->updated = false;
   return updated;
 }
 

@@ -20,7 +20,7 @@ public:
 private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
-  bool udpated;
+  bool updated;
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
