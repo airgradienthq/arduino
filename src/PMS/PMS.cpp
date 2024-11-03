@@ -151,6 +151,7 @@ void PMSBase::readPackage(Stream *serial) {
     if (ms >= READ_PACKGE_TIMEOUT) {
       lastPackage = 0;
       _connected = false;
+      Serial.println("PMS disconnected");
     }
   }
 }
@@ -297,22 +298,50 @@ uint8_t PMSBase::getErrorCode(void) { return pms_errorCode; }
  * @return int
  */
 int PMSBase::pm25ToAQI(int pm02) {
-  if (pm02 <= 12.0)
-    return ((50 - 0) / (12.0 - .0) * (pm02 - .0) + 0);
+  if (pm02 <= 9.0)
+    return ((50 - 0) / (9.0 - .0) * (pm02 - .0) + 0);
   else if (pm02 <= 35.4)
-    return ((100 - 50) / (35.4 - 12.0) * (pm02 - 12.0) + 50);
+    return ((100 - 51) / (35.4 - 9.1) * (pm02 - 9.0) + 51);
   else if (pm02 <= 55.4)
-    return ((150 - 100) / (55.4 - 35.4) * (pm02 - 35.4) + 100);
-  else if (pm02 <= 150.4)
-    return ((200 - 150) / (150.4 - 55.4) * (pm02 - 55.4) + 150);
-  else if (pm02 <= 250.4)
-    return ((300 - 200) / (250.4 - 150.4) * (pm02 - 150.4) + 200);
-  else if (pm02 <= 350.4)
-    return ((400 - 300) / (350.4 - 250.4) * (pm02 - 250.4) + 300);
-  else if (pm02 <= 500.4)
-    return ((500 - 400) / (500.4 - 350.4) * (pm02 - 350.4) + 400);
+    return ((150 - 101) / (55.4 - 35.5) * (pm02 - 35.5) + 101);
+  else if (pm02 <= 125.4)
+    return ((200 - 151) / (125.4 - 55.5) * (pm02 - 55.5) + 151);
+  else if (pm02 <= 225.4)
+    return ((300 - 201) / (225.4 - 125.5) * (pm02 - 125.5) + 201);
+  else if (pm02 <= 325.4)
+    return ((500 - 301) / (325.4 - 225.5) * (pm02 - 225.5) + 301);
   else
     return 500;
+}
+
+
+/**
+ * @brief SLR correction for PM2.5 
+ * 
+ * Reference: https://www.airgradient.com/blog/low-readings-from-pms5003/
+ * 
+ * @param pm25 PM2.5 raw value
+ * @param pm003Count PM0.3 count
+ * @param scalingFactor Scaling factor
+ * @param intercept Intercept
+ * @return float Calibrated PM2.5 value
+ */
+float PMSBase::slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept) {
+  float calibrated;
+
+  float lowCalibrated = (scalingFactor * pm003Count) + intercept;
+  if (lowCalibrated < 31) {
+    calibrated = lowCalibrated;
+  } else {
+    calibrated = pm25;
+  }
+
+  // No negative value for pm2.5
+  if (calibrated < 0) {
+    return 0.0;
+  }
+
+  return calibrated;
 }
 
 /**
@@ -322,11 +351,12 @@ int PMSBase::pm25ToAQI(int pm02) {
  *
  * @param pm25 Raw PM2.5 value
  * @param humidity Humidity value (%)
- * @return int
+ * @return compensated pm25 value
  */
-int PMSBase::compensate(int pm25, float humidity) {
+float PMSBase::compensate(float pm25, float humidity) {
   float value;
-  float fpm25 = pm25;
+
+  // Correct invalid humidity value
   if (humidity < 0) {
     humidity = 0;
   }
@@ -334,23 +364,33 @@ int PMSBase::compensate(int pm25, float humidity) {
     humidity = 100.0f;
   }
 
-  if(pm25 < 30) { /** pm2.5 < 30 */
-    value = (fpm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
-  } else if(pm25 < 50) { /** 30 <= pm2.5 < 50 */
-    value = (0.786f * (fpm25 * 0.05f - 1.5f) + 0.524f * (1.0f - (fpm25 * 0.05f - 1.5f))) * fpm25 - (0.0862f * humidity) + 5.75f;
-  } else if(pm25 < 210) { /** 50 <= pm2.5 < 210 */
-    value = (0.786f * fpm25) - (0.0862f * humidity) + 5.75f;
-  } else if(pm25 < 260) { /** 210 <= pm2.5 < 260 */
-    value = (0.69f * (fpm25 * 0.02f - 4.2f) + 0.786f * (1.0f - (fpm25 * 0.02f - 4.2f))) * fpm25 - (0.0862f * humidity * (1.0f - (fpm25 * 0.02f - 4.2f))) + (2.966f * (fpm25 * 0.02f - 4.2f)) + (5.75f * (1.0f - (fpm25 * 0.02f - 4.2f))) + (8.84f * (1.e-4) * fpm25 * fpm25 * (fpm25 * 0.02f - 4.2f));
+  // If its already 0, do not proceed
+  if (pm25 == 0) {
+    return 0.0;
+  }
+
+  if (pm25 < 30) { /** pm2.5 < 30 */
+    value = (pm25 * 0.524f) - (humidity * 0.0862f) + 5.75f;
+  } else if (pm25 < 50) { /** 30 <= pm2.5 < 50 */
+    value = (0.786f * (pm25 * 0.05f - 1.5f) + 0.524f * (1.0f - (pm25 * 0.05f - 1.5f))) * pm25 -
+            (0.0862f * humidity) + 5.75f;
+  } else if (pm25 < 210) { /** 50 <= pm2.5 < 210 */
+    value = (0.786f * pm25) - (0.0862f * humidity) + 5.75f;
+  } else if (pm25 < 260) { /** 210 <= pm2.5 < 260 */
+    value = (0.69f * (pm25 * 0.02f - 4.2f) + 0.786f * (1.0f - (pm25 * 0.02f - 4.2f))) * pm25 -
+            (0.0862f * humidity * (1.0f - (pm25 * 0.02f - 4.2f))) +
+            (2.966f * (pm25 * 0.02f - 4.2f)) + (5.75f * (1.0f - (pm25 * 0.02f - 4.2f))) +
+            (8.84f * (1.e-4) * pm25 * pm25 * (pm25 * 0.02f - 4.2f));
   } else { /** 260 <= pm2.5 */
-    value = 2.966f + (0.69f * fpm25) + (8.84f * (1.e-4) * fpm25 * fpm25);
+    value = 2.966f + (0.69f * pm25) + (8.84f * (1.e-4) * pm25 * pm25);
   }
 
+  // No negative value for pm2.5
   if (value < 0) {
-    value = 0;
+    return 0.0;
   }
 
-  return (int)value;
+  return value;
 }
 
 /**
@@ -390,20 +430,26 @@ bool PMSBase::validate(const uint8_t *buf) {
 }
 
 void PMSBase::parse(const uint8_t *buf) {
+  // Standard particle
   pms_raw0_1 = toU16(&buf[4]);
   pms_raw2_5 = toU16(&buf[6]);
   pms_raw10 = toU16(&buf[8]);
+  // atmospheric
   pms_pm0_1 = toU16(&buf[10]);
   pms_pm2_5 = toU16(&buf[12]);
   pms_pm10 = toU16(&buf[14]);
+
+  // particle count
   pms_count0_3 = toU16(&buf[16]);
   pms_count0_5 = toU16(&buf[18]);
   pms_count1_0 = toU16(&buf[20]);
   pms_count2_5 = toU16(&buf[22]);
-  pms_count5_0 = toU16(&buf[24]);
-  pms_count10 = toU16(&buf[26]);
-  pms_temp = toU16(&buf[24]);
-  pms_hum = toU16(&buf[26]);
+  pms_count5_0 = toU16(&buf[24]); // PMS5003 only
+  pms_count10 = toU16(&buf[26]);  // PMS5003 only
+
+  // Others
+  pms_temp = toU16(&buf[24]); // PMS5003T only
+  pms_hum = toU16(&buf[26]);  // PMS5003T only
   pms_firmwareVersion = buf[28];
   pms_errorCode = buf[29];
 }

@@ -25,12 +25,25 @@ public:
   void resetFailCount(void);
   int getFailCount(void);
   int getFailCountMax(void);
+  // Atmospheric environment
   int getPm01Ae(void);
   int getPm25Ae(void);
   int getPm10Ae(void);
+  // Standard particle
+  int getPm01Sp(void);
+  int getPm25Sp(void);
+  int getPm10Sp(void);
+  // Particle count
   int getPm03ParticleCount(void);
+  int getPm05ParticleCount(void);
+  int getPm01ParticleCount(void);
+  int getPm25ParticleCount(void);
+  int getPm5ParticleCount(void);
+  int getPm10ParticleCount(void);
+
   int convertPm25ToUsAqi(int pm25);
-  int compensate(int pm25, float humidity);
+  float slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept);
+  float compensate(float pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);
   bool connected(void);
