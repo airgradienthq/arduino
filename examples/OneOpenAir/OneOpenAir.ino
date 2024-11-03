@@ -169,7 +169,7 @@ void setup() {
   setMeasurementMaxPeriod();
 
   // Uncomment below line to print every measurements reading update
-  // measurements.setDebug(true);
+  measurements.setDebug(true);
 
   /** Connecting wifi */
   bool connectToWifi = false;
