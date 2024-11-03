@@ -82,7 +82,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
 
 #### Get Configuration Parameters (GET)
 
-With the path "/config" you can get monitor current configurations.
+"/config" path returns the current configuration of the monitor.
 
 ```json 
 {
@@ -133,7 +133,7 @@ Example to set monitor to Celsius
 
 #### Avoiding Conflicts with Configuration on AirGradient Server
 
-If the monitor is set up on the AirGradient dashboard, it will also receive configurations from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
+If the monitor is set up on the AirGradient dashboard, it will also receive the configuration parameters from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
 
 #### Configuration Parameters (GET/PUT)
 
