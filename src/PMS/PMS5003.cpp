@@ -172,6 +172,10 @@ int PMS5003::getPm10ParticleCount(void) { return pms.getCount10(); }
  */
 int PMS5003::convertPm25ToUsAqi(int pm25) { return pms.pm25ToAQI(pm25); }
 
+float PMS5003::slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept) {
+  return pms.slrCorrection(pm25, pm003Count, scalingFactor, intercept);
+}
+
 /**
  * @brief Correct PM2.5
  *

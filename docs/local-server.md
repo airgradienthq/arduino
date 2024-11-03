@@ -73,16 +73,17 @@ You get the following response:
 | `noxIndex`                        | Number  | Senisirion NOx Index                                                                   |
 | `noxRaw`                          | Number  | NOx raw value                                                                          |
 | `boot`                            | Number  | Counts every measurement cycle. Low boot counts indicate restarts.                     |
-| `bootCount`                       | Number  | Same as boot property. Required for Home Assistant compatability. Will be depreciated. |
+| `bootCount`                       | Number  | Same as boot property. Required for Home Assistant compatability. (deprecated soon!)   |
 | `ledMode`                         | String  | Current configuration of the LED mode                                                  |
 | `firmware`                        | String  | Current firmware version                                                               |
 | `model`                           | String  | Current model name                                                                     |
-| `monitorDisplayCompensatedValues` | Boolean | Switching Display of AirGradient ONE to Compensated / Non Compensated Values           |
 
 Compensated values apply correction algorithms to make the sensor values more accurate. Temperature and relative humidity correction is only applied on the outdoor monitor Open Air but the properties _compensated will still be send also for the indoor monitor AirGradient ONE.
 
 #### Get Configuration Parameters (GET)
-With the path "/config" you can get the current configuration.
+
+"/config" path returns the current configuration of the monitor.
+
 ```json 
 {
   "country": "TH",
@@ -99,28 +100,40 @@ With the path "/config" you can get the current configuration.
   "displayBrightness": 100,
   "offlineMode": false,
   "model": "I-9PSL",
-  "monitorDisplayCompensatedValues": true
+  "monitorDisplayCompensatedValues": true,
+  "corrections": {
+    "pm02": {
+      "correctionAlgorithm": "epa_2021",
+      "slr": {}
+      }
+    }
+  }
 }
 ```
 
 #### Set Configuration Parameters (PUT)
 
-Configuration parameters can be changed with a put request to the monitor, e.g.
+Configuration parameters can be changed with a PUT request to the monitor, e.g.
 
 Example to force CO2 calibration
 
- ```curl -X PUT -H "Content-Type: application/json" -d '{"co2CalibrationRequested":true}' http://airgradient_84fce612eff4.local/config ```
+ ```bash
+ curl -X PUT -H "Content-Type: application/json" -d '{"co2CalibrationRequested":true}' http://airgradient_84fce612eff4.local/config 
+ ```
 
 Example to set monitor to Celsius
 
- ```curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config ```
+ ```bash
+ curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config 
+ ```
 
  If you use command prompt on Windows, you need to escape the quotes:
  
   ``` -d "{\"param\":\"value\"}" ```
 
 #### Avoiding Conflicts with Configuration on AirGradient Server
-If the monitor is set up on the AirGradient dashboard, it will also receive configurations from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
+
+If the monitor is set up on the AirGradient dashboard, it will also receive the configuration parameters from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
 
 #### Configuration Parameters (GET/PUT)
 
@@ -142,4 +155,47 @@ If the monitor is set up on the AirGradient dashboard, it will also receive conf
 | `noxLearningOffset`               | Set NOx learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"noxLearningOffset": 12}`                     |
 | `tvocLearningOffset`              | Set VOC learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"tvocLearningOffset": 12}`                    |
 | `offlineMode`                     | Set monitor to run without WiFi.                                 | Boolean |  `false`: Disabled (default) <br> `true`: Enabled                                                                                       | `{"offlineMode": true}`                         |
-| `monitorDisplayCompensatedValues` | Set the display show the PM value with/without compensate  value (From [3.1.9]()) | Boolean | `false`: Without compensate (default) <br> `true`: with compensate                                                                      | `{"monitorDisplayCompensatedValues": false }`   |
+| `monitorDisplayCompensatedValues` | Set the display show the PM value with/without compensate  value (only on [3.1.9]()) | Boolean | `false`: Without compensate (default) <br> `true`: with compensate                                                                      | `{"monitorDisplayCompensatedValues": false }`   |
+| `corrections`                     | Sets correction options to display and measurement values on local server response.    | Object |  _see corretions section_             | _see corretions section_                         |
+
+
+
+#### Corrections
+
+The `corrections` object allows configuring PM2.5 correction algorithms and parameters. This affects both the display and local server response values.
+
+Example correction configuration:
+
+```json
+{
+  "corrections": {
+    "pm02": {
+      "correctionAlgorithm": "<Option In String>",
+      "slr": {
+        "intercept": 0,
+        "scalingFactor": 0,
+        "useEpa2021": false
+      }
+    }
+  }
+}
+```
+
+| Algorithm | Value | Description | SLR required |
+|------------|-------------|------|---------| 
+| Raw | `"none"` | No correction (default) | No |
+| EPA 2021 | `"epa_2021"` | Use EPA 2021 correction factors on top of raw value | No |
+| PMS5003_20240104 | `"slr_PMS5003_20240104"` | Correction for PMS5003 sensor batch 20240104| Yes | 
+| PMS5003_20231218 | `"slr_PMS5003_20231218"` | Correction for PMS5003 sensor batch 20231218| Yes |
+| PMS5003_20231030 | `"slr_PMS5003_20231030"` | Correction for PMS5003 sensor batch 20231030| Yes |
+
+**Notes**: 
+
+- Set `useEpa2021` to true if want to apply EPA 2021 correction factors on top of SLR correction value.
+- `intercept` and `scalingFactor` values can be obtained from [this article](https://www.airgradient.com/blog/low-readings-from-pms5003/)
+
+**Example**:
+
+```bash
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231030","slr":{"intercept":0,"scalingFactor":0.02838,"useEpa2021":false}}}}'
+```

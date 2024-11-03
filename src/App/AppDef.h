@@ -94,6 +94,18 @@ enum ConfigurationControl {
   ConfigurationControlBoth
 };
 
+enum PMCorrectionAlgorithm {
+  Unknown, // Unknown algorithm
+  None,    // No PM correction
+  EPA_2021,
+  SLR_PMS5003_20220802,
+  SLR_PMS5003_20220803,
+  SLR_PMS5003_20220824,
+  SLR_PMS5003_20231030,
+  SLR_PMS5003_20231218,
+  SLR_PMS5003_20240104,
+};
+
 enum AgFirmwareMode {
   FW_MODE_I_9PSL, /** ONE_INDOOR */
   FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */

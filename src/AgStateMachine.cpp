@@ -142,8 +142,8 @@ void StateMachine::co2handleLeds(void) {
  */
 void StateMachine::pm25handleLeds(void) {
   int pm25Value = value.get(Measurements::PM25);
-  if (config.isMonitorDisplayCompensatedValues() && config.hasSensorSHT) {
-    pm25Value = ag->pms5003.compensate(pm25Value, value.getFloat(Measurements::Humidity));
+  if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+    pm25Value = (int)value.getCorrectedPM25(*ag, config);
   }
 
   if (pm25Value < 5) {

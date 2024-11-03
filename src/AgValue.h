@@ -114,6 +114,18 @@ public:
    */
   float getFloat(MeasurementType type, int ch = 1);
 
+
+  /**
+   * @brief Get the Corrected PM25 object based on the correction algorithm from configuration
+   *
+   * @param ag AirGradient instance
+   * @param config Configuration instance
+   * @param useAvg Use moving average value if true, otherwise use latest value
+   * @param ch MeasurementType channel
+   * @return float Corrected PM2.5 value
+   */
+  float getCorrectedPM25(AirGradient &ag, Configuration &config, bool useAvg = false, int ch = 1);
+
   /**
    * build json payload for every measurements
    */

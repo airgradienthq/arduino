@@ -39,6 +39,7 @@ public:
   uint8_t getErrorCode(void);
 
   int pm25ToAQI(int pm02);
+  float slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept);
   float compensate(float pm25, float humidity);
 
 private:

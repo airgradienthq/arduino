@@ -1,6 +1,7 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
 #include "AirGradient.h"
+#include "App/AppDef.h"
 
 #define json_prop_pmFirmware     "firmware"
 #define json_prop_pm01Ae "pm01"
@@ -482,6 +483,38 @@ void Measurements::validateChannel(int ch) {
   }
 }
 
+float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, bool useAvg, int ch) {
+  float pm25;
+  float humidity;
+  float pm003Count;
+  int channel = ch - 1; // Array index
+  if (useAvg) {
+    // Directly call from the index
+    pm25 = _pm_25[channel].update.avg;
+    humidity = _humidity[channel].update.avg;
+    pm003Count = _pm_03_pc[channel].update.avg;
+  } else {
+    pm25 = get(PM25, ch);
+    humidity = getFloat(Humidity, ch);
+    pm003Count = get(PM03_PC, ch);
+  }
+
+  Configuration::PMCorrection pmCorrection = config.getPMCorrection();
+  if (pmCorrection.algorithm == PMCorrectionAlgorithm::EPA_2021) {
+    // EPA correction directly applied
+    pm25 = ag.pms5003.compensate(pm25, humidity);
+  } else {
+    // SLR correction, this is assumes before calling this function, correction algorithm is not None
+    pm25 = ag.pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
+    if (pmCorrection.useEPA) {
+      // Add EPA compensation on top of SLR
+      pm25 = ag.pms5003.compensate(pm25, humidity);
+    }
+  }
+
+  return pm25;
+}
+
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
                               Configuration &config) {
   JSONVar root;
@@ -605,10 +638,9 @@ JSONVar Measurements::buildIndoor(bool localServer, AirGradient &ag, Configurati
   // Add pm25 compensated value only if PM2.5 and humidity value is valid
   if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
     if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
-      float pm25 = ag.pms5003.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
-      if (utils::isValidPm(pm25)) {
-        indoor[json_prop_pm25Compensated] = ag.round2(pm25);
-      }
+      // Correction using moving average value
+      float tmp = getCorrectedPM25(ag, config, true);
+      indoor[json_prop_pm25Compensated] = ag.round2(tmp);
     }
   }
 
