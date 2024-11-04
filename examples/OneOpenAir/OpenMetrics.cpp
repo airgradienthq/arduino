@@ -74,41 +74,46 @@ String OpenMetrics::getPayload(void) {
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
   if (config.hasSensorPMS1 && config.hasSensorPMS2) {
-    _temp = (measure.temp_1 + measure.temp_2) / 2.0f;
-    _hum = (measure.hum_1 + measure.hum_2) / 2.0f;
-    pm01 = (measure.pm01_1 + measure.pm01_2) / 2;
-    pm25 = (measure.pm25_1 + measure.pm25_2) / 2;
-    pm10 = (measure.pm10_1 + measure.pm10_2) / 2;
-    pm03PCount = (measure.pm03PCount_1 + measure.pm03PCount_2) / 2;
+    _temp = (measure.getFloat(Measurements::Temperature, 1) +
+             measure.getFloat(Measurements::Temperature, 2)) /
+            2.0f;
+    _hum = (measure.getFloat(Measurements::Humidity, 1) +
+            measure.getFloat(Measurements::Humidity, 2)) /
+           2.0f;
+    pm01 = (measure.get(Measurements::PM01, 1) + measure.get(Measurements::PM01, 2)) / 2.0f;
+    pm25 = (measure.get(Measurements::PM25, 1) + measure.get(Measurements::PM25, 2)) / 2.0f;
+    pm10 = (measure.get(Measurements::PM10, 1) + measure.get(Measurements::PM10, 2)) / 2.0f;
+    pm03PCount =
+        (measure.get(Measurements::PM03_PC, 1) + measure.get(Measurements::PM03_PC, 2)) / 2.0f;
   } else {
     if (ag->isOne()) {
       if (config.hasSensorSHT) {
-        _temp = measure.Temperature;
-        _hum = measure.Humidity;
+        _temp = measure.getFloat(Measurements::Temperature);
+        _hum = measure.getFloat(Measurements::Humidity);
       }
 
       if (config.hasSensorPMS1) {
-        pm01 = measure.pm01_1;
-        pm25 = measure.pm25_1;
-        pm10 = measure.pm10_1;
-        pm03PCount = measure.pm03PCount_1;
+        pm01 = measure.get(Measurements::PM01);
+        pm25 = measure.get(Measurements::PM25);
+        pm10 = measure.get(Measurements::PM10);
+        pm03PCount = measure.get(Measurements::PM03_PC);
       }
     } else {
       if (config.hasSensorPMS1) {
-        _temp = measure.temp_1;
-        _hum = measure.hum_1;
-        pm01 = measure.pm01_1;
-        pm25 = measure.pm25_1;
-        pm10 = measure.pm10_1;
-        pm03PCount = measure.pm03PCount_1;
+        _temp = measure.getFloat(Measurements::Temperature, 1);
+        _hum = measure.getFloat(Measurements::Humidity, 1);
+        pm01 = measure.get(Measurements::PM01, 1);
+        pm25 = measure.get(Measurements::PM25, 1);
+        pm10 = measure.get(Measurements::PM10, 1);
+        pm03PCount = measure.get(Measurements::PM03_PC, 1);
       }
       if (config.hasSensorPMS2) {
-        _temp = measure.temp_2;
-        _hum = measure.hum_2;
-        pm01 = measure.pm01_2;
-        pm25 = measure.pm25_2;
-        pm10 = measure.pm10_2;
-        pm03PCount = measure.pm03PCount_2;
+        _temp = measure.getFloat(Measurements::Temperature, 2);
+        _hum = measure.getFloat(Measurements::Humidity, 2);
+        pm01 = measure.get(Measurements::PM01, 2);
+        pm25 = measure.get(Measurements::PM25, 2);
+        pm10 = measure.get(Measurements::PM10, 2);
+        pm03PCount = measure.get(Measurements::PM03_PC, 2);
       }
     }
   }
