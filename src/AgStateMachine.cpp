@@ -13,6 +13,7 @@
 #define RGB_COLOR_Y 255, 150, 0  /** Yellow */
 #define RGB_COLOR_O 255, 40, 0  /** Orange */
 #define RGB_COLOR_P 180, 0, 255 /** Purple */
+#define RGB_COLOR_CLEAR 0, 0, 0 /** No color */
 
 /**
  * @brief Animation LED bar with color
@@ -47,47 +48,67 @@ void StateMachine::ledStatusBlinkDelay(uint32_t ms) {
 }
 
 /**
- * @brief Led bar show led color status
+ * @brief Led bar show PM or CO2 led color status
  *
+ * @return true if all led bar are used, false othwerwise 
  */
-void StateMachine::sensorhandleLeds(void) {
+bool StateMachine::sensorhandleLeds(void) {
+  int totalLedUsed = 0;
   switch (config.getLedBarMode()) {
   case LedBarMode::LedBarModeCO2:
-    co2handleLeds();
+    totalLedUsed = co2handleLeds();
     break;
   case LedBarMode::LedBarModePm:
-    pm25handleLeds();
+    totalLedUsed = pm25handleLeds();
     break;
   default:
     ag->ledBar.clear();
     break;
   }
+
+  if (totalLedUsed == ag->ledBar.getNumberOfLeds()) {
+    return true;
+  }
+
+  // Clear the rest of unused led
+  int startIndex = totalLedUsed + 1;
+  for (int i = startIndex; i <= ag->ledBar.getNumberOfLeds(); i++) {
+    ag->ledBar.setColor(RGB_COLOR_CLEAR, ag->ledBar.getNumberOfLeds() - i);
+  }
+
+  return false;
 }
 
 /**
  * @brief Show CO2 LED status
  *
+ * @return return total number of led that are used on the monitor 
  */
-void StateMachine::co2handleLeds(void) {
+int StateMachine::co2handleLeds(void) {
+  int totalUsed = ag->ledBar.getNumberOfLeds();
   int co2Value = value.get(Measurements::CO2);
   if (co2Value <= 700) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+    totalUsed = 1;
   } else if (co2Value <= 1000) {
     /** GG; 2 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
+    totalUsed = 2;
   } else if (co2Value <= 1333) {
     /** YYY; 3 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+    totalUsed = 3;
   } else if (co2Value <= 1666) {
     /** OOOO; 4 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
+    totalUsed = 4;
   } else if (co2Value <= 2000) {
     /** OOOOO; 5 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
@@ -95,6 +116,7 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 5);
+    totalUsed = 5;
   } else if (co2Value <= 2666) {
     /** RRRRRR; 6 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -103,6 +125,7 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
+    totalUsed = 6;
   } else if (co2Value <= 3333) {
     /** RRRRRRR; 7 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -112,6 +135,7 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+    totalUsed = 7;
   } else if (co2Value <= 4000) {
     /** RRRRRRRR; 8 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -122,6 +146,7 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
+    totalUsed = 8;
   } else { /** > 4000 */
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
@@ -133,14 +158,19 @@ void StateMachine::co2handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
+    totalUsed = 9;
   }
+
+  return totalUsed;
 }
 
 /**
  * @brief Show PM2.5 LED status
- *
+ * 
+ * @return return total number of led that are used on the monitor 
  */
-void StateMachine::pm25handleLeds(void) {
+int StateMachine::pm25handleLeds(void) {
+  int totalUsed = ag->ledBar.getNumberOfLeds();
   int pm25Value = value.get(Measurements::PM25);
   if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
     pm25Value = (int)value.getCorrectedPM25(*ag, config);
@@ -149,21 +179,25 @@ void StateMachine::pm25handleLeds(void) {
   if (pm25Value <= 5) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
+    totalUsed = 1;
   } else if (pm25Value <= 9) {
     /** GG; 2 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 2);
+    totalUsed = 2;
   } else if (pm25Value <= 20) {
     /** YYY; 3 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
+    totalUsed = 3;
   } else if (pm25Value <= 35) {
     /** YYYY; 4 */
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 1);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 2);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_Y, ag->ledBar.getNumberOfLeds() - 4);
+    totalUsed = 4;
   } else if (pm25Value <= 45) {
     /** OOOOO; 5 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
@@ -171,6 +205,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 3);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
+    totalUsed = 5;
   } else if (pm25Value <= 55) {
     /** OOOOOO; 6 */
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 1);
@@ -179,6 +214,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 4);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_O, ag->ledBar.getNumberOfLeds() - 6);
+    totalUsed = 6;
   } else if (pm25Value <= 100) {
     /** RRRRRRR; 7 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -188,6 +224,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 5);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
+    totalUsed = 7;
   } else if (pm25Value <= 125) {
     /** RRRRRRRR; 8 */
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 1);
@@ -198,6 +235,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 6);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
+    totalUsed = 8;
   } else if (pm25Value <= 225) {
     /** PPPPPPPPP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
@@ -209,6 +247,7 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
+    totalUsed = 9;
   } else { /** > 225 */
     /* PRPRPRPRP; 9 */
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 1);
@@ -220,7 +259,10 @@ void StateMachine::pm25handleLeds(void) {
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 7);
     ag->ledBar.setColor(RGB_COLOR_R, ag->ledBar.getNumberOfLeds() - 8);
     ag->ledBar.setColor(RGB_COLOR_P, ag->ledBar.getNumberOfLeds() - 9);
+    totalUsed = 9;
   }
+
+  return totalUsed;
 }
 
 void StateMachine::co2Calibration(void) {
@@ -311,6 +353,7 @@ void StateMachine::co2Calibration(void) {
 void StateMachine::ledBarTest(void) {
   if (config.isLedBarTestRequested()) {
     if (ag->isOne()) {
+      ag->ledBar.clear();
       if (config.getCountry() == "TH") {
         uint32_t tstart = millis();
         logInfo("Start run LED test for 2 min");
@@ -332,7 +375,12 @@ void StateMachine::ledBarTest(void) {
   }
 }
 
-void StateMachine::ledBarPowerUpTest(void) { ledBarRunTest(); }
+void StateMachine::ledBarPowerUpTest(void) { 
+  if (ag->isOne()) {
+    ag->ledBar.clear();
+  }
+  ledBarRunTest(); 
+}
 
 void StateMachine::ledBarRunTest(void) {
   if (ag->isOne()) {
@@ -585,15 +633,13 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   }
 
   ledState = state;
-  if (ag->isOne()) {
-    ag->ledBar.clear(); // Set all LED OFF
-  }
   switch (state) {
   case AgStateMachineWiFiManagerMode: {
     /** In WiFi Manager Mode */
     /** Turn LED OFF */
     /** Turn middle LED Color */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(0, 0, 255, ag->ledBar.getNumberOfLeds() / 2);
     } else {
       ag->statusLed.setToggle();
@@ -603,6 +649,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiManagerPortalActive: {
     /** WiFi Manager has connected to mobile phone */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(0, 0, 255);
     } else {
       ag->statusLed.setOn();
@@ -613,6 +660,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** after SSID and PW entered and OK clicked, connection to WiFI network is
      * attempted */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ledBarSingleLedAnimation(255, 255, 255);
     } else {
       ag->statusLed.setOff();
@@ -622,6 +670,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiManagerStaConnected: {
     /** Connecting to WiFi worked */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(255, 255, 255);
     } else {
       ag->statusLed.setOff();
@@ -631,6 +680,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiOkServerConnecting: {
     /** once connected to WiFi an attempt to reach the server is performed */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ledBarSingleLedAnimation(0, 255, 0);
     } else {
       ag->statusLed.setOff();
@@ -640,6 +690,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiOkServerConnected: {
     /** Server is reachable, all ﬁne */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(0, 255, 0);
     } else {
       ag->statusLed.setOff();
@@ -656,6 +707,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiManagerConnectFailed: {
     /** Cannot connect to WiFi (e.g. wrong password, WPA Enterprise etc.) */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(255, 0, 0);
     } else {
       ag->statusLed.setOff();
@@ -674,6 +726,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connected to WiFi but server not reachable, e.g. firewall block/
      * whitelisting needed etc. */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(233, 183, 54); /** orange */
     } else {
       ag->statusLed.setOff();
@@ -690,6 +743,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
   case AgStateMachineWiFiOkServerOkSensorConfigFailed: {
     /** Server reachable but sensor not configured correctly */
     if (ag->isOne()) {
+      ag->ledBar.clear();
       ag->ledBar.setColor(139, 24, 248); /** violet */
     } else {
       ag->statusLed.setOff();
@@ -707,11 +761,10 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connection to WiFi network failed credentials incorrect encryption not
      * supported etc. */
     if (ag->isOne()) {
-      /** WIFI failed status LED color */
-      ag->ledBar.setColor(255, 0, 0, 0);
-      /** Show CO2 or PM color status */
-      // sensorLedColorHandler();
-      sensorhandleLeds();
+      bool allUsed = sensorhandleLeds();
+      if (allUsed == false) {
+        ag->ledBar.setColor(255, 0, 0, 0);
+      }
     } else {
       ag->statusLed.setOff();
     }
@@ -721,11 +774,10 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connected to WiFi network but the server cannot be reached through the
      * internet, e.g. blocked by firewall */
     if (ag->isOne()) {
-      ag->ledBar.setColor(233, 183, 54, 0);
-
-      /** Show CO2 or PM color status */
-      sensorhandleLeds();
-      // sensorLedColorHandler();
+      bool allUsed = sensorhandleLeds();
+      if (allUsed == false) {
+        ag->ledBar.setColor(233, 183, 54, 0);
+      }
     } else {
       ag->statusLed.setOff();
     }
@@ -735,10 +787,10 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Server is reachable but there is some configuration issue to be fixed on
      * the server side */
     if (ag->isOne()) {
-      ag->ledBar.setColor(139, 24, 248, 0);
-
-      /** Show CO2 or PM color status */
-      sensorhandleLeds();
+      bool allUsed = sensorhandleLeds();
+      if (allUsed == false) {
+        ag->ledBar.setColor(139, 24, 248, 0);
+      }
     } else {
       ag->statusLed.setOff();
     }
