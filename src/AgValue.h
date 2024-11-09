@@ -125,6 +125,8 @@ public:
 
   /**
    * @brief Get the Corrected PM25 object based on the correction algorithm from configuration
+   * 
+   * If correction is not enabled, then will return the raw value (either average or last value)
    *
    * @param ag AirGradient instance
    * @param config Configuration instance

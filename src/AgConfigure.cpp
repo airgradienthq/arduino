@@ -1369,7 +1369,12 @@ bool Configuration::isPMCorrectionChanged(void) {
  */
 bool Configuration::isPMCorrectionEnabled(void) {
   PMCorrection pmCorrection = getPMCorrection();
-  return pmCorrection.algorithm != PMCorrectionAlgorithm::None;
+  if (pmCorrection.algorithm == PMCorrectionAlgorithm::None ||
+      pmCorrection.algorithm == PMCorrectionAlgorithm::Unknown) {
+    return false;
+  }
+
+  return true;
 }
 
 Configuration::PMCorrection Configuration::getPMCorrection(void) {
