@@ -485,6 +485,7 @@ void Measurements::validateChannel(int ch) {
 
 float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, bool useAvg, int ch) {
   float pm25;
+  float corrected;
   float humidity;
   float pm003Count;
   int channel = ch - 1; // Array index
@@ -500,19 +501,27 @@ float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, boo
   }
 
   Configuration::PMCorrection pmCorrection = config.getPMCorrection();
-  if (pmCorrection.algorithm == PMCorrectionAlgorithm::EPA_2021) {
-    // EPA correction directly applied
-    pm25 = ag.pms5003.compensate(pm25, humidity);
-  } else {
-    // SLR correction, this is assumes before calling this function, correction algorithm is not None
-    pm25 = ag.pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
+  switch (pmCorrection.algorithm) {
+  case PMCorrectionAlgorithm::Unknown:
+  case PMCorrectionAlgorithm::None:
+    // If correction is Unknown, then default is None
+    corrected = pm25;
+    break;
+  case PMCorrectionAlgorithm::EPA_2021:
+    corrected = ag.pms5003.compensate(pm25, humidity);
+    break;
+  default: {
+    // All SLR correction using the same flow
+    corrected = ag.pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor,
+                                    pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
-      pm25 = ag.pms5003.compensate(pm25, humidity);
+      corrected = ag.pms5003.compensate(pm25, humidity);
     }
   }
+  }
 
-  return pm25;
+  return corrected;
 }
 
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
