@@ -292,8 +292,8 @@ void Configuration::defaultConfig(void) {
   // PM2.5 correction
   pmCorrection.algorithm = None;
   pmCorrection.changed = false;
-  pmCorrection.intercept = -1;
-  pmCorrection.scalingFactor = -1;
+  pmCorrection.intercept = 0;
+  pmCorrection.scalingFactor = 1;
   pmCorrection.useEPA = false;
 
   saveConfig();
