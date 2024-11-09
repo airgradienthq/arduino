@@ -168,7 +168,7 @@ void setup() {
   boardInit();
   setMeasurementMaxPeriod();
 
-  // Uncomment below line to print every measurements reading update
+  // Comment below line to disable debug measurement readings
   measurements.setDebug(true);
 
   /** Connecting wifi */

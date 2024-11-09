@@ -24,9 +24,9 @@ private:
 
   void ledBarSingleLedAnimation(uint8_t r, uint8_t g, uint8_t b);
   void ledStatusBlinkDelay(uint32_t delay);
-  void sensorhandleLeds(void);
-  void co2handleLeds(void);
-  void pm25handleLeds(void);
+  bool sensorhandleLeds(void);
+  int co2handleLeds(void);
+  int pm25handleLeds(void);
   void co2Calibration(void);
   void ledBarTest(void);
   void ledBarPowerUpTest(void);
