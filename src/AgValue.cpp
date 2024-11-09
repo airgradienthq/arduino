@@ -396,6 +396,52 @@ float Measurements::getFloat(MeasurementType type, int ch) {
   return temporary->listValues.back();
 }
 
+float Measurements::getAverage(MeasurementType type, int ch) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+
+  // Define data point source. Data type doesn't matter because only to get the average value
+  FloatValue *temporary = nullptr;
+  Update update;
+  float measurementAverage;
+  switch (type) {
+  case CO2:
+    measurementAverage = _co2.update.avg;
+    break;
+  case TVOC:
+    measurementAverage = _tvoc.update.avg;
+    break;
+  case NOx:
+    measurementAverage = _nox.update.avg;
+    break;
+  case PM25:
+    measurementAverage = _pm_25[ch].update.avg;
+    break;
+  case Temperature:
+    measurementAverage = _temperature[ch].update.avg;
+    break;
+  case Humidity:
+    measurementAverage = _humidity[ch].update.avg;
+    break;
+  default:
+    // Invalidate, measurements type not handled
+    measurementAverage = -1000;
+    break;
+  };
+
+  // Sanity check if measurement type is not defined 
+  if (measurementAverage == -1000) {
+    Serial.printf("ERROR! %s is not defined on get average value function\n", measurementTypeStr(type));
+    delay(1000);
+    assert(0);
+  }
+
+  return measurementAverage; 
+}
+
 String Measurements::pms5003FirmwareVersion(int fwCode) {
   return pms5003FirmwareVersionBase("PMS5003x", fwCode);
 }
@@ -488,9 +534,9 @@ float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, boo
   float corrected;
   float humidity;
   float pm003Count;
-  int channel = ch - 1; // Array index
   if (useAvg) {
     // Directly call from the index
+    int channel = ch - 1; // Array index
     pm25 = _pm_25[channel].update.avg;
     humidity = _humidity[channel].update.avg;
     pm003Count = _pm_03_pc[channel].update.avg;
@@ -511,7 +557,7 @@ float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, boo
     corrected = ag.pms5003.compensate(pm25, humidity);
     break;
   default: {
-    // All SLR correction using the same flow
+    // All SLR correction using the same flow, hence default condition
     corrected = ag.pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor,
                                     pmCorrection.intercept);
     if (pmCorrection.useEPA) {

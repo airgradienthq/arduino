@@ -114,6 +114,14 @@ public:
    */
   float getFloat(MeasurementType type, int ch = 1);
 
+  /**
+   * @brief Get the target measurement average value
+   *
+   * @param type measurement type that will be retrieve
+   * @param ch target type value channel
+   * @return moving average value of target measurements type  
+   */
+  float getAverage(MeasurementType type, int ch = 1);
 
   /**
    * @brief Get the Corrected PM25 object based on the correction algorithm from configuration
