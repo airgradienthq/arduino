@@ -172,7 +172,7 @@ int StateMachine::co2handleLeds(void) {
 int StateMachine::pm25handleLeds(void) {
   int totalUsed = ag->ledBar.getNumberOfLeds();
 
-  int pm25Value = round(value.getFloat(Measurements::PM25));
+  int pm25Value = round(value.getAverage(Measurements::PM25));
   if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
     pm25Value = round(value.getCorrectedPM25(*ag, config, true));
   }
