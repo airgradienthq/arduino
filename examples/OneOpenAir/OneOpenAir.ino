@@ -1216,6 +1216,6 @@ void setMeasurementMaxPeriod() {
 }
 
 int calculateMaxPeriod(int updateInterval) {
-  // 0.5 is 50% reduced interval for max period
-  return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.5)) / updateInterval;
+  // 0.8 is 80% reduced interval for max period
+  return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.8)) / updateInterval;
 }

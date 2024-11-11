@@ -162,7 +162,7 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 
 #### Corrections
 
-The `corrections` object allows configuring PM2.5 correction algorithms and parameters. This affects both the display and local server response values.
+The `corrections` object allows configuring PM2.5 correction algorithms and parameters locally. This affects both the display and local server response values.
 
 Example correction configuration:
 
@@ -189,13 +189,28 @@ Example correction configuration:
 | PMS5003_20231218 | `"slr_PMS5003_20231218"` | Correction for PMS5003 sensor batch 20231218| Yes |
 | PMS5003_20231030 | `"slr_PMS5003_20231030"` | Correction for PMS5003 sensor batch 20231030| Yes |
 
-**Notes**: 
+**NOTES**: 
 
-- Set `useEpa2021` to true if want to apply EPA 2021 correction factors on top of SLR correction value.
+- Set `useEpa2021` to `true` if want to apply EPA 2021 correction factors on top of SLR correction value, otherwise `false`
 - `intercept` and `scalingFactor` values can be obtained from [this article](https://www.airgradient.com/blog/low-readings-from-pms5003/)
+- If `configurationControl` is set to `local` (eg. when using Home Assistant), correction need to be set manually, see examples below 
 
-**Example**:
+**Examples**:
+
+- PMS5003_20231030 
 
 ```bash
-curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231030","slr":{"intercept":0,"scalingFactor":0.02838,"useEpa2021":false}}}}'
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231030","slr":{"intercept":0,"scalingFactor":0.02838,"useEpa2021":true}}}}'
+```
+
+- PMS5003_20231218 
+
+```bash
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231218","slr":{"intercept":0,"scalingFactor":0,03525,"useEpa2021":true}}}}'
+```
+
+- PMS5003_20240104 
+
+```bash
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20240104","slr":{"intercept":0,"scalingFactor":0.02896,"useEpa2021":true}}}}'
 ```

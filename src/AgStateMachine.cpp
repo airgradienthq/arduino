@@ -86,7 +86,7 @@ bool StateMachine::sensorhandleLeds(void) {
  */
 int StateMachine::co2handleLeds(void) {
   int totalUsed = ag->ledBar.getNumberOfLeds();
-  int co2Value = value.get(Measurements::CO2);
+  int co2Value = round(value.getAverage(Measurements::CO2));
   if (co2Value <= 700) {
     /** G; 1 */
     ag->ledBar.setColor(RGB_COLOR_G, ag->ledBar.getNumberOfLeds() - 1);
@@ -171,9 +171,10 @@ int StateMachine::co2handleLeds(void) {
  */
 int StateMachine::pm25handleLeds(void) {
   int totalUsed = ag->ledBar.getNumberOfLeds();
-  int pm25Value = value.get(Measurements::PM25);
+
+  int pm25Value = round(value.getAverage(Measurements::PM25));
   if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-    pm25Value = (int)value.getCorrectedPM25(*ag, config);
+    pm25Value = round(value.getCorrectedPM25(*ag, config, true));
   }
 
   if (pm25Value <= 5) {
