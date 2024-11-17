@@ -206,7 +206,7 @@ curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header '
 - PMS5003_20231218 
 
 ```bash
-curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231218","slr":{"intercept":0,"scalingFactor":0,03525,"useEpa2021":true}}}}'
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231218","slr":{"intercept":0,"scalingFactor":0.03525,"useEpa2021":true}}}}'
 ```
 
 - PMS5003_20240104 
