@@ -896,10 +896,10 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms[json_prop_pm03Count] = ag.round2(avg);
     pms["channels"]["1"][json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
     pms["channels"]["2"][json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
-  } else if (utils::isValidPm(_pm_03_pc[0].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_03_pc[0].update.avg)) {
     pms[json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
     pms["channels"]["1"][json_prop_pm03Count] = ag.round2(_pm_03_pc[0].update.avg);
-  } else if (utils::isValidPm(_pm_03_pc[1].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
     pms[json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
     pms["channels"]["2"][json_prop_pm03Count] = ag.round2(_pm_03_pc[1].update.avg);
   }
@@ -911,10 +911,10 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms[json_prop_pm05Count] = ag.round2(avg);
     pms["channels"]["1"][json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
     pms["channels"]["2"][json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
-  } else if (utils::isValidPm(_pm_05_pc[0].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_05_pc[0].update.avg)) {
     pms[json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
     pms["channels"]["1"][json_prop_pm05Count] = ag.round2(_pm_05_pc[0].update.avg);
-  } else if (utils::isValidPm(_pm_05_pc[1].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_05_pc[1].update.avg)) {
     pms[json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
     pms["channels"]["2"][json_prop_pm05Count] = ag.round2(_pm_05_pc[1].update.avg);
   }
@@ -925,10 +925,10 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms[json_prop_pm1Count] = ag.round2(avg);
     pms["channels"]["1"][json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
     pms["channels"]["2"][json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
-  } else if (utils::isValidPm(_pm_01_pc[0].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_01_pc[0].update.avg)) {
     pms[json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
     pms["channels"]["1"][json_prop_pm1Count] = ag.round2(_pm_01_pc[0].update.avg);
-  } else if (utils::isValidPm(_pm_01_pc[1].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
     pms[json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
     pms["channels"]["2"][json_prop_pm1Count] = ag.round2(_pm_01_pc[1].update.avg);
   }
@@ -940,10 +940,10 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
     pms[json_prop_pm25Count] = ag.round2(avg);
     pms["channels"]["1"][json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
     pms["channels"]["2"][json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
-  } else if (utils::isValidPm(_pm_25_pc[0].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_25_pc[0].update.avg)) {
     pms[json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
     pms["channels"]["1"][json_prop_pm25Count] = ag.round2(_pm_25_pc[0].update.avg);
-  } else if (utils::isValidPm(_pm_25_pc[1].update.avg)) {
+  } else if (utils::isValidPm03Count(_pm_25_pc[1].update.avg)) {
     pms[json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
     pms["channels"]["2"][json_prop_pm25Count] = ag.round2(_pm_25_pc[1].update.avg);
   }
