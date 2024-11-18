@@ -562,7 +562,7 @@ float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, boo
                                     pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
-      corrected = ag.pms5003.compensate(pm25, humidity);
+      corrected = ag.pms5003.compensate(corrected, humidity);
     }
   }
   }
