@@ -354,16 +354,16 @@ bool Configuration::begin(void) {
  * @return false Failure
  */
 bool Configuration::parse(String data, bool isLocal) {
-  logInfo("Parse configure: " + data);
+  logInfo("Parsing configuration: " + data);
 
   JSONVar root = JSON.parse(data);
   failedMessage = "";
-  if (root == undefined) {
+  if (root == undefined || JSONVar::typeof_(root) != "object") {
+    logError("Parse configuration failed, JSON invalid (" + JSONVar::typeof_(root) + ")");
     failedMessage = "JSON invalid";
-    logError(failedMessage);
     return false;
   }
-  logInfo("Parse configure success");
+  logInfo("Parse configuration success");
 
   /** Is configuration changed */
   bool changed = false;
