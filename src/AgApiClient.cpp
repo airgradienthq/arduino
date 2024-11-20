@@ -124,6 +124,14 @@ bool AgApiClient::postToServer(String data) {
   }
 
   String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
+#ifdef ESP8266
+  HTTPClient client;
+  WiFiClient wifiClient;
+  if (client.begin(wifiClient, uri) == false) {
+    getConfigFailed = true;
+    return false;
+  }
+#else
   HTTPClient client;
   client.setTimeout(timeoutMs);
   if (apiRootChanged) {
@@ -141,6 +149,7 @@ bool AgApiClient::postToServer(String data) {
       return false;
     }
   }
+#endif
   client.addHeader("content-type", "application/json");
   int retCode = client.POST(data);
   client.end();
