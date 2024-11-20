@@ -1150,6 +1150,9 @@ static void sendDataToServer(void) {
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
+
+  /** Log current free heap size */
+  Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
 static void tempHumUpdate(void) {

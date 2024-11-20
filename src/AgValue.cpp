@@ -612,6 +612,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     root["serialno"] = ag.deviceId();
     root["firmware"] = ag.getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
+  } else {
+#ifndef ESP8266
+    root["freeHeap"] = ESP.getFreeHeap();
+#endif
   }
 
   String result = JSON.stringify(root);
