@@ -601,8 +601,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
 
-  root["boot"] = bootCount;
-  root["bootCount"] = bootCount;
+  root["boot"] = _bootCount;
+  root["bootCount"] = _bootCount;
   root["wifi"] = rssi;
 
   if (localServer) {
@@ -1066,3 +1066,7 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 }
 
 void Measurements::setDebug(bool debug) { _debug = debug; }
+
+int Measurements::bootCount() { return _bootCount; }
+
+void Measurements::setBootCount(int bootCount) { _bootCount = bootCount; }
