@@ -57,26 +57,20 @@ String OpenMetrics::getPayload(void) {
       "gauge", "dbm");
   add_metric_point("", String(wifiConnector.RSSI()));
 
-  if (config.hasSensorS8 && measure.CO2 >= 0) {
-    add_metric("co2",
-               "Carbon dioxide concentration as measured by the AirGradient S8 "
-               "sensor, in parts per million",
-               "gauge", "ppm");
-    add_metric_point("", String(measure.CO2));
-  }
-
+  // Initialize default invalid value for each measurements
   float _temp = utils::getInvalidTemperature();
   float _hum = utils::getInvalidHumidity();
   int pm01 = utils::getInvalidPmValue();
   int pm25 = utils::getInvalidPmValue();
   int pm10 = utils::getInvalidPmValue();
   int pm03PCount = utils::getInvalidPmValue();
+  int co2 = utils::getInvalidCO2();
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
   int tvoc = utils::getInvalidVOC();
-  int tvoc_raw = utils::getInvalidVOC();
+  int tvocRaw = utils::getInvalidVOC();
   int nox = utils::getInvalidNOx();
-  int nox_raw = utils::getInvalidNOx();
+  int noxRaw = utils::getInvalidNOx();
 
   if (config.hasSensorSHT) {
     _temp = measure.getFloat(Measurements::Temperature);
@@ -94,9 +88,13 @@ String OpenMetrics::getPayload(void) {
 
   if (config.hasSensorSGP) {
     tvoc = measure.get(Measurements::TVOC);
-    tvoc_raw = measure.get(Measurements::TVOCRaw);
+    tvocRaw = measure.get(Measurements::TVOCRaw);
     nox = measure.get(Measurements::NOx);
-    nox_raw = measure.get(Measurements::NOxRaw);
+    noxRaw = measure.get(Measurements::NOxRaw);
+  }
+
+  if (config.hasSensorS8) {
+    co2 = measure.get(Measurements::CO2);
   }
 
   if (config.hasSensorPMS1) {
@@ -138,12 +136,13 @@ String OpenMetrics::getPayload(void) {
                  "gauge");
       add_metric_point("", String(tvoc));
     }
-    if (utils::isValidVOC(tvoc_raw)) {
+
+    if (utils::isValidVOC(tvocRaw)) {
       add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(tvoc_raw));
+      add_metric_point("", String(tvocRaw));
     }
     if (utils::isValidNOx(nox)) {
       add_metric("nox_index",
@@ -152,13 +151,21 @@ String OpenMetrics::getPayload(void) {
                  "gauge");
       add_metric_point("", String(nox));
     }
-    if (utils::isValidNOx(nox_raw)) {
+    if (utils::isValidNOx(noxRaw)) {
       add_metric("nox_raw",
                  "The raw input value to the Nitrous Oxide (NOx) index as "
                  "measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(nox_raw));
+      add_metric_point("", String(noxRaw));
     }
+  }
+
+  if (utils::isValidCO2(co2)) {
+    add_metric("co2",
+               "Carbon dioxide concentration as measured by the AirGradient S8 "
+               "sensor, in parts per million",
+               "gauge", "ppm");
+    add_metric_point("", String(co2));
   }
 
   if (utils::isValidTemperature(_temp)) {
