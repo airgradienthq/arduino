@@ -57,22 +57,22 @@ String OpenMetrics::getPayload(void) {
       "gauge", "dbm");
   add_metric_point("", String(wifiConnector.RSSI()));
 
-  if (config.hasSensorS8 && measure.CO2 >= 0) {
-    add_metric("co2",
-               "Carbon dioxide concentration as measured by the AirGradient S8 "
-               "sensor, in parts per million",
-               "gauge", "ppm");
-    add_metric_point("", String(measure.CO2));
-  }
-
+  // Initialize default invalid value for each measurements
   float _temp = utils::getInvalidTemperature();
   float _hum = utils::getInvalidHumidity();
   int pm01 = utils::getInvalidPmValue();
   int pm25 = utils::getInvalidPmValue();
   int pm10 = utils::getInvalidPmValue();
   int pm03PCount = utils::getInvalidPmValue();
+  int co2 = utils::getInvalidCO2();
   int atmpCompensated = utils::getInvalidTemperature();
   int ahumCompensated = utils::getInvalidHumidity();
+  int tvoc = utils::getInvalidVOC();
+  int tvocRaw = utils::getInvalidVOC();
+  int nox = utils::getInvalidNOx();
+  int noxRaw = utils::getInvalidNOx();
+
+  // Get values
   if (config.hasSensorPMS1 && config.hasSensorPMS2) {
     _temp = (measure.getFloat(Measurements::Temperature, 1) +
              measure.getFloat(Measurements::Temperature, 2)) /
@@ -118,6 +118,17 @@ String OpenMetrics::getPayload(void) {
     }
   }
 
+  if (config.hasSensorSGP) {
+    tvoc = measure.get(Measurements::TVOC);
+    tvocRaw = measure.get(Measurements::TVOCRaw);
+    nox = measure.get(Measurements::NOx);
+    noxRaw = measure.get(Measurements::NOxRaw);
+  }
+
+  if (config.hasSensorS8) {
+    co2 = measure.get(Measurements::CO2);
+  }
+
   /** Get temperature and humidity compensated */
   if (ag->isOne()) {
     atmpCompensated = _temp;
@@ -127,6 +138,7 @@ String OpenMetrics::getPayload(void) {
     ahumCompensated = ag->pms5003t_1.compensateHum(_hum);
   }
 
+  // Add measurements that valid to the metrics
   if (config.hasSensorPMS1 || config.hasSensorPMS2) {
     if (utils::isValidPm(pm01)) {
       add_metric("pm1",
@@ -159,34 +171,42 @@ String OpenMetrics::getPayload(void) {
   }
 
   if (config.hasSensorSGP) {
-    if (utils::isValidVOC(measure.TVOC)) {
+    if (utils::isValidVOC(tvoc)) {
       add_metric("tvoc_index",
                  "The processed Total Volatile Organic Compounds (TVOC) index "
                  "as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.TVOC));
+      add_metric_point("", String(tvoc));
     }
-    if (utils::isValidVOC(measure.TVOCRaw)) {
+    if (utils::isValidVOC(tvocRaw)) {
       add_metric("tvoc_raw",
                  "The raw input value to the Total Volatile Organic Compounds "
                  "(TVOC) index as measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.TVOCRaw));
+      add_metric_point("", String(tvocRaw));
     }
-    if (utils::isValidNOx(measure.NOx)) {
+    if (utils::isValidNOx(nox)) {
       add_metric("nox_index",
                  "The processed Nitrous Oxide (NOx) index as measured by the "
                  "AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.NOx));
+      add_metric_point("", String(nox));
     }
-    if (utils::isValidNOx(measure.NOxRaw)) {
+    if (utils::isValidNOx(noxRaw)) {
       add_metric("nox_raw",
                  "The raw input value to the Nitrous Oxide (NOx) index as "
                  "measured by the AirGradient SGP sensor",
                  "gauge");
-      add_metric_point("", String(measure.NOxRaw));
+      add_metric_point("", String(noxRaw));
     }
+  }
+
+  if (utils::isValidCO2(co2)) {
+    add_metric("co2",
+               "Carbon dioxide concentration as measured by the AirGradient S8 "
+               "sensor, in parts per million",
+               "gauge", "ppm");
+    add_metric_point("", String(co2));
   }
 
   if (utils::isValidTemperature(_temp)) {
@@ -197,25 +217,21 @@ String OpenMetrics::getPayload(void) {
     add_metric_point("", String(_temp));
   }
   if (utils::isValidTemperature(atmpCompensated)) {
-    add_metric(
-        "temperature_compensated",
-        "The compensated ambient temperature as measured by the AirGradient SHT / PMS "
-        "sensor, in degrees Celsius",
-        "gauge", "celsius");
+    add_metric("temperature_compensated",
+               "The compensated ambient temperature as measured by the AirGradient SHT / PMS "
+               "sensor, in degrees Celsius",
+               "gauge", "celsius");
     add_metric_point("", String(atmpCompensated));
   }
   if (utils::isValidHumidity(_hum)) {
-    add_metric(
-        "humidity",
-        "The relative humidity as measured by the AirGradient SHT sensor",
-        "gauge", "percent");
+    add_metric("humidity", "The relative humidity as measured by the AirGradient SHT sensor",
+               "gauge", "percent");
     add_metric_point("", String(_hum));
   }
   if (utils::isValidHumidity(ahumCompensated)) {
-    add_metric(
-        "humidity_compensated",
-        "The compensated relative humidity as measured by the AirGradient SHT / PMS sensor",
-        "gauge", "percent");
+    add_metric("humidity_compensated",
+               "The compensated relative humidity as measured by the AirGradient SHT / PMS sensor",
+               "gauge", "percent");
     add_metric_point("", String(ahumCompensated));
   }
 
