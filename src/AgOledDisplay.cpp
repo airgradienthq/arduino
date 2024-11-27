@@ -394,7 +394,7 @@ void OledDisplay::showDashboard(const char *status) {
       if (config.isTemperatureUnitInF()) {
         snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", utils::degreeC_To_F(temp));
       } else {
-        snprintf(strBuf, sizeof(strBuf), "T:%0.f1 C", temp);
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f C", temp);
       }
     } else {
       if (config.isTemperatureUnitInF()) {
