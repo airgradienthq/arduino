@@ -36,20 +36,21 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
-#include <HardwareSerial.h>
-#include "AirGradient.h"
-#include "OtaHandler.h"
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
 #include "AgWiFiConnector.h"
+#include "AirGradient.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
+#include "OtaHandler.h"
 #include "WebServer.h"
+#include "esp32c3/rom/rtc.h"
+#include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
@@ -135,6 +136,10 @@ void setup() {
 
   /** Print device ID into log */
   Serial.println("Serial nr: " + ag->deviceId());
+
+  // Set reason why esp is reset
+  esp_reset_reason_t reason = esp_reset_reason();
+  measurements.setResetReason(reason);
 
   /** Initialize local configure */
   configuration.begin();

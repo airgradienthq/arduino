@@ -150,6 +150,8 @@ public:
   int bootCount();
   void setBootCount(int bootCount);
 
+  void setResetReason(esp_reset_reason_t reason);
+
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
   FloatValue _temperature[2];
@@ -172,7 +174,7 @@ private:
   IntegerValue _pm_5_pc[2];  // particle count 5.0
   IntegerValue _pm_10_pc[2]; // particle count 10
   int _bootCount;
-
+  int _resetReason;
   bool _debug = false;
 
   /**
