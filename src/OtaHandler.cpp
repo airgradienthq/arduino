@@ -1,5 +1,7 @@
 #include "OtaHandler.h"
 
+#ifndef ESP8266 // Only for esp32 based mcu
+
 void OtaHandler::setHandlerCallback(OtaHandlerCallback_t callback) { _callback = callback; }
 
 void OtaHandler::updateFirmwareIfOutdated(String deviceId) {
@@ -162,3 +164,5 @@ void OtaHandler::cleanupHttp(esp_http_client_handle_t client) {
   esp_http_client_close(client);
   esp_http_client_cleanup(client);
 }
+
+#endif
