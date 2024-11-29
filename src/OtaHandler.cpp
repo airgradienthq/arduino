@@ -2,6 +2,8 @@
 
 #ifndef ESP8266 // Only for esp32 based mcu
 
+#include "AirGradient.h"
+
 void OtaHandler::setHandlerCallback(OtaHandlerCallback_t callback) { _callback = callback; }
 
 void OtaHandler::updateFirmwareIfOutdated(String deviceId) {
