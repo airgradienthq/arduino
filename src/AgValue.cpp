@@ -604,6 +604,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   root["boot"] = _bootCount;
   root["bootCount"] = _bootCount;
   root["wifi"] = rssi;
+  root["resetReason"] = _resetReason;
+  root["freeHeap"] = ESP.getFreeHeap();
 
   if (localServer) {
     if (ag.isOne()) {
@@ -612,10 +614,6 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     root["serialno"] = ag.deviceId();
     root["firmware"] = ag.getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
-  } else {
-#ifndef ESP8266
-    root["freeHeap"] = ESP.getFreeHeap();
-#endif
   }
 
   String result = JSON.stringify(root);
@@ -1074,3 +1072,43 @@ void Measurements::setDebug(bool debug) { _debug = debug; }
 int Measurements::bootCount() { return _bootCount; }
 
 void Measurements::setBootCount(int bootCount) { _bootCount = bootCount; }
+
+void Measurements::setResetReason(esp_reset_reason_t reason) {
+  switch (reason) {
+  case ESP_RST_UNKNOWN:
+    Serial.println("Reset reason: ESP_RST_UNKNOWN");
+    break;
+  case ESP_RST_POWERON:
+    Serial.println("Reset reason: ESP_RST_POWERON");
+    break;
+  case ESP_RST_EXT:
+    Serial.println("Reset reason: ESP_RST_EXT");
+    break;
+  case ESP_RST_SW:
+    Serial.println("Reset reason: ESP_RST_SW");
+    break;
+  case ESP_RST_PANIC:
+    Serial.println("Reset reason: ESP_RST_PANIC");
+    break;
+  case ESP_RST_INT_WDT:
+    Serial.println("Reset reason: ESP_RST_INT_WDT");
+    break;
+  case ESP_RST_TASK_WDT:
+    Serial.println("Reset reason: ESP_RST_TASK_WDT");
+    break;
+  case ESP_RST_WDT:
+    Serial.println("Reset reason: ESP_RST_WDT");
+    break;
+  case ESP_RST_BROWNOUT:
+    Serial.println("Reset reason: ESP_RST_BROWNOUT");
+    break;
+  case ESP_RST_SDIO:
+    Serial.println("Reset reason: ESP_RST_SDIO");
+    break;
+  default:
+    Serial.println("Reset reason: unknown");
+    break;
+  }
+
+  _resetReason = (int)reason;
+}
