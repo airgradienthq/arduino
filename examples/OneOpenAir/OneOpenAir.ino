@@ -112,9 +112,8 @@ static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
 static void firmwareCheckForUpdate(void);
-static void otaHandlerCallback(OtaState state, String mesasge);
-static void displayExecuteOta(OtaState state, String msg,
-                              int processing);
+static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
+static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 
@@ -519,29 +518,27 @@ static void firmwareCheckForUpdate(void) {
   Serial.println();
 }
 
-static void otaHandlerCallback(OtaState state, String mesasge) {
-  Serial.println("OTA message: " + mesasge);
+static void otaHandlerCallback(OtaHandler::OtaState state, String message) {
+  Serial.println("OTA message: " + message);
   switch (state) {
-  case OtaState::OTA_STATE_BEGIN:
+  case OtaHandler::OTA_STATE_BEGIN:
     displayExecuteOta(state, fwNewVersion, 0);
     break;
-  case OtaState::OTA_STATE_FAIL:
+  case OtaHandler::OTA_STATE_FAIL:
     displayExecuteOta(state, "", 0);
     break;
-  case OtaState::OTA_STATE_PROCESSING:
-    displayExecuteOta(state, "", mesasge.toInt());
-    break;
-  case OtaState::OTA_STATE_SUCCESS:
-    displayExecuteOta(state, "", mesasge.toInt());
+  case OtaHandler::OTA_STATE_PROCESSING:
+  case OtaHandler::OTA_STATE_SUCCESS:
+    displayExecuteOta(state, "", message.toInt());
     break;
   default:
     break;
   }
 }
 
-static void displayExecuteOta(OtaState state, String msg, int processing) {
+static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing) {
   switch (state) {
-  case OtaState::OTA_STATE_BEGIN: {
+  case OtaHandler::OTA_STATE_BEGIN: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
@@ -550,7 +547,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_FAIL: {
+  case OtaHandler::OTA_STATE_FAIL: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateFailed();
     } else {
@@ -560,7 +557,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_SKIP: {
+  case OtaHandler::OTA_STATE_SKIP: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateSkipped();
     } else {
@@ -570,7 +567,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_UP_TO_DATE: {
+  case OtaHandler::OTA_STATE_UP_TO_DATE: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateUpToDate();
     } else {
@@ -580,7 +577,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_PROCESSING: {
+  case OtaHandler::OTA_STATE_PROCESSING: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateProgress(processing);
     } else {
@@ -589,7 +586,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
 
     break;
   }
-  case OtaState::OTA_STATE_SUCCESS: {
+  case OtaHandler::OTA_STATE_SUCCESS: {
     int i = 6;
     while(i != 0) {
       i = i - 1;
