@@ -34,7 +34,7 @@ private:
   };
 
 public:
-  Measurements() {}
+  Measurements();
   ~Measurements() {}
 
   // Enumeration for every AG measurements
@@ -150,7 +150,9 @@ public:
   int bootCount();
   void setBootCount(int bootCount);
 
+#ifndef ESP8266
   void setResetReason(esp_reset_reason_t reason);
+#endif
 
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T

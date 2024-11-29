@@ -27,6 +27,12 @@
 #define json_prop_noxRaw "noxRaw"
 #define json_prop_co2 "rco2"
 
+Measurements::Measurements() {
+#ifndef ESP8266
+  _resetReason = (int)ESP_RST_UNKNOWN;
+#endif
+}
+
 void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
   case Temperature:
@@ -604,8 +610,6 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
   root["boot"] = _bootCount;
   root["bootCount"] = _bootCount;
   root["wifi"] = rssi;
-  root["resetReason"] = _resetReason;
-  root["freeHeap"] = ESP.getFreeHeap();
 
   if (localServer) {
     if (ag.isOne()) {
@@ -614,6 +618,11 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     root["serialno"] = ag.deviceId();
     root["firmware"] = ag.getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
+  } else {
+#ifndef ESP8266
+    root["resetReason"] = _resetReason;
+    root["freeHeap"] = ESP.getFreeHeap();
+#endif
   }
 
   String result = JSON.stringify(root);
@@ -1073,6 +1082,7 @@ int Measurements::bootCount() { return _bootCount; }
 
 void Measurements::setBootCount(int bootCount) { _bootCount = bootCount; }
 
+#ifndef ESP8266
 void Measurements::setResetReason(esp_reset_reason_t reason) {
   switch (reason) {
   case ESP_RST_UNKNOWN:
@@ -1112,3 +1122,4 @@ void Measurements::setResetReason(esp_reset_reason_t reason) {
 
   _resetReason = (int)reason;
 }
+#endif
