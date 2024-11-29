@@ -68,7 +68,7 @@ bool AgApiClient::fetchServerConfiguration(void) {
     }
   } else {
     // By default, airgradient using https
-    if (client.begin(uri, AIRGRADIENT_SERVER_CA) == false) {
+    if (client.begin(uri, AG_SERVER_ROOT_CA) == false) {
       logError("Begin HTTPClient using tls failed (GET)");
       getConfigFailed = true;
       return false;
@@ -143,7 +143,7 @@ bool AgApiClient::postToServer(String data) {
     }
   } else {
     // By default, airgradient using https
-    if (client.begin(uri, AIRGRADIENT_SERVER_CA) == false) {
+    if (client.begin(uri, AG_SERVER_ROOT_CA) == false) {
       logError("Begin HTTPClient using tls failed (POST)");
       getConfigFailed = true;
       return false;

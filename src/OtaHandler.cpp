@@ -8,7 +8,7 @@ void OtaHandler::setHandlerCallback(OtaHandlerCallback_t callback) { _callback =
 
 void OtaHandler::updateFirmwareIfOutdated(String deviceId) {
   String url =
-      "http://hw.airgradient.com/sensors/airgradient:" + deviceId + "/generic/os/firmware.bin";
+      "https://hw.airgradient.com/sensors/airgradient:" + deviceId + "/generic/os/firmware.bin";
   url += "?current_firmware=";
   url += GIT_VERSION;
   char urlAsChar[URL_BUF_SIZE];
@@ -17,6 +17,7 @@ void OtaHandler::updateFirmwareIfOutdated(String deviceId) {
 
   esp_http_client_config_t config = {};
   config.url = urlAsChar;
+  config.cert_pem = AG_SERVER_ROOT_CA;
   OtaUpdateOutcome ret = attemptToPerformOta(&config);
   Serial.println(ret);
   if (_callback) {

@@ -19,7 +19,8 @@
 #endif
 
 #ifndef ESP8266
-const char *const AIRGRADIENT_SERVER_CA =
+// Airgradient server root ca certificate
+const char *const AG_SERVER_ROOT_CA =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIF4jCCA8oCCQD7MgvcaVWxkTANBgkqhkiG9w0BAQsFADCBsjELMAkGA1UEBhMC\n"
     "VEgxEzARBgNVBAgMCkNoaWFuZyBNYWkxEDAOBgNVBAcMB01hZSBSaW0xGTAXBgNV\n"
