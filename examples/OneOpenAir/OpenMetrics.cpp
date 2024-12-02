@@ -94,7 +94,8 @@ String OpenMetrics::getPayload(void) {
 
       if (config.hasSensorPMS1) {
         pm01 = measure.get(Measurements::PM01);
-        pm25 = measure.get(Measurements::PM25);
+        float correctedPm = measure.getCorrectedPM25(*ag, config, false, 1);
+        pm25 = round(correctedPm);
         pm10 = measure.get(Measurements::PM10);
         pm03PCount = measure.get(Measurements::PM03_PC);
       }
