@@ -189,7 +189,7 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   // Sanity check if measurement type is defined for integer data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type));
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -228,7 +228,7 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
   // Calculate average based on how many elements on the list
   temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
   if (_debug) {
-    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch, temporary->update.avg);
   }
 
   return true;
@@ -260,7 +260,7 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
 
   // Sanity check if measurement type is defined for float data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type));
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -299,7 +299,7 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   // Calculate average based on how many elements on the list
   temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
   if (_debug) {
-    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type), ch, temporary->update.avg);
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch, temporary->update.avg);
   }
 
   return true;
@@ -348,7 +348,7 @@ int Measurements::get(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is defined for integer data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type));
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -383,7 +383,7 @@ float Measurements::getFloat(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is defined for float data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type));
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -434,7 +434,7 @@ float Measurements::getAverage(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is not defined 
   if (measurementAverage == -1000) {
-    Serial.printf("ERROR! %s is not defined on get average value function\n", measurementTypeStr(type));
+    Serial.printf("ERROR! %s is not defined on get average value function\n", measurementTypeStr(type).c_str());
     delay(1000);
     assert(0);
   }
