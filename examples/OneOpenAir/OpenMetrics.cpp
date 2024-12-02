@@ -81,7 +81,10 @@ String OpenMetrics::getPayload(void) {
             measure.getFloat(Measurements::Humidity, 2)) /
            2.0f;
     pm01 = (measure.get(Measurements::PM01, 1) + measure.get(Measurements::PM01, 2)) / 2.0f;
-    pm25 = (measure.get(Measurements::PM25, 1) + measure.get(Measurements::PM25, 2)) / 2.0f;
+    float correctedPm25_1 = measure.getCorrectedPM25(*ag, config, false, 1);
+    float correctedPm25_2 = measure.getCorrectedPM25(*ag, config, false, 2);
+    float correctedPm25 = (correctedPm25_1 + correctedPm25_2) / 2.0f;
+    pm25 = round(correctedPm25);
     pm10 = (measure.get(Measurements::PM10, 1) + measure.get(Measurements::PM10, 2)) / 2.0f;
     pm03PCount =
         (measure.get(Measurements::PM03_PC, 1) + measure.get(Measurements::PM03_PC, 2)) / 2.0f;
@@ -104,7 +107,8 @@ String OpenMetrics::getPayload(void) {
         _temp = measure.getFloat(Measurements::Temperature, 1);
         _hum = measure.getFloat(Measurements::Humidity, 1);
         pm01 = measure.get(Measurements::PM01, 1);
-        pm25 = measure.get(Measurements::PM25, 1);
+        float correctedPm = measure.getCorrectedPM25(*ag, config, false, 1);
+        pm25 = round(correctedPm);
         pm10 = measure.get(Measurements::PM10, 1);
         pm03PCount = measure.get(Measurements::PM03_PC, 1);
       }
@@ -112,7 +116,8 @@ String OpenMetrics::getPayload(void) {
         _temp = measure.getFloat(Measurements::Temperature, 2);
         _hum = measure.getFloat(Measurements::Humidity, 2);
         pm01 = measure.get(Measurements::PM01, 2);
-        pm25 = measure.get(Measurements::PM25, 2);
+        float correctedPm = measure.getCorrectedPM25(*ag, config, false, 2);
+        pm25 = round(correctedPm);
         pm10 = measure.get(Measurements::PM10, 2);
         pm03PCount = measure.get(Measurements::PM03_PC, 2);
       }
