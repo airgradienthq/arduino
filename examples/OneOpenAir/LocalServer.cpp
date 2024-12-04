@@ -13,6 +13,10 @@ bool LocalServer::begin(void) {
   server.on(openMetrics.getApi(), HTTP_GET, [this]() { _GET_metrics(); });
   server.on("/config", HTTP_GET, [this]() { _GET_config(); });
   server.on("/config", HTTP_PUT, [this]() { _PUT_config(); });
+  server.on("/storage", HTTP_GET, [this]() {
+    Serial.println(server.arg("time"));
+    _GET_storage();
+  });
   server.begin();
 
   if (xTaskCreate(
@@ -66,6 +70,17 @@ void LocalServer::_GET_metrics(void) {
 void LocalServer::_GET_measure(void) {
   String toSend = measure.toString(true, fwMode, wifiConnector.RSSI(), *ag, config);
   server.send(200, "application/json", toSend);
+}
+
+void LocalServer::_GET_storage(void) {
+  char *data = measure.getLocalStorage();
+  if (data != nullptr) {
+    server.sendHeader("Content-Disposition", "attachment; filename=\"measurements.csv\"");
+    server.send(200, "text/plain", data);
+    free(data);
+  } else {
+    server.send(200, "text/plain", "No data");
+  }
 }
 
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }

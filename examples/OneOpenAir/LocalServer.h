@@ -33,6 +33,7 @@ public:
   void _PUT_config(void);
   void _GET_metrics(void);
   void _GET_measure(void);
+  void _GET_storage(void);
 };
 
 #endif /** _LOCAL_SERVER_H_ */
