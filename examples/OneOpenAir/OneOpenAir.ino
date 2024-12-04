@@ -119,15 +119,16 @@ static void setMeasurementMaxPeriod();
 static void offlineStorageUpdate();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
-AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
-                          configurationUpdateSchedule);
-AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
+// AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
+//                           configurationUpdateSchedule);
+// AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 AgSchedule offlineStorage(60000, offlineStorageUpdate);
+// AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -219,11 +220,11 @@ void setup() {
           // ota not supported
         #else
           firmwareCheckForUpdate();
-          checkForUpdateSchedule.update();
+// checkForUpdateSchedule.update();
         #endif
 
         apiClient.fetchServerConfiguration();
-        configSchedule.update();
+// configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
           if (ag->isOne()) {
             if (apiClient.isNotAvailableOnDashboard()) {
@@ -272,6 +273,8 @@ void setup() {
 void loop() {
   /** Handle schedule */
   dispLedSchedule.run();
+// configSchedule.run();
+  // agApiPostSchedule.run();
   offlineStorage.run();
 
   if (configuration.hasSensorS8) {
@@ -318,7 +321,7 @@ void loop() {
   configUpdateHandle();
 
   /** Firmware check for update handle */
-  checkForUpdateSchedule.run();
+  // checkForUpdateSchedule.run();
 }
 
 static void co2Update(void) {
