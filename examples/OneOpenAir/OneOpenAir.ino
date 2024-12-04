@@ -116,6 +116,7 @@ static void displayExecuteOta(OtaState state, String msg,
                               int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
+static void offlineStorageUpdate();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
@@ -126,7 +127,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
-AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
+AgSchedule offlineStorage(60000, offlineStorageUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -271,8 +272,7 @@ void setup() {
 void loop() {
   /** Handle schedule */
   dispLedSchedule.run();
-  configSchedule.run();
-  agApiPostSchedule.run();
+  offlineStorage.run();
 
   if (configuration.hasSensorS8) {
     co2Schedule.run();
@@ -1219,3 +1219,5 @@ int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
   return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.8)) / updateInterval;
 }
+
+void offlineStorageUpdate() { measurements.saveLocalStorage(*ag); }
