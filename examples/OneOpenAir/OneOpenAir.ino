@@ -120,14 +120,14 @@ static void offlineStorageUpdate();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 // AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
-//                           configurationUpdateSchedule);
+// configurationUpdateSchedule);
 // AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
-AgSchedule offlineStorage(60000, offlineStorageUpdate);
+AgSchedule offlineStorage((2 * 60000), offlineStorageUpdate);
 // AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
 
 void setup() {
@@ -175,100 +175,50 @@ void setup() {
   setMeasurementMaxPeriod();
 
   // Comment below line to disable debug measurement readings
-  measurements.setDebug(true);
+  measurements.setDebug(false);
 
-  /** Connecting wifi */
-  bool connectToWifi = false;
-  if (ag->isOne()) {
-    /** Show message confirm offline mode, should me perform if LED bar button
-     * test pressed */
-    if (ledBarButtonTest == false) {
-      oledDisplay.setText(
-          "Press now for",
-          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
-      uint32_t startTime = millis();
-      while (true) {
-        if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
-          configuration.setOfflineMode(!configuration.isOfflineMode());
-
-          oledDisplay.setText(
-              "Offline Mode",
-              configuration.isOfflineMode() ? " = True" : "  = False", "");
-          delay(1000);
-          break;
-        }
-        uint32_t periodMs = (uint32_t)(millis() - startTime);
-        if (periodMs >= 3000) {
-          break;
-        }
-      }
-      connectToWifi = !configuration.isOfflineMode();
-    } else {
-      configuration.setOfflineModeWithoutSave(true);
-    }
-  } else {
-    connectToWifi = true;
-  }
-
-  if (connectToWifi) {
-    apiClient.begin();
-
-    if (wifiConnector.connect()) {
-      if (wifiConnector.isConnected()) {
-        mdnsInit();
-        localServer.begin();
-        initMqtt();
-        sendDataToAg();
-
-        #ifdef ESP8266
-          // ota not supported
-        #else
-          firmwareCheckForUpdate();
-// checkForUpdateSchedule.update();
-        #endif
-
-        apiClient.fetchServerConfiguration();
-// configSchedule.update();
-        if (apiClient.isFetchConfigureFailed()) {
-          if (ag->isOne()) {
-            if (apiClient.isNotAvailableOnDashboard()) {
-              stateMachine.displaySetAddToDashBoard();
-              stateMachine.displayHandle(
-                  AgStateMachineWiFiOkServerOkSensorConfigFailed);
-            } else {
-              stateMachine.displayClearAddToDashBoard();
-            }
-          }
-          stateMachine.handleLeds(
-              AgStateMachineWiFiOkServerOkSensorConfigFailed);
-          delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-        } else {
-          ledBarEnabledUpdate();
-        }
-      } else {
-        if (wifiConnector.isConfigurePorttalTimeout()) {
-          oledDisplay.showRebooting();
-          delay(2500);
-          oledDisplay.setText("", "", "");
-          ESP.restart();
-        }
-      }
-    }
-  }
-  /** Set offline mode without saving, cause wifi is not configured */
-  if (wifiConnector.hasConfigurated() == false) {
-    Serial.println("Set offline mode cause wifi is not configurated");
-    configuration.setOfflineModeWithoutSave(true);
-  }
+  // Force to offline mode
+  configuration.setOfflineMode(true);
 
   /** Show display Warning up */
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-    Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
-    oledDisplay.setBrightness(configuration.getDisplayBrightness());
+    // Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
+    // oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
+
+  oledDisplay.setText("Offline Storage Mode", "Connecting to", "default WiFi");
+
+  // Attempt connect to default wifi
+  Serial.println("Connecting to default wifi " + String(wifiConnector.defaultSsid));
+  WiFi.begin();
+  /** Set wifi connect */
+  WiFi.begin(wifiConnector.defaultSsid, wifiConnector.defaultPassword);
+
+  /** Wait for wifi connect to AP */
+  int count = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    count++;
+    if (count >= 15) {
+      Serial.println("Try connect to default wifi \"" + String(wifiConnector.defaultSsid) +
+                     "\"failed, ignore");
+      Serial.println();
+      break;
+    }
+  }
+
+  // Notify and wait
+  if (WiFi.status() == WL_CONNECTED) {
+    oledDisplay.setText("WiFi connected", "", "");
+    mdnsInit();
+    localServer.begin();
+  } else {
+    oledDisplay.setText("WiFi not connect", "", "");
+  }
+  delay(3000);
 
   // Update display and led bar after finishing setup to show dashboard
   updateDisplayAndLedBar();
@@ -277,7 +227,7 @@ void setup() {
 void loop() {
   /** Handle schedule */
   dispLedSchedule.run();
-// configSchedule.run();
+  // configSchedule.run();
   // agApiPostSchedule.run();
   offlineStorage.run();
 
@@ -477,6 +427,8 @@ static void factoryConfigReset(void) {
 static void wdgFeedUpdate(void) {
   ag->watchdog.reset();
   Serial.println("External watchdog feed!");
+  /** Log current free heap size */
+  Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
 static void ledBarEnabledUpdate(void) {
@@ -1227,4 +1179,17 @@ int calculateMaxPeriod(int updateInterval) {
   return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.8)) / updateInterval;
 }
 
-void offlineStorageUpdate() { measurements.saveLocalStorage(*ag); }
+void offlineStorageUpdate() {
+  measurements.saveLocalStorage(*ag);
+  ag->ledBar.setColor(0, 0, 255, 0);
+  ag->ledBar.show();
+  delay(250);
+  ag->ledBar.setColor(0, 0, 0, 0);
+  ag->ledBar.show();
+  delay(250);
+  ag->ledBar.setColor(0, 0, 255, 0);
+  ag->ledBar.show();
+  delay(250);
+  ag->ledBar.setColor(0, 0, 0, 0);
+  ag->ledBar.show();
+}
