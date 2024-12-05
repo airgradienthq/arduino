@@ -1077,7 +1077,15 @@ bool Measurements::resetLocalStorage() {
   return true;
 }
 
-void Measurements::saveLocalStorage(AirGradient &ag) {
+bool Measurements::saveLocalStorage(AirGradient &ag) {
+  int spiffUsed = (SPIFFS.usedBytes() / SPIFFS.totalBytes()) / 2;
+  Serial.printf("%d | %d\n", SPIFFS.totalBytes(), SPIFFS.usedBytes());
+  Serial.printf("SPIFF used %d%%\n", spiffUsed);
+  if (spiffUsed > 98) {
+    Serial.println("SPIFF used already on maximum");
+    return false;
+  }
+
   File file;
   if (!SPIFFS.exists(FILE_PATH)) {
     file = SPIFFS.open(FILE_PATH, FILE_APPEND, true);
@@ -1089,7 +1097,7 @@ void Measurements::saveLocalStorage(AirGradient &ag) {
 
   if (!file) {
     Serial.println("Failed local storage file path");
-    return;
+    return false;
   }
 
   // Save new measurements
@@ -1101,6 +1109,7 @@ void Measurements::saveLocalStorage(AirGradient &ag) {
               (int)round(_nox.update.avg));
 
   Serial.println("Success save measurements to local storage");
+  return true;
 }
 
 char *Measurements::getLocalStorage() {

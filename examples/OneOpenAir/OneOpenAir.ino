@@ -1180,7 +1180,8 @@ int calculateMaxPeriod(int updateInterval) {
 }
 
 void offlineStorageUpdate() {
-  measurements.saveLocalStorage(*ag);
+  if (measurements.saveLocalStorage(*ag)) {
+    // blue
   ag->ledBar.setColor(0, 0, 255, 0);
   ag->ledBar.show();
   delay(250);
@@ -1192,4 +1193,18 @@ void offlineStorageUpdate() {
   delay(250);
   ag->ledBar.setColor(0, 0, 0, 0);
   ag->ledBar.show();
+  } else {
+    // red
+    ag->ledBar.setColor(255, 0, 0, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(0, 0, 0, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(255, 0, 0, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(0, 0, 0, 0);
+    ag->ledBar.show();
+  }
 }
