@@ -1068,6 +1068,15 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 
 void Measurements::setDebug(bool debug) { _debug = debug; }
 
+bool Measurements::resetLocalStorage() {
+  if (!SPIFFS.remove(FILE_PATH)) {
+    Serial.println("Failed reset local storage");
+    return false;
+  }
+
+  return true;
+}
+
 void Measurements::saveLocalStorage(AirGradient &ag) {
   File file;
   if (!SPIFFS.exists(FILE_PATH)) {

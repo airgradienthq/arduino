@@ -142,6 +142,7 @@ public:
   String toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
                   Configuration &config);
 
+  bool resetLocalStorage();
   void saveLocalStorage(AirGradient &ag);
   char *getLocalStorage();
 
@@ -176,7 +177,7 @@ private:
   IntegerValue _pm_10_pc[2]; // particle count 10
 
   bool _debug = false;
-  const char *FILE_PATH = "/measurement.csv"; // Local storage file path
+  const char *FILE_PATH = "/measurements.csv"; // Local storage file path
 
   /**
    * @brief Get PMS5003 firmware version string
