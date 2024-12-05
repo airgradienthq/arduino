@@ -85,3 +85,24 @@ String AirGradient::deviceId(void) {
   mac.toLowerCase();
   return mac;
 }
+
+void AirGradient::setCurrentTime(long epochTime) {
+  // set current day/time
+  struct timeval tv;
+  tv.tv_sec = epochTime;
+  settimeofday(&tv, NULL);
+  Serial.printf("Set current time to %s\n", getCurrentTime().c_str());
+}
+
+String AirGradient::getCurrentTime() {
+  // Get time
+  time_t now;
+  char strftime_buf[64];
+  struct tm timeinfo;
+  time(&now);
+  // Format
+  localtime_r(&now, &timeinfo);
+  strftime(strftime_buf, sizeof(strftime_buf), "%d/%m %H:%M:%S", &timeinfo);
+
+  return String(strftime_buf);
+}

@@ -173,6 +173,9 @@ public:
    */
   String deviceId(void);
 
+  void setCurrentTime(long epochTime);
+  String getCurrentTime();
+
 private:
   BoardType boardType;
 };
