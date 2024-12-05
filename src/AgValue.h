@@ -34,7 +34,7 @@ private:
   };
 
 public:
-  Measurements() {}
+  Measurements();
   ~Measurements() {}
 
   // Enumeration for every AG measurements
@@ -147,8 +147,12 @@ public:
    */
   void setDebug(bool debug);
 
-  // TODO: update this to use setter
-  int bootCount;
+  int bootCount();
+  void setBootCount(int bootCount);
+
+#ifndef ESP8266
+  void setResetReason(esp_reset_reason_t reason);
+#endif
 
 private:
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
@@ -171,7 +175,8 @@ private:
   IntegerValue _pm_25_pc[2]; // particle count 2.5
   IntegerValue _pm_5_pc[2];  // particle count 5.0
   IntegerValue _pm_10_pc[2]; // particle count 10
-
+  int _bootCount;
+  int _resetReason;
   bool _debug = false;
 
   /**

@@ -59,9 +59,20 @@ bool AgApiClient::fetchServerConfiguration(void) {
 #else
   HTTPClient client;
   client.setTimeout(timeoutMs);
-  if (client.begin(uri) == false) {
-    getConfigFailed = true;
-    return false;
+  if (apiRootChanged) {
+    // If apiRoot is changed, assume not using https
+    if (client.begin(uri) == false) {
+      logError("Begin HTTPClient failed (GET)");
+      getConfigFailed = true;
+      return false;
+    }
+  } else {
+    // By default, airgradient using https
+    if (client.begin(uri, AG_SERVER_ROOT_CA) == false) {
+      logError("Begin HTTPClient using tls failed (GET)");
+      getConfigFailed = true;
+      return false;
+    }
   }
 #endif
 
@@ -90,8 +101,6 @@ bool AgApiClient::fetchServerConfiguration(void) {
   String respContent = client.getString();
   client.end();
 
-  // logInfo("Get configuration: " + respContent);
-
   /** Parse configuration and return result */
   return config.parse(respContent, false);
 }
@@ -115,22 +124,37 @@ bool AgApiClient::postToServer(String data) {
   }
 
   String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
-  // logInfo("Post uri: " + uri);
-  // logInfo("Post data: " + data);
-
-  WiFiClient wifiClient;
+#ifdef ESP8266
   HTTPClient client;
-  client.setTimeout(timeoutMs);
-  if (client.begin(wifiClient, uri.c_str()) == false) {
-    logError("Init client failed");
+  WiFiClient wifiClient;
+  if (client.begin(wifiClient, uri) == false) {
+    getConfigFailed = true;
     return false;
   }
+#else
+  HTTPClient client;
+  client.setTimeout(timeoutMs);
+  if (apiRootChanged) {
+    // If apiRoot is changed, assume not using https
+    if (client.begin(uri) == false) {
+      logError("Begin HTTPClient failed (POST)");
+      getConfigFailed = true;
+      return false;
+    }
+  } else {
+    // By default, airgradient using https
+    if (client.begin(uri, AG_SERVER_ROOT_CA) == false) {
+      logError("Begin HTTPClient using tls failed (POST)");
+      getConfigFailed = true;
+      return false;
+    }
+  }
+#endif
   client.addHeader("content-type", "application/json");
   int retCode = client.POST(data);
   client.end();
 
   logInfo(String("POST: ") + uri);
-  // logInfo(String("DATA: ") + data);
   logInfo(String("Return code: ") + String(retCode));
 
   if ((retCode == 200) || (retCode == 429)) {
@@ -189,7 +213,10 @@ bool AgApiClient::sendPing(int rssi, int bootCount) {
 
 String AgApiClient::getApiRoot() const { return apiRoot; }
 
-void AgApiClient::setApiRoot(const String &apiRoot) { this->apiRoot = apiRoot; }
+void AgApiClient::setApiRoot(const String &apiRoot) {
+  this->apiRootChanged = true;
+  this->apiRoot = apiRoot;
+}
 
 /**
  * @brief Set http request timeout. (Default: 10s)
