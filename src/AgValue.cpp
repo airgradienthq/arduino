@@ -1104,17 +1104,17 @@ void Measurements::saveLocalStorage(AirGradient &ag) {
 }
 
 char *Measurements::getLocalStorage() {
-  char *buf = new char[1024];
-  if (buf == nullptr) {
-    Serial.println("NEW getLocal buffer failed");
-    return nullptr;
-  }
-  memset(buf, 0, 1024);
-
-  // TODO: Buffer based on file size
+  char *buf = nullptr;
   bool success = false;
   File file = SPIFFS.open(FILE_PATH);
   if (file && !file.isDirectory()) {
+    // Allocate memory
+    buf = new char[file.size() + 1];
+    if (buf == nullptr) {
+      return nullptr;
+    }
+    memset(buf, 0, file.size() + 1);
+    // Retrieve data from the file
     if (file.readBytes(buf, file.size()) != file.size()) {
       Serial.println("Reading measurements file: failed - size not match");
     } else {
