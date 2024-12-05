@@ -36,20 +36,21 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
-#include <HardwareSerial.h>
-#include "AirGradient.h"
-#include "OtaHandler.h"
 #include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
 #include "AgWiFiConnector.h"
+#include "AirGradient.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
+#include "OtaHandler.h"
 #include "WebServer.h"
+#include "esp32c3/rom/rtc.h"
+#include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
@@ -111,9 +112,8 @@ static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
 static void firmwareCheckForUpdate(void);
-static void otaHandlerCallback(OtaState state, String mesasge);
-static void displayExecuteOta(OtaState state, String msg,
-                              int processing);
+static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
+static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 
@@ -135,6 +135,10 @@ void setup() {
 
   /** Print device ID into log */
   Serial.println("Serial nr: " + ag->deviceId());
+
+  // Set reason why esp is reset
+  esp_reset_reason_t reason = esp_reset_reason();
+  measurements.setResetReason(reason);
 
   /** Initialize local configure */
   configuration.begin();
@@ -514,29 +518,27 @@ static void firmwareCheckForUpdate(void) {
   Serial.println();
 }
 
-static void otaHandlerCallback(OtaState state, String mesasge) {
-  Serial.println("OTA message: " + mesasge);
+static void otaHandlerCallback(OtaHandler::OtaState state, String message) {
+  Serial.println("OTA message: " + message);
   switch (state) {
-  case OtaState::OTA_STATE_BEGIN:
+  case OtaHandler::OTA_STATE_BEGIN:
     displayExecuteOta(state, fwNewVersion, 0);
     break;
-  case OtaState::OTA_STATE_FAIL:
+  case OtaHandler::OTA_STATE_FAIL:
     displayExecuteOta(state, "", 0);
     break;
-  case OtaState::OTA_STATE_PROCESSING:
-    displayExecuteOta(state, "", mesasge.toInt());
-    break;
-  case OtaState::OTA_STATE_SUCCESS:
-    displayExecuteOta(state, "", mesasge.toInt());
+  case OtaHandler::OTA_STATE_PROCESSING:
+  case OtaHandler::OTA_STATE_SUCCESS:
+    displayExecuteOta(state, "", message.toInt());
     break;
   default:
     break;
   }
 }
 
-static void displayExecuteOta(OtaState state, String msg, int processing) {
+static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing) {
   switch (state) {
-  case OtaState::OTA_STATE_BEGIN: {
+  case OtaHandler::OTA_STATE_BEGIN: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
@@ -545,7 +547,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_FAIL: {
+  case OtaHandler::OTA_STATE_FAIL: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateFailed();
     } else {
@@ -555,7 +557,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_SKIP: {
+  case OtaHandler::OTA_STATE_SKIP: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateSkipped();
     } else {
@@ -565,7 +567,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_UP_TO_DATE: {
+  case OtaHandler::OTA_STATE_UP_TO_DATE: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateUpToDate();
     } else {
@@ -575,7 +577,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
     delay(2500);
     break;
   }
-  case OtaState::OTA_STATE_PROCESSING: {
+  case OtaHandler::OTA_STATE_PROCESSING: {
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateProgress(processing);
     } else {
@@ -584,7 +586,7 @@ static void displayExecuteOta(OtaState state, String msg, int processing) {
 
     break;
   }
-  case OtaState::OTA_STATE_SUCCESS: {
+  case OtaHandler::OTA_STATE_SUCCESS: {
     int i = 6;
     while(i != 0) {
       i = i - 1;
@@ -634,7 +636,7 @@ static void sendDataToAg() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount)) {
+  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount())) {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
@@ -1135,7 +1137,8 @@ static void updatePm(void) {
 
 static void sendDataToServer(void) {
   /** Increment bootcount when send measurements data is scheduled */
-  measurements.bootCount++;
+  int bootCount = measurements.bootCount() + 1;
+  measurements.setBootCount(bootCount);
 
   /** Ignore send data to server if postToAirGradient disabled */
   if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
@@ -1149,6 +1152,9 @@ static void sendDataToServer(void) {
         "Online mode and isPostToAirGradient = true: watchdog reset");
     Serial.println();
   }
+
+  /** Log current free heap size */
+  Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
 static void tempHumUpdate(void) {

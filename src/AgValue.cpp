@@ -27,6 +27,12 @@
 #define json_prop_noxRaw "noxRaw"
 #define json_prop_co2 "rco2"
 
+Measurements::Measurements() {
+#ifndef ESP8266
+  _resetReason = (int)ESP_RST_UNKNOWN;
+#endif
+}
+
 void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
   case Temperature:
@@ -601,8 +607,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     }
   }
 
-  root["boot"] = bootCount;
-  root["bootCount"] = bootCount;
+  root["boot"] = _bootCount;
+  root["bootCount"] = _bootCount;
   root["wifi"] = rssi;
 
   if (localServer) {
@@ -612,6 +618,11 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
     root["serialno"] = ag.deviceId();
     root["firmware"] = ag.getVersion();
     root["model"] = AgFirmwareModeName(fwMode);
+  } else {
+#ifndef ESP8266
+    root["resetReason"] = _resetReason;
+    root["freeHeap"] = ESP.getFreeHeap();
+#endif
   }
 
   String result = JSON.stringify(root);
@@ -1066,3 +1077,49 @@ JSONVar Measurements::buildPMS(AirGradient &ag, int ch, bool allCh, bool withTem
 }
 
 void Measurements::setDebug(bool debug) { _debug = debug; }
+
+int Measurements::bootCount() { return _bootCount; }
+
+void Measurements::setBootCount(int bootCount) { _bootCount = bootCount; }
+
+#ifndef ESP8266
+void Measurements::setResetReason(esp_reset_reason_t reason) {
+  switch (reason) {
+  case ESP_RST_UNKNOWN:
+    Serial.println("Reset reason: ESP_RST_UNKNOWN");
+    break;
+  case ESP_RST_POWERON:
+    Serial.println("Reset reason: ESP_RST_POWERON");
+    break;
+  case ESP_RST_EXT:
+    Serial.println("Reset reason: ESP_RST_EXT");
+    break;
+  case ESP_RST_SW:
+    Serial.println("Reset reason: ESP_RST_SW");
+    break;
+  case ESP_RST_PANIC:
+    Serial.println("Reset reason: ESP_RST_PANIC");
+    break;
+  case ESP_RST_INT_WDT:
+    Serial.println("Reset reason: ESP_RST_INT_WDT");
+    break;
+  case ESP_RST_TASK_WDT:
+    Serial.println("Reset reason: ESP_RST_TASK_WDT");
+    break;
+  case ESP_RST_WDT:
+    Serial.println("Reset reason: ESP_RST_WDT");
+    break;
+  case ESP_RST_BROWNOUT:
+    Serial.println("Reset reason: ESP_RST_BROWNOUT");
+    break;
+  case ESP_RST_SDIO:
+    Serial.println("Reset reason: ESP_RST_SDIO");
+    break;
+  default:
+    Serial.println("Reset reason: unknown");
+    break;
+  }
+
+  _resetReason = (int)reason;
+}
+#endif

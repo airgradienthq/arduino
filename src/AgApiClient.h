@@ -20,8 +20,14 @@ class AgApiClient : public PrintLog {
 private:
   Configuration &config;
   AirGradient *ag;
+#ifdef ESP8266
+  // ESP8266 not support HTTPS
   String apiRoot = "http://hw.airgradient.com";
+#else
+  String apiRoot = "https://hw.airgradient.com";
+#endif
 
+  bool apiRootChanged = false; // Indicate if setApiRoot() is called
   bool getConfigFailed;
   bool postToServerFailed;
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.

@@ -388,7 +388,7 @@ static void sendDataToAg() {
   stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
 
   delay(1500);
-  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount)) {
+  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount())) {
     stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
   } else {
     stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
@@ -570,7 +570,8 @@ static void updatePm(void) {
 
 static void sendDataToServer(void) {
   /** Increment bootcount when send measurements data is scheduled */
-  measurements.bootCount++;
+  int bootCount = measurements.bootCount() + 1;
+  measurements.setBootCount(bootCount);
 
   /** Ignore send data to server if postToAirGradient disabled */
   if (configuration.isPostDataToAirGradient() == false ||
