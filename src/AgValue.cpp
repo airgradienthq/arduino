@@ -1074,6 +1074,7 @@ bool Measurements::resetLocalStorage() {
     return false;
   }
 
+  Serial.println("Success reset local storage");
   return true;
 }
 

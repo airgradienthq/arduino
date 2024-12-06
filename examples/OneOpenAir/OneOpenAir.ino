@@ -185,9 +185,6 @@ void setup() {
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-
-    // Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
-    // oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
   oledDisplay.setText("Offline Storage Mode", "Connecting to", "default WiFi");
@@ -628,6 +625,7 @@ static void oneIndoorInit(void) {
 
   /** Display init */
   oledDisplay.begin();
+  oledDisplay.setBrightness(40);
 
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
@@ -935,7 +933,7 @@ static void updateDisplayAndLedBar(void) {
     } else {
       stateMachine.displayHandle(AgStateMachineWiFiLost);
     }
-    stateMachine.handleLeds(AgStateMachineNormal);
+    // stateMachine.handleLeds(AgStateMachineNormal);
 
     return;
   }
@@ -1195,30 +1193,9 @@ int calculateMaxPeriod(int updateInterval) {
 
 void offlineStorageUpdate() {
   if (measurements.saveLocalStorage(*ag, configuration)) {
-    // blue
-    ag->ledBar.setColor(0, 0, 255, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(0, 0, 0, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(0, 0, 255, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(0, 0, 0, 0);
-    ag->ledBar.show();
+    oledDisplay.setText("", "New Measurements", "");
   } else {
-    // red
-    ag->ledBar.setColor(255, 0, 0, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(0, 0, 0, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(255, 0, 0, 0);
-    ag->ledBar.show();
-    delay(250);
-    ag->ledBar.setColor(0, 0, 0, 0);
-    ag->ledBar.show();
+    oledDisplay.setText("Failed write", "Measurements", "");
   }
+  delay(1200);
 }
