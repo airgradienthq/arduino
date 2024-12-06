@@ -137,7 +137,7 @@ void setup() {
   delay(100); /** For bester show log */
 
   // Set timezone to UTC
-  setenv("TZ", "UTC+0", 1);
+  setenv("TZ", "UTC", 1);
   tzset();
 
   /** Print device ID into log */
@@ -187,38 +187,20 @@ void setup() {
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
-  oledDisplay.setText("Offline Storage Mode", "Connecting to", "default WiFi");
+  // Connect to Wi-Fi network with SSID and password
+  Serial.print("Setting AP (Access Point)…");
+  // Remove the password parameter, if you want the AP (Access Point) to be open
+  WiFi.softAP("airgradient", "cleanair");
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+      Serial.println(IP);
 
-  // Attempt connect to default wifi
-  Serial.println("Connecting to default wifi " + String(wifiConnector.defaultSsid));
-  WiFi.begin(wifiConnector.defaultSsid, wifiConnector.defaultPassword);
+    oledDisplay.setText("", "Offline Storage Mode", "");
 
-  /** Wait for wifi connect to AP */
-  int count = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    count++;
-    if (count >= 10) {
-      Serial.println("Try connect to default wifi \"" + String(wifiConnector.defaultSsid) +
-                     "\"failed, ignore");
-      Serial.println();
-      break;
-    }
-  }
-
-  // Notify and wait
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("WiFi connected");
-    oledDisplay.setText("WiFi connected", "", "");
+  delay(3000);
     mdnsInit();
     localServer.begin();
-    isLocalServerInitialized = true;
-  } else {
-    Serial.println("WiFi not connect");
-    oledDisplay.setText("WiFi not connect", "", "");
-  }
-  delay(3000);
-
+    
   // Update display and led bar after finishing setup to show dashboard
   updateDisplayAndLedBar();
 }
@@ -264,15 +246,8 @@ void loop() {
 
   watchdogFeedSchedule.run();
 
-  if (WiFi.status() == WL_CONNECTED && !isLocalServerInitialized) {
-    Serial.println("WiFi connected and local server has not initialized, initializing...");
-    mdnsInit();
-    localServer.begin();
-    isLocalServerInitialized = true;
-  }
-
-  /** Check for handle WiFi reconnect */
-  wifiConnector.handle();
+  // /** Check for handle WiFi reconnect */
+  // wifiConnector.handle();
 
   /** factory reset handle */
   factoryConfigReset();
@@ -928,13 +903,8 @@ static void updateDisplayAndLedBar(void) {
 
   if (configuration.isOfflineMode()) {
     // Ignore network related status when in offline mode
-    if (wifiConnector.isConnected()) {
-      stateMachine.displayHandle(AgStateMachineNormal);
-    } else {
-      stateMachine.displayHandle(AgStateMachineWiFiLost);
-    }
-    // stateMachine.handleLeds(AgStateMachineNormal);
-
+          stateMachine.displayHandle(AgStateMachineNormal);
+        // stateMachine.handleLeds(AgStateMachineNormal);
     return;
   }
 

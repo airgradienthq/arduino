@@ -149,7 +149,7 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "            margin: 10px 0;";
   page += "        }";
   page += "        .datetime-container input[type=\"datetime-local\"] {";
-  page += "            margin-right: 10px;";
+  page += "            margin-left: 10px;";
   page += "            padding: 5px;";
   page += "            font-size: 14px;";
   page += "        }";
@@ -174,8 +174,8 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "        <button type=\"submit\">Download Measurements</button>";
   page += "    </form>";
   page += "    <form id=\"timestampForm\" method=\"POST\" action=\"/timestamp\">";
-  page += "        <button type=\"submit\">Set Timestamp</button>";
-  page += "        <input type=\"datetime-local\" id=\"timestampInput\" required>";
+    page += "        <input type=\"datetime-local\" id=\"timestampInput\" required>";
+page += "        <button type=\"submit\">Set Timestamp</button>";
   page += "        <input type=\"hidden\" name=\"timestamp\" id=\"epochInput\">";
   page += "    </form>";
   page += "    <div class=\"spacer\"></div>";
