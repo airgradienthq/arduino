@@ -18,6 +18,7 @@ bool LocalServer::begin(void) {
     _GET_storage();
   });
   server.on("/storage/reset", HTTP_PUT, [this]() { _PUT_storage(); });
+  server.on("/timestamp", HTTP_PUT, [this]() { _PUT_time(); });
 
   server.begin();
 
@@ -86,6 +87,15 @@ void LocalServer::_GET_storage(void) {
 }
 
 void LocalServer::_PUT_storage(void) {
+  if (!measure.resetLocalStorage()) {
+    server.send(500, "text/plain", "Failed reset local storage, unknown error");
+    return;
+  }
+
+  server.send(200, "text/plain", "Success reset storage");
+}
+
+void LocalServer::_PUT_time(void) {
   String epochTime = server.arg(0);
   Serial.printf("Received epoch: %s \n", epochTime.c_str());
   if (epochTime.isEmpty()) {
@@ -101,12 +111,7 @@ void LocalServer::_PUT_storage(void) {
 
   ag->setCurrentTime(_epochTime);
 
-  if (!measure.resetLocalStorage()) {
-    server.send(500, "text/plain", "Failed reset local storage, unknown error");
-    return;
-  }
-
-  server.send(200, "text/plain", "Success reset storage");
+  server.send(200, "text/plain", "Success set new time");
 }
 
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }

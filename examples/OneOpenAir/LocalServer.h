@@ -35,6 +35,7 @@ public:
   void _GET_measure(void);
   void _GET_storage(void);
   void _PUT_storage(void);
+  void _PUT_time(void);
 };
 
 #endif /** _LOCAL_SERVER_H_ */
