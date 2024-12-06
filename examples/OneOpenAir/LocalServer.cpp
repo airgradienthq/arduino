@@ -120,14 +120,13 @@ void LocalServer::_POST_time(void) {
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }
 
 String LocalServer::htmlDashboard(String timestamp) {
-  // TODO: Set timestamp
   String page = "";
   page += "<!DOCTYPE html>";
   page += "<html lang=\"en\">";
   page += "<head>";
   page += "    <meta charset=\"UTF-8\">";
   page += "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">";
-  page += "    <title>Button Layout with Datetime Picker</title>";
+  page += "    <title>AirGradient Local Storage Mode</title>";
   page += "    <style>";
   page += "        body {";
   page += "            font-family: Arial, sans-serif;";
@@ -168,6 +167,9 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "    </style>";
   page += "</head>";
   page += "<body>";
+  page += "    <h1>";
+  page += timestamp;
+  page += "    </h1>";
   page += "    <form action=\"/storage/download\" method=\"GET\">";
   page += "        <button type=\"submit\">Download Measurements</button>";
   page += "    </form>";
