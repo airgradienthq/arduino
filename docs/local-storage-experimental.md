@@ -14,7 +14,8 @@
 1. Default wifi
     - ssid ➝ `airgradient`
     - password ➝ `cleanair`
-2. Maximum measurements file is around 113kb. If assume each measurements is 60 bytes, with write schedule 2 minutes, SPIFFS will be full in around 5 days.
+2. Maximum measurements file is around 113kb. If assume each measurements is 60 bytes, with write schedule 2 minutes, SPIFFS will be full in around 5 days
+3. Tips. If monitor already connected to wifi once on boot, no need to restart the monitor for reconnection, it will automatically connect to AP once it is available
 
 ### Local Storage Endpoinds
 
@@ -26,7 +27,7 @@ To download measurements file from local storage, just directly access following
 
 **Reset measurements**
 
-Execure below command in terminal
+Execute below command in terminal
 
 ```sh
 curl -X PUT -H "Content-Type: text/plain" -d '1733431986' http://airgradient_aaaaaaa.local/storage/reset
