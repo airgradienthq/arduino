@@ -137,7 +137,7 @@ void setup() {
   delay(100); /** For bester show log */
 
   // Set timezone to UTC
-  setenv("TZ", "UTC-0", 1);
+  setenv("TZ", "UTC+0", 1);
   tzset();
 
   /** Print device ID into log */
