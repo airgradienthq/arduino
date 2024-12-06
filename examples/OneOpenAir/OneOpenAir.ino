@@ -193,14 +193,14 @@ void setup() {
   WiFi.softAP("airgradient", "cleanair");
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
-      Serial.println(IP);
+  Serial.println(IP);
 
-    oledDisplay.setText("", "Offline Storage Mode", "");
+  oledDisplay.setText("", "Offline Storage Mode", "");
 
   delay(3000);
-    mdnsInit();
-    localServer.begin();
-    
+  mdnsInit();
+  localServer.begin();
+
   // Update display and led bar after finishing setup to show dashboard
   updateDisplayAndLedBar();
 }
@@ -903,8 +903,8 @@ static void updateDisplayAndLedBar(void) {
 
   if (configuration.isOfflineMode()) {
     // Ignore network related status when in offline mode
-          stateMachine.displayHandle(AgStateMachineNormal);
-        // stateMachine.handleLeds(AgStateMachineNormal);
+    stateMachine.displayHandle(AgStateMachineNormal);
+    // stateMachine.handleLeds(AgStateMachineNormal);
     return;
   }
 
