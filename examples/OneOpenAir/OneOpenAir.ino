@@ -93,6 +93,7 @@ static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
+static bool isLocalServerInitialized = false;
 
 static void boardInit(void);
 static void failedHandler(String msg);
@@ -193,8 +194,6 @@ void setup() {
 
   // Attempt connect to default wifi
   Serial.println("Connecting to default wifi " + String(wifiConnector.defaultSsid));
-  WiFi.begin();
-  /** Set wifi connect */
   WiFi.begin(wifiConnector.defaultSsid, wifiConnector.defaultPassword);
 
   /** Wait for wifi connect to AP */
@@ -202,7 +201,7 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     count++;
-    if (count >= 15) {
+    if (count >= 10) {
       Serial.println("Try connect to default wifi \"" + String(wifiConnector.defaultSsid) +
                      "\"failed, ignore");
       Serial.println();
@@ -212,10 +211,13 @@ void setup() {
 
   // Notify and wait
   if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi connected");
     oledDisplay.setText("WiFi connected", "", "");
     mdnsInit();
     localServer.begin();
+    isLocalServerInitialized = true;
   } else {
+    Serial.println("WiFi not connect");
     oledDisplay.setText("WiFi not connect", "", "");
   }
   delay(3000);
@@ -264,6 +266,13 @@ void loop() {
   }
 
   watchdogFeedSchedule.run();
+
+  if (WiFi.status() == WL_CONNECTED && !isLocalServerInitialized) {
+    Serial.println("WiFi connected and local server has not initialized, initializing...");
+    mdnsInit();
+    localServer.begin();
+    isLocalServerInitialized = true;
+  }
 
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
@@ -921,8 +930,13 @@ static void updateDisplayAndLedBar(void) {
 
   if (configuration.isOfflineMode()) {
     // Ignore network related status when in offline mode
-    stateMachine.displayHandle(AgStateMachineNormal);
+    if (wifiConnector.isConnected()) {
+      stateMachine.displayHandle(AgStateMachineNormal);
+    } else {
+      stateMachine.displayHandle(AgStateMachineWiFiLost);
+    }
     stateMachine.handleLeds(AgStateMachineNormal);
+
     return;
   }
 
@@ -1182,17 +1196,17 @@ int calculateMaxPeriod(int updateInterval) {
 void offlineStorageUpdate() {
   if (measurements.saveLocalStorage(*ag)) {
     // blue
-  ag->ledBar.setColor(0, 0, 255, 0);
-  ag->ledBar.show();
-  delay(250);
-  ag->ledBar.setColor(0, 0, 0, 0);
-  ag->ledBar.show();
-  delay(250);
-  ag->ledBar.setColor(0, 0, 255, 0);
-  ag->ledBar.show();
-  delay(250);
-  ag->ledBar.setColor(0, 0, 0, 0);
-  ag->ledBar.show();
+    ag->ledBar.setColor(0, 0, 255, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(0, 0, 0, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(0, 0, 255, 0);
+    ag->ledBar.show();
+    delay(250);
+    ag->ledBar.setColor(0, 0, 0, 0);
+    ag->ledBar.show();
   } else {
     // red
     ag->ledBar.setColor(255, 0, 0, 0);
