@@ -15,7 +15,7 @@
     - ssid ➝ `airgradient`
     - password ➝ `cleanair`
 2. Maximum measurements file is around 113kb. If assume each measurements is 60 bytes, with write schedule 2 minutes, SPIFFS will be full in around 5 days
-3. WiFi connection attempt on boot wait for 10s before considering timeout, and continue 
+3. WiFi connection attempt on boot wait for 10s before considering timeout
 4. Tips. If monitor not connected to wifi on boot, no need to restart the monitor for reconnection, it will automatically connect to AP once it is available
 
 ### Local Storage Endpoinds
