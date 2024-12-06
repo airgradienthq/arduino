@@ -1078,7 +1078,7 @@ bool Measurements::resetLocalStorage() {
 }
 
 bool Measurements::saveLocalStorage(AirGradient &ag) {
-  int spiffUsed = (SPIFFS.usedBytes() / SPIFFS.totalBytes()) / 2;
+  int spiffUsed = ((float)SPIFFS.usedBytes() / (float)SPIFFS.totalBytes()) * 100.0;
   Serial.printf("%d | %d\n", SPIFFS.totalBytes(), SPIFFS.usedBytes());
   Serial.printf("SPIFF used %d%%\n", spiffUsed);
   if (spiffUsed > 98) {
