@@ -1194,7 +1194,7 @@ int calculateMaxPeriod(int updateInterval) {
 }
 
 void offlineStorageUpdate() {
-  if (measurements.saveLocalStorage(*ag)) {
+  if (measurements.saveLocalStorage(*ag, configuration)) {
     // blue
     ag->ledBar.setColor(0, 0, 255, 0);
     ag->ledBar.show();

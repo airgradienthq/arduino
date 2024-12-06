@@ -143,7 +143,7 @@ public:
                   Configuration &config);
 
   bool resetLocalStorage();
-  bool saveLocalStorage(AirGradient &ag);
+  bool saveLocalStorage(AirGradient &ag, Configuration &config);
   char *getLocalStorage();
 
   /**

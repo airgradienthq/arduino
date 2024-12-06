@@ -1077,7 +1077,7 @@ bool Measurements::resetLocalStorage() {
   return true;
 }
 
-bool Measurements::saveLocalStorage(AirGradient &ag) {
+bool Measurements::saveLocalStorage(AirGradient &ag, Configuration &config) {
   int spiffUsed = ((float)SPIFFS.usedBytes() / (float)SPIFFS.totalBytes()) * 100.0;
   Serial.printf("%d | %d\n", SPIFFS.totalBytes(), SPIFFS.usedBytes());
   Serial.printf("SPIFF used %d%%\n", spiffUsed);
@@ -1100,13 +1100,14 @@ bool Measurements::saveLocalStorage(AirGradient &ag) {
     return false;
   }
 
+  float pm25 = getCorrectedPM25(ag, config, true);
+
   // Save new measurements
   file.printf("%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d\n", ag.getCurrentTime().c_str(),
-              ag.round2(_pm_03_pc[0].update.avg), ag.round2(_pm_01[0].update.avg),
-              ag.round2(_pm_25[0].update.avg), ag.round2(_pm_10[0].update.avg),
-              ag.round2(_temperature[0].update.avg), ag.round2(_humidity[0].update.avg),
-              (int)round(_co2.update.avg), (int)round(_tvoc.update.avg),
-              (int)round(_nox.update.avg));
+              ag.round2(_pm_03_pc[0].update.avg), ag.round2(_pm_01[0].update.avg), ag.round2(pm25),
+              ag.round2(_pm_10[0].update.avg), ag.round2(_temperature[0].update.avg),
+              ag.round2(_humidity[0].update.avg), (int)round(_co2.update.avg),
+              (int)round(_tvoc.update.avg), (int)round(_nox.update.avg));
 
   Serial.println("Success save measurements to local storage");
   return true;
