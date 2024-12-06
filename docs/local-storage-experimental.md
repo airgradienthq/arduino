@@ -20,7 +20,7 @@
 
 ### Local Storage Endpoinds
 
-*Make sure monitor is connected to AP, and client also connect to it*
+*Make sure monitor is connected to AP, and client also connect to it. And change the serial number on the url*
 
 **Download measurements file**
 
