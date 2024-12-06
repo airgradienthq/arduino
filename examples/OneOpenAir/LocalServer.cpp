@@ -13,12 +13,10 @@ bool LocalServer::begin(void) {
   server.on(openMetrics.getApi(), HTTP_GET, [this]() { _GET_metrics(); });
   server.on("/config", HTTP_GET, [this]() { _GET_config(); });
   server.on("/config", HTTP_PUT, [this]() { _PUT_config(); });
-  server.on("/storage", HTTP_GET, [this]() {
-    Serial.println(server.arg("time"));
-    _GET_storage();
-  });
-  server.on("/storage/reset", HTTP_PUT, [this]() { _PUT_storage(); });
-  server.on("/timestamp", HTTP_PUT, [this]() { _PUT_time(); });
+  server.on("/dashboard", HTTP_GET, [this]() { _GET_dashboard(); });
+  server.on("/storage/download", HTTP_GET, [this]() { _GET_storage(); });
+  server.on("/storage/reset", HTTP_POST, [this]() { _POST_storage(); });
+  server.on("/timestamp", HTTP_POST, [this]() { _POST_time(); });
 
   server.begin();
 
@@ -75,6 +73,11 @@ void LocalServer::_GET_measure(void) {
   server.send(200, "application/json", toSend);
 }
 
+void LocalServer::_GET_dashboard(void) {
+  String timestamp = ag->getCurrentTime();
+  server.send(200, "text/html", htmlDashboard(timestamp));
+}
+
 void LocalServer::_GET_storage(void) {
   char *data = measure.getLocalStorage();
   if (data != nullptr) {
@@ -86,7 +89,7 @@ void LocalServer::_GET_storage(void) {
   }
 }
 
-void LocalServer::_PUT_storage(void) {
+void LocalServer::_POST_storage(void) {
   if (!measure.resetLocalStorage()) {
     server.send(500, "text/plain", "Failed reset local storage, unknown error");
     return;
@@ -95,7 +98,7 @@ void LocalServer::_PUT_storage(void) {
   server.send(200, "text/plain", "Success reset storage");
 }
 
-void LocalServer::_PUT_time(void) {
+void LocalServer::_POST_time(void) {
   String epochTime = server.arg(0);
   Serial.printf("Received epoch: %s \n", epochTime.c_str());
   if (epochTime.isEmpty()) {
@@ -115,3 +118,87 @@ void LocalServer::_PUT_time(void) {
 }
 
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }
+
+String LocalServer::htmlDashboard(String timestamp) {
+  // TODO: Set timestamp
+  String page = "";
+  page += "<!DOCTYPE html>";
+  page += "<html lang=\"en\">";
+  page += "<head>";
+  page += "    <meta charset=\"UTF-8\">";
+  page += "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">";
+  page += "    <title>Button Layout with Datetime Picker</title>";
+  page += "    <style>";
+  page += "        body {";
+  page += "            font-family: Arial, sans-serif;";
+  page += "            display: flex;";
+  page += "            flex-direction: column;";
+  page += "            align-items: center;";
+  page += "            margin-top: 50px;";
+  page += "        }";
+  page += "";
+  page += "        button {";
+  page += "            display: block;";
+  page += "            margin: 10px 0;";
+  page += "            padding: 10px 20px;";
+  page += "            font-size: 16px;";
+  page += "            cursor: pointer;";
+  page += "        }";
+  page += "        .datetime-container {";
+  page += "            display: flex;";
+  page += "            align-items: center;";
+  page += "            margin: 10px 0;";
+  page += "        }";
+  page += "        .datetime-container input[type=\"datetime-local\"] {";
+  page += "            margin-right: 10px;";
+  page += "            padding: 5px;";
+  page += "            font-size: 14px;";
+  page += "        }";
+  page += "        button.reset-button {";
+  page += "            background-color: red;";
+  page += "            color: white;";
+  page += "            border: none;";
+  page += "            padding: 10px 20px;";
+  page += "            font-size: 16px;";
+  page += "            cursor: pointer;";
+  page += "        }";
+  page += "        .spacer {";
+  page += "            height: 50px;";
+  page += "        }";
+  page += "    </style>";
+  page += "</head>";
+  page += "<body>";
+  page += "    <form action=\"/storage/download\" method=\"GET\">";
+  page += "        <button type=\"submit\">Download Measurements</button>";
+  page += "    </form>";
+  page += "    <form id=\"timestampForm\" method=\"POST\" action=\"/timestamp\">";
+  page += "        <button type=\"submit\">Set Timestamp</button>";
+  page += "        <input type=\"datetime-local\" id=\"timestampInput\" required>";
+  page += "        <input type=\"hidden\" name=\"timestamp\" id=\"epochInput\">";
+  page += "    </form>";
+  page += "    <div class=\"spacer\"></div>";
+  page += "    <form action=\"/storage/reset\" method=\"POST\"";
+  page += "        onsubmit=\"return confirm('Are you sure you want to reset the measurements? "
+          "This action will permanently delete the existing measurement files!');\">";
+  page += "        <button class=\"reset-button\" type=\"submit\">Reset Measurements</button>";
+  page += "    </form>";
+  page += "</body>";
+  page += "<script>";
+  page += "    document.querySelector('#timestampForm').onsubmit = function (event) {";
+  page += "        const datetimeInput = document.querySelector('#timestampInput').value;";
+  page += "        const localDate = new Date(datetimeInput);";
+  page += "        const epochTimeUTC = Math.floor(Date.UTC(";
+  page += "            localDate.getFullYear(),";
+  page += "            localDate.getMonth(),";
+  page += "            localDate.getDate(),";
+  page += "            localDate.getHours(),";
+  page += "            localDate.getMinutes()";
+  page += "        ) / 1000);";
+  page += "        document.querySelector('#epochInput').value = epochTimeUTC;";
+  page += "        return true;";
+  page += "    };";
+  page += "</script>";
+  page += "</html>";
+
+  return page;
+}

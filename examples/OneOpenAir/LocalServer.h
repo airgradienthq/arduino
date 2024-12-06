@@ -19,6 +19,8 @@ private:
   WebServer server;
   AgFirmwareMode fwMode;
 
+  String htmlDashboard(String timestamp);
+
 public:
   LocalServer(Stream &log, OpenMetrics &openMetrics, Measurements &measure,
               Configuration &config, WifiConnector& wifiConnector);
@@ -33,9 +35,10 @@ public:
   void _PUT_config(void);
   void _GET_metrics(void);
   void _GET_measure(void);
+  void _GET_dashboard(void);
   void _GET_storage(void);
-  void _PUT_storage(void);
-  void _PUT_time(void);
+  void _POST_storage(void);
+  void _POST_time(void);
 };
 
 #endif /** _LOCAL_SERVER_H_ */
