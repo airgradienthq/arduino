@@ -174,8 +174,8 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "        <button type=\"submit\">Download Measurements</button>";
   page += "    </form>";
   page += "    <form id=\"timestampForm\" method=\"POST\" action=\"/timestamp\">";
-    page += "        <input type=\"datetime-local\" id=\"timestampInput\" required>";
-page += "        <button type=\"submit\">Set Timestamp</button>";
+  page += "        <input type=\"datetime-local\" id=\"timestampInput\" required>";
+  page += "        <button type=\"submit\">Set Timestamp</button>";
   page += "        <input type=\"hidden\" name=\"timestamp\" id=\"epochInput\">";
   page += "    </form>";
   page += "    <div class=\"spacer\"></div>";
