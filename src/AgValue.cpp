@@ -1090,7 +1090,8 @@ bool Measurements::saveLocalStorage(AirGradient &ag, Configuration &config) {
   File file;
   if (!SPIFFS.exists(FILE_PATH)) {
     file = SPIFFS.open(FILE_PATH, FILE_APPEND, true);
-    file.println("datetime,pm0.3 count,pm1,pm2.5,pm10,temp,rhum,co2,tvoc,nox"); // csv header
+    file.println(
+        "datetime,pm0.3 count,pm2.5,temp,rhum,co2,tvoc,tvoc raw,nox,nox raw"); // csv header
     Serial.println("New measurements file created");
   } else {
     file = SPIFFS.open(FILE_PATH, FILE_APPEND, false);
@@ -1104,11 +1105,12 @@ bool Measurements::saveLocalStorage(AirGradient &ag, Configuration &config) {
   float pm25 = getCorrectedPM25(ag, config, true);
 
   // Save new measurements
-  file.printf("%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d\n", ag.getCurrentTime().c_str(),
-              ag.round2(_pm_03_pc[0].update.avg), ag.round2(_pm_01[0].update.avg), ag.round2(pm25),
-              ag.round2(_pm_10[0].update.avg), ag.round2(_temperature[0].update.avg),
-              ag.round2(_humidity[0].update.avg), (int)round(_co2.update.avg),
-              (int)round(_tvoc.update.avg), (int)round(_nox.update.avg));
+  file.printf("%s,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%d\n", ag.getCurrentTime().c_str(),
+              ag.round2(_pm_03_pc[0].update.avg), ag.round2(pm25),
+              ag.round2(_temperature[0].update.avg), ag.round2(_humidity[0].update.avg),
+              (int)round(_co2.update.avg), (int)round(_tvoc.update.avg),
+              (int)round(_tvoc_raw.update.avg), (int)round(_nox.update.avg),
+              (int)round(_nox_raw.update.avg));
 
   Serial.println("Success save measurements to local storage");
   return true;
