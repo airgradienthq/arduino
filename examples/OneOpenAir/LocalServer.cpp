@@ -168,7 +168,7 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "        .datetime-container input[type=\"datetime-local\"] {";
   page += "            margin-left: 10px;";
   page += "            padding: 5px;";
-  page += "            font-size: 14px;";
+  page += "            font-size: 16px;";
   page += "        }";
   page += "        button.reset-button {";
   page += "            background-color: red;";
@@ -232,6 +232,9 @@ String LocalServer::htmlResponse(String body, bool redirect) {
   page += "<!DOCTYPE HTML>";
   page += "<html lang=\"en-US\">";
   page += "    <head>";
+  page += "<style>";
+  page += "p { font-size: 22px; }";
+  page += "</style>";
   page += "        <meta charset=\"UTF-8\">";
 
   if (redirect) {
@@ -241,7 +244,9 @@ String LocalServer::htmlResponse(String body, bool redirect) {
   page += "        <title>Page Redirection</title>";
   page += "    </head>";
   page += "    <body>";
+  page += "    <p>";
   page += body;
+  page += "    </p>";
   page += "    </body>";
   page += "</html>";
 
