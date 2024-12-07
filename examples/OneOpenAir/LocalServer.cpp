@@ -81,7 +81,9 @@ void LocalServer::_GET_dashboard(void) {
 void LocalServer::_GET_storage(void) {
   char *data = measure.getLocalStorage();
   if (data != nullptr) {
-    server.sendHeader("Content-Disposition", "attachment; filename=\"measurements.csv\"");
+    String filename =
+        "measurements-" + ag->deviceId().substring(8) + ".csv"; // measurements-fdsa.csv
+    server.sendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     server.send(200, "text/plain", data);
     free(data);
   } else {

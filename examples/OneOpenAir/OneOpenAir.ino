@@ -187,13 +187,16 @@ void setup() {
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
+  String deviceId = ag->deviceId();
+
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Setting AP (Access Point)…");
   // Remove the password parameter, if you want the AP (Access Point) to be open
-  WiFi.softAP("airgradient", "cleanair");
+  WiFi.softAP("ag_" + deviceId, "cleanair");
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(IP);
+  Serial.printf("SSID: ag_%s\n", deviceId.c_str());
 
   oledDisplay.setText("", "Offline Storage Mode", "");
 
