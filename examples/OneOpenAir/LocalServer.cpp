@@ -184,9 +184,14 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "    </style>";
   page += "</head>";
   page += "<body>";
-  page += "    <h1>";
+  page += "    <h2>";
+page += "    Device Time: ";
   page += timestamp;
-  page += "    </h1>";
+  page += "    </h2>";
+  page += "    <h2>";
+  page += "    Serial Number: ";
+  page += ag->deviceId();
+  page += "    </h2>";
   page += "    <form action=\"/storage/download\" method=\"GET\">";
   page += "        <button type=\"submit\">Download Measurements</button>";
   page += "    </form>";
