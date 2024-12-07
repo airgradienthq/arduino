@@ -100,12 +100,18 @@ void LocalServer::_GET_storage(void) {
 }
 
 void LocalServer::_POST_storage(void) {
-  if (!measure.resetLocalStorage()) {
-    server.send(500, "text/plain", "Failed reset local storage, unknown error");
-    return;
-  }
+  String body;
+  int statusCode = 200;
 
-  server.send(200, "text/plain", "Success reset storage");
+  if (measure.resetLocalStorage()) {
+    body = "Success reset storage";
+  } else {
+    body = "Failed reset local storage, unknown error";
+    statusCode = 500;
+  }
+  body += ". Go to <a href='http://192.168.4.1/dashboard'>dashboard</a>.";
+
+  server.send(statusCode, "text/html", htmlResponse(body, false));
 }
 
 void LocalServer::_POST_time(void) {
@@ -124,7 +130,8 @@ void LocalServer::_POST_time(void) {
 
   ag->setCurrentTime(_epochTime);
 
-  server.send(200, "text/plain", "Success set new time");
+  String body = "Success set new time. Go to <a href='http://192.168.4.1/dashboard'>dashboard</a>.";
+  server.send(200, "text/html", htmlResponse(body, false));
 }
 
 void LocalServer::setFwMode(AgFirmwareMode fwMode) { this->fwMode = fwMode; }
