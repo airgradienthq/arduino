@@ -185,7 +185,7 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "</head>";
   page += "<body>";
   page += "    <h2>";
-page += "    Device Time: ";
+  page += "    Device Time: ";
   page += timestamp;
   page += "    </h2>";
   page += "    <h2>";
