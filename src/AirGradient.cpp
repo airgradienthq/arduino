@@ -89,7 +89,7 @@ String AirGradient::deviceId(void) {
 void AirGradient::setCurrentTime(long epochTime) {
   // set current day/time
   struct timeval tv;
-  tv.tv_sec = epochTime - 1020; // 17 minutes // don't know why it always off by 17 minutes
+  tv.tv_sec = epochTime; // - 1020; // 17 minutes // don't know why it always off by 17 minutes
   settimeofday(&tv, NULL);
   Serial.println(epochTime);
   Serial.printf("Set current time to %s\n", getCurrentTime().c_str());
