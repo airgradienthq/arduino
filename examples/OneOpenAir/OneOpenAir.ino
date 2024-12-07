@@ -201,7 +201,7 @@ void setup() {
   oledDisplay.setText("", "Offline Storage Mode", "");
 
   delay(3000);
-  mdnsInit();
+  // mdnsInit();
   localServer.begin();
 
   // Update display and led bar after finishing setup to show dashboard
@@ -377,7 +377,7 @@ static void factoryConfigReset(void) {
             WiFi.disconnect(true, true);
 
             /** Reset local config */
-            configuration.reset();
+            // configuration.reset();
 
             if (ag->isOne()) {
               oledDisplay.setText("Factory reset", "successful", "");

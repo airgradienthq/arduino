@@ -253,7 +253,7 @@ void Configuration::loadConfig(void) {
     }
     file.close();
   } else {
-    SPIFFS.format();
+    // SPIFFS.format();
   }
 #endif
   toConfig(buf);

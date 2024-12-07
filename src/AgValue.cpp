@@ -1097,28 +1097,39 @@ bool Measurements::saveLocalStorage(AirGradient &ag, Configuration &config) {
     file = SPIFFS.open(FILE_PATH, FILE_APPEND, false);
   }
 
-  if (!file) {
-    Serial.println("Failed local storage file path");
-    return false;
-  }
-
   float pm25 = getCorrectedPM25(ag, config, true);
 
   // Save new measurements
-  file.printf("%s,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%d\n", ag.getCurrentTime().c_str(),
-              ag.round2(_pm_03_pc[0].update.avg), ag.round2(pm25),
-              ag.round2(_temperature[0].update.avg), ag.round2(_humidity[0].update.avg),
-              (int)round(_co2.update.avg), (int)round(_tvoc.update.avg),
-              (int)round(_tvoc_raw.update.avg), (int)round(_nox.update.avg),
-              (int)round(_nox_raw.update.avg));
+  char buff[100] = {0};
+  sprintf(buff, "%s,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%d,%d\n\0", ag.getCurrentTime().c_str(),
+          ag.round2(_pm_03_pc[0].update.avg), ag.round2(pm25),
+          ag.round2(_temperature[0].update.avg), ag.round2(_humidity[0].update.avg),
+          (int)round(_co2.update.avg), (int)round(_tvoc.update.avg),
+          (int)round(_tvoc_raw.update.avg), (int)round(_nox.update.avg),
+          (int)round(_nox_raw.update.avg));
 
+  size_t len = strlen(buff);
+  if (file.write((const uint8_t *)buff, len) != len) {
+    Serial.println("Write new measurements failed!");
+    file.close();
+    return false;
+  }
+
+  file.close();
   Serial.println("Success save measurements to local storage");
+
   return true;
 }
 
 char *Measurements::getLocalStorage() {
   char *buf = nullptr;
   bool success = false;
+
+  if (!SPIFFS.exists(FILE_PATH)) {
+    Serial.println("No measurements file exists yet");
+    return nullptr;
+  }
+
   File file = SPIFFS.open(FILE_PATH);
   if (file && !file.isDirectory()) {
     // Allocate memory
@@ -1134,14 +1145,15 @@ char *Measurements::getLocalStorage() {
       Serial.println("Reading measurements file: success");
       success = true;
     }
+
     file.close();
-  } else {
-    SPIFFS.format();
   }
 
   if (!success) {
     Serial.println("Reading measurements file failed");
-    delete buf;
+    if (buf != nullptr) {
+      delete buf;
+    }
     return nullptr;
   }
 
