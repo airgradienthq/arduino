@@ -20,6 +20,7 @@ private:
   AgFirmwareMode fwMode;
 
   String htmlDashboard(String timestamp);
+  String htmlResponse(String body, bool redirect);
 
 public:
   LocalServer(Stream &log, OpenMetrics &openMetrics, Measurements &measure,
@@ -31,6 +32,7 @@ public:
   String getHostname(void);
   void setFwMode(AgFirmwareMode fwMode);
   void _handle(void);
+  void _GET_root(void);
   void _GET_config(void);
   void _PUT_config(void);
   void _GET_metrics(void);

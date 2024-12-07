@@ -9,6 +9,7 @@ LocalServer::LocalServer(Stream &log, OpenMetrics &openMetrics,
 LocalServer::~LocalServer() {}
 
 bool LocalServer::begin(void) {
+  server.on("/", HTTP_GET, [this]() { _GET_root(); });
   server.on("/measures/current", HTTP_GET, [this]() { _GET_measure(); });
   server.on(openMetrics.getApi(), HTTP_GET, [this]() { _GET_metrics(); });
   server.on("/config", HTTP_GET, [this]() { _GET_config(); });
@@ -42,6 +43,13 @@ String LocalServer::getHostname(void) {
 }
 
 void LocalServer::_handle(void) { server.handleClient(); }
+
+void LocalServer::_GET_root(void) {
+  String body = "If you are not redirected automatically, go to <a "
+                "href='http://192.168.4.1/dashboard'>dashboard</a>.";
+
+  server.send(302, "text/html", htmlResponse(body, true));
+}
 
 void LocalServer::_GET_config(void) {
   if(ag->isOne()) {
@@ -202,6 +210,27 @@ String LocalServer::htmlDashboard(String timestamp) {
   page += "        return true;";
   page += "    };";
   page += "</script>";
+  page += "</html>";
+
+  return page;
+}
+
+String LocalServer::htmlResponse(String body, bool redirect) {
+  String page = "";
+  page += "<!DOCTYPE HTML>";
+  page += "<html lang=\"en-US\">";
+  page += "    <head>";
+  page += "        <meta charset=\"UTF-8\">";
+
+  if (redirect) {
+    page += "        <meta http-equiv=\"refresh\" content=\"0;url=/dashboard\">";
+  }
+
+  page += "        <title>Page Redirection</title>";
+  page += "    </head>";
+  page += "    <body>";
+  page += body;
+  page += "    </body>";
   page += "</html>";
 
   return page;
