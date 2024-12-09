@@ -92,7 +92,7 @@ void LocalServer::_GET_storage(void) {
     String filename =
         "measurements-" + ag->deviceId().substring(8) + ".csv"; // measurements-fdsa.csv
     server.sendHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-    server.send(200, "text/plain", data);
+    server.send_P(200, "text/plain", data);
     free(data);
   } else {
     server.send(204, "text/plain", "No data");
