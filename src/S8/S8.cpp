@@ -1,6 +1,6 @@
 #include "S8.h"
-#include "mb_crc.h"
 #include "../Main/utils.h"
+#include "mb_crc.h"
 #if defined(ESP8266)
 #include <SoftwareSerial.h>
 #else
@@ -275,6 +275,7 @@ bool S8::isBaseLineCalibrationDone(void) {
     return true;
   }
   if (getAcknowledgement() & S8_MASK_CO2_BACKGROUND_CALIBRATION) {
+    Serial.println("Waiting getAcknowlagdement");
     return true;
   }
   return false;
@@ -396,10 +397,8 @@ bool S8::manualCalib(void) {
   }
 
   bool result = clearAcknowledgement();
-
   if (result) {
     result = sendSpecialCommand(S8_CO2_BACKGROUND_CALIBRATION);
-
     if (result) {
       AgLog("Manual calibration in background has started");
     } else {
@@ -425,17 +424,29 @@ int16_t S8::getAcknowledgement(void) {
   // Ask acknowledgement flags
   sendCommand(MODBUS_FUNC_READ_HOLDING_REGISTERS, MODBUS_HR1, 0x0001);
 
+  Serial.print("Get Acknowladgement Command >  ");
+  for (int i = 0; i < 8; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
+
   // Wait response
   memset(buf_msg, 0, S8_LEN_BUF_MSG);
   uint8_t nb = uartReadBytes(7, S8_TIMEOUT);
+  Serial.print("Get Acknowladgement Response > ");
+  for (int i = 0; i < nb; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
 
   // Check response and get data
   if (validResponseLenght(MODBUS_FUNC_READ_HOLDING_REGISTERS, nb, 7)) {
     flags = ((buf_msg[3] << 8) & 0xFF00) | (buf_msg[4] & 0x00FF);
+    Serial.printf("Flags: %x\n", flags);
   } else {
     AgLog("Error getting acknowledgement flags!");
+    Serial.println("Error getting acknowledgement flags!");
   }
-
   return flags;
 }
 
@@ -455,6 +466,11 @@ bool S8::clearAcknowledgement(void) {
 
   // Ask clear acknowledgement flags
   sendCommand(MODBUS_FUNC_WRITE_SINGLE_REGISTER, MODBUS_HR1, 0x0000);
+  Serial.print("Clear Acknowladgement Command >  ");
+  for (int i = 0; i < 8; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
 
   // Save bytes sent
   memcpy(buf_msg_sent, buf_msg, 8);
@@ -462,6 +478,12 @@ bool S8::clearAcknowledgement(void) {
   // Wait response
   memset(buf_msg, 0, S8_LEN_BUF_MSG);
   uartReadBytes(8, S8_TIMEOUT);
+  Serial.print("Clear Acknowladgement Response > ");
+  for (int i = 0; i < 8; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
+
 
   // Check response
   if (memcmp(buf_msg_sent, buf_msg, 8) == 0) {
@@ -578,6 +600,11 @@ bool S8::sendSpecialCommand(CalibrationSpecialComamnd command) {
 
   // Ask set user special command
   sendCommand(MODBUS_FUNC_WRITE_SINGLE_REGISTER, MODBUS_HR2, command);
+  Serial.print("Send Calibration Command >  ");
+  for (int i = 0; i < 8; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
 
   // Save bytes sent
   memcpy(buf_msg_sent, buf_msg, 8);
@@ -585,6 +612,12 @@ bool S8::sendSpecialCommand(CalibrationSpecialComamnd command) {
   // Wait response
   memset(buf_msg, 0, S8_LEN_BUF_MSG);
   uartReadBytes(8, S8_TIMEOUT);
+
+  Serial.print("Send Calibration Response > ");
+  for (int i = 0; i < 8; i++) {
+    Serial.printf(" 0x%02X ", buf_msg[i]);
+  }
+  Serial.println();
 
   // Check response
   if (memcmp(buf_msg_sent, buf_msg, 8) == 0) {
