@@ -242,6 +242,7 @@ void StateMachine::co2Calibration(void) {
       }
       delay(1000);
     }
+    delay(2000);
 
     if (ag->s8.setBaselineCalibration()) {
       if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3()) {
