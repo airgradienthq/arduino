@@ -1,0 +1,232 @@
+16:32:59:558 -> Detected OPEN_AIR_OUTDOOR
+16:32:59:559 -> Firmware Version: 3.1.9-1-g4691500-dirty
+16:32:59:704 -> Found S8 on Serial1
+16:32:59:704 -> Init SGP41 failuire
+16:32:59:704 -> SGP sensor not found
+16:32:59:704 -> Can not detect SGP run mode 'O-1PS'
+16:32:59:705 -> initializing PM sensor
+16:32:59:705 -> cleared 0 byte(s)
+16:32:59:705 -> setting active mode
+16:32:59:705 -> 7 byte(s) written
+16:33:03:705 -> No PM sensor detected on Serial0
+16:33:03:705 -> initializing PM sensor
+16:33:03:705 -> cleared 0 byte(s)
+16:33:03:705 -> setting active mode
+16:33:03:705 -> 7 byte(s) written
+16:33:07:705 -> No PM sensor detected on Serial1
+16:33:07:705 -> Firmware Mode: 0-1PS
+16:33:07:726 -> Set S8 AbcDays successful
+16:33:07:726 -> [ApiClient] Info: Init apiRoot: http://hw.airgradient.com
+16:33:07:726 -> [ApiClient] Info: begin
+16:33:07:771 -> [WifiConnector] Info: Connecting to WiFi...
+16:33:07:771 -> *wm:AutoConnect 
+16:33:07:772 -> *wm:Connecting to SAVED AP: ag-diamond_2.4GHz
+16:33:08:274 -> E (10414) wifi:sta is connecting, return error
+16:33:08:275 -> [ 10167][E][WiFiSTA.cpp:317] begin(): connect failed! 0x3007
+16:33:15:690 -> *wm:AutoConnect: SUCCESS 
+16:33:15:690 -> *wm:STA IP Address: 192.168.100.127
+16:33:15:692 -> [WifiConnector] Info: Wait for configure portal
+16:33:15:692 -> [WifiConnector] Info: WiFi Connected: ag-diamond_2.4GHz IP: 192.168.100.127
+16:33:15:704 -> [LocalServer] Info: Init: airgradient_d83bda1b86c8.local
+16:33:18:046 -> MQTT is not configured, skipping initialization of MQTT client
+16:33:18:047 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:33:18:047 -> [ApiClient] Info: DATA: {"wifi":-59,"boot":0}
+16:33:18:047 -> [ApiClient] Info: Return code: 200
+16:33:24:047 -> 
+16:33:24:048 -> firmwareCheckForUpdate:
+16:33:24:048 -> firmwareCheckForUpdate: Perform
+16:33:24:048 -> checking for new OTA update @ http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/generic/os/firmware.bin?current_firmware=3.1.9-1-g4691500-dirty
+16:33:24:678 -> Firmware update skipped, the server returned 400
+16:33:24:679 -> 3
+16:33:24:679 -> OTA message: 
+16:33:24:679 -> 
+16:33:25:252 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:33:25:252 -> [ApiClient] Info: Return code: 200
+16:33:25:254 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:33:25:256 -> [Configure] Info: Parse configure success
+16:33:25:256 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:33:25:284 -> CO2 (ppm): 367
+16:33:29:305 -> CO2 (ppm): 347
+16:33:33:325 -> CO2 (ppm): 333
+16:33:37:346 -> CO2 (ppm): 309
+16:33:41:367 -> CO2 (ppm): 307
+16:33:45:388 -> CO2 (ppm): 301
+16:33:49:409 -> CO2 (ppm): 293
+16:33:53:430 -> CO2 (ppm): 284
+16:33:57:450 -> CO2 (ppm): 276
+16:33:58:130 -> External watchdog feed!
+16:33:59:077 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:33:59:078 -> [ApiClient] Info: DATA: {"wifi":-59,"rco2":276,"boot":0,"bootCount":0}
+16:33:59:078 -> [ApiClient] Info: Return code: 200
+16:33:59:079 -> 
+16:33:59:079 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:33:59:079 -> 
+16:34:01:471 -> CO2 (ppm): 269
+16:34:05:492 -> CO2 (ppm): 263
+16:34:09:512 -> CO2 (ppm): 257
+16:34:13:533 -> CO2 (ppm): 253
+16:34:17:554 -> CO2 (ppm): 248
+16:34:21:574 -> CO2 (ppm): 246
+16:34:25:895 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:34:25:895 -> [ApiClient] Info: Return code: 200
+16:34:25:897 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:34:25:898 -> [Configure] Info: Parse configure success
+16:34:25:899 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:34:25:943 -> CO2 (ppm): 249
+16:34:29:964 -> CO2 (ppm): 249
+16:34:33:985 -> CO2 (ppm): 248
+16:34:38:006 -> CO2 (ppm): 246
+16:34:42:026 -> CO2 (ppm): 246
+16:34:46:048 -> CO2 (ppm): 244
+16:34:50:068 -> CO2 (ppm): 243
+16:34:54:090 -> CO2 (ppm): 242
+16:34:58:111 -> CO2 (ppm): 241
+16:34:58:153 -> External watchdog feed!
+16:35:00:013 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:35:00:013 -> [ApiClient] Info: DATA: {"wifi":-57,"rco2":241,"boot":1,"bootCount":1}
+16:35:00:013 -> [ApiClient] Info: Return code: 200
+16:35:00:014 -> 
+16:35:00:014 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:35:00:014 -> 
+16:35:06:152 -> CO2 (ppm): 240
+16:35:06:152 -> CO2 (ppm): 239
+16:35:10:173 -> CO2 (ppm): 238
+16:35:14:193 -> CO2 (ppm): 238
+16:35:18:214 -> CO2 (ppm): 237
+16:35:22:235 -> CO2 (ppm): 238
+16:35:26:492 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:35:26:493 -> [ApiClient] Info: Return code: 200
+16:35:26:495 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:35:26:496 -> [Configure] Info: Parse configure success
+16:35:26:496 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:35:26:541 -> CO2 (ppm): 238
+16:35:30:561 -> CO2 (ppm): 239
+16:35:34:582 -> CO2 (ppm): 238
+16:35:38:603 -> CO2 (ppm): 238
+16:35:42:624 -> CO2 (ppm): 238
+16:35:46:645 -> CO2 (ppm): 238
+16:35:50:666 -> CO2 (ppm): 238
+16:35:58:177 -> CO2 (ppm): 238
+16:35:58:177 -> External watchdog feed!
+16:35:58:708 -> CO2 (ppm): 238
+16:36:01:001 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:36:01:002 -> [ApiClient] Info: DATA: {"wifi":-57,"rco2":238,"boot":2,"bootCount":2}
+16:36:01:002 -> [ApiClient] Info: Return code: 200
+16:36:01:003 -> 
+16:36:01:003 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:36:01:003 -> 
+16:36:02:729 -> CO2 (ppm): 239
+16:36:06:750 -> CO2 (ppm): 240
+16:36:10:770 -> CO2 (ppm): 240
+16:36:18:812 -> CO2 (ppm): 240
+16:36:18:812 -> CO2 (ppm): 240
+16:36:22:833 -> CO2 (ppm): 240
+16:36:27:113 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:36:27:113 -> [ApiClient] Info: Return code: 200
+16:36:27:114 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:36:27:116 -> [Configure] Info: Parse configure success
+16:36:27:116 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:36:27:160 -> CO2 (ppm): 253
+16:36:31:181 -> CO2 (ppm): 263
+16:36:35:202 -> CO2 (ppm): 267
+16:36:39:223 -> CO2 (ppm): 267
+16:36:43:244 -> CO2 (ppm): 266
+16:36:47:265 -> CO2 (ppm): 264
+16:36:51:287 -> CO2 (ppm): 262
+16:36:55:307 -> CO2 (ppm): 259
+16:36:58:200 -> External watchdog feed!
+16:36:59:328 -> CO2 (ppm): 256
+16:37:01:982 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:37:01:982 -> [ApiClient] Info: DATA: {"wifi":-60,"rco2":256,"boot":3,"bootCount":3}
+16:37:01:983 -> [ApiClient] Info: Return code: 200
+16:37:01:984 -> 
+16:37:01:984 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:37:01:984 -> 
+16:37:03:349 -> CO2 (ppm): 257
+16:37:07:370 -> CO2 (ppm): 257
+16:37:11:391 -> CO2 (ppm): 268
+16:37:15:412 -> CO2 (ppm): 291
+16:37:19:433 -> CO2 (ppm): 306
+16:37:23:472 -> CO2 (ppm): 313
+16:37:27:728 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:37:27:728 -> [ApiClient] Info: Return code: 200
+16:37:27:729 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:37:27:731 -> [Configure] Info: Parse configure success
+16:37:27:731 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:37:27:775 -> CO2 (ppm): 316
+16:37:31:796 -> CO2 (ppm): 314
+16:37:35:817 -> CO2 (ppm): 315
+16:37:43:859 -> CO2 (ppm): 314
+16:37:43:859 -> CO2 (ppm): 309
+16:37:47:880 -> CO2 (ppm): 304
+16:37:55:922 -> CO2 (ppm): 297
+16:37:55:922 -> CO2 (ppm): 290
+16:37:58:223 -> External watchdog feed!
+16:37:59:943 -> CO2 (ppm): 283
+16:38:03:062 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:38:03:062 -> [ApiClient] Info: DATA: {"wifi":-60,"rco2":283,"boot":4,"bootCount":4}
+16:38:03:062 -> [ApiClient] Info: Return code: 200
+16:38:03:063 -> 
+16:38:03:064 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:38:03:064 -> 
+16:38:03:964 -> CO2 (ppm): 276
+16:38:07:985 -> CO2 (ppm): 270
+16:38:12:006 -> CO2 (ppm): 264
+16:38:16:027 -> CO2 (ppm): 260
+16:38:20:048 -> CO2 (ppm): 263
+16:38:24:069 -> CO2 (ppm): 271
+16:38:28:375 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:38:28:375 -> [ApiClient] Info: Return code: 200
+16:38:28:376 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:38:28:378 -> [Configure] Info: Parse configure success
+16:38:28:379 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:38:28:423 -> CO2 (ppm): 273
+16:38:32:443 -> CO2 (ppm): 279
+16:38:36:469 -> CO2 (ppm): 292
+16:38:40:485 -> CO2 (ppm): 305
+16:38:44:560 -> CO2 (ppm): 310
+16:38:48:581 -> CO2 (ppm): 308
+16:38:52:602 -> CO2 (ppm): 296
+16:38:56:623 -> CO2 (ppm): 312
+16:38:58:246 -> External watchdog feed!
+16:39:00:644 -> CO2 (ppm): 326
+16:39:04:092 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+16:39:04:092 -> [ApiClient] Info: DATA: {"wifi":-65,"rco2":326,"boot":5,"bootCount":5}
+16:39:04:092 -> [ApiClient] Info: Return code: 200
+16:39:04:093 -> 
+16:39:04:093 -> Online mode and isPostToAirGradient = true: watchdog reset
+16:39:04:093 -> 
+16:39:04:665 -> CO2 (ppm): 333
+16:39:12:707 -> CO2 (ppm): 334
+16:39:12:707 -> CO2 (ppm): 329
+16:39:16:728 -> CO2 (ppm): 321
+16:39:20:749 -> CO2 (ppm): 312
+16:39:24:770 -> CO2 (ppm): 302
+16:39:29:015 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+16:39:29:015 -> [ApiClient] Info: Return code: 200
+16:39:29:016 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":true,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+16:39:29:018 -> [Configure] Info: Parse configure success
+16:39:29:018 -> [Configure] Info: co2CalibrationRequested: True
+16:39:29:019 -> [Configure] Info: Detected new firmware version: 3.1.9
+16:39:29:020 -> [StateMachine] Info: CO2 Calibration
+16:39:29:021 -> [StateMachine] Info: Start CO2 calib after 5 sec
+16:39:30:021 -> [StateMachine] Info: Start CO2 calib after 4 sec
+16:39:31:021 -> [StateMachine] Info: Start CO2 calib after 3 sec
+16:39:32:021 -> [StateMachine] Info: Start CO2 calib after 2 sec
+16:39:33:021 -> [StateMachine] Info: Start CO2 calib after 1 sec
+16:39:36:029 -> Clear Acknowladgement Command >   0xFE  0x06  0x00  0x00  0x00  0x00  0x9D  0xC5 
+16:39:36:043 -> Clear Acknowladgement Response >  0xFE  0x06  0x00  0x00  0x00  0x00  0x9D  0xC5 
+16:39:36:052 -> Send Calibration Command >   0xFE  0x06  0x00  0x01  0x7C  0x06  0x6C  0xC7 
+16:39:36:065 -> Send Calibration Response >  0xFE  0x06  0x00  0x01  0x7C  0x06  0x6C  0xC7 
+16:39:36:066 -> [StateMachine] Info: CO2 Calibration: success
+16:39:37:066 -> [StateMachine] Info: CO2 Calibration: Wait for calibration finish...
+16:39:37:074 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+16:39:37:086 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+16:39:37:087 -> Flags: 0
+16:39:38:095 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+16:39:38:107 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+16:39:38:107 -> Flags: 0
+16:39:39:116 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+16:39:39:128 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+16:39:39:129 -> Flags: 0
+16:39:40:137 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 

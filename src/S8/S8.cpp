@@ -245,7 +245,6 @@ int16_t S8::getCo2(void) {
   } else {
     AgLog("Error getting CO2 value!");
   }
-
   return co2;
 }
 
@@ -274,8 +273,13 @@ bool S8::isBaseLineCalibrationDone(void) {
   if (isCalib == false) {
     return true;
   }
-  if (getAcknowledgement() & S8_MASK_CO2_BACKGROUND_CALIBRATION) {
-    Serial.println("Waiting getAcknowlagdement");
+  int16_t getack = getAcknowledgement();
+  // Serial.printf("getAcknowledgement: 0x%X\n", getack);
+  if (getack == 0xFF) {
+    Serial.println("Stop calibration");
+    return true;
+  } else if (getack & S8_MASK_CO2_BACKGROUND_CALIBRATION) {
+    Serial.println("Success calibration!");
     return true;
   }
   return false;
@@ -424,7 +428,7 @@ int16_t S8::getAcknowledgement(void) {
   // Ask acknowledgement flags
   sendCommand(MODBUS_FUNC_READ_HOLDING_REGISTERS, MODBUS_HR1, 0x0001);
 
-  Serial.print("Get Acknowladgement Command >  ");
+  Serial.print("Get Acknowledgement Command >  ");
   for (int i = 0; i < 8; i++) {
     Serial.printf(" 0x%02X ", buf_msg[i]);
   }
@@ -433,7 +437,7 @@ int16_t S8::getAcknowledgement(void) {
   // Wait response
   memset(buf_msg, 0, S8_LEN_BUF_MSG);
   uint8_t nb = uartReadBytes(7, S8_TIMEOUT);
-  Serial.print("Get Acknowladgement Response > ");
+  Serial.print("Get Acknowledgement Response > ");
   for (int i = 0; i < nb; i++) {
     Serial.printf(" 0x%02X ", buf_msg[i]);
   }
@@ -446,6 +450,13 @@ int16_t S8::getAcknowledgement(void) {
   } else {
     AgLog("Error getting acknowledgement flags!");
     Serial.println("Error getting acknowledgement flags!");
+  }
+  if (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input == "calStop") {
+      return 0x00FF;
+    }
   }
   return flags;
 }
@@ -466,7 +477,7 @@ bool S8::clearAcknowledgement(void) {
 
   // Ask clear acknowledgement flags
   sendCommand(MODBUS_FUNC_WRITE_SINGLE_REGISTER, MODBUS_HR1, 0x0000);
-  Serial.print("Clear Acknowladgement Command >  ");
+  Serial.print("Clear Acknowledgement Command >  ");
   for (int i = 0; i < 8; i++) {
     Serial.printf(" 0x%02X ", buf_msg[i]);
   }
@@ -478,12 +489,11 @@ bool S8::clearAcknowledgement(void) {
   // Wait response
   memset(buf_msg, 0, S8_LEN_BUF_MSG);
   uartReadBytes(8, S8_TIMEOUT);
-  Serial.print("Clear Acknowladgement Response > ");
+  Serial.print("Clear Acknowledgement Response > ");
   for (int i = 0; i < 8; i++) {
     Serial.printf(" 0x%02X ", buf_msg[i]);
   }
   Serial.println();
-
 
   // Check response
   if (memcmp(buf_msg_sent, buf_msg, 8) == 0) {

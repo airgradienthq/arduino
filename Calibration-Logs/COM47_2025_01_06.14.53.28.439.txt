@@ -1,0 +1,292 @@
+14:53:30:502 -> No PM sensor detected on Serial0
+14:53:30:502 -> initializing PM sensor
+14:53:30:502 -> cleared 0 byte(s)
+14:53:30:503 -> setting active mode
+14:53:30:503 -> 7 byte(s) written
+14:53:34:501 -> No PM sensor detected on Serial1
+14:53:34:501 -> Firmware Mode: 0-1PS
+14:53:44:517 -> Set S8 AbcDays failure
+14:53:44:517 -> [ApiClient] Info: Init apiRoot: http://hw.airgradient.com
+14:53:44:517 -> [ApiClient] Info: begin
+14:53:44:564 -> [WifiConnector] Info: Connecting to WiFi...
+14:53:44:565 -> *wm:AutoConnect 
+14:53:44:565 -> *wm:Connecting to SAVED AP: ag-diamond_2.4GHz
+14:53:45:067 -> E (20635) wifi:sta is connecting, return error
+14:53:45:068 -> [ 20164][E][WiFiSTA.cpp:317] begin(): connect failed! 0x3007
+14:53:52:483 -> *wm:AutoConnect: SUCCESS 
+14:53:52:484 -> *wm:STA IP Address: 192.168.100.127
+14:53:52:484 -> [WifiConnector] Info: Wait for configure portal
+14:53:52:484 -> [WifiConnector] Info: WiFi Connected: ag-diamond_2.4GHz IP: 192.168.100.127
+14:53:52:497 -> [LocalServer] Info: Init: airgradient_d83bda1b86c8.local
+14:53:52:497 -> MQTT is not configured, skipping initialization of MQTT client
+14:53:54:987 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:53:54:987 -> [ApiClient] Info: DATA: {"wifi":-60,"boot":0}
+14:53:54:987 -> [ApiClient] Info: Return code: 200
+14:54:00:988 -> 
+14:54:00:988 -> firmwareCheckForUpdate:
+14:54:00:988 -> firmwareCheckForUpdate: Perform
+14:54:00:989 -> checking for new OTA update @ http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/generic/os/firmware.bin?current_firmware=3.1.9-dirty
+14:54:01:633 -> Firmware update skipped, the server returned 400
+14:54:01:634 -> 3
+14:54:01:634 -> OTA message: 
+14:54:01:634 -> 
+14:54:02:214 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:54:02:214 -> [ApiClient] Info: Return code: 200
+14:54:02:215 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:54:02:217 -> [Configure] Info: Parse configure success
+14:54:02:218 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:54:07:232 -> Get CO2 failed: 1
+14:54:11:274 -> CO2 (ppm): 585
+14:54:15:294 -> CO2 (ppm): 556
+14:54:19:315 -> CO2 (ppm): 517
+14:54:23:336 -> CO2 (ppm): 497
+14:54:25:868 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:54:25:868 -> [ApiClient] Info: DATA: {"wifi":-56,"rco2":497,"boot":0,"bootCount":0}
+14:54:25:868 -> [ApiClient] Info: Return code: 200
+14:54:25:869 -> 
+14:54:25:869 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:54:25:869 -> 
+14:54:25:894 -> External watchdog feed!
+14:54:27:357 -> CO2 (ppm): 487
+14:54:35:399 -> CO2 (ppm): 472
+14:54:35:399 -> CO2 (ppm): 469
+14:54:39:420 -> CO2 (ppm): 464
+14:54:43:441 -> CO2 (ppm): 464
+14:54:47:462 -> CO2 (ppm): 462
+14:54:51:483 -> CO2 (ppm): 459
+14:54:55:504 -> CO2 (ppm): 455
+14:54:59:525 -> CO2 (ppm): 451
+14:55:02:834 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:55:02:834 -> [ApiClient] Info: Return code: 200
+14:55:02:835 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:55:02:836 -> [Configure] Info: Parse configure success
+14:55:02:837 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:55:03:545 -> CO2 (ppm): 449
+14:55:07:567 -> CO2 (ppm): 468
+14:55:11:587 -> CO2 (ppm): 484
+14:55:15:608 -> CO2 (ppm): 493
+14:55:19:629 -> CO2 (ppm): 497
+14:55:23:657 -> CO2 (ppm): 501
+14:55:26:899 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:55:26:900 -> [ApiClient] Info: DATA: {"wifi":-52,"rco2":501,"boot":1,"bootCount":1}
+14:55:26:900 -> [ApiClient] Info: Return code: 200
+14:55:26:900 -> 
+14:55:26:900 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:55:26:900 -> 
+14:55:26:925 -> External watchdog feed!
+14:55:27:671 -> CO2 (ppm): 501
+14:55:31:692 -> CO2 (ppm): 499
+14:55:35:713 -> CO2 (ppm): 495
+14:55:39:734 -> CO2 (ppm): 491
+14:55:43:755 -> CO2 (ppm): 485
+14:55:47:776 -> CO2 (ppm): 480
+14:55:51:797 -> CO2 (ppm): 473
+14:55:55:818 -> CO2 (ppm): 467
+14:55:59:839 -> CO2 (ppm): 460
+14:56:03:454 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:56:03:454 -> [ApiClient] Info: Return code: 200
+14:56:03:456 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:56:03:457 -> [Configure] Info: Parse configure success
+14:56:03:458 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:56:03:860 -> CO2 (ppm): 454
+14:56:07:880 -> CO2 (ppm): 447
+14:56:11:901 -> CO2 (ppm): 442
+14:56:15:923 -> CO2 (ppm): 438
+14:56:19:944 -> CO2 (ppm): 433
+14:56:23:965 -> CO2 (ppm): 430
+14:56:27:929 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:56:27:929 -> [ApiClient] Info: DATA: {"wifi":-50,"rco2":430,"boot":2,"bootCount":2}
+14:56:27:929 -> [ApiClient] Info: Return code: 200
+14:56:27:930 -> 
+14:56:27:931 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:56:27:931 -> 
+14:56:27:955 -> External watchdog feed!
+14:56:27:985 -> CO2 (ppm): 427
+14:56:32:006 -> CO2 (ppm): 424
+14:56:36:027 -> CO2 (ppm): 422
+14:56:40:048 -> CO2 (ppm): 420
+14:56:44:069 -> CO2 (ppm): 417
+14:56:52:111 -> CO2 (ppm): 417
+14:56:52:111 -> CO2 (ppm): 416
+14:56:56:133 -> CO2 (ppm): 415
+14:57:00:153 -> CO2 (ppm): 414
+14:57:04:075 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:57:04:075 -> [ApiClient] Info: Return code: 200
+14:57:04:077 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:57:04:078 -> [Configure] Info: Parse configure success
+14:57:04:079 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:57:04:174 -> CO2 (ppm): 414
+14:57:08:195 -> CO2 (ppm): 414
+14:57:12:216 -> CO2 (ppm): 415
+14:57:16:237 -> CO2 (ppm): 416
+14:57:20:258 -> CO2 (ppm): 415
+14:57:28:960 -> CO2 (ppm): 416
+14:57:28:960 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:57:28:961 -> [ApiClient] Info: DATA: {"wifi":-53,"rco2":416,"boot":3,"bootCount":3}
+14:57:28:961 -> [ApiClient] Info: Return code: 200
+14:57:28:962 -> 
+14:57:28:962 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:57:28:962 -> 
+14:57:28:984 -> CO2 (ppm): 416
+14:57:29:008 -> External watchdog feed!
+14:57:33:004 -> CO2 (ppm): 416
+14:57:37:026 -> CO2 (ppm): 416
+14:57:41:046 -> CO2 (ppm): 416
+14:57:45:067 -> CO2 (ppm): 416
+14:57:53:109 -> CO2 (ppm): 415
+14:57:53:109 -> CO2 (ppm): 415
+14:57:57:130 -> CO2 (ppm): 415
+14:58:01:151 -> CO2 (ppm): 414
+14:58:04:695 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:58:04:696 -> [ApiClient] Info: Return code: 200
+14:58:04:697 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:58:04:698 -> [Configure] Info: Parse configure success
+14:58:04:699 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:58:05:172 -> CO2 (ppm): 414
+14:58:09:193 -> CO2 (ppm): 413
+14:58:13:214 -> CO2 (ppm): 413
+14:58:17:235 -> CO2 (ppm): 413
+14:58:21:255 -> CO2 (ppm): 412
+14:58:25:277 -> CO2 (ppm): 422
+14:58:30:089 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:58:30:089 -> [ApiClient] Info: DATA: {"wifi":-52,"rco2":422,"boot":4,"bootCount":4}
+14:58:30:090 -> [ApiClient] Info: Return code: 200
+14:58:30:091 -> 
+14:58:30:091 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:58:30:091 -> 
+14:58:30:112 -> CO2 (ppm): 451
+14:58:30:137 -> External watchdog feed!
+14:58:34:134 -> CO2 (ppm): 482
+14:58:38:155 -> CO2 (ppm): 503
+14:58:42:175 -> CO2 (ppm): 517
+14:58:46:197 -> CO2 (ppm): 520
+14:58:50:217 -> CO2 (ppm): 519
+14:58:54:237 -> CO2 (ppm): 513
+14:58:58:258 -> CO2 (ppm): 506
+14:59:02:279 -> CO2 (ppm): 500
+14:59:05:317 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+14:59:05:317 -> [ApiClient] Info: Return code: 200
+14:59:05:319 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":false,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+14:59:05:320 -> [Configure] Info: Parse configure success
+14:59:05:321 -> [Configure] Info: Detected new firmware version: 3.1.9
+14:59:06:299 -> CO2 (ppm): 492
+14:59:10:321 -> CO2 (ppm): 484
+14:59:14:342 -> CO2 (ppm): 475
+14:59:18:362 -> CO2 (ppm): 467
+14:59:22:384 -> CO2 (ppm): 460
+14:59:26:439 -> CO2 (ppm): 455
+14:59:31:051 -> [ApiClient] Info: POST: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/measures
+14:59:31:051 -> [ApiClient] Info: DATA: {"wifi":-54,"rco2":455,"boot":5,"bootCount":5}
+14:59:31:051 -> [ApiClient] Info: Return code: 200
+14:59:31:052 -> 
+14:59:31:052 -> Online mode and isPostToAirGradient = true: watchdog reset
+14:59:31:052 -> 
+14:59:31:074 -> CO2 (ppm): 447
+14:59:31:099 -> External watchdog feed!
+14:59:35:095 -> CO2 (ppm): 443
+14:59:39:116 -> CO2 (ppm): 438
+14:59:43:136 -> CO2 (ppm): 436
+14:59:47:157 -> CO2 (ppm): 433
+14:59:51:178 -> CO2 (ppm): 431
+14:59:55:199 -> CO2 (ppm): 431
+14:59:59:220 -> CO2 (ppm): 432
+15:00:03:241 -> CO2 (ppm): 432
+15:00:05:937 -> [ApiClient] Info: GET: http://hw.airgradient.com/sensors/airgradient:d83bda1b86c8/one/config
+15:00:05:937 -> [ApiClient] Info: Return code: 200
+15:00:05:939 -> [Configure] Info: Parse configure: {"country":"CH","pmStandard":"ugm3","co2CalibrationRequested":true,"ledBarTestRequested":false,"ledBarMode":"pm","displayMode":"on","placeOpen":true,"abcDays":8,"tvocLearningOffset":12,"noxLearningOffset":12,"temperatureUnit":"c","targetFirmware":"3.1.9","ledBarBrightness":100,"displayBrightness":100,"corrections":{"pm02":{"correctionAlgorithm":"none","slr":null}},"model":"O-1PST"}
+15:00:05:940 -> [Configure] Info: Parse configure success
+15:00:05:941 -> [Configure] Info: co2CalibrationRequested: True
+15:00:05:941 -> [Configure] Info: Detected new firmware version: 3.1.9
+15:00:05:943 -> [StateMachine] Info: CO2 Calibration
+15:00:05:943 -> [StateMachine] Info: Start CO2 calib after 5 sec
+15:00:06:943 -> [StateMachine] Info: Start CO2 calib after 4 sec
+15:00:07:943 -> [StateMachine] Info: Start CO2 calib after 3 sec
+15:00:08:943 -> [StateMachine] Info: Start CO2 calib after 2 sec
+15:00:09:943 -> [StateMachine] Info: Start CO2 calib after 1 sec
+15:00:12:952 -> Clear Acknowladgement Command >   0xFE  0x06  0x00  0x00  0x00  0x00  0x9D  0xC5 
+15:00:12:965 -> Clear Acknowladgement Response >  0xFE  0x06  0x00  0x00  0x00  0x00  0x9D  0xC5 
+15:00:12:973 -> Send Calibration Command >   0xFE  0x06  0x00  0x01  0x7C  0x06  0x6C  0xC7 
+15:00:12:988 -> Send Calibration Response >  0xFE  0x06  0x00  0x01  0x7C  0x06  0x6C  0xC7 
+15:00:12:988 -> [StateMachine] Info: CO2 Calibration: success
+15:00:13:988 -> [StateMachine] Info: CO2 Calibration: Wait for calibration finish...
+15:00:13:996 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:14:009 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:14:009 -> Flags: 0
+15:00:15:017 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:15:030 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:15:030 -> Flags: 0
+15:00:16:038 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:16:051 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:16:051 -> Flags: 0
+15:00:17:059 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:17:072 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:17:072 -> Flags: 0
+15:00:18:080 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:18:093 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:18:093 -> Flags: 0
+15:00:19:101 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:19:114 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:19:114 -> Flags: 0
+15:00:20:122 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:20:135 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:20:135 -> Flags: 0
+15:00:21:143 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:21:156 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:21:156 -> Flags: 0
+15:00:22:164 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:22:177 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:22:177 -> Flags: 0
+15:00:23:185 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:23:198 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:23:198 -> Flags: 0
+15:00:24:206 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:24:219 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:24:219 -> Flags: 0
+15:00:25:227 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:25:240 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:25:240 -> Flags: 0
+15:00:26:248 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:26:285 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:26:286 -> Flags: 0
+15:00:27:294 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:27:306 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:27:307 -> Flags: 0
+15:00:28:315 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:28:327 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:28:328 -> Flags: 0
+15:00:29:336 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:29:349 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:29:349 -> Flags: 0
+15:00:30:357 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:30:370 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:30:370 -> Flags: 0
+15:00:31:378 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:31:390 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:31:391 -> Flags: 0
+15:00:32:399 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:32:411 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:32:412 -> Flags: 0
+15:00:33:420 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:33:432 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:33:433 -> Flags: 0
+15:00:34:441 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:34:453 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:34:454 -> Flags: 0
+15:00:35:462 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:35:474 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:35:475 -> Flags: 0
+15:00:36:483 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:36:495 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:36:496 -> Flags: 0
+15:00:37:504 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:37:516 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:37:517 -> Flags: 0
+15:00:38:525 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:38:537 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:38:538 -> Flags: 0
+15:00:39:546 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:39:558 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:39:559 -> Flags: 0
+15:00:40:567 -> Get Acknowladgement Command >   0xFE  0x03  0x00  0x00  0x00  0x01  0x90  0x05 
+15:00:40:579 -> Get Acknowladgement Response >  0xFE  0x03  0x02  0x00  0x00  0xAC  0x50 
+15:00:40:579 -> Flags: 0

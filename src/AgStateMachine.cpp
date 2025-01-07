@@ -1,6 +1,6 @@
 #include "AgStateMachine.h"
 
-#define LED_TEST_BLINK_DELAY  50  /** ms */
+#define LED_TEST_BLINK_DELAY 50   /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
 #define LED_SLOW_BLINK_DELAY 1000 /** ms */
 #define LED_SHORT_BLINK_DELAY 500 /** ms */
@@ -8,9 +8,9 @@
 
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5 /** sec */
 
-#define RGB_COLOR_R 255, 0, 0    /** Red */
-#define RGB_COLOR_G 0, 255, 0    /** Green */
-#define RGB_COLOR_Y 255, 150, 0  /** Yellow */
+#define RGB_COLOR_R 255, 0, 0   /** Red */
+#define RGB_COLOR_G 0, 255, 0   /** Green */
+#define RGB_COLOR_Y 255, 150, 0 /** Yellow */
 #define RGB_COLOR_O 255, 40, 0  /** Orange */
 #define RGB_COLOR_P 180, 0, 255 /** Purple */
 
@@ -264,6 +264,10 @@ void StateMachine::co2Calibration(void) {
       while (ag->s8.isBaseLineCalibrationDone() == false) {
         delay(1000);
         count++;
+        if (count >= 5) {
+          Serial.println("Calibration Timeout");
+          break;
+        }
       }
       if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
         String str = "after " + String(count);
@@ -326,8 +330,7 @@ void StateMachine::ledBarTest(void) {
       } else {
         ledBarRunTest();
       }
-    }
-    else if(ag->isOpenAir()) {
+    } else if (ag->isOpenAir()) {
       ledBarRunTest();
     }
   }
@@ -805,6 +808,7 @@ void StateMachine::setAirGradient(AirGradient *ag) { this->ag = ag; }
 AgStateMachineState StateMachine::getLedState(void) { return ledState; }
 
 void StateMachine::executeCo2Calibration(void) {
+  Serial.println("state: " + String(AgStateMachineCo2Calibration));
   displayHandle(AgStateMachineCo2Calibration);
 }
 
