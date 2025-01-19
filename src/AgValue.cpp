@@ -406,12 +406,12 @@ float Measurements::getAverage(MeasurementType type, int ch) {
   // Sanity check to validate channel, assert if invalid
   validateChannel(ch);
 
+  bool undefined = false;
+
   // Follow array indexing just for get address of the value type
   ch = ch - 1;
 
   // Define data point source. Data type doesn't matter because only to get the average value
-  FloatValue *temporary = nullptr;
-  Update update;
   float measurementAverage;
   switch (type) {
   case CO2:
@@ -434,12 +434,12 @@ float Measurements::getAverage(MeasurementType type, int ch) {
     break;
   default:
     // Invalidate, measurements type not handled
-    measurementAverage = -1000;
+    undefined = true;
     break;
   };
 
-  // Sanity check if measurement type is not defined 
-  if (measurementAverage == -1000) {
+  // Sanity check if measurement type is not defined
+  if (undefined) {
     Serial.printf("ERROR! %s is not defined on get average value function\n", measurementTypeStr(type).c_str());
     delay(1000);
     assert(0);
