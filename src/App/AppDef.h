@@ -106,6 +106,14 @@ enum PMCorrectionAlgorithm {
   SLR_PMS5003_20240104,
 };
 
+// Don't change the order of the enum
+enum TempHumCorrectionAlgorithm {
+  CA_TH_UNKNOWN, // Unknown algorithm
+  CA_TH_NONE,    // No PM correction
+  CA_TH_AG_PMS5003T_2024,
+  CA_TH_SLR_CUSTOM
+};
+
 enum AgFirmwareMode {
   FW_MODE_I_9PSL,       /** ONE_INDOOR */
   FW_MODE_O_1PST,       /** PMS5003T, S8 and SGP41 */
