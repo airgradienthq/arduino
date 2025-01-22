@@ -111,6 +111,8 @@ public:
   bool isPMCorrectionChanged(void);
   bool isPMCorrectionEnabled(void);
   PMCorrection getPMCorrection(void);
+  TempHumCorrection getTempCorrection(void);
+  TempHumCorrection getHumCorrection(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

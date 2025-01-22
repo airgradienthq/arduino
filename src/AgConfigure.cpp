@@ -1510,6 +1510,8 @@ bool Configuration::isPMCorrectionEnabled(void) {
   return true;
 }
 
-Configuration::PMCorrection Configuration::getPMCorrection(void) {
-  return pmCorrection;
-}
+Configuration::PMCorrection Configuration::getPMCorrection(void) { return pmCorrection; }
+
+Configuration::TempHumCorrection Configuration::getTempCorrection(void) { return tempCorrection; }
+
+Configuration::TempHumCorrection Configuration::getHumCorrection(void) { return rhumCorrection; }
