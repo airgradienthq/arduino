@@ -123,6 +123,9 @@ public:
    */
   float getAverage(MeasurementType type, int ch = 1);
 
+  float getCorrectedTempHum(AirGradient &ag, Configuration &config, MeasurementType type,
+                            int ch = 1, bool forceCorrection = false);
+
   /**
    * @brief Get the Corrected PM25 object based on the correction algorithm from configuration
    * 

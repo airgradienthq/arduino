@@ -535,6 +535,63 @@ void Measurements::validateChannel(int ch) {
   }
 }
 
+float Measurements::getCorrectedTempHum(AirGradient &ag, Configuration &config,
+                                        MeasurementType type, int ch, bool forceCorrection) {
+  // Sanity check to validate channel, assert if invalid
+  validateChannel(ch);
+
+  // Follow array indexing just for get address of the value type
+  ch = ch - 1;
+  bool undefined = false;
+
+  float rawValue;
+  Configuration::TempHumCorrection correction;
+
+  switch (type) {
+  case Temperature: {
+    rawValue = _temperature[ch].update.avg;
+
+    Configuration::TempHumCorrection tmp = config.getTempCorrection();
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024 || forceCorrection) {
+      return ag.pms5003t_1.compensateTemp(rawValue);
+    }
+
+    correction.algorithm = tmp.algorithm;
+    correction.intercept = tmp.intercept;
+    correction.scalingFactor = tmp.scalingFactor;
+    break;
+  }
+  case Humidity: {
+    rawValue = _humidity[ch].update.avg;
+
+    Configuration::TempHumCorrection tmp = config.getHumCorrection();
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024 || forceCorrection) {
+      return ag.pms5003t_1.compensateHum(rawValue);
+    }
+
+    correction.algorithm = tmp.algorithm;
+    correction.intercept = tmp.intercept;
+    correction.scalingFactor = tmp.scalingFactor;
+    break;
+  }
+  default:
+    // Should not be called for other measurements
+    delay(1000);
+    assert(0);
+  }
+
+  // Use raw if correction not defined
+  if (correction.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE ||
+      correction.algorithm == TempHumCorrectionAlgorithm::CA_TH_UNKNOWN) {
+    return rawValue;
+  }
+
+  // Custom correction constants
+  float corrected = (rawValue * correction.scalingFactor) + correction.intercept;
+
+  return corrected;
+}
+
 float Measurements::getCorrectedPM25(AirGradient &ag, Configuration &config, bool useAvg, int ch) {
   float pm25;
   float corrected;
