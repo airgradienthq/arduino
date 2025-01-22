@@ -316,7 +316,7 @@ void OledDisplay::showDashboard(const char *status) {
       int pm25 = round(value.getAverage(Measurements::PM25));
       if (utils::isValidPm(pm25)) {
         if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-          pm25 = round(value.getCorrectedPM25(*ag, config, true));
+          pm25 = round(value.getCorrectedPM25(true));
         }
         if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
@@ -377,7 +377,7 @@ void OledDisplay::showDashboard(const char *status) {
     /** Set PM */
     int pm25 = round(value.getAverage(Measurements::PM25));
     if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-      pm25 = round(value.getCorrectedPM25(*ag, config, true));
+      pm25 = round(value.getCorrectedPM25(true));
     }
 
     ag->display.setCursor(0, 12);

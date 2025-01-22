@@ -34,8 +34,10 @@ private:
   };
 
 public:
-  Measurements();
+  Measurements(Configuration &config);
   ~Measurements() {}
+
+  void setAirGradient(AirGradient *ag);
 
   // Enumeration for every AG measurements
   enum MeasurementType {
@@ -123,27 +125,23 @@ public:
    */
   float getAverage(MeasurementType type, int ch = 1);
 
-  float getCorrectedTempHum(AirGradient &ag, Configuration &config, MeasurementType type,
-                            int ch = 1, bool forceCorrection = false);
+  float getCorrectedTempHum(MeasurementType type, int ch = 1, bool forceCorrection = false);
 
   /**
    * @brief Get the Corrected PM25 object based on the correction algorithm from configuration
-   * 
+   *
    * If correction is not enabled, then will return the raw value (either average or last value)
    *
-   * @param ag AirGradient instance
-   * @param config Configuration instance
    * @param useAvg Use moving average value if true, otherwise use latest value
    * @param ch MeasurementType channel
    * @return float Corrected PM2.5 value
    */
-  float getCorrectedPM25(AirGradient &ag, Configuration &config, bool useAvg = false, int ch = 1);
+  float getCorrectedPM25(bool useAvg = false, int ch = 1);
 
   /**
    * build json payload for every measurements
    */
-  String toString(bool localServer, AgFirmwareMode fwMode, int rssi, AirGradient &ag,
-                  Configuration &config);
+  String toString(bool localServer, AgFirmwareMode fwMode, int rssi);
 
   /**
    * Set to true if want to debug every update value
@@ -158,6 +156,9 @@ public:
 #endif
 
 private:
+  Configuration &config;
+  AirGradient *ag;
+
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
   FloatValue _temperature[2];
   FloatValue _humidity[2];
@@ -216,10 +217,9 @@ private:
    */
   void validateChannel(int ch);
 
-  JSONVar buildOutdoor(bool localServer, AgFirmwareMode fwMode, AirGradient &ag,
-                       Configuration &config);
-  JSONVar buildIndoor(bool localServer, AirGradient &ag, Configuration &config);
-  JSONVar buildPMS(AirGradient &ag, int ch, bool allCh, bool withTempHum, bool compensate);
+  JSONVar buildOutdoor(bool localServer, AgFirmwareMode fwMode);
+  JSONVar buildIndoor(bool localServer);
+  JSONVar buildPMS(int ch, bool allCh, bool withTempHum, bool compensate);
 };
 
 #endif /** _AG_VALUE_H_ */
