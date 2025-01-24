@@ -41,6 +41,7 @@ public:
   bool fetchServerConfiguration(void);
   bool postToServer(String data);
   bool isFetchConfigureFailed(void);
+  void resetFetchConfigureState(void);
   bool isPostToServerFailed(void);
   bool isNotAvailableOnDashboard(void);
   void setAirGradient(AirGradient *ag);

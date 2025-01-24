@@ -34,17 +34,6 @@ void AgApiClient::begin(void) {
  * @return false Failure
  */
 bool AgApiClient::fetchServerConfiguration(void) {
-  if (config.getConfigurationControl() ==
-          ConfigurationControl::ConfigurationControlLocal ||
-      config.isOfflineMode()) {
-    logWarning("Ignore fetch server configuration");
-
-    // Clear server configuration failed flag, cause it's ignore but not
-    // really failed
-    getConfigFailed = false;
-    return false;
-  }
-
   String uri = apiRoot + "/sensors/airgradient:" +
                ag->deviceId() + "/one/config";
 
@@ -114,15 +103,6 @@ bool AgApiClient::fetchServerConfiguration(void) {
  * @return false Failure
  */
 bool AgApiClient::postToServer(String data) {
-  if (config.isPostDataToAirGradient() == false) {
-    logWarning("Ignore post data to server");
-    return true;
-  }
-
-  if (WiFi.isConnected() == false) {
-    return false;
-  }
-
   String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
 #ifdef ESP8266
   HTTPClient client;
@@ -174,6 +154,11 @@ bool AgApiClient::postToServer(String data) {
  * @return false Failure
  */
 bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
+
+/**
+ * @brief Reset getConfigFailed state to false
+ */
+void AgApiClient::resetFetchConfigureState(void) { getConfigFailed = false; }
 
 /**
  * @brief Get failed status when post data to AirGradient cloud
