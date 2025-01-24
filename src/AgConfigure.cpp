@@ -47,6 +47,7 @@ JSON_PROP_DEF(mqttBrokerUrl);
 JSON_PROP_DEF(temperatureUnit);
 JSON_PROP_DEF(configurationControl);
 JSON_PROP_DEF(postDataToAirGradient);
+JSON_PROP_DEF(disableCloudConnection);
 JSON_PROP_DEF(ledBarBrightness);
 JSON_PROP_DEF(displayBrightness);
 JSON_PROP_DEF(co2CalibrationRequested);
@@ -66,6 +67,7 @@ JSON_PROP_DEF(corrections);
 #define jprop_temperatureUnit_default                 "c"
 #define jprop_configurationControl_default            String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
 #define jprop_postDataToAirGradient_default           true
+#define jprop_disableCloudConnection_default          false
 #define jprop_ledBarBrightness_default                100
 #define jprop_displayBrightness_default               100
 #define jprop_offlineMode_default                     false
@@ -272,6 +274,7 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_configurationControl] = jprop_configurationControl_default;
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
+  jconfig[jprop_disableCloudConnection] = jprop_disableCloudConnection_default;
   jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
   if (ag->isOne()) {
     jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
@@ -1167,6 +1170,18 @@ void Configuration::toConfig(const char *buf) {
     logInfo("toConfig: temperatureUnit changed");
   }
 
+  /** validate disableCloudConnection configuration */
+  if (JSON.typeof_(jconfig[jprop_disableCloudConnection]) != "boolean") {
+    isInvalid = true;
+  } else {
+    isInvalid = false;
+  }
+  if (isInvalid) {
+    jconfig[jprop_disableCloudConnection] = jprop_disableCloudConnection_default;
+    changed = true;
+    logInfo("toConfig: disableCloudConnection changed");
+  }
+
   /** validate configuration control */
   if (JSON.typeof_(jprop_configurationControl) != "string") {
     isInvalid = true;
@@ -1332,6 +1347,17 @@ void Configuration::setOfflineMode(bool offline) {
 
 void Configuration::setOfflineModeWithoutSave(bool offline) {
   _offlineMode = offline;
+}
+
+bool Configuration::isCloudConnectionDisabled(void) {
+  bool disabled = jconfig[jprop_disableCloudConnection];
+  return disabled;
+}
+
+void Configuration::setDisableCloudConnection(bool disable) {
+  logInfo("Set DisableCloudConnection to " + String(disable ? "True" : "False"));
+  jconfig[jprop_disableCloudConnection] = disable;
+  saveConfig();
 }
 
 bool Configuration::isLedBarModeChanged(void) { 
