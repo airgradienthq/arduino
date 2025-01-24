@@ -125,6 +125,16 @@ public:
    */
   float getAverage(MeasurementType type, int ch = 1);
 
+  /**
+   * @brief Get Temperature or Humidity correction value
+   * Only if correction is applied from configuration or forceCorrection is True
+   *
+   * @param type measurement type either Temperature or Humidity
+   * @param ch target type value channel
+   * @param forceCorrection force using correction even though config correction is not applied, but
+   * not for CUSTOM
+   * @return correction value
+   */
   float getCorrectedTempHum(MeasurementType type, int ch = 1, bool forceCorrection = false);
 
   /**

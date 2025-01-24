@@ -551,9 +551,12 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
   switch (type) {
   case Temperature: {
     rawValue = _temperature[ch].update.avg;
-
     Configuration::TempHumCorrection tmp = config.getTempCorrection();
-    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024 || forceCorrection) {
+
+    // Apply 'standard' correction if its defined or correction forced
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024) {
+      return ag->pms5003t_1.compensateTemp(rawValue);
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE && forceCorrection) {
       return ag->pms5003t_1.compensateTemp(rawValue);
     }
 
@@ -564,9 +567,12 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
   }
   case Humidity: {
     rawValue = _humidity[ch].update.avg;
-
     Configuration::TempHumCorrection tmp = config.getHumCorrection();
-    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024 || forceCorrection) {
+
+    // Apply 'standard' correction if its defined or correction forced
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024) {
+      return ag->pms5003t_1.compensateHum(rawValue);
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE && forceCorrection) {
       return ag->pms5003t_1.compensateHum(rawValue);
     }
 
@@ -589,6 +595,7 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
 
   // Custom correction constants
   float corrected = (rawValue * correction.scalingFactor) + correction.intercept;
+  Serial.println("Custom correction applied");
 
   return corrected;
 }
@@ -747,14 +754,14 @@ JSONVar Measurements::buildIndoor(bool localServer) {
     if (utils::isValidTemperature(_temperature[0].update.avg)) {
       indoor[json_prop_temp] = ag->round2(_temperature[0].update.avg);
       if (localServer) {
-        indoor[json_prop_tempCompensated] = ag->round2(_temperature[0].update.avg);
+        indoor[json_prop_tempCompensated] = ag->round2(getCorrectedTempHum(Temperature));
       }
     }
     // Add humidity
     if (utils::isValidHumidity(_humidity[0].update.avg)) {
       indoor[json_prop_rhum] = ag->round2(_humidity[0].update.avg);
       if (localServer) {
-        indoor[json_prop_rhumCompensated] = ag->round2(_humidity[0].update.avg);
+        indoor[json_prop_rhumCompensated] = ag->round2(getCorrectedTempHum(Humidity));
       }
     }
   }
@@ -834,7 +841,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
         pms[json_prop_temp] = ag->round2(_temperature[ch].update.avg);
         // Compensate temperature when flag is set
         if (compensate) {
-          _vc = ag->pms5003t_1.compensateTemp(_temperature[ch].update.avg);
+          _vc = getCorrectedTempHum(Temperature, ch, true);
           if (utils::isValidTemperature(_vc)) {
             pms[json_prop_tempCompensated] = ag->round2(_vc);
           }
@@ -845,8 +852,8 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
         pms[json_prop_rhum] = ag->round2(_humidity[ch].update.avg);
         // Compensate relative humidity when flag is set
         if (compensate) {
-          _vc = ag->pms5003t_1.compensateHum(_humidity[ch].update.avg);
-          if (utils::isValidTemperature(_vc)) {
+          _vc = getCorrectedTempHum(Humidity, ch, true);
+          if (utils::isValidHumidity(_vc)) {
             pms[json_prop_rhumCompensated] = ag->round2(_vc);
           }
         }
@@ -1031,10 +1038,10 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate both temperature channel
-        float temp = ag->pms5003t_1.compensateTemp(temperature);
-        float temp1 = ag->pms5003t_1.compensateTemp(_temperature[0].update.avg);
-        float temp2 = ag->pms5003t_2.compensateTemp(_temperature[1].update.avg);
-        pms[json_prop_tempCompensated] = ag->round2(temp);
+        float temp1 = getCorrectedTempHum(Temperature, 1, true);
+        float temp2 = getCorrectedTempHum(Temperature, 2, true);
+        float tempAverage = (temp1 + temp2) / 2.0f;
+        pms[json_prop_tempCompensated] = ag->round2(tempAverage);
         pms["channels"]["1"][json_prop_tempCompensated] = ag->round2(temp1);
         pms["channels"]["2"][json_prop_tempCompensated] = ag->round2(temp2);
       }
@@ -1045,7 +1052,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate channel 1
-        float temp1 = ag->pms5003t_1.compensateTemp(_temperature[0].update.avg);
+        float temp1 = getCorrectedTempHum(Temperature, 1, true);
         pms[json_prop_tempCompensated] = ag->round2(temp1);
         pms["channels"]["1"][json_prop_tempCompensated] = ag->round2(temp1);
       }
@@ -1056,7 +1063,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate channel 2
-        float temp2 = ag->pms5003t_2.compensateTemp(_temperature[1].update.avg);
+        float temp2 = getCorrectedTempHum(Temperature, 2, true);
         pms[json_prop_tempCompensated] = ag->round2(temp2);
         pms["channels"]["2"][json_prop_tempCompensated] = ag->round2(temp2);
       }
@@ -1072,10 +1079,10 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate both humidity channel
-        float hum = ag->pms5003t_1.compensateHum(humidity);
-        float hum1 = ag->pms5003t_1.compensateHum(_humidity[0].update.avg);
-        float hum2 = ag->pms5003t_2.compensateHum(_humidity[1].update.avg);
-        pms[json_prop_rhumCompensated] = ag->round2(hum);
+        float hum1 = getCorrectedTempHum(Humidity, 1, true);
+        float hum2 = getCorrectedTempHum(Humidity, 2, true);
+        float humAverage = (hum1 + hum2) / 2.0f;
+        pms[json_prop_rhumCompensated] = ag->round2(humAverage);
         pms["channels"]["1"][json_prop_rhumCompensated] = ag->round2(hum1);
         pms["channels"]["2"][json_prop_rhumCompensated] = ag->round2(hum2);
       }
@@ -1086,7 +1093,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate humidity channel 1
-        float hum1 = ag->pms5003t_1.compensateHum(_humidity[0].update.avg);
+        float hum1 = getCorrectedTempHum(Humidity, 1, true);
         pms[json_prop_rhumCompensated] = ag->round2(hum1);
         pms["channels"]["1"][json_prop_rhumCompensated] = ag->round2(hum1);
       }
@@ -1097,7 +1104,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
 
       if (compensate) {
         // Compensate humidity channel 2
-        float hum2 = ag->pms5003t_2.compensateHum(_humidity[1].update.avg);
+        float hum2 = getCorrectedTempHum(Humidity, 2, true);
         pms[json_prop_rhumCompensated] = ag->round2(hum2);
         pms["channels"]["2"][json_prop_rhumCompensated] = ag->round2(hum2);
       }

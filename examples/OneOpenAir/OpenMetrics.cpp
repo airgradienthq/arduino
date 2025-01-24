@@ -137,11 +137,15 @@ String OpenMetrics::getPayload(void) {
 
   /** Get temperature and humidity compensated */
   if (ag->isOne()) {
-    atmpCompensated = _temp;
-    ahumCompensated = _hum;
+    atmpCompensated = round(measure.getCorrectedTempHum(Measurements::Temperature));
+    ahumCompensated = round(measure.getCorrectedTempHum(Measurements::Humidity));
   } else {
-    atmpCompensated = ag->pms5003t_1.compensateTemp(_temp);
-    ahumCompensated = ag->pms5003t_1.compensateHum(_hum);
+    atmpCompensated = round((measure.getCorrectedTempHum(Measurements::Temperature, 1) +
+                             measure.getCorrectedTempHum(Measurements::Temperature, 2)) /
+                            2.0f);
+    ahumCompensated = round((measure.getCorrectedTempHum(Measurements::Humidity, 1) +
+                             measure.getCorrectedTempHum(Measurements::Humidity, 2)) /
+                            2.0f);
   }
 
   // Add measurements that valid to the metrics
