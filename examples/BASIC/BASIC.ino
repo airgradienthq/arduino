@@ -149,7 +149,10 @@ void setup() {
         initMqtt();
         sendDataToAg();
 
-        apiClient.fetchServerConfiguration();
+        if (configuration.getConfigurationControl() !=
+            ConfigurationControl::ConfigurationControlLocal) {
+          apiClient.fetchServerConfiguration();
+        }
         configSchedule.update();
         if (apiClient.isFetchConfigureFailed()) {
           if (apiClient.isNotAvailableOnDashboard()) {
@@ -415,6 +418,14 @@ static void failedHandler(String msg) {
 }
 
 static void configurationUpdateSchedule(void) {
+  if (configuration.isOfflineMode() ||
+      configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    Serial.println("Ignore fetch server configuration. Either mode is offline "
+                   "or configurationControl set to local");
+    apiClient.resetFetchConfigureState();
+    return;
+  }
+
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
@@ -521,17 +532,21 @@ static void sendDataToServer(void) {
   int bootCount = measurements.bootCount() + 1;
   measurements.setBootCount(bootCount);
 
-  /** Ignore send data to server if postToAirGradient disabled */
-  if (configuration.isPostDataToAirGradient() == false ||
-      configuration.isOfflineMode()) {
+  if (configuration.isOfflineMode() || !configuration.isPostDataToAirGradient()) {
+    Serial.println("Ignore send data to server. Either mode is offline "
+                   "or post data to server disabled");
+    return;
+  }
+
+  if (wifiConnector.isConnected() == false) {
+    Serial.println("WiFi not connected, skip post data to server");
     return;
   }
 
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
-    Serial.println(
-        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
   }
 }

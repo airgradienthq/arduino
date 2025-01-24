@@ -861,7 +861,7 @@ void initiateNetwork() {
   // Initiate local network configuration
   mdnsInit();
   localServer.begin();
-  // Apply mqtt connection
+  // Apply mqtt connection if configured
   initMqtt();
 
   // Ignore the rest if cloud connection to AirGradient is disabled
@@ -869,7 +869,10 @@ void initiateNetwork() {
     return;
   }
 
-  // Send ping to aigradient server
+  // Initialize api client
+  apiClient.begin();
+
+  // Send ping to airgradient server
   sendDataToAg();
 
 // OTA check
