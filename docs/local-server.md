@@ -160,8 +160,8 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 
 **Notes**
 
-- `offlineMode` : device will disable all network operation, and only show measurements on display and ledbar; Read-Only; change can be apply using reset button on boot.
-- `disableCloudConnection` : disable every request to airgradient server, means feature like post data to airgradient dashboard, configure from cloud and firmware update are disabled. This configuration override `configurationControl` and `postDataToAirGradient`; Read-Only; change can be apply from wifi setup webpage.
+- `offlineMode` : device will disable all network operation, and only show measurements on display and ledbar; Read-Only; Change can be apply using reset button on boot.
+- `disableCloudConnection` : disable every request to AirGradient server, means features like post data to AirGradient server, configuration from AirGradient server and automatic firmware updates are disabled. This configuration overrides `configurationControl` and `postDataToAirGradient`; Read-Only; Change can be apply from wifi setup webpage.
 
 #### Corrections
 
