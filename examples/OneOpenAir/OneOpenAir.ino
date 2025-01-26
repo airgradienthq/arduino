@@ -872,7 +872,7 @@ void initiateNetwork() {
   // Initialize api client
   apiClient.begin();
 
-  // Send ping to airgradient server
+  // Check and process if AirGradient server is reachable
   sendDataToAg();
 
 // OTA check
