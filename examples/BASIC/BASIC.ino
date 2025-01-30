@@ -154,7 +154,7 @@ void setup() {
           apiClient.fetchServerConfiguration();
         }
         configSchedule.update();
-        if (apiClient.isFetchConfigureFailed()) {
+        if (apiClient.isFetchConfigurationFailed()) {
           if (apiClient.isNotAvailableOnDashboard()) {
             stateMachine.displaySetAddToDashBoard();
             stateMachine.displayHandle(
@@ -422,7 +422,7 @@ static void configurationUpdateSchedule(void) {
       configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
     Serial.println("Ignore fetch server configuration. Either mode is offline "
                    "or configurationControl set to local");
-    apiClient.resetFetchConfigureState();
+    apiClient.resetFetchConfigurationStatus();
     return;
   }
 
@@ -483,7 +483,7 @@ static void appDispHandler(void) {
   if (configuration.isOfflineMode() == false) {
     if (wifiConnector.isConnected() == false) {
       state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
+    } else if (apiClient.isFetchConfigurationFailed()) {
       state = AgStateMachineSensorConfigFailed;
       if (apiClient.isNotAvailableOnDashboard()) {
         stateMachine.displaySetAddToDashBoard();

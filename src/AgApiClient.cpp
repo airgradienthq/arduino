@@ -153,12 +153,12 @@ bool AgApiClient::postToServer(String data) {
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
+bool AgApiClient::isFetchConfigurationFailed(void) { return getConfigFailed; }
 
 /**
- * @brief Reset getConfigFailed state to false
+ * @brief Reset status of get configuration from AirGradient cloud
  */
-void AgApiClient::resetFetchConfigureState(void) { getConfigFailed = false; }
+void AgApiClient::resetFetchConfigurationStatus(void) { getConfigFailed = false; }
 
 /**
  * @brief Get failed status when post data to AirGradient cloud

@@ -884,7 +884,7 @@ void initializeNetwork() {
 
   apiClient.fetchServerConfiguration();
   configSchedule.update();
-  if (apiClient.isFetchConfigureFailed()) {
+  if (apiClient.isFetchConfigurationFailed()) {
     if (ag->isOne()) {
       if (apiClient.isNotAvailableOnDashboard()) {
         stateMachine.displaySetAddToDashBoard();
@@ -905,7 +905,7 @@ static void configurationUpdateSchedule(void) {
       configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
     Serial.println("Ignore fetch server configuration. Either mode is offline or cloud connection "
                    "disabled or configurationControl set to local");
-    apiClient.resetFetchConfigureState();
+    apiClient.resetFetchConfigurationStatus();
     return;
   }
 
@@ -1019,7 +1019,7 @@ static void updateDisplayAndLedBar(void) {
   }
 
   AgStateMachineState state = AgStateMachineNormal;
-  if (apiClient.isFetchConfigureFailed()) {
+  if (apiClient.isFetchConfigurationFailed()) {
     state = AgStateMachineSensorConfigFailed;
     if (apiClient.isNotAvailableOnDashboard()) {
       stateMachine.displaySetAddToDashBoard();
