@@ -1039,20 +1039,20 @@ void Configuration::toConfig(const char *buf) {
   }
 
   bool changed = false;
-  bool isInvalid = false;
+  bool isConfigFieldInvalid = false;
 
   /** Validate country */
   if (JSON.typeof_(jconfig[jprop_country]) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     String country = jconfig[jprop_country];
     if (country.length() != 2) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_country] = jprop_country_default;
     changed = true;
     logInfo("toConfig: country changed");
@@ -1060,17 +1060,17 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate: PM standard */
   if (JSON.typeof_(jconfig[jprop_pmStandard]) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     String standard = jconfig[jprop_pmStandard];
     if (standard != getPMStandardString(true) &&
         standard != getPMStandardString(false)) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_pmStandard] = jprop_pmStandard_default;
     changed = true;
     logInfo("toConfig: pmStandard changed");
@@ -1078,18 +1078,18 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate led bar mode */
   if (JSON.typeof_(jconfig[jprop_ledBarMode]) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     String mode = jconfig[jprop_ledBarMode];
     if (mode != getLedBarModeName(LedBarMode::LedBarModeCO2) &&
         mode != getLedBarModeName(LedBarMode::LedBarModeOff) &&
         mode != getLedBarModeName(LedBarMode::LedBarModePm)) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_ledBarMode] = jprop_ledBarMode_default;
     changed = true;
     logInfo("toConfig: ledBarMode changed");
@@ -1097,11 +1097,11 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate abcday */
   if (JSON.typeof_(jconfig[jprop_abcDays]) != "number") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
-    isInvalid = false;
+    isConfigFieldInvalid = false;
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_abcDays] = jprop_abcDays_default;
     changed = true;
     logInfo("toConfig: abcDays changed");
@@ -1109,16 +1109,16 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate tvoc learning offset */
   if (JSON.typeof_(jconfig[jprop_tvocLearningOffset]) != "number") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     int value = jconfig[jprop_tvocLearningOffset];
     if (value < 0) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_tvocLearningOffset] = jprop_tvocLearningOffset_default;
     changed = true;
     logInfo("toConfig: tvocLearningOffset changed");
@@ -1126,16 +1126,16 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate nox learning offset */
   if (JSON.typeof_(jconfig[jprop_noxLearningOffset]) != "number") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     int value = jconfig[jprop_noxLearningOffset];
     if (value < 0) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_noxLearningOffset] = jprop_noxLearningOffset_default;
     changed = true;
     logInfo("toConfig: noxLearningOffset changed");
@@ -1143,11 +1143,11 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate mqtt broker */
   if (JSON.typeof_(jconfig[jprop_mqttBrokerUrl]) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
-    isInvalid = false;
+    isConfigFieldInvalid = false;
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     changed = true;
     jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
     logInfo("toConfig: mqttBroker changed");
@@ -1155,16 +1155,16 @@ void Configuration::toConfig(const char *buf) {
 
   /** Validate temperature unit */
   if (JSON.typeof_(jconfig[jprop_temperatureUnit]) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     String unit = jconfig[jprop_temperatureUnit];
     if (unit != "c" && unit != "f") {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
     changed = true;
     logInfo("toConfig: temperatureUnit changed");
@@ -1172,11 +1172,11 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate disableCloudConnection configuration */
   if (JSON.typeof_(jconfig[jprop_disableCloudConnection]) != "boolean") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
-    isInvalid = false;
+    isConfigFieldInvalid = false;
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_disableCloudConnection] = jprop_disableCloudConnection_default;
     changed = true;
     logInfo("toConfig: disableCloudConnection changed");
@@ -1184,7 +1184,7 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate configuration control */
   if (JSON.typeof_(jprop_configurationControl) != "string") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     String ctrl = jconfig[jprop_configurationControl];
     if (ctrl != String(CONFIGURATION_CONTROL_NAME
@@ -1193,12 +1193,12 @@ void Configuration::toConfig(const char *buf) {
                            [ConfigurationControl::ConfigurationControlLocal]) &&
         ctrl != String(CONFIGURATION_CONTROL_NAME
                            [ConfigurationControl::ConfigurationControlCloud])) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_configurationControl] =jprop_configurationControl_default;
     changed = true;
     logInfo("toConfig: configurationControl changed");
@@ -1206,11 +1206,11 @@ void Configuration::toConfig(const char *buf) {
 
   /** Validate post to airgradient cloud */
   if (JSON.typeof_(jconfig[jprop_postDataToAirGradient]) != "boolean") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
-    isInvalid = false;
+    isConfigFieldInvalid = false;
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_postDataToAirGradient] = jprop_postDataToAirGradient_default;
     changed = true;
     logInfo("toConfig: postToAirGradient changed");
@@ -1218,16 +1218,16 @@ void Configuration::toConfig(const char *buf) {
 
   /** validate led bar brightness */
   if (JSON.typeof_(jconfig[jprop_ledBarBrightness]) != "number") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     int value = jconfig[jprop_ledBarBrightness];
     if (value < 0 || value > 100) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_ledBarBrightness] = jprop_ledBarBrightness_default;
     changed = true;
     logInfo("toConfig: ledBarBrightness changed");
@@ -1235,16 +1235,16 @@ void Configuration::toConfig(const char *buf) {
 
   /** Validate display brightness */
   if (JSON.typeof_(jconfig[jprop_displayBrightness]) != "number") {
-    isInvalid = true;
+    isConfigFieldInvalid = true;
   } else {
     int value = jconfig[jprop_displayBrightness];
     if (value < 0 || value > 100) {
-      isInvalid = true;
+      isConfigFieldInvalid = true;
     } else {
-      isInvalid = false;
+      isConfigFieldInvalid = false;
     }
   }
-  if (isInvalid) {
+  if (isConfigFieldInvalid) {
     jconfig[jprop_displayBrightness] = jprop_displayBrightness_default;
     changed = true;
     logInfo("toConfig: displayBrightness changed");
