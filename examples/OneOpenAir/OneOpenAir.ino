@@ -96,7 +96,7 @@ static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
 static void boardInit(void);
-static void initiateNetwork(void);
+static void initializeNetwork(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
 static void updateDisplayAndLedBar(void);
@@ -209,9 +209,9 @@ void setup() {
     connectToWifi = true;
   }
 
-  // Initiate networking configuration
+  // Initialize networking configuration
   if (connectToWifi) {
-    initiateNetwork();
+    initializeNetwork();
   }
 
   /** Set offline mode without saving, cause wifi is not configured */
@@ -838,8 +838,7 @@ static void failedHandler(String msg) {
   }
 }
 
-void initiateNetwork() {
-
+void initializeNetwork() {
   if (!wifiConnector.connect()) {
     Serial.println("Cannot initiate wifi connection");
     return;
