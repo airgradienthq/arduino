@@ -59,6 +59,7 @@ bool AgApiClient::fetchServerConfiguration(void) {
 #else
   HTTPClient client;
   client.setTimeout(timeoutMs);
+  client.setConnectTimeout(timeoutMs);
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
     if (client.begin(uri) == false) {
@@ -134,6 +135,7 @@ bool AgApiClient::postToServer(String data) {
 #else
   HTTPClient client;
   client.setTimeout(timeoutMs);
+  client.setConnectTimeout(timeoutMs);
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
     if (client.begin(uri) == false) {
