@@ -268,8 +268,7 @@ void setup() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
-  // Reset display and post schedulers to make sure measurements value already available
-  dispLedSchedule.update();
+  // Reset post schedulers to make sure measurements value already available
   agApiPostSchedule.update();
 }
 
