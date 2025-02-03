@@ -268,15 +268,16 @@ void setup() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
-  // Update display and led bar after finishing setup to show dashboard
-  updateDisplayAndLedBar();
+  // Reset post schedulers to make sure measurements value already available
+  agApiPostSchedule.update();
 }
 
 void loop() {
-  /** Handle schedule */
+  /** Run schedulers */
   dispLedSchedule.run();
   configSchedule.run();
   agApiPostSchedule.run();
+  watchdogFeedSchedule.run();
 
   if (configuration.hasSensorS8) {
     co2Schedule.run();
@@ -310,15 +311,13 @@ void loop() {
     }
   }
 
-  watchdogFeedSchedule.run();
-
   /** Check for handle WiFi reconnect */
   wifiConnector.handle();
 
   /** factory reset handle */
   factoryConfigReset();
 
-  /** check that local configura changed then do some action */
+  /** check that local configuration changed then do some action */
   configUpdateHandle();
 
   /** Firmware check for update handle */
