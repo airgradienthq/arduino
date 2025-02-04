@@ -31,6 +31,45 @@ Measurements::Measurements() {
 #ifndef ESP8266
   _resetReason = (int)ESP_RST_UNKNOWN;
 #endif
+  
+  /* Set invalid value for each measurements as default value when initialized*/
+  _temperature[0].update.avg = utils::getInvalidTemperature();
+  _temperature[1].update.avg = utils::getInvalidTemperature();
+  _humidity[0].update.avg = utils::getInvalidHumidity();
+  _humidity[1].update.avg = utils::getInvalidHumidity();
+  _co2.update.avg = utils::getInvalidCO2();
+  _tvoc.update.avg = utils::getInvalidVOC();
+  _tvoc_raw.update.avg = utils::getInvalidVOC();
+  _nox.update.avg = utils::getInvalidNOx();
+  _nox_raw.update.avg = utils::getInvalidNOx();
+
+  _pm_03_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_03_pc[1].update.avg = utils::getInvalidPmValue();
+  _pm_05_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_05_pc[1].update.avg = utils::getInvalidPmValue();
+  _pm_5_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_5_pc[1].update.avg = utils::getInvalidPmValue();
+  
+  _pm_01[0].update.avg = utils::getInvalidPmValue();
+  _pm_01_sp[0].update.avg = utils::getInvalidPmValue();
+  _pm_01_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_01[1].update.avg = utils::getInvalidPmValue();
+  _pm_01_sp[1].update.avg = utils::getInvalidPmValue();
+  _pm_01_pc[1].update.avg = utils::getInvalidPmValue();
+
+  _pm_25[0].update.avg = utils::getInvalidPmValue();
+  _pm_25_sp[0].update.avg = utils::getInvalidPmValue();
+  _pm_25_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_25[1].update.avg = utils::getInvalidPmValue();
+  _pm_25_sp[1].update.avg = utils::getInvalidPmValue();
+  _pm_25_pc[1].update.avg = utils::getInvalidPmValue();
+
+  _pm_10[0].update.avg = utils::getInvalidPmValue();
+  _pm_10_sp[0].update.avg = utils::getInvalidPmValue();
+  _pm_10_pc[0].update.avg = utils::getInvalidPmValue();
+  _pm_10[1].update.avg = utils::getInvalidPmValue();
+  _pm_10_sp[1].update.avg = utils::getInvalidPmValue();
+  _pm_10_pc[1].update.avg = utils::getInvalidPmValue();
 }
 
 void Measurements::maxPeriod(MeasurementType type, int max) {
