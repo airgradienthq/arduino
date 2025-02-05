@@ -870,7 +870,7 @@ void initializeNetwork() {
   // Initialize api client
   apiClient.begin();
 
-  // Send data for the first time to airgradient at boot 
+  // Send data for the first time to AG server at boot 
   sendDataToAg();
 
 // OTA check
