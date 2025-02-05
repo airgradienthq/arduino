@@ -87,8 +87,8 @@ bool WifiConnector::connect(void) {
   WiFiManagerParameter disableCloudInfo(
       "<p>Prevent connection to the AirGradient Server. Important: Only enable "
       "it if you are sure you don't want to use any AirGradient cloud "
-      "features. As a result you will not receive automatic firmware updates "
-      "configure from cloud and your data will not reach the AirGradient dashboard.</p>");
+      "features. As a result you will not receive automatic firmware updates, "
+      "configuration settings from cloud and the measure data will not reach the AirGradient dashboard.</p>");
   WIFI()->addParameter(&disableCloudInfo);
 
   WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);

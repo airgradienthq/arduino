@@ -591,7 +591,7 @@ static void sendDataToServer(void) {
   }
 
   if (wifiConnector.isConnected() == false) {
-    Serial.println("WiFi not connected, skip post data to server");
+    Serial.println("WiFi not connected, skipping data transmission to AG server");
     return;
   }
 
