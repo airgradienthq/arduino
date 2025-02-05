@@ -626,7 +626,7 @@ static void sendDataToServer(void) {
   measurements.setBootCount(bootCount);
 
   if (configuration.isOfflineMode() || !configuration.isPostDataToAirGradient()) {
-    Serial.println("Ignore send data to server. Either mode is offline "
+    Serial.println("Skipping transmission of data to AG server. Either mode is offline "
                    "or post data to server disabled");
     return;
   }

@@ -464,9 +464,9 @@ static bool sgp41Init(void) {
   return false;
 }
 
-static void firmwareCheckForUpdate(void) {
+static void checkForFirmwareUpdate(void) {
   Serial.println();
-  Serial.print("firmwareCheckForUpdate: ");
+  Serial.print("checkForFirmwareUpdate: ");
 
   if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled()) {
     Serial.println("mode is offline or cloud connection disabled, ignored");
@@ -870,7 +870,7 @@ void initializeNetwork() {
   // Initialize api client
   apiClient.begin();
 
-  // Check and process if AirGradient server is reachable
+  // Send data for the first time to airgradient at boot 
   sendDataToAg();
 
 // OTA check
@@ -1188,7 +1188,7 @@ static void sendDataToServer(void) {
 
   if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
       !configuration.isPostDataToAirGradient()) {
-    Serial.println("Ignore send data to server. Either mode is offline or cloud connection is "
+    Serial.println("Skipping transmission of data to AG server. Either mode is offline or cloud connection is "
                    "disabled or post data to server disabled");
     return;
   }
