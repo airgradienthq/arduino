@@ -66,7 +66,7 @@ String OpenMetrics::getPayload(void) {
   int pm03PCount = utils::getInvalidPmValue();
   int co2 = utils::getInvalidCO2();
   int atmpCompensated = utils::getInvalidTemperature();
-  int ahumCompensated = utils::getInvalidHumidity();
+  int rhumCompensated = utils::getInvalidHumidity();
   int tvoc = utils::getInvalidVOC();
   int tvocRaw = utils::getInvalidVOC();
   int nox = utils::getInvalidNOx();
@@ -138,12 +138,12 @@ String OpenMetrics::getPayload(void) {
   /** Get temperature and humidity compensated */
   if (ag->isOne()) {
     atmpCompensated = round(measure.getCorrectedTempHum(Measurements::Temperature));
-    ahumCompensated = round(measure.getCorrectedTempHum(Measurements::Humidity));
+    rhumCompensated = round(measure.getCorrectedTempHum(Measurements::Humidity));
   } else {
     atmpCompensated = round((measure.getCorrectedTempHum(Measurements::Temperature, 1) +
                              measure.getCorrectedTempHum(Measurements::Temperature, 2)) /
                             2.0f);
-    ahumCompensated = round((measure.getCorrectedTempHum(Measurements::Humidity, 1) +
+    rhumCompensated = round((measure.getCorrectedTempHum(Measurements::Humidity, 1) +
                              measure.getCorrectedTempHum(Measurements::Humidity, 2)) /
                             2.0f);
   }
@@ -238,11 +238,11 @@ String OpenMetrics::getPayload(void) {
                "gauge", "percent");
     add_metric_point("", String(_hum));
   }
-  if (utils::isValidHumidity(ahumCompensated)) {
+  if (utils::isValidHumidity(rhumCompensated)) {
     add_metric("humidity_compensated",
                "The compensated relative humidity as measured by the AirGradient SHT / PMS sensor",
                "gauge", "percent");
-    add_metric_point("", String(ahumCompensated));
+    add_metric_point("", String(rhumCompensated));
   }
 
   response += "# EOF\n";

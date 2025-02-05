@@ -66,7 +66,7 @@ String OpenMetrics::getPayload(void) {
   int pm03PCount = utils::getInvalidPmValue();
   int co2 = utils::getInvalidCO2();
   int atmpCompensated = utils::getInvalidTemperature();
-  int ahumCompensated = utils::getInvalidHumidity();
+  int rhumCompensated = utils::getInvalidHumidity();
   int tvoc = utils::getInvalidVOC();
   int tvocRaw = utils::getInvalidVOC();
   int nox = utils::getInvalidNOx();
@@ -76,7 +76,7 @@ String OpenMetrics::getPayload(void) {
     _temp = measure.getFloat(Measurements::Temperature);
     _hum = measure.getFloat(Measurements::Humidity);
     atmpCompensated = _temp;
-    ahumCompensated = _hum;
+    rhumCompensated = _hum;
   }
 
   if (config.hasSensorPMS1) {
@@ -192,12 +192,12 @@ String OpenMetrics::getPayload(void) {
         "gauge", "percent");
     add_metric_point("", String(_hum));
   }
-  if (utils::isValidHumidity(ahumCompensated)) {
+  if (utils::isValidHumidity(rhumCompensated)) {
     add_metric("humidity_compensated",
                "The compensated relative humidity as measured by the "
                "AirGradient SHT / PMS sensor",
                "gauge", "percent");
-    add_metric_point("", String(ahumCompensated));
+    add_metric_point("", String(rhumCompensated));
   }
 
   response += "# EOF\n";
