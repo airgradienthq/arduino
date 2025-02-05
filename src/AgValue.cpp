@@ -554,9 +554,9 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
     Configuration::TempHumCorrection tmp = config.getTempCorrection();
 
     // Apply 'standard' correction if its defined or correction forced
-    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024) {
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateTemp(rawValue);
-    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE && forceCorrection) {
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE && forceCorrection) {
       return ag->pms5003t_1.compensateTemp(rawValue);
     }
 
@@ -570,9 +570,9 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
     Configuration::TempHumCorrection tmp = config.getHumCorrection();
 
     // Apply 'standard' correction if its defined or correction forced
-    if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_AG_PMS5003T_2024) {
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateHum(rawValue);
-    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE && forceCorrection) {
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE && forceCorrection) {
       return ag->pms5003t_1.compensateHum(rawValue);
     }
 
@@ -588,8 +588,8 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
   }
 
   // Use raw if correction not defined
-  if (correction.algorithm == TempHumCorrectionAlgorithm::CA_TH_NONE ||
-      correction.algorithm == TempHumCorrectionAlgorithm::CA_TH_UNKNOWN) {
+  if (correction.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE ||
+      correction.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_UNKNOWN) {
     return rawValue;
   }
 

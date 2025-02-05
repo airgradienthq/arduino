@@ -34,10 +34,10 @@ const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
 };
 
 const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
-    [CA_TH_UNKNOWN] = "-", // This is only to pass "non-trivial designated initializers" error
-    [CA_TH_NONE] = "none",
-    [CA_TH_AG_PMS5003T_2024] = "ag_pms5003t_2024",
-    [CA_TH_SLR_CUSTOM] = "custom",
+    [COR_ALGO_TEMP_HUM_UNKNOWN] = "-", // This is only to pass "non-trivial designated initializers" error
+    [COR_ALGO_TEMP_HUM_NONE] = "none",
+    [COR_ALGO_TEMP_HUM_AG_PMS5003T_2024] = "ag_pms5003t_2024",
+    [COR_ALGO_TEMP_HUM_SLR_CUSTOM] = "custom",
 };
 
 #define JSON_PROP_NAME(name) jprop_##name
@@ -128,8 +128,8 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
 
 TempHumCorrectionAlgorithm Configuration::matchTempHumAlgorithm(String algorithm) {
   // Get the actual size of the enum
-  const int enumSize = static_cast<int>(CA_TH_SLR_CUSTOM);
-  TempHumCorrectionAlgorithm result = CA_TH_UNKNOWN;
+  const int enumSize = static_cast<int>(COR_ALGO_TEMP_HUM_SLR_CUSTOM);
+  TempHumCorrectionAlgorithm result = COR_ALGO_TEMP_HUM_UNKNOWN;
 
   // Loop through enum values
   for (size_t enumVal = 0; enumVal <= enumSize; enumVal++) {
@@ -251,7 +251,7 @@ bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &ta
 
   String algorithm = correctionTarget["correctionAlgorithm"];
   TempHumCorrectionAlgorithm algo = matchTempHumAlgorithm(algorithm);
-  if (algo == CA_TH_UNKNOWN) {
+  if (algo == COR_ALGO_TEMP_HUM_UNKNOWN) {
     logInfo("Uknown temp/hum algorithm");
     return false;
   }
@@ -259,7 +259,7 @@ bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &ta
 
   // If algo is None or Standard, then no need to check slr
   // But first check if target correction different from algo
-  if (algo == CA_TH_NONE || algo == CA_TH_AG_PMS5003T_2024) {
+  if (algo == COR_ALGO_TEMP_HUM_NONE || algo == COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
     if (target.algorithm != algo) {
       // Deep copy corrections from root to jconfig, so it will be saved later
       jconfig[jprop_corrections][correctionName]["correctionAlgorithm"] = algorithm;
@@ -1376,7 +1376,7 @@ void Configuration::toConfig(const char *buf) {
 
   // Temperature correction
   /// Set default first before parsing local config
-  tempCorrection.algorithm = CA_TH_NONE;
+  tempCorrection.algorithm = COR_ALGO_TEMP_HUM_NONE;
   tempCorrection.intercept = 0;
   tempCorrection.scalingFactor = 0;
   /// Load correction from saved config
@@ -1384,7 +1384,7 @@ void Configuration::toConfig(const char *buf) {
 
   // Relative humidity correction
   /// Set default first before parsing local config
-  rhumCorrection.algorithm = CA_TH_NONE;
+  rhumCorrection.algorithm = COR_ALGO_TEMP_HUM_NONE;
   rhumCorrection.intercept = 0;
   rhumCorrection.scalingFactor = 0;
   /// Load correction from saved config

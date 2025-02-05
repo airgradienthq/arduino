@@ -108,10 +108,10 @@ enum PMCorrectionAlgorithm {
 
 // Don't change the order of the enum
 enum TempHumCorrectionAlgorithm {
-  CA_TH_UNKNOWN, // Unknown algorithm
-  CA_TH_NONE,    // No PM correction
-  CA_TH_AG_PMS5003T_2024,
-  CA_TH_SLR_CUSTOM
+  COR_ALGO_TEMP_HUM_UNKNOWN, // Unknown algorithm
+  COR_ALGO_TEMP_HUM_NONE,    // No PM correction
+  COR_ALGO_TEMP_HUM_AG_PMS5003T_2024,
+  COR_ALGO_TEMP_HUM_SLR_CUSTOM
 };
 
 enum AgFirmwareMode {
