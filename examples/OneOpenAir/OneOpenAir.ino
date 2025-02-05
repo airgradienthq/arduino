@@ -112,7 +112,7 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
-static void firmwareCheckForUpdate(void);
+static void checkForFirmwareUpdate(void);
 static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
 static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
@@ -127,7 +127,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
-AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
+AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -877,7 +877,7 @@ void initializeNetwork() {
 #ifdef ESP8266
 // ota not supported
 #else
-  firmwareCheckForUpdate();
+  checkForFirmwareUpdate();
   checkForUpdateSchedule.update();
 #endif
 
