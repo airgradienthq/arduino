@@ -143,7 +143,6 @@ TempHumCorrectionAlgorithm Configuration::matchTempHumAlgorithm(String algorithm
 
 bool Configuration::updatePmCorrection(JSONVar &json) {
   if (!json.hasOwnProperty("corrections")) {
-    // TODO: need to response message?
     Serial.println("corrections not found");
     return false;
   }
@@ -232,7 +231,6 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &target,
                                             const char *correctionName) {
   if (!json.hasOwnProperty(jprop_corrections)) {
-    // TODO: need to response message?
     return false;
   }
 
