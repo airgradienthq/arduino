@@ -658,12 +658,12 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch) {
 
   Configuration::PMCorrection pmCorrection = config.getPMCorrection();
   switch (pmCorrection.algorithm) {
-  case PMCorrectionAlgorithm::Unknown:
-  case PMCorrectionAlgorithm::None:
+  case PMCorrectionAlgorithm::COR_ALGO_PM_UNKNOWN:
+  case PMCorrectionAlgorithm::COR_ALGO_PM_NONE:
     // If correction is Unknown, then default is None
     corrected = pm25;
     break;
-  case PMCorrectionAlgorithm::EPA_2021:
+  case PMCorrectionAlgorithm::COR_ALGO_PM_EPA_2021:
     corrected = ag->pms5003.compensate(pm25, humidity);
     break;
   default: {

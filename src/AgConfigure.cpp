@@ -22,15 +22,15 @@ const char *LED_BAR_MODE_NAMES[] = {
 };
 
 const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
-    [Unknown] = "-", // This is only to pass "non-trivial designated initializers" error
-    [None] = "none",
-    [EPA_2021] = "epa_2021",
-    [SLR_PMS5003_20220802] = "slr_PMS5003_20220802",
-    [SLR_PMS5003_20220803] = "slr_PMS5003_20220803",
-    [SLR_PMS5003_20220824] = "slr_PMS5003_20220824",
-    [SLR_PMS5003_20231030] = "slr_PMS5003_20231030",
-    [SLR_PMS5003_20231218] = "slr_PMS5003_20231218",
-    [SLR_PMS5003_20240104] = "slr_PMS5003_20240104",
+    [COR_ALGO_PM_UNKNOWN] = "-", // This is only to pass "non-trivial designated initializers" error
+    [COR_ALGO_PM_NONE] = "none",
+    [COR_ALGO_PM_EPA_2021] = "epa_2021",
+    [COR_ALGO_PM_PMS5003_20220802] = "slr_PMS5003_20220802",
+    [COR_ALGO_PM_PMS5003_20220803] = "slr_PMS5003_20220803",
+    [COR_ALGO_PM_PMS5003_20220824] = "slr_PMS5003_20220824",
+    [COR_ALGO_PM_PMS5003_20231030] = "slr_PMS5003_20231030",
+    [COR_ALGO_PM_PMS5003_20231218] = "slr_PMS5003_20231218",
+    [COR_ALGO_PM_PMS5003_20240104] = "slr_PMS5003_20240104",
 };
 
 const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
@@ -115,8 +115,8 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If the input string matches an algorithm name, return the corresponding enum value
   // Else return Unknown
 
-  const size_t enumSize = SLR_PMS5003_20240104 + 1; // Get the actual size of the enum
-  PMCorrectionAlgorithm result = PMCorrectionAlgorithm::Unknown;
+  const size_t enumSize = COR_ALGO_PM_PMS5003_20240104 + 1; // Get the actual size of the enum
+  PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;;
   
   // Loop through enum values
   for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
@@ -166,7 +166,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   // Check algorithm
   String algorithm = pm02["correctionAlgorithm"];
   PMCorrectionAlgorithm algo = matchPmAlgorithm(algorithm);
-  if (algo == Unknown) {
+  if (algo == COR_ALGO_PM_UNKNOWN) {
     logInfo("Unknown algorithm");
     return false;
   }
@@ -174,7 +174,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // If algo is None or EPA_2021, no need to check slr
   // But first check if pmCorrection different from algo
-  if (algo == None || algo == EPA_2021) {
+  if (algo == COR_ALGO_PM_NONE || algo == COR_ALGO_PM_EPA_2021) {
     if (pmCorrection.algorithm != algo) {
       // Deep copy corrections from root to jconfig, so it will be saved later
       jconfig[jprop_corrections]["pm02"]["correctionAlgorithm"] = algorithm;
@@ -397,8 +397,8 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   jconfig[jprop_monitorDisplayCompensatedValues] = jprop_monitorDisplayCompensatedValues_default;
 
-  // PM2.5 correction
-  pmCorrection.algorithm = None;
+  // PM2.5 default correction
+  pmCorrection.algorithm = COR_ALGO_PM_NONE;
   pmCorrection.changed = false;
   pmCorrection.intercept = 0;
   pmCorrection.scalingFactor = 1;
@@ -1380,7 +1380,7 @@ void Configuration::toConfig(const char *buf) {
 
   // PM2.5 correction
   /// Set default first before parsing local config
-  pmCorrection.algorithm = PMCorrectionAlgorithm::None;
+  pmCorrection.algorithm = COR_ALGO_PM_NONE;
   pmCorrection.intercept = 0;
   pmCorrection.scalingFactor = 0;
   pmCorrection.useEPA = false;
@@ -1526,8 +1526,8 @@ bool Configuration::isPMCorrectionChanged(void) {
  */
 bool Configuration::isPMCorrectionEnabled(void) {
   PMCorrection pmCorrection = getPMCorrection();
-  if (pmCorrection.algorithm == PMCorrectionAlgorithm::None ||
-      pmCorrection.algorithm == PMCorrectionAlgorithm::Unknown) {
+  if (pmCorrection.algorithm == COR_ALGO_PM_NONE ||
+      pmCorrection.algorithm == COR_ALGO_PM_UNKNOWN) {
     return false;
   }
 
