@@ -33,6 +33,13 @@ const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
     [SLR_PMS5003_20240104] = "slr_PMS5003_20240104",
 };
 
+const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
+    [COR_ALGO_TEMP_HUM_UNKNOWN] = "-", // This is only to pass "non-trivial designated initializers" error
+    [COR_ALGO_TEMP_HUM_NONE] = "none",
+    [COR_ALGO_TEMP_HUM_AG_PMS5003T_2024] = "ag_pms5003t_2024",
+    [COR_ALGO_TEMP_HUM_SLR_CUSTOM] = "custom",
+};
+
 #define JSON_PROP_NAME(name) jprop_##name
 #define JSON_PROP_DEF(name) const char *JSON_PROP_NAME(name) = #name
 
@@ -55,6 +62,8 @@ JSON_PROP_DEF(ledBarTestRequested);
 JSON_PROP_DEF(offlineMode);
 JSON_PROP_DEF(monitorDisplayCompensatedValues);
 JSON_PROP_DEF(corrections);
+JSON_PROP_DEF(atmp);
+JSON_PROP_DEF(rhum);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
@@ -119,9 +128,23 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   return result;
 }
 
+TempHumCorrectionAlgorithm Configuration::matchTempHumAlgorithm(String algorithm) {
+  // Get the actual size of the enum
+  const int enumSize = static_cast<int>(COR_ALGO_TEMP_HUM_SLR_CUSTOM);
+  TempHumCorrectionAlgorithm result = COR_ALGO_TEMP_HUM_UNKNOWN;
+
+  // Loop through enum values
+  for (size_t enumVal = 0; enumVal <= enumSize; enumVal++) {
+    if (algorithm == TEMP_HUM_CORRECTION_ALGORITHM_NAMES[enumVal]) {
+      result = static_cast<TempHumCorrectionAlgorithm>(enumVal);
+    }
+  }
+
+  return result;
+}
+
 bool Configuration::updatePmCorrection(JSONVar &json) {
   if (!json.hasOwnProperty("corrections")) {
-    // TODO: need to response message?
     Serial.println("corrections not found");
     return false;
   }
@@ -204,6 +227,88 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // Correction values were updated
   logInfo("PM2.5 correction updated");
+  return true;
+}
+
+bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &target,
+                                            const char *correctionName) {
+  if (!json.hasOwnProperty(jprop_corrections)) {
+    return false;
+  }
+
+  JSONVar corrections = json[jprop_corrections];
+  if (!corrections.hasOwnProperty(correctionName)) {
+    Serial.println("pm02 not found");
+    logWarning(String(correctionName) + " correction field not found on configuration");
+    return false;
+  }
+
+  JSONVar correctionTarget = corrections[correctionName];
+  if (!correctionTarget.hasOwnProperty("correctionAlgorithm")) {
+    Serial.println("correctionAlgorithm not found");
+    return false;
+  }
+
+  String algorithm = correctionTarget["correctionAlgorithm"];
+  TempHumCorrectionAlgorithm algo = matchTempHumAlgorithm(algorithm);
+  if (algo == COR_ALGO_TEMP_HUM_UNKNOWN) {
+    logInfo("Uknown temp/hum algorithm");
+    return false;
+  }
+  logInfo(String(correctionName) + " correction algorithm: " + algorithm);
+
+  // If algo is None or Standard, then no need to check slr
+  // But first check if target correction different from algo
+  if (algo == COR_ALGO_TEMP_HUM_NONE || algo == COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
+    if (target.algorithm != algo) {
+      // Deep copy corrections from root to jconfig, so it will be saved later
+      jconfig[jprop_corrections][correctionName]["correctionAlgorithm"] = algorithm;
+      jconfig[jprop_corrections][correctionName]["slr"] = JSON.parse("{}"); // Clear slr
+      // Update pmCorrection with new values
+      target.algorithm = algo;
+      target.changed = true;
+      logInfo(String(correctionName) + " correction updated");
+      return true;
+    }
+
+    return false;
+  }
+
+  // Check if correction.target (atmp or rhum) has slr object
+  if (!correctionTarget.hasOwnProperty("slr")) {
+    logWarning(String(correctionName) + " slr not found");
+    return false;
+  }
+
+  JSONVar slr = correctionTarget["slr"];
+
+  // Validate required slr properties exist
+  if (!slr.hasOwnProperty("intercept") || !slr.hasOwnProperty("scalingFactor")) {
+    Serial.println("Missing required slr properties");
+    return false;
+  }
+
+  // arduino_json doesn't support float type, need to cast to double first
+  float intercept = (float)((double)slr["intercept"]);
+  float scalingFactor = (float)((double)slr["scalingFactor"]);
+
+  // Compare with current target correciont
+  if (target.algorithm == algo && target.intercept == intercept &&
+      target.scalingFactor == scalingFactor) {
+    return false; // No changes needed
+  }
+
+  // Deep copy corrections from root to jconfig, so it will be saved later
+  jconfig[jprop_corrections] = corrections;
+
+  // Update target with new values
+  target.algorithm = algo;
+  target.intercept = intercept;
+  target.scalingFactor = scalingFactor;
+  target.changed = true;
+
+  // Correction values were updated
+  logInfo(String(correctionName) + " correction updated");
   return true;
 }
 
@@ -795,8 +900,18 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
-  // Corrections
+  // PM2.5 Corrections
   if (updatePmCorrection(root)) {
+    changed = true;
+  }
+
+  // Temperature correction
+  if (updateTempHumCorrection(root, tempCorrection, jprop_atmp)) {
+    changed = true;
+  }
+
+  // Relative humidity correction
+  if (updateTempHumCorrection(root, rhumCorrection, jprop_rhum)) {
     changed = true;
   }
 
@@ -1263,14 +1378,30 @@ void Configuration::toConfig(const char *buf) {
         jprop_monitorDisplayCompensatedValues_default;
   }
 
-
-  // Set default first before parsing local config
+  // PM2.5 correction
+  /// Set default first before parsing local config
   pmCorrection.algorithm = PMCorrectionAlgorithm::None;
   pmCorrection.intercept = 0;
   pmCorrection.scalingFactor = 0;
   pmCorrection.useEPA = false;
-  // Load correction from saved config
+  /// Load correction from saved config
   updatePmCorrection(jconfig);
+
+  // Temperature correction
+  /// Set default first before parsing local config
+  tempCorrection.algorithm = COR_ALGO_TEMP_HUM_NONE;
+  tempCorrection.intercept = 0;
+  tempCorrection.scalingFactor = 0;
+  /// Load correction from saved config
+  updateTempHumCorrection(jconfig, tempCorrection, jprop_atmp);
+
+  // Relative humidity correction
+  /// Set default first before parsing local config
+  rhumCorrection.algorithm = COR_ALGO_TEMP_HUM_NONE;
+  rhumCorrection.intercept = 0;
+  rhumCorrection.scalingFactor = 0;
+  /// Load correction from saved config
+  updateTempHumCorrection(jconfig, rhumCorrection, jprop_rhum);
 
   if (changed) {
     saveConfig();
@@ -1403,6 +1534,8 @@ bool Configuration::isPMCorrectionEnabled(void) {
   return true;
 }
 
-Configuration::PMCorrection Configuration::getPMCorrection(void) {
-  return pmCorrection;
-}
+Configuration::PMCorrection Configuration::getPMCorrection(void) { return pmCorrection; }
+
+Configuration::TempHumCorrection Configuration::getTempCorrection(void) { return tempCorrection; }
+
+Configuration::TempHumCorrection Configuration::getHumCorrection(void) { return rhumCorrection; }

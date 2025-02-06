@@ -76,7 +76,7 @@ static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
-static Measurements measurements;
+static Measurements measurements(configuration);
 static AirGradient *ag;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
 static StateMachine stateMachine(oledDisplay, Serial, measurements,
@@ -165,6 +165,7 @@ void setup() {
   apiClient.setAirGradient(ag);
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
+  measurements.setAirGradient(ag);
 
   /** Example set custom API root URL */
   // apiClient.setApiRoot("https://example.custom.api");
@@ -328,8 +329,7 @@ static void createMqttTask(void) {
 
           /** Send data */
           if (mqttClient.isConnected()) {
-            String payload =
-                measurements.toString(true, fwMode, wifiConnector.RSSI(), *ag, configuration);
+            String payload = measurements.toString(true, fwMode, wifiConnector.RSSI());
             String topic = "airgradient/readings/" + ag->deviceId();
 
             if (mqttClient.publish(topic.c_str(), payload.c_str(),
@@ -1198,7 +1198,7 @@ static void sendDataToServer(void) {
     return;
   }
 
-  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), *ag, configuration);
+  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI());
   if (apiClient.postToServer(syncData)) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");

@@ -17,6 +17,13 @@ public:
     bool changed;
   };
 
+  struct TempHumCorrection {
+    TempHumCorrectionAlgorithm algorithm;
+    float intercept;
+    float scalingFactor;
+    bool changed;
+  };
+
 private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
@@ -30,12 +37,17 @@ private:
   bool _offlineMode = false;
   bool _ledBarModeChanged = false;
   PMCorrection pmCorrection;
+  TempHumCorrection tempCorrection;
+  TempHumCorrection rhumCorrection;
 
   AirGradient* ag;
 
   String getLedBarModeName(LedBarMode mode);
   PMCorrectionAlgorithm matchPmAlgorithm(String algorithm);
+  TempHumCorrectionAlgorithm matchTempHumAlgorithm(String algorithm);
   bool updatePmCorrection(JSONVar &json);
+  bool updateTempHumCorrection(JSONVar &json, TempHumCorrection &target,
+                               const char *correctionName);
   void saveConfig(void);
   void loadConfig(void);
   void defaultConfig(void);
@@ -46,7 +58,7 @@ private:
   void configLogInfo(String name, String fromValue, String toValue);
   String getPMStandardString(bool usaqi);
   String getAbcDayString(int value);
-  void toConfig(const char* buf);
+  void toConfig(const char *buf);
 
 public:
   Configuration(Stream &debugLog);
@@ -101,6 +113,8 @@ public:
   bool isPMCorrectionChanged(void);
   bool isPMCorrectionEnabled(void);
   PMCorrection getPMCorrection(void);
+  TempHumCorrection getTempCorrection(void);
+  TempHumCorrection getHumCorrection(void);
 };
 
 #endif /** _AG_CONFIG_H_ */

@@ -55,7 +55,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 static AirGradient ag(DIY_PRO_INDOOR_V4_2);
 static Configuration configuration(Serial);
 static AgApiClient apiClient(Serial, configuration);
-static Measurements measurements;
+static Measurements measurements(configuration);
 static OledDisplay oledDisplay(configuration, measurements, Serial);
 static StateMachine stateMachine(oledDisplay, Serial, measurements,
                                  configuration);
@@ -125,6 +125,7 @@ void setup() {
   apiClient.setAirGradient(&ag);
   openMetrics.setAirGradient(&ag);
   localServer.setAirGraident(&ag);
+  measurements.setAirGradient(&ag);
 
   /** Example set custom API root URL */
   // apiClient.setApiRoot("https://example.custom.api");
@@ -399,7 +400,7 @@ static void mqttHandle(void) {
   }
 
   if (mqttClient.isConnected()) {
-    String payload = measurements.toString(true, fwMode, wifiConnector.RSSI(), ag, configuration);
+    String payload = measurements.toString(true, fwMode, wifiConnector.RSSI());
     String topic = "airgradient/readings/" + ag.deviceId();
     if (mqttClient.publish(topic.c_str(), payload.c_str(), payload.length())) {
       Serial.println("MQTT sync success");
@@ -636,7 +637,7 @@ static void sendDataToServer(void) {
     return;
   }
 
-  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), ag, configuration);
+  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI());
   if (apiClient.postToServer(syncData)) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");

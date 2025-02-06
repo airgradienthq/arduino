@@ -2,7 +2,7 @@
 
 From [firmware version 3.0.10](firmwares) onwards, the AirGradient ONE and Open Air monitors have below API available. 
 
-#### Discovery
+### Discovery
 
 The monitors run a mDNS discovery. So within the same network, the monitor can be accessed through:
 
@@ -11,7 +11,7 @@ http://airgradient_{{serialnumber}}.local
 
 The following requests are possible:
 
-#### Get Current Air Quality (GET)
+### Get Current Air Quality (GET)
 
 With the path "/measures/current" you can get the current air quality data.
 
@@ -80,7 +80,7 @@ You get the following response:
 
 Compensated values apply correction algorithms to make the sensor values more accurate. Temperature and relative humidity correction is only applied on the outdoor monitor Open Air but the properties _compensated will still be send also for the indoor monitor AirGradient ONE.
 
-#### Get Configuration Parameters (GET)
+### Get Configuration Parameters (GET)
 
 "/config" path returns the current configuration of the monitor.
 
@@ -111,7 +111,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
 }
 ```
 
-#### Set Configuration Parameters (PUT)
+### Set Configuration Parameters (PUT)
 
 Configuration parameters can be changed with a PUT request to the monitor, e.g.
 
@@ -131,11 +131,11 @@ Example to set monitor to Celsius
  
   ``` -d "{\"param\":\"value\"}" ```
 
-#### Avoiding Conflicts with Configuration on AirGradient Server
+### Avoiding Conflicts with Configuration on AirGradient Server
 
 If the monitor is set up on the AirGradient dashboard, it will also receive the configuration parameters from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
 
-#### Configuration Parameters (GET/PUT)
+### Configuration Parameters (GET/PUT)
 
 | Properties                        | Description                                                      | Type    | Accepted Values                                                                                                                         | Example                                         |
 |-----------------------------------|:-----------------------------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
@@ -163,9 +163,9 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 - `offlineMode` : the device will disable all network operation, and only show measurements on the display and ledbar; Read-Only; Change can be apply using reset button on boot.
 - `disableCloudConnection` : disable every request to AirGradient server, means features like post data to AirGradient server, configuration from AirGradient server and automatic firmware updates are disabled. This configuration overrides `configurationControl` and `postDataToAirGradient`; Read-Only; Change can be apply from wifi setup webpage.
 
-#### Corrections
+### Corrections
 
-The `corrections` object allows configuring PM2.5 correction algorithms and parameters locally. This affects both the display and local server response values.
+The `corrections` object allows configuring PM2.5, Temperature and Humidity correction algorithms and parameters locally. This affects both the display, local server response and open metrics values.
 
 Example correction configuration:
 
@@ -179,10 +179,28 @@ Example correction configuration:
         "scalingFactor": 0,
         "useEpa2021": false
       }
-    }
+    },
+    "atmp": {
+      "correctionAlgorithm": "<Option In String>",
+      "slr": {
+        "intercept": 0,
+        "scalingFactor": 0
+      }
+    },
+    "rhum": {
+      "correctionAlgorithm": "<Option In String>",
+      "slr": {
+        "intercept": 0,
+        "scalingFactor": 0
+      }
+    },
   }
 }
 ```
+
+#### PM 2.5
+
+Field Name: `pm02`
 
 | Algorithm | Value | Description | SLR required |
 |------------|-------------|------|---------| 
@@ -216,4 +234,24 @@ curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header '
 
 ```bash
 curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20240104","slr":{"intercept":0,"scalingFactor":0.02896,"useEpa2021":true}}}}'
+```
+
+#### Temperature & Humidity
+
+Field Name:
+- Temperature: `atmp`
+- Humidity: `rhum`
+
+| Algorithm | Value | Description | SLR required |
+|------------|-------------|------|---------| 
+| Raw | `"none"` | No correction (default) | No |
+| AirGradient Standard Correction | `"ag_pms5003t_2024"` | Using standard airgradient correction (for outdoor monitor)| No |
+| Custom | `"custom"` | custom corrections constant, set `intercept` and `scalingFactor` manually | Yes | 
+
+*Table above apply for both Temperature and Humidity*
+
+**Example**
+
+```bash
+curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"atmp":{"correctionAlgorithm":"custom","slr":{"intercept":0.2,"scalingFactor":1.1}}}}'
 ```

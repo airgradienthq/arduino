@@ -106,15 +106,23 @@ enum PMCorrectionAlgorithm {
   SLR_PMS5003_20240104,
 };
 
+// Don't change the order of the enum
+enum TempHumCorrectionAlgorithm {
+  COR_ALGO_TEMP_HUM_UNKNOWN, // Unknown algorithm
+  COR_ALGO_TEMP_HUM_NONE,    // No PM correction
+  COR_ALGO_TEMP_HUM_AG_PMS5003T_2024,
+  COR_ALGO_TEMP_HUM_SLR_CUSTOM
+};
+
 enum AgFirmwareMode {
-  FW_MODE_I_9PSL, /** ONE_INDOOR */
-  FW_MODE_O_1PST, /** PMS5003T, S8 and SGP41 */
-  FW_MODE_O_1PPT, /** PMS5003T_1, PMS5003T_2, SGP41 */
-  FW_MODE_O_1PP,  /** PMS5003T_1, PMS5003T_2 */
-  FW_MODE_O_1PS,  /** PMS5003T, S8 */
-  FW_MODE_O_1P,   /** PMS5003T */
-  FW_MODE_I_42PS, /** DIY_PRO 4.2 */
-  FW_MODE_I_33PS, /** DIY_PRO 3.3 */
+  FW_MODE_I_9PSL,       /** ONE_INDOOR */
+  FW_MODE_O_1PST,       /** PMS5003T, S8 and SGP41 */
+  FW_MODE_O_1PPT,       /** PMS5003T_1, PMS5003T_2, SGP41 */
+  FW_MODE_O_1PP,        /** PMS5003T_1, PMS5003T_2 */
+  FW_MODE_O_1PS,        /** PMS5003T, S8 */
+  FW_MODE_O_1P,         /** PMS5003T */
+  FW_MODE_I_42PS,       /** DIY_PRO 4.2 */
+  FW_MODE_I_33PS,       /** DIY_PRO 3.3 */
   FW_MODE_I_BASIC_40PS, /** DIY_BASIC 4.0 */
 };
 const char *AgFirmwareModeName(AgFirmwareMode mode);
