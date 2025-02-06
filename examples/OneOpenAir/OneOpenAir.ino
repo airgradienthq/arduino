@@ -613,7 +613,7 @@ static void sendDataToAg() {
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerConnectFailed);
   }
-  delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+
   stateMachine.handleLeds(AgStateMachineNormal);
 }
 
