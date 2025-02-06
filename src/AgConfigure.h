@@ -94,6 +94,8 @@ public:
   bool isOfflineMode(void);
   void setOfflineMode(bool offline);
   void setOfflineModeWithoutSave(bool offline);
+  bool isCloudConnectionDisabled(void);
+  void setDisableCloudConnection(bool disable);
   bool isLedBarModeChanged(void);
   bool isMonitorDisplayCompensatedValues(void);
   bool isPMCorrectionChanged(void);

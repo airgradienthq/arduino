@@ -154,11 +154,14 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 | `ledBarTestRequested`             | Can be set to trigger a test.                                    | Boolean | `true` : LEDs will run test sequence                                                                                                    | `{"ledBarTestRequested": true}`                 |
 | `noxLearningOffset`               | Set NOx learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"noxLearningOffset": 12}`                     |
 | `tvocLearningOffset`              | Set VOC learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"tvocLearningOffset": 12}`                    |
-| `offlineMode`                     | Set monitor to run without WiFi.                                 | Boolean |  `false`: Disabled (default) <br> `true`: Enabled                                                                                       | `{"offlineMode": true}`                         |
 | `monitorDisplayCompensatedValues` | Set the display show the PM value with/without compensate  value (only on [3.1.9]()) | Boolean | `false`: Without compensate (default) <br> `true`: with compensate                                                                      | `{"monitorDisplayCompensatedValues": false }`   |
 | `corrections`                     | Sets correction options to display and measurement values on local server response. (version >= [3.1.11]())    | Object |  _see corrections section_             | _see corrections section_                         |
 
 
+**Notes**
+
+- `offlineMode` : the device will disable all network operation, and only show measurements on the display and ledbar; Read-Only; Change can be apply using reset button on boot.
+- `disableCloudConnection` : disable every request to AirGradient server, means features like post data to AirGradient server, configuration from AirGradient server and automatic firmware updates are disabled. This configuration overrides `configurationControl` and `postDataToAirGradient`; Read-Only; Change can be apply from wifi setup webpage.
 
 #### Corrections
 

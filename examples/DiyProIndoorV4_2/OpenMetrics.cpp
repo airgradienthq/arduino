@@ -43,7 +43,7 @@ String OpenMetrics::getPayload(void) {
              "1 if the AirGradient device was able to successfully fetch its "
              "configuration from the server",
              "gauge");
-  add_metric_point("", apiClient.isFetchConfigureFailed() ? "0" : "1");
+  add_metric_point("", apiClient.isFetchConfigurationFailed() ? "0" : "1");
 
   add_metric(
       "post_ok",

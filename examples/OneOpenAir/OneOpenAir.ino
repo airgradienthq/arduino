@@ -96,6 +96,7 @@ static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
 static void boardInit(void);
+static void initializeNetwork(void);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
 static void updateDisplayAndLedBar(void);
@@ -111,7 +112,7 @@ static void factoryConfigReset(void);
 static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
-static void firmwareCheckForUpdate(void);
+static void checkForFirmwareUpdate(void);
 static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
 static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
@@ -126,7 +127,7 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
-AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, firmwareCheckForUpdate);
+AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
 
 void setup() {
   /** Serial for print debug message */
@@ -208,51 +209,11 @@ void setup() {
     connectToWifi = true;
   }
 
+  // Initialize networking configuration
   if (connectToWifi) {
-    apiClient.begin();
-
-    if (wifiConnector.connect()) {
-      if (wifiConnector.isConnected()) {
-        mdnsInit();
-        localServer.begin();
-        initMqtt();
-        sendDataToAg();
-
-        #ifdef ESP8266
-          // ota not supported
-        #else
-          firmwareCheckForUpdate();
-          checkForUpdateSchedule.update();
-        #endif
-
-        apiClient.fetchServerConfiguration();
-        configSchedule.update();
-        if (apiClient.isFetchConfigureFailed()) {
-          if (ag->isOne()) {
-            if (apiClient.isNotAvailableOnDashboard()) {
-              stateMachine.displaySetAddToDashBoard();
-              stateMachine.displayHandle(
-                  AgStateMachineWiFiOkServerOkSensorConfigFailed);
-            } else {
-              stateMachine.displayClearAddToDashBoard();
-            }
-          }
-          stateMachine.handleLeds(
-              AgStateMachineWiFiOkServerOkSensorConfigFailed);
-          delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-        } else {
-          ledBarEnabledUpdate();
-        }
-      } else {
-        if (wifiConnector.isConfigurePorttalTimeout()) {
-          oledDisplay.showRebooting();
-          delay(2500);
-          oledDisplay.setText("", "", "");
-          ESP.restart();
-        }
-      }
-    }
+    initializeNetwork();
   }
+
   /** Set offline mode without saving, cause wifi is not configured */
   if (wifiConnector.hasConfigurated() == false) {
     Serial.println("Set offline mode cause wifi is not configurated");
@@ -503,17 +464,23 @@ static bool sgp41Init(void) {
   return false;
 }
 
-static void firmwareCheckForUpdate(void) {
+static void checkForFirmwareUpdate(void) {
   Serial.println();
-  Serial.println("firmwareCheckForUpdate:");
+  Serial.print("checkForFirmwareUpdate: ");
 
-  if (wifiConnector.isConnected()) {
-    Serial.println("firmwareCheckForUpdate: Perform");
-    otaHandler.setHandlerCallback(otaHandlerCallback);
-    otaHandler.updateFirmwareIfOutdated(ag->deviceId());
-  } else {
-    Serial.println("firmwareCheckForUpdate: Ignored");
+  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled()) {
+    Serial.println("mode is offline or cloud connection disabled, ignored");
+    return;
   }
+  
+  if (!wifiConnector.isConnected()) {
+    Serial.println("wifi not connected, ignored");
+    return;
+  }
+
+  Serial.println("perform");
+  otaHandler.setHandlerCallback(otaHandlerCallback);
+  otaHandler.updateFirmwareIfOutdated(ag->deviceId());
   Serial.println();
 }
 
@@ -870,7 +837,77 @@ static void failedHandler(String msg) {
   }
 }
 
+void initializeNetwork() {
+  if (!wifiConnector.connect()) {
+    Serial.println("Cannot initiate wifi connection");
+    return;
+  }
+
+  if (!wifiConnector.isConnected()) {
+    Serial.println("Failed connect to WiFi");
+    if (wifiConnector.isConfigurePorttalTimeout()) {
+      oledDisplay.showRebooting();
+      delay(2500);
+      oledDisplay.setText("", "", "");
+      ESP.restart();
+    }
+
+    // Directly return because the rest of the function applied if wifi is connect only
+    return;
+  }
+
+  // Initiate local network configuration
+  mdnsInit();
+  localServer.begin();
+  // Apply mqtt connection if configured
+  initMqtt();
+
+  // Ignore the rest if cloud connection to AirGradient is disabled
+  if (configuration.isCloudConnectionDisabled()) {
+    return;
+  }
+
+  // Initialize api client
+  apiClient.begin();
+
+  // Send data for the first time to AG server at boot 
+  sendDataToAg();
+
+// OTA check
+#ifdef ESP8266
+// ota not supported
+#else
+  checkForFirmwareUpdate();
+  checkForUpdateSchedule.update();
+#endif
+
+  apiClient.fetchServerConfiguration();
+  configSchedule.update();
+  if (apiClient.isFetchConfigurationFailed()) {
+    if (ag->isOne()) {
+      if (apiClient.isNotAvailableOnDashboard()) {
+        stateMachine.displaySetAddToDashBoard();
+        stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+      } else {
+        stateMachine.displayClearAddToDashBoard();
+      }
+    }
+    stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+  } else {
+    ledBarEnabledUpdate();
+  }
+}
+
 static void configurationUpdateSchedule(void) {
+  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
+      configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    Serial.println("Ignore fetch server configuration. Either mode is offline or cloud connection "
+                   "disabled or configurationControl set to local");
+    apiClient.resetFetchConfigurationStatus();
+    return;
+  }
+
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
@@ -968,10 +1005,20 @@ static void updateDisplayAndLedBar(void) {
     return;
   }
 
-  AgStateMachineState state = AgStateMachineNormal;
   if (wifiConnector.isConnected() == false) {
-    state = AgStateMachineWiFiLost;
-  } else if (apiClient.isFetchConfigureFailed()) {
+    stateMachine.displayHandle(AgStateMachineWiFiLost);
+    stateMachine.handleLeds(AgStateMachineWiFiLost);
+  }
+
+  if (configuration.isCloudConnectionDisabled()) {
+    // Ignore API related check since cloud is disabled 
+    stateMachine.displayHandle(AgStateMachineNormal);
+    stateMachine.handleLeds(AgStateMachineNormal);
+    return;
+  }
+
+  AgStateMachineState state = AgStateMachineNormal;
+  if (apiClient.isFetchConfigurationFailed()) {
     state = AgStateMachineSensorConfigFailed;
     if (apiClient.isNotAvailableOnDashboard()) {
       stateMachine.displaySetAddToDashBoard();
@@ -1139,16 +1186,22 @@ static void sendDataToServer(void) {
   int bootCount = measurements.bootCount() + 1;
   measurements.setBootCount(bootCount);
 
-  /** Ignore send data to server if postToAirGradient disabled */
-  if (configuration.isPostDataToAirGradient() == false || configuration.isOfflineMode()) {
+  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
+      !configuration.isPostDataToAirGradient()) {
+    Serial.println("Skipping transmission of data to AG server. Either mode is offline or cloud connection is "
+                   "disabled or post data to server disabled");
+    return;
+  }
+
+  if (wifiConnector.isConnected() == false) {
+    Serial.println("WiFi not connected, skipping data transmission to AG server");
     return;
   }
 
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), *ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
-    Serial.println(
-        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
   }
 

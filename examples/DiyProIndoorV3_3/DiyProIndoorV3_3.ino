@@ -149,9 +149,12 @@ void setup() {
         initMqtt();
         sendDataToAg();
 
-        apiClient.fetchServerConfiguration();
+        if (configuration.getConfigurationControl() !=
+            ConfigurationControl::ConfigurationControlLocal) {
+          apiClient.fetchServerConfiguration();
+        }
         configSchedule.update();
-        if (apiClient.isFetchConfigureFailed()) {
+        if (apiClient.isFetchConfigurationFailed()) {
           if (apiClient.isNotAvailableOnDashboard()) {
             stateMachine.displaySetAddToDashBoard();
             stateMachine.displayHandle(
@@ -467,6 +470,14 @@ static void failedHandler(String msg) {
 }
 
 static void configurationUpdateSchedule(void) {
+  if (configuration.isOfflineMode() ||
+      configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    Serial.println("Ignore fetch server configuration. Either mode is offline "
+                   "or configurationControl set to local");
+    apiClient.resetFetchConfigurationStatus();
+    return;
+  }
+
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
@@ -524,7 +535,7 @@ static void appDispHandler(void) {
   if (configuration.isOfflineMode() == false) {
     if (wifiConnector.isConnected() == false) {
       state = AgStateMachineWiFiLost;
-    } else if (apiClient.isFetchConfigureFailed()) {
+    } else if (apiClient.isFetchConfigurationFailed()) {
       state = AgStateMachineSensorConfigFailed;
       if (apiClient.isNotAvailableOnDashboard()) {
         stateMachine.displaySetAddToDashBoard();
@@ -573,17 +584,21 @@ static void sendDataToServer(void) {
   int bootCount = measurements.bootCount() + 1;
   measurements.setBootCount(bootCount);
 
-  /** Ignore send data to server if postToAirGradient disabled */
-  if (configuration.isPostDataToAirGradient() == false ||
-      configuration.isOfflineMode()) {
+  if (configuration.isOfflineMode() || !configuration.isPostDataToAirGradient()) {
+    Serial.println("Skipping transmission of data to AG server. Either mode is offline "
+                   "or post data to server disabled");
+    return;
+  }
+
+  if (wifiConnector.isConnected() == false) {
+    Serial.println("WiFi not connected, skipping data transmission to AG server");
     return;
   }
 
   String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI(), ag, configuration);
   if (apiClient.postToServer(syncData)) {
     Serial.println();
-    Serial.println(
-        "Online mode and isPostToAirGradient = true: watchdog reset");
+    Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
   }
 }
