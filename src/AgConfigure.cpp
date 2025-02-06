@@ -25,12 +25,7 @@ const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
     [COR_ALGO_PM_UNKNOWN] = "-", // This is only to pass "non-trivial designated initializers" error
     [COR_ALGO_PM_NONE] = "none",
     [COR_ALGO_PM_EPA_2021] = "epa_2021",
-    [COR_ALGO_PM_PMS5003_20220802] = "slr_PMS5003_20220802",
-    [COR_ALGO_PM_PMS5003_20220803] = "slr_PMS5003_20220803",
-    [COR_ALGO_PM_PMS5003_20220824] = "slr_PMS5003_20220824",
-    [COR_ALGO_PM_PMS5003_20231030] = "slr_PMS5003_20231030",
-    [COR_ALGO_PM_PMS5003_20231218] = "slr_PMS5003_20231218",
-    [COR_ALGO_PM_PMS5003_20240104] = "slr_PMS5003_20240104",
+    [COR_ALGO_PM_SLR_CUSTOM] = "custom",
 };
 
 const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
@@ -115,13 +110,22 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If the input string matches an algorithm name, return the corresponding enum value
   // Else return Unknown
 
-  const size_t enumSize = COR_ALGO_PM_PMS5003_20240104 + 1; // Get the actual size of the enum
+  const size_t enumSize = COR_ALGO_PM_SLR_CUSTOM + 1; // Get the actual size of the enum
   PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;;
   
   // Loop through enum values
   for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
     if (algorithm == PM_CORRECTION_ALGORITHM_NAMES[enumVal]) {
       result = static_cast<PMCorrectionAlgorithm>(enumVal);
+    }
+  }
+
+  // If string not match from enum, check if correctionAlgorithm is one of the PM batch corrections 
+  if (result == COR_ALGO_PM_UNKNOWN) {
+    // Check the substring "slr_PMS5003_xxxxxxxx"
+    if (algorithm.substring(0, 11) == "slr_PMS5003") {
+      // If it is, then its a custom correction
+      result = COR_ALGO_PM_SLR_CUSTOM;
     }
   }
 
@@ -145,29 +149,27 @@ TempHumCorrectionAlgorithm Configuration::matchTempHumAlgorithm(String algorithm
 
 bool Configuration::updatePmCorrection(JSONVar &json) {
   if (!json.hasOwnProperty("corrections")) {
-    Serial.println("corrections not found");
+    logInfo("corrections not found");
     return false;
   }
 
   JSONVar corrections = json["corrections"];
   if (!corrections.hasOwnProperty("pm02")) {
-    Serial.println("pm02 not found");
+    logWarning("pm02 not found");
     return false;
   }
 
   JSONVar pm02 = corrections["pm02"];
   if (!pm02.hasOwnProperty("correctionAlgorithm")) {
-    Serial.println("correctionAlgorithm not found");
+    logWarning("pm02 correctionAlgorithm not found");
     return false;
   }
-
-  // TODO: Need to have data type check, with error message response if invalid 
 
   // Check algorithm
   String algorithm = pm02["correctionAlgorithm"];
   PMCorrectionAlgorithm algo = matchPmAlgorithm(algorithm);
   if (algo == COR_ALGO_PM_UNKNOWN) {
-    logInfo("Unknown algorithm");
+    logWarning("Unknown algorithm");
     return false;
   }
   logInfo("Correction algorithm: " + algorithm);
@@ -191,7 +193,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // Check if pm02 has slr object
   if (!pm02.hasOwnProperty("slr")) {
-    Serial.println("slr not found");
+    logWarning("slr not found");
     return false;
   }
 
@@ -200,7 +202,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
   // Validate required slr properties exist
   if (!slr.hasOwnProperty("intercept") || !slr.hasOwnProperty("scalingFactor") ||
       !slr.hasOwnProperty("useEpa2021")) {
-    Serial.println("Missing required slr properties");
+    logWarning("Missing required slr properties");
     return false;
   }
 
