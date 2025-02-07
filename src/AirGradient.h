@@ -15,7 +15,7 @@
 #include "Main/utils.h"
 
 #ifndef GIT_VERSION
-#define GIT_VERSION "3.1.21-snap"
+#define GIT_VERSION "3.2.0-snap"
 #endif
 
 #ifndef ESP8266
