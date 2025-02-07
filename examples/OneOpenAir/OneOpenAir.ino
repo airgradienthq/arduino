@@ -908,6 +908,11 @@ static void configurationUpdateSchedule(void) {
     return;
   }
 
+  if (wifiConnector.isConnected() == false) {
+    Serial.println(" WiFi not connected, skipping fetch configuration from AG server");
+    return;
+  }
+
   if (apiClient.fetchServerConfiguration()) {
     configUpdateHandle();
   }
@@ -1008,6 +1013,7 @@ static void updateDisplayAndLedBar(void) {
   if (wifiConnector.isConnected() == false) {
     stateMachine.displayHandle(AgStateMachineWiFiLost);
     stateMachine.handleLeds(AgStateMachineWiFiLost);
+    return;
   }
 
   if (configuration.isCloudConnectionDisabled()) {
