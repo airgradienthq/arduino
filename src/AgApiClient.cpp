@@ -34,17 +34,6 @@ void AgApiClient::begin(void) {
  * @return false Failure
  */
 bool AgApiClient::fetchServerConfiguration(void) {
-  if (config.getConfigurationControl() ==
-          ConfigurationControl::ConfigurationControlLocal ||
-      config.isOfflineMode()) {
-    logWarning("Ignore fetch server configuration");
-
-    // Clear server configuration failed flag, cause it's ignore but not
-    // really failed
-    getConfigFailed = false;
-    return false;
-  }
-
   String uri = apiRoot + "/sensors/airgradient:" +
                ag->deviceId() + "/one/config";
 
@@ -58,7 +47,8 @@ bool AgApiClient::fetchServerConfiguration(void) {
   }
 #else
   HTTPClient client;
-  client.setTimeout(timeoutMs);
+  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server 
+  client.setTimeout(timeoutMs); // Timeout when waiting for response from AG server
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
     if (client.begin(uri) == false) {
@@ -114,15 +104,6 @@ bool AgApiClient::fetchServerConfiguration(void) {
  * @return false Failure
  */
 bool AgApiClient::postToServer(String data) {
-  if (config.isPostDataToAirGradient() == false) {
-    logWarning("Ignore post data to server");
-    return true;
-  }
-
-  if (WiFi.isConnected() == false) {
-    return false;
-  }
-
   String uri = apiRoot + "/sensors/airgradient:" + ag->deviceId() + "/measures";
 #ifdef ESP8266
   HTTPClient client;
@@ -133,7 +114,8 @@ bool AgApiClient::postToServer(String data) {
   }
 #else
   HTTPClient client;
-  client.setTimeout(timeoutMs);
+  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server 
+  client.setTimeout(timeoutMs); // Timeout when waiting for response from AG server
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
     if (client.begin(uri) == false) {
@@ -173,7 +155,12 @@ bool AgApiClient::postToServer(String data) {
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::isFetchConfigureFailed(void) { return getConfigFailed; }
+bool AgApiClient::isFetchConfigurationFailed(void) { return getConfigFailed; }
+
+/**
+ * @brief Reset status of get configuration from AirGradient cloud
+ */
+void AgApiClient::resetFetchConfigurationStatus(void) { getConfigFailed = false; }
 
 /**
  * @brief Get failed status when post data to AirGradient cloud

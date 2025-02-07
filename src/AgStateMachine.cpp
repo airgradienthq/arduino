@@ -174,7 +174,7 @@ int StateMachine::pm25handleLeds(void) {
 
   int pm25Value = round(value.getAverage(Measurements::PM25));
   if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-    pm25Value = round(value.getCorrectedPM25(*ag, config, true));
+    pm25Value = round(value.getCorrectedPM25(true));
   }
 
   if (pm25Value <= 5) {

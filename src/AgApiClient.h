@@ -31,7 +31,7 @@ private:
   bool getConfigFailed;
   bool postToServerFailed;
   bool notAvailableOnDashboard = false; // Device not setup on Airgradient cloud dashboard.
-  uint16_t timeoutMs = 10000;           // Default set to 10s
+  uint16_t timeoutMs = 15000;           // Default set to 15s
 
 public:
   AgApiClient(Stream &stream, Configuration &config);
@@ -40,7 +40,8 @@ public:
   void begin(void);
   bool fetchServerConfiguration(void);
   bool postToServer(String data);
-  bool isFetchConfigureFailed(void);
+  bool isFetchConfigurationFailed(void);
+  void resetFetchConfigurationStatus(void);
   bool isPostToServerFailed(void);
   bool isNotAvailableOnDashboard(void);
   void setAirGradient(AirGradient *ag);

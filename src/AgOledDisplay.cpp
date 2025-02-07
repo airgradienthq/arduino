@@ -12,7 +12,7 @@
  */
 void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
   /** Temperature */
-  float temp = value.getAverage(Measurements::Temperature);
+  float temp = value.getCorrectedTempHum(Measurements::Temperature, 1);
   if (utils::isValidTemperature(temp)) {
     float t = 0.0f;
     if (config.isTemperatureUnitInF()) {
@@ -44,7 +44,7 @@ void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
   DISP()->drawUTF8(1, 10, buf);
 
   /** Show humidity */
-  int rhum = round(value.getAverage(Measurements::Humidity));
+  int rhum = round(value.getCorrectedTempHum(Measurements::Humidity, 1));
   if (utils::isValidHumidity(rhum)) {
     snprintf(buf, buf_size, "%d%%", rhum);
   } else {
@@ -316,7 +316,7 @@ void OledDisplay::showDashboard(const char *status) {
       int pm25 = round(value.getAverage(Measurements::PM25));
       if (utils::isValidPm(pm25)) {
         if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-          pm25 = round(value.getCorrectedPM25(*ag, config, true));
+          pm25 = round(value.getCorrectedPM25(true));
         }
         if (config.isPmStandardInUSAQI()) {
           sprintf(strBuf, "%d", ag->pms5003.convertPm25ToUsAqi(pm25));
@@ -377,7 +377,7 @@ void OledDisplay::showDashboard(const char *status) {
     /** Set PM */
     int pm25 = round(value.getAverage(Measurements::PM25));
     if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
-      pm25 = round(value.getCorrectedPM25(*ag, config, true));
+      pm25 = round(value.getCorrectedPM25(true));
     }
 
     ag->display.setCursor(0, 12);
@@ -389,7 +389,7 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setText(strBuf);
 
     /** Set temperature and humidity */
-    float temp = value.getAverage(Measurements::Temperature);
+    float temp = value.getCorrectedTempHum(Measurements::Temperature, 1);
     if (utils::isValidTemperature(temp)) {
       if (config.isTemperatureUnitInF()) {
         snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", utils::degreeC_To_F(temp));
@@ -407,7 +407,7 @@ void OledDisplay::showDashboard(const char *status) {
     ag->display.setCursor(0, 24);
     ag->display.setText(strBuf);
 
-    int rhum = round(value.getAverage(Measurements::Humidity));
+    int rhum = round(value.getCorrectedTempHum(Measurements::Humidity, 1));
     if (utils::isValidHumidity(rhum)) {
       snprintf(strBuf, sizeof(strBuf), "H:%d %%", rhum);
     } else {
