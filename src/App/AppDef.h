@@ -95,15 +95,10 @@ enum ConfigurationControl {
 };
 
 enum PMCorrectionAlgorithm {
-  Unknown, // Unknown algorithm
-  None,    // No PM correction
-  EPA_2021,
-  SLR_PMS5003_20220802,
-  SLR_PMS5003_20220803,
-  SLR_PMS5003_20220824,
-  SLR_PMS5003_20231030,
-  SLR_PMS5003_20231218,
-  SLR_PMS5003_20240104,
+  COR_ALGO_PM_UNKNOWN, // Unknown algorithm
+  COR_ALGO_PM_NONE,    // No PM correction
+  COR_ALGO_PM_EPA_2021,
+  COR_ALGO_PM_SLR_CUSTOM,
 };
 
 // Don't change the order of the enum

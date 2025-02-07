@@ -144,9 +144,10 @@ public:
    *
    * @param useAvg Use moving average value if true, otherwise use latest value
    * @param ch MeasurementType channel
+   * @param forceCorrection force using correction even though config correction is not applied, default to EPA
    * @return float Corrected PM2.5 value
    */
-  float getCorrectedPM25(bool useAvg = false, int ch = 1);
+  float getCorrectedPM25(bool useAvg = false, int ch = 1, bool forceCorrection = false);
 
   /**
    * build json payload for every measurements

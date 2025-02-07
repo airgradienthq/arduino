@@ -639,7 +639,7 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
   return corrected;
 }
 
-float Measurements::getCorrectedPM25(bool useAvg, int ch) {
+float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) {
   float pm25;
   float corrected;
   float humidity;
@@ -658,12 +658,18 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch) {
 
   Configuration::PMCorrection pmCorrection = config.getPMCorrection();
   switch (pmCorrection.algorithm) {
-  case PMCorrectionAlgorithm::Unknown:
-  case PMCorrectionAlgorithm::None:
-    // If correction is Unknown, then default is None
-    corrected = pm25;
+  case PMCorrectionAlgorithm::COR_ALGO_PM_UNKNOWN:
+  case PMCorrectionAlgorithm::COR_ALGO_PM_NONE: {
+    // If correction is Unknown or None, then default is None
+    // Unless forceCorrection enabled
+    if (forceCorrection) {
+      corrected = ag->pms5003.compensate(pm25, humidity);
+    } else {
+      corrected = pm25;
+    }
     break;
-  case PMCorrectionAlgorithm::EPA_2021:
+  }
+  case PMCorrectionAlgorithm::COR_ALGO_PM_EPA_2021:
     corrected = ag->pms5003.compensate(pm25, humidity);
     break;
   default: {
@@ -780,8 +786,8 @@ JSONVar Measurements::buildIndoor(bool localServer) {
     // buildPMS params:
     /// PMS channel 1 (indoor only have 1 PMS; hence allCh false)
     /// Not include temperature and humidity from PMS sensor
-    /// Not include compensated calculation
-    indoor = buildPMS(1, false, false, false);
+    /// Include compensated calculation
+    indoor = buildPMS(1, false, false, true);
     if (!localServer) {
       // Indoor is using PMS5003
       indoor[json_prop_pmFirmware] = this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
@@ -805,15 +811,6 @@ JSONVar Measurements::buildIndoor(bool localServer) {
     }
   }
 
-  // Add pm25 compensated value only if PM2.5 and humidity value is valid
-  if (config.hasSensorPMS1 && utils::isValidPm(_pm_25[0].update.avg)) {
-    if (config.hasSensorSHT && utils::isValidHumidity(_humidity[0].update.avg)) {
-      // Correction using moving average value
-      float tmp = getCorrectedPM25(true);
-      indoor[json_prop_pm25Compensated] = ag->round2(tmp);
-    }
-  }
-
   return indoor;
 }
 
@@ -826,58 +823,58 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
     validateChannel(ch);
 
     // Follow array indexing just for get address of the value type
-    ch = ch - 1;
+    int chIndex = ch - 1;
 
-    if (utils::isValidPm(_pm_01[ch].update.avg)) {
-      pms[json_prop_pm01Ae] = ag->round2(_pm_01[ch].update.avg);
+    if (utils::isValidPm(_pm_01[chIndex].update.avg)) {
+      pms[json_prop_pm01Ae] = ag->round2(_pm_01[chIndex].update.avg);
     }
-    if (utils::isValidPm(_pm_25[ch].update.avg)) {
-      pms[json_prop_pm25Ae] = ag->round2(_pm_25[ch].update.avg);
+    if (utils::isValidPm(_pm_25[chIndex].update.avg)) {
+      pms[json_prop_pm25Ae] = ag->round2(_pm_25[chIndex].update.avg);
     }
-    if (utils::isValidPm(_pm_10[ch].update.avg)) {
-      pms[json_prop_pm10Ae] = ag->round2(_pm_10[ch].update.avg);
+    if (utils::isValidPm(_pm_10[chIndex].update.avg)) {
+      pms[json_prop_pm10Ae] = ag->round2(_pm_10[chIndex].update.avg);
     }
-    if (utils::isValidPm(_pm_01_sp[ch].update.avg)) {
-      pms[json_prop_pm01Sp] = ag->round2(_pm_01_sp[ch].update.avg);
+    if (utils::isValidPm(_pm_01_sp[chIndex].update.avg)) {
+      pms[json_prop_pm01Sp] = ag->round2(_pm_01_sp[chIndex].update.avg);
     }
-    if (utils::isValidPm(_pm_25_sp[ch].update.avg)) {
-      pms[json_prop_pm25Sp] = ag->round2(_pm_25_sp[ch].update.avg);
+    if (utils::isValidPm(_pm_25_sp[chIndex].update.avg)) {
+      pms[json_prop_pm25Sp] = ag->round2(_pm_25_sp[chIndex].update.avg);
     }
-    if (utils::isValidPm(_pm_10_sp[ch].update.avg)) {
-      pms[json_prop_pm10Sp] = ag->round2(_pm_10_sp[ch].update.avg);
+    if (utils::isValidPm(_pm_10_sp[chIndex].update.avg)) {
+      pms[json_prop_pm10Sp] = ag->round2(_pm_10_sp[chIndex].update.avg);
     }
-    if (utils::isValidPm03Count(_pm_03_pc[ch].update.avg)) {
-      pms[json_prop_pm03Count] = ag->round2(_pm_03_pc[ch].update.avg);
+    if (utils::isValidPm03Count(_pm_03_pc[chIndex].update.avg)) {
+      pms[json_prop_pm03Count] = ag->round2(_pm_03_pc[chIndex].update.avg);
     }
-    if (utils::isValidPm03Count(_pm_05_pc[ch].update.avg)) {
-      pms[json_prop_pm05Count] = ag->round2(_pm_05_pc[ch].update.avg);
+    if (utils::isValidPm03Count(_pm_05_pc[chIndex].update.avg)) {
+      pms[json_prop_pm05Count] = ag->round2(_pm_05_pc[chIndex].update.avg);
     }
-    if (utils::isValidPm03Count(_pm_01_pc[ch].update.avg)) {
-      pms[json_prop_pm1Count] = ag->round2(_pm_01_pc[ch].update.avg);
+    if (utils::isValidPm03Count(_pm_01_pc[chIndex].update.avg)) {
+      pms[json_prop_pm1Count] = ag->round2(_pm_01_pc[chIndex].update.avg);
     }
-    if (utils::isValidPm03Count(_pm_25_pc[ch].update.avg)) {
-      pms[json_prop_pm25Count] = ag->round2(_pm_25_pc[ch].update.avg);
+    if (utils::isValidPm03Count(_pm_25_pc[chIndex].update.avg)) {
+      pms[json_prop_pm25Count] = ag->round2(_pm_25_pc[chIndex].update.avg);
     }
-    if (_pm_5_pc[ch].listValues.empty() == false) {
+    if (_pm_5_pc[chIndex].listValues.empty() == false) {
       // Only include pm5.0 count when values available on its list
       // If not, means no pm5_pc available from the sensor
-      if (utils::isValidPm03Count(_pm_5_pc[ch].update.avg)) {
-        pms[json_prop_pm5Count] = ag->round2(_pm_5_pc[ch].update.avg);
+      if (utils::isValidPm03Count(_pm_5_pc[chIndex].update.avg)) {
+        pms[json_prop_pm5Count] = ag->round2(_pm_5_pc[chIndex].update.avg);
       }
     }
-    if (_pm_10_pc[ch].listValues.empty() == false) {
+    if (_pm_10_pc[chIndex].listValues.empty() == false) {
       // Only include pm10 count when values available on its list
       // If not, means no pm10_pc available from the sensor
-      if (utils::isValidPm03Count(_pm_10_pc[ch].update.avg)) {
-        pms[json_prop_pm10Count] = ag->round2(_pm_10_pc[ch].update.avg);
+      if (utils::isValidPm03Count(_pm_10_pc[chIndex].update.avg)) {
+        pms[json_prop_pm10Count] = ag->round2(_pm_10_pc[chIndex].update.avg);
       }
     }
 
     if (withTempHum) {
       float _vc;
       // Set temperature if valid
-      if (utils::isValidTemperature(_temperature[ch].update.avg)) {
-        pms[json_prop_temp] = ag->round2(_temperature[ch].update.avg);
+      if (utils::isValidTemperature(_temperature[chIndex].update.avg)) {
+        pms[json_prop_temp] = ag->round2(_temperature[chIndex].update.avg);
         // Compensate temperature when flag is set
         if (compensate) {
           _vc = getCorrectedTempHum(Temperature, ch, true);
@@ -887,8 +884,8 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
         }
       }
       // Set humidity if valid
-      if (utils::isValidHumidity(_humidity[ch].update.avg)) {
-        pms[json_prop_rhum] = ag->round2(_humidity[ch].update.avg);
+      if (utils::isValidHumidity(_humidity[chIndex].update.avg)) {
+        pms[json_prop_rhum] = ag->round2(_humidity[chIndex].update.avg);
         // Compensate relative humidity when flag is set
         if (compensate) {
           _vc = getCorrectedTempHum(Humidity, ch, true);
@@ -898,17 +895,14 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
         }
       }
 
-      // Add pm25 compensated value only if PM2.5 and humidity value is valid
-      if (compensate) {
-        if (utils::isValidPm(_pm_25[ch].update.avg) &&
-            utils::isValidHumidity(_humidity[ch].update.avg)) {
-          // Note: the pms5003t object is not matter either for channel 1 or 2, compensate points to
-          // the same base function
-          float pm25 = ag->pms5003t_1.compensate(_pm_25[ch].update.avg, _humidity[ch].update.avg);
-          if (utils::isValidPm(pm25)) {
-            pms[json_prop_pm25Compensated] = ag->round2(pm25);
-          }
-        }
+    }
+
+    // Add pm25 compensated value only if PM2.5 and humidity value is valid
+    if (compensate) {
+      if (utils::isValidPm(_pm_25[chIndex].update.avg) &&
+          utils::isValidHumidity(_humidity[chIndex].update.avg)) {
+        float pm25 = getCorrectedPM25(true, ch, true);
+        pms[json_prop_pm25Compensated] = ag->round2(pm25);
       }
     }
 
@@ -1156,12 +1150,12 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
       float pm25_comp2 = utils::getInvalidPmValue();
       if (utils::isValidPm(_pm_25[0].update.avg) &&
           utils::isValidHumidity(_humidity[0].update.avg)) {
-        pm25_comp1 = ag->pms5003t_1.compensate(_pm_25[0].update.avg, _humidity[0].update.avg);
+        pm25_comp1 = getCorrectedPM25(true, 1, true);
         pms["channels"]["1"][json_prop_pm25Compensated] = ag->round2(pm25_comp1);
       }
       if (utils::isValidPm(_pm_25[1].update.avg) &&
           utils::isValidHumidity(_humidity[1].update.avg)) {
-        pm25_comp2 = ag->pms5003t_2.compensate(_pm_25[1].update.avg, _humidity[1].update.avg);
+        pm25_comp2 = getCorrectedPM25(true, 2, true);
         pms["channels"]["2"][json_prop_pm25Compensated] = ag->round2(pm25_comp2);
       }
 
