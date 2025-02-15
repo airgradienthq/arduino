@@ -22,7 +22,7 @@ jobs:
             core_url: "https://arduino.esp8266.com/stable/package_esp8266com_index.json"
           - fqbn: "esp32:esp32:esp32c3"
             core: "esp32:esp32"
-            core_version: "2.0.11"
+            core_version: "2.0.17"
             core_url: "https://espressif.github.io/arduino-esp32/package_esp32_index.json"
             board_options: "JTAGAdapter=default,CDCOnBoot=cdc,PartitionScheme=min_spiffs,CPUFreq=160,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=verbose,EraseFlash=none"
         exclude:
@@ -34,7 +34,7 @@ jobs:
             fqbn: "esp32:esp32:esp32c3"
           - example: "OneOpenAir"
             fqbn: "esp8266:esp8266:d1_mini"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: arduino/compile-sketches@v1.1.2
