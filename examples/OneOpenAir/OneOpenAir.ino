@@ -14,17 +14,8 @@ https://www.airgradient.com/documentation/one-v9/ Build Instructions:
 AirGradient Open Air:
 https://www.airgradient.com/documentation/open-air-pst-kit-1-3/
 
-Please make sure you have esp32 board manager installed. Tested with
-version 2.0.11.
-
-Important flashing settings:
-- Set board to "ESP32C3 Dev Module"
-- Enable "USB CDC On Boot"
-- Flash frequency "80Mhz"
-- Flash mode "QIO"
-- Flash size "4MB"
-- Partition scheme "Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)"
-- JTAG adapter "Disabled"
+Compile Instructions:
+https://github.com/airgradienthq/arduino/blob/master/docs/howto-compile.md
 
 Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
 can be set through the AirGradient dashboard.

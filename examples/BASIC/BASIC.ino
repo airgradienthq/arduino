@@ -12,10 +12,8 @@ Outdoor Monitor: https://www.airgradient.com/outdoor/
 Build Instructions:
 https://www.airgradient.com/documentation/diy-v4/
 
-Please make sure you have esp8266 board manager installed. Tested with
-version 3.1.2.
-
-Set board to "LOLIN(WEMOS) D1 R2 & mini"
+Compile Instructions:
+https://github.com/airgradienthq/arduino/blob/master/docs/howto-compile.md
 
 Configuration parameters, e.g. Celsius / Fahrenheit or PM unit (US AQI vs ug/m3)
 can be set through the AirGradient dashboard.
