@@ -4,7 +4,7 @@
 
 Arduino IDE version 2.x
 
-## Steps for ESP32C3 based board (ONE and OpenAir Model)
+## Steps for ESP32C3 based board (ONE and Open Air Model)
 
 1. Install esp32 board on board manager with version **2.0.17**
 
@@ -14,8 +14,7 @@ Arduino IDE version 2.x
 
 ![Aigradient Library](images/ag-lib.png)
 
-3. Plug AirGradient monitor
-4. On tools tab, follow settings below
+3. On tools tab, follow settings below
 
 ```
 Board ➝ ESP32C3 Dev Module
@@ -33,7 +32,7 @@ Upload Speed ➝ 921600
 
 ![Compile Settings](images/settings.png)
 
-5. Compile
+4. Compile
 
 ## Steps for ESP8266 based board (DIY model)
 
@@ -42,9 +41,8 @@ Upload Speed ➝ 921600
 
 ![board manager](images/esp8266-board.png)
 
-3. Plug AirGradient monitor
-4. Set board to `LOLIN(WEMOS) D1 R2 & mini`, let other settings to default
-5. Compile
+3. Set board to `LOLIN(WEMOS) D1 R2 & mini`, let other settings to default
+4. Compile
 
 ## Possible Issues
 
