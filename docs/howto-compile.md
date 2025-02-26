@@ -47,12 +47,16 @@ Upload Speed ➝ 921600
 
 ![board manager](images/esp8266-board.png)
 
-3. On tools tab, set board to `LOLIN(WEMOS) D1 R2 & mini`, and let other settings to default
+3. Install AirGradient library on library manager using the latest version (Tools ➝ Manage Libraries... ➝ search for `"airgradient"`) 
+
+![Aigradient Library](images/ag-lib.png)
+
+4. On tools tab, set board to `LOLIN(WEMOS) D1 R2 & mini`, and let other settings to default
 
 ![settings esp8266](images/settings-esp8266.png)
 
-4. Open sketch to compile (File ➝ Examples ➝ AirGradient Air Quality Sensor ➝ `<Model Option>`). Depends on the DIY model, either `BASIC`, `DiyProIndoorV3_3` and `DiyProIndoorV4_2` 
-5. Compile
+5. Open sketch to compile (File ➝ Examples ➝ AirGradient Air Quality Sensor ➝ `<Model Option>`). Depends on the DIY model, either `BASIC`, `DiyProIndoorV3_3` and `DiyProIndoorV4_2` 
+6. Compile
 
 ![compiled esp8266](images/compiled-esp8266.png)
 
