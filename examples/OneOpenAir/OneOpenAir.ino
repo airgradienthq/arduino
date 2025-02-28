@@ -872,19 +872,23 @@ void initializeNetwork() {
   checkForUpdateSchedule.update();
 #endif
 
-  apiClient.fetchServerConfiguration();
-  configSchedule.update();
-  if (apiClient.isFetchConfigurationFailed()) {
-    if (ag->isOne()) {
-      if (apiClient.isNotAvailableOnDashboard()) {
-        stateMachine.displaySetAddToDashBoard();
-        stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-      } else {
-        stateMachine.displayClearAddToDashBoard();
+  if (! configuration.isCloudConnectionDisabled()) {
+    apiClient.fetchServerConfiguration();
+    configSchedule.update();
+    if (apiClient.isFetchConfigurationFailed()) {
+      if (ag->isOne()) {
+        if (apiClient.isNotAvailableOnDashboard()) {
+          stateMachine.displaySetAddToDashBoard();
+          stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        } else {
+          stateMachine.displayClearAddToDashBoard();
+        }
       }
+      stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+      delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
+    } else {
+      ledBarEnabledUpdate();
     }
-    stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   } else {
     ledBarEnabledUpdate();
   }
