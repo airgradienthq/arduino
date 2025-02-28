@@ -62,10 +62,6 @@ Upload Speed ➝ 921600
 
 ![compiled esp8266](images/compiled-esp8266.png)
 
-**Notes**
-
-To modify codes from examples
-
 ## Possible Issues
 
 ### Linux (Debian)
