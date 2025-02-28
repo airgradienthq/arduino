@@ -100,6 +100,3 @@ There are 2 environment options to compile this project, PlatformIO and ArduinoI
 
 - For PlatformIO, it should work out of the box
 - For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for Windows and Mac, and `~/Arduino/Libraries` for Linux
-
-
-
