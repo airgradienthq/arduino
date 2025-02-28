@@ -4,6 +4,8 @@
 
 Arduino IDE version 2.x ([download](https://www.arduino.cc/en/software))
 
+> For AirGradient model ONE and Open Air, the codebase **WILL NOT** work on the latest major version of arduino-esp32 which is *3.x* . This related to when installing "esp32 by Espressif Systems" in board manager. Instead use version **2.0.17**, please follow the first step carefully.
+
 ## Steps for ESP32C3 based board (ONE and Open Air Model)
 
 1. Install "esp32 by Espressif Systems" in board manager with version **2.0.17** (Tools ➝ Board ➝ Boards Manager ➝ search for `"espressif"`)
@@ -60,12 +62,33 @@ Upload Speed ➝ 921600
 
 ![compiled esp8266](images/compiled-esp8266.png)
 
+**Notes**
+
+To modify codes from examples
+
 ## Possible Issues
 
 ### Linux (Debian)
 
 ModuleNotFoundError: No module named ‘serial’
 
+![Linux Failed](images/linux-failed.png)
+
 Make sure python pyserial module installed globally in the environment by executing: 
 
-`$ pip install pyserial`
+`$ sudo apt install -y python3-pyserial`
+
+or 
+
+`$ pip install pyserial` 
+
+Choose based on how python installed on your machine. But most user, using `apt` is better.
+
+## How to contribute
+
+Please follow github [contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) tutorial to contribute to this project.
+
+There are 2 environment options to compile this project, PlatformIO and ArduinoIDE.
+
+- For PlatformIO, it should work out of the box
+- For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for windows and mac, and `~/Arduino/Libraries` for linux
