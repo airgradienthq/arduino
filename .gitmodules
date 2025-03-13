@@ -1,0 +1,3 @@
+[submodule "src/Libraries/airgradient-client"]
+	path = src/Libraries/airgradient-client
+	url = git@github.com:airgradienthq/airgradient-client.git
