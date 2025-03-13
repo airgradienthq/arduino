@@ -45,6 +45,11 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include "Libraries/airgradient-client/src/agSerial.h"
+#include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
+#include "Libraries/airgradient-client/src/airgradientCellularClient.h"
+#include "Libraries/airgradient-client/src/airgradientWifiClient.h"
+
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
 #define SERVER_CONFIG_SYNC_INTERVAL 60000    /** ms */
@@ -63,6 +68,11 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
 
+/** Power pin */
+#define GPIO_POWER_MODULE_PIN  5
+#define GPIO_EXPANSION_CARD_POWER 4
+#define GPIO_IIC_RESET 3
+
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
@@ -80,6 +90,10 @@ static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 
+static AgSerial *agSerial;
+static CellularModule *cell;
+static AirgradientClient *agClient;
+
 static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 
@@ -87,7 +101,7 @@ static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
 static void boardInit(void);
-static void initializeNetwork(void);
+static void initializeNetwork(bool useWifi);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
 static void updateDisplayAndLedBar(void);
@@ -153,24 +167,51 @@ void setup() {
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
   wifiConnector.setAirGradient(ag);
-  apiClient.setAirGradient(ag);
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
   measurements.setAirGradient(ag);
-
-  /** Example set custom API root URL */
-  // apiClient.setApiRoot("https://example.custom.api");
 
   /** Init sensor */
   boardInit();
   setMeasurementMaxPeriod();
 
   // Comment below line to disable debug measurement readings
-  measurements.setDebug(true);
+  measurements.setDebug(false);
 
-  /** Connecting wifi */
-  bool connectToWifi = false;
-  if (ag->isOne()) {
+  // Check if cellular module available
+  bool cellularFound = false;
+  agSerial = new AgSerial(Wire);
+  agSerial->init(GPIO_IIC_RESET);
+  if (agSerial->open()) {
+    Serial.println("Cellular module found");
+    // Enable cellular load switch
+    pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
+    digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
+    // Initialize cellular module and use cellular as agClient 
+    cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    agClient = new AirgradientCellularClient(cell);
+    cellularFound = true;
+
+    //! NOTE: TMP
+    configuration.setOfflineModeWithoutSave(false);
+  } else {
+    Serial.println("Cellular module not available, using wifi");
+    delete agSerial;
+    agSerial = nullptr;
+    // Use wifi as agClient
+    agClient = new AirgradientWifiClient;
+    cellularFound = false;
+  }
+
+  if (!agClient->begin()) {
+    // TODO: Need to do retry when agclient already in other task 
+    Serial.println("Failed start Airgradient Client FAILED");
+    assert(0);
+  }
+
+  // bool connectToWifi = false;
+  bool connectToNetwork = true;
+  if (ag->isOne()) { // Offline mode only available for indoor monitor
     /** Show message confirm offline mode, should me perform if LED bar button
      * test pressed */
     if (ledBarButtonTest == false) {
@@ -193,21 +234,23 @@ void setup() {
           break;
         }
       }
-      connectToWifi = !configuration.isOfflineMode();
+      connectToNetwork = !configuration.isOfflineMode();
     } else {
       configuration.setOfflineModeWithoutSave(true);
     }
-  } else {
-    connectToWifi = true;
   }
+  // else {
+  //   connectToWifi = true;
+  // }
 
   // Initialize networking configuration
-  if (connectToWifi) {
-    initializeNetwork();
+  if (connectToNetwork) {
+    bool useWifi = !cellularFound;
+    initializeNetwork(useWifi);
   }
 
   /** Set offline mode without saving, cause wifi is not configured */
-  if (wifiConnector.hasConfigurated() == false) {
+  if (wifiConnector.hasConfigurated() == false && !cellularFound) {
     Serial.println("Set offline mode cause wifi is not configurated");
     configuration.setOfflineModeWithoutSave(true);
   }
@@ -274,7 +317,7 @@ void loop() {
   configUpdateHandle();
 
   /** Firmware check for update handle */
-  checkForUpdateSchedule.run();
+  // checkForUpdateSchedule.run(); //! Temporary until ota cellular
 }
 
 static void co2Update(void) {
@@ -464,10 +507,10 @@ static void checkForFirmwareUpdate(void) {
     return;
   }
   
-  if (!wifiConnector.isConnected()) {
-    Serial.println("wifi not connected, ignored");
-    return;
-  }
+  // if (!wifiConnector.isConnected()) {
+  //   Serial.println("wifi not connected, ignored");
+  //   return;
+  // }
 
   Serial.println("perform");
   otaHandler.setHandlerCallback(otaHandlerCallback);
@@ -593,7 +636,13 @@ static void sendDataToAg() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  if (apiClient.sendPing(wifiConnector.RSSI(), measurements.bootCount())) {
+  
+  // Build payload to check connection to airgradient server
+  JSONVar root;
+  root["wifi"] = wifiConnector.RSSI();
+  root["boot"] = measurements.bootCount();
+  std::string payload = JSON.stringify(root).c_str();
+  if (agClient->httpPostMeasures(ag->getDeviceId(), payload)) {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
@@ -828,38 +877,37 @@ static void failedHandler(String msg) {
   }
 }
 
-void initializeNetwork() {
-  if (!wifiConnector.connect()) {
-    Serial.println("Cannot initiate wifi connection");
-    return;
-  }
-
-  if (!wifiConnector.isConnected()) {
-    Serial.println("Failed connect to WiFi");
-    if (wifiConnector.isConfigurePorttalTimeout()) {
-      oledDisplay.showRebooting();
-      delay(2500);
-      oledDisplay.setText("", "", "");
-      ESP.restart();
+void initializeNetwork(bool useWifi) {
+  if (useWifi) {
+    if (!wifiConnector.connect()) {
+      Serial.println("Cannot initiate wifi connection");
+      return;
     }
-
-    // Directly return because the rest of the function applied if wifi is connect only
-    return;
+  
+    if (!wifiConnector.isConnected()) {
+      Serial.println("Failed connect to WiFi");
+      if (wifiConnector.isConfigurePorttalTimeout()) {
+        oledDisplay.showRebooting();
+        delay(2500);
+        oledDisplay.setText("", "", "");
+        ESP.restart();
+      }
+  
+      // Directly return because the rest of the function applied if wifi is connect only
+      return;
+    }
+  
+    // Initiate local network configuration
+    mdnsInit();
+    localServer.begin();
+    // Apply mqtt connection if configured
+    initMqtt();
+  
+    // Ignore the rest if cloud connection to AirGradient is disabled
+    if (configuration.isCloudConnectionDisabled()) {
+      return;
+    }
   }
-
-  // Initiate local network configuration
-  mdnsInit();
-  localServer.begin();
-  // Apply mqtt connection if configured
-  initMqtt();
-
-  // Ignore the rest if cloud connection to AirGradient is disabled
-  if (configuration.isCloudConnectionDisabled()) {
-    return;
-  }
-
-  // Initialize api client
-  apiClient.begin();
 
   // Send data for the first time to AG server at boot 
   sendDataToAg();
@@ -868,15 +916,17 @@ void initializeNetwork() {
 #ifdef ESP8266
 // ota not supported
 #else
-  checkForFirmwareUpdate();
-  checkForUpdateSchedule.update();
+  // checkForFirmwareUpdate(); //! Temporary until ota cellular
+  // checkForUpdateSchedule.update();
 #endif
 
-  apiClient.fetchServerConfiguration();
+  std::string config = agClient->httpFetchConfig(ag->getDeviceId());
   configSchedule.update();
-  if (apiClient.isFetchConfigurationFailed()) {
+  // Check if fetch configuration failed or fetch succes but parsing failed
+  if (agClient->isLastFetchConfigSucceed() == false ||
+      configuration.parse(config.c_str(), false) == false) {
     if (ag->isOne()) {
-      if (apiClient.isNotAvailableOnDashboard()) {
+      if (agClient->isRegisteredOnAgServer() == false) {
         stateMachine.displaySetAddToDashBoard();
         stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
       } else {
@@ -885,7 +935,8 @@ void initializeNetwork() {
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-  } else {
+  }
+  else {
     ledBarEnabledUpdate();
   }
 }
@@ -895,16 +946,17 @@ static void configurationUpdateSchedule(void) {
       configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
     Serial.println("Ignore fetch server configuration. Either mode is offline or cloud connection "
                    "disabled or configurationControl set to local");
-    apiClient.resetFetchConfigurationStatus();
+    agClient->resetFetchConfigurationStatus();
     return;
   }
 
-  if (wifiConnector.isConnected() == false) {
-    Serial.println(" WiFi not connected, skipping fetch configuration from AG server");
-    return;
-  }
+  // if (wifiConnector.isConnected() == false) {
+  //   Serial.println(" WiFi not connected, skipping fetch configuration from AG server");
+  //   return;
+  // }
 
-  if (apiClient.fetchServerConfiguration()) {
+  std::string config = agClient->httpFetchConfig(ag->getDeviceId());
+  if (agClient->isLastFetchConfigSucceed() && configuration.parse(config.c_str(), false)) {
     configUpdateHandle();
   }
 }
@@ -1001,11 +1053,11 @@ static void updateDisplayAndLedBar(void) {
     return;
   }
 
-  if (wifiConnector.isConnected() == false) {
-    stateMachine.displayHandle(AgStateMachineWiFiLost);
-    stateMachine.handleLeds(AgStateMachineWiFiLost);
-    return;
-  }
+  // if (wifiConnector.isConnected() == false) {
+  //   stateMachine.displayHandle(AgStateMachineWiFiLost);
+  //   stateMachine.handleLeds(AgStateMachineWiFiLost);
+  //   return;
+  // }
 
   if (configuration.isCloudConnectionDisabled()) {
     // Ignore API related check since cloud is disabled 
@@ -1015,14 +1067,15 @@ static void updateDisplayAndLedBar(void) {
   }
 
   AgStateMachineState state = AgStateMachineNormal;
-  if (apiClient.isFetchConfigurationFailed()) {
+  if (agClient->isLastFetchConfigSucceed() == false) {
     state = AgStateMachineSensorConfigFailed;
-    if (apiClient.isNotAvailableOnDashboard()) {
+    if (agClient->isRegisteredOnAgServer() == false) {
       stateMachine.displaySetAddToDashBoard();
     } else {
       stateMachine.displayClearAddToDashBoard();
     }
-  } else if (apiClient.isPostToServerFailed() && configuration.isPostDataToAirGradient()) {
+  } else if (agClient->isLastPostMeasureSucceed() == false &&
+             configuration.isPostDataToAirGradient()) {
     state = AgStateMachineServerLost;
   }
 
@@ -1190,13 +1243,14 @@ static void sendDataToServer(void) {
     return;
   }
 
-  if (wifiConnector.isConnected() == false) {
-    Serial.println("WiFi not connected, skipping data transmission to AG server");
-    return;
-  }
+  // if (wifiConnector.isConnected() == false) {
+  //   Serial.println("WiFi not connected, skipping data transmission to AG server");
+  //   return;
+  // }
 
-  String syncData = measurements.toString(false, fwMode, wifiConnector.RSSI());
-  if (apiClient.postToServer(syncData)) {
+  String measures = measurements.toString(false, fwMode, wifiConnector.RSSI());
+  std::string payload = std::string(measures.c_str());
+  if (agClient->httpPostMeasures(ag->getDeviceId(), payload)) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
