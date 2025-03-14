@@ -139,6 +139,11 @@ void setup() {
   Serial.begin(115200);
   delay(100); /** For bester show log */
 
+  // First make sure cellular load switch off before initializing anything
+  pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
+  digitalWrite(GPIO_EXPANSION_CARD_POWER, LOW);
+  delay(1000);
+
   /** Print device ID into log */
   Serial.println("Serial nr: " + ag->deviceId());
 
