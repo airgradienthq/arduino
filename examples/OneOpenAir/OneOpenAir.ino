@@ -31,8 +31,10 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
+#include "AgValue.h"
 #include "AgWiFiConnector.h"
 #include "AirGradient.h"
+#include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
 #include "LocalServer.h"
@@ -49,11 +51,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
 #include "Libraries/airgradient-client/src/airgradientCellularClient.h"
 #include "Libraries/airgradient-client/src/airgradientWifiClient.h"
-
+#include "freertos/projdefs.h"
+ 
 #define LED_BAR_ANIMATION_PERIOD 100         /** ms */
 #define DISP_UPDATE_INTERVAL 2500            /** ms */
-#define SERVER_CONFIG_SYNC_INTERVAL 60000    /** ms */
-#define SERVER_SYNC_INTERVAL 60000           /** ms */
+#define SERVER_CONFIG_SYNC_INTERVAL 3 * 60000 /** ms */
+#define MEASUREMENT_INTERVAL 3 * 60000       /** ms */
+#define TRANSMISSION_INTERVAL 3 * 60000      /** ms */ // FIXME: should be 9 * 60000
 #define MQTT_SYNC_INTERVAL 60000             /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
@@ -89,10 +93,11 @@ static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
 static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
-
 static AgSerial *agSerial;
 static CellularModule *cell;
 static AirgradientClient *agClient;
+
+TaskHandle_t handleNetworkTask = NULL;
 
 static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
@@ -100,10 +105,14 @@ static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
+SemaphoreHandle_t mutexMeasurementCycleQueue;
+static std::vector<Measurements::MeasurementCycle> measurementCycleQueue;
+
 static void boardInit(void);
 static void initializeNetwork(bool useWifi);
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
+static void configUpdateHandle(void); 
 static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
@@ -122,11 +131,14 @@ static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
 static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
+static void newMeasurementCycle();
+static void networkingTask(void *args);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
-AgSchedule agApiPostSchedule(SERVER_SYNC_INTERVAL, sendDataToServer);
+AgSchedule transmissionSchedule(TRANSMISSION_INTERVAL, sendDataToServer);
+AgSchedule measurementSchedule(MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
@@ -139,10 +151,9 @@ void setup() {
   Serial.begin(115200);
   delay(100); /** For bester show log */
 
-  // First make sure cellular load switch off before initializing anything
+  // Enable cullular module power board 
   pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
-  digitalWrite(GPIO_EXPANSION_CARD_POWER, LOW);
-  delay(1000);
+  digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
 
   /** Print device ID into log */
   Serial.println("Serial nr: " + ag->deviceId());
@@ -189,9 +200,6 @@ void setup() {
   agSerial->init(GPIO_IIC_RESET);
   if (agSerial->open()) {
     Serial.println("Cellular module found");
-    // Enable cellular load switch
-    pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
-    digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
     // Initialize cellular module and use cellular as agClient 
     cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
     agClient = new AirgradientCellularClient(cell);
@@ -244,9 +252,6 @@ void setup() {
       configuration.setOfflineModeWithoutSave(true);
     }
   }
-  // else {
-  //   connectToWifi = true;
-  // }
 
   // Initialize networking configuration
   if (connectToNetwork) {
@@ -269,16 +274,29 @@ void setup() {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
 
-  // Reset post schedulers to make sure measurements value already available
-  agApiPostSchedule.update();
+  // Allocate queue memory to avoid always reallocation
+  measurementCycleQueue.reserve(10);
+
+  BaseType_t xReturned =
+      xTaskCreate(networkingTask, "WD", 4096, null, 5, &handleNetworkTask);
+  if (xReturned == pdPASS) {
+    Serial.println("Success create networking task");
+  } else {
+    Serial.println("Failed to create networking task");
+    // TODO: What to do here?
+  }
+
+  // Initialize mutex to access mesurementCycleQueue 
+  mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
 }
 
 void loop() {
-  /** Run schedulers */
+  // Schedule to update display and led
   dispLedSchedule.run();
-  configSchedule.run();
-  agApiPostSchedule.run();
+  // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
+  // Schedule to take new measurement cycle
+  measurementSchedule.run();
 
   if (configuration.hasSensorS8) {
     co2Schedule.run();
@@ -311,9 +329,6 @@ void loop() {
       ag->pms5003t_2.handle();
     }
   }
-
-  /** Check for handle WiFi reconnect */
-  wifiConnector.handle();
 
   /** factory reset handle */
   factoryConfigReset();
@@ -1237,10 +1252,6 @@ static void updatePm(void) {
 }
 
 static void sendDataToServer(void) {
-  /** Increment bootcount when send measurements data is scheduled */
-  int bootCount = measurements.bootCount() + 1;
-  measurements.setBootCount(bootCount);
-
   if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
       !configuration.isPostDataToAirGradient()) {
     Serial.println("Skipping transmission of data to AG server. Either mode is offline or cloud connection is "
@@ -1253,16 +1264,33 @@ static void sendDataToServer(void) {
   //   return;
   // }
 
-  String measures = measurements.toString(false, fwMode, wifiConnector.RSSI());
-  std::string payload = std::string(measures.c_str());
-  if (agClient->httpPostMeasures(ag->getDeviceId(), payload)) {
+  // TODO: Loop through measurementCycleQueue size
+
+  // Aquire queue mutex
+  if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdFALSE) {
+    // Sanity check to just release mutex
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+  }
+  
+  // Get the oldest queue
+  auto mc = measurementCycleQueue.front();
+
+  // Release before actually post measures that might takes too long
+  xSemaphoreGive(mutexMeasurementCycleQueue);
+
+  String payload = measurements.buildMeasurementPayload(mc, fwMode);
+  if (agClient->httpPostMeasures(ag->getDeviceId(), payload.c_str())) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
+
+    // Post success, remove the oldest queue
+    if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdTRUE) {
+      measurementCycleQueue.erase(measurementCycleQueue.begin());
+      xSemaphoreGive(mutexMeasurementCycleQueue);
+    }
   }
 
-  /** Log current free heap size */
-  Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
 static void tempHumUpdate(void) {
@@ -1331,5 +1359,53 @@ void setMeasurementMaxPeriod() {
 
 int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
-  return (SERVER_SYNC_INTERVAL - (SERVER_SYNC_INTERVAL * 0.8)) / updateInterval;
+  return (MEASUREMENT_INTERVAL - (MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
 }
+
+void networkingTask(void *args) {
+  while (1) {
+    // First check if offline mode or disableCloudConnection
+    // If yes, don't continue. Even, don't create the task, but only if offline mode don't create the task
+    // So in configSchedule and transmission schedule only check for if that feature is disabled
+    
+    // Handle reconnection based on mode
+    
+    /// Handle reconnection cellular here
+    /// If failed fetch config or transmission it is an indication that the module might have a problem
+    /// cellular-client or the cell module it self need an inteface for last operation success or not
+    /// For example, httpGet() failed, then there's a state like isLastOperationSuccess
+
+    /// Handle WiFi reconnection when disconnect
+    // wifiConnector.handle();
+    // if (wifiConnector.isConnected() == false) {
+    // // NOTE: If not connect while mode is not offline, skip the rest of code
+    // }
+
+    configSchedule.run();
+    transmissionSchedule.run();
+
+
+    delay(1000);
+  }
+
+  vTaskDelete(handleNetworkTask);
+}
+
+void newMeasurementCycle() {
+  // TODO: Need to check max queue
+  // NOTE: Maybe define acquire mutex timeout
+  if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdTRUE) {
+    Measurements::MeasurementCycle mc = measurements.getMeasurementCycle(); 
+    mc.wifi = wifiConnector.RSSI();
+    measurementCycleQueue.push_back(mc);
+    Serial.println("New measurement cycle added to queue");
+    // Release mutex
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+    // Increment bootcount for the next measurement cycle 
+    int bootCount = measurements.bootCount() + 1;
+    measurements.setBootCount(bootCount);
+    // Log current free heap size
+    Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
+  }
+}
+
