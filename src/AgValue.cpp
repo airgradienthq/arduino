@@ -686,6 +686,340 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) 
   return corrected;
 }
 
+Measurements::MeasurementCycle Measurements::getMeasurementCycle() {
+  MeasurementCycle mc;
+  mc.bootCount = _bootCount;
+  mc.freeHeap = ESP.getFreeHeap();
+  // co2, tvoc, nox
+  mc.co2 = _co2.update.avg;
+  mc.tvoc = _tvoc.update.avg;
+  mc.tvoc_raw = _tvoc_raw.update.avg;
+  mc.nox = _nox.update.avg;
+  mc.nox_raw = _nox_raw.update.avg;
+  // Temperature & Humidity
+  mc.temperature[0] = _temperature[0].update.avg;
+  mc.humidity[0] = _humidity[0].update.avg;
+  mc.temperature[1] = _temperature[1].update.avg;
+  mc.humidity[1] = _humidity[1].update.avg;
+  // PM atmospheric
+  mc.pm_01[0] = _pm_01[0].update.avg;
+  mc.pm_25[0] = _pm_25[0].update.avg;
+  mc.pm_10[0] = _pm_10[0].update.avg;
+  mc.pm_01[1] = _pm_01[1].update.avg;
+  mc.pm_25[1] = _pm_25[1].update.avg;
+  mc.pm_10[1] = _pm_10[1].update.avg;
+  // PM standard particle
+  mc.pm_01_sp[0] = _pm_01_sp[0].update.avg;
+  mc.pm_25_sp[0] = _pm_25_sp[0].update.avg;
+  mc.pm_10_sp[0] = _pm_10_sp[0].update.avg;
+  mc.pm_01_sp[1] = _pm_01_sp[1].update.avg;
+  mc.pm_25_sp[1] = _pm_25_sp[1].update.avg;
+  mc.pm_10_sp[1] = _pm_10_sp[1].update.avg;
+  // Particle Count
+  mc.pm_03_pc[0] = _pm_03_pc[0].update.avg;
+  mc.pm_05_pc[0] = _pm_05_pc[0].update.avg;
+  mc.pm_01_pc[0] = _pm_01_pc[0].update.avg;
+  mc.pm_25_pc[0] = _pm_25_pc[0].update.avg;
+  mc.pm_5_pc[0] = _pm_5_pc[0].update.avg;
+  mc.pm_10_pc[0] = _pm_10_pc[0].update.avg;
+  mc.pm_03_pc[1] = _pm_03_pc[1].update.avg;
+  mc.pm_05_pc[1] = _pm_05_pc[1].update.avg;
+  mc.pm_01_pc[1] = _pm_01_pc[1].update.avg;
+  mc.pm_25_pc[1] = _pm_25_pc[1].update.avg;
+  mc.pm_5_pc[1] = _pm_5_pc[1].update.avg;
+  mc.pm_10_pc[1] = _pm_10_pc[1].update.avg;
+
+  return mc;
+}
+
+String Measurements::buildMeasurementPayload(MeasurementCycle &mc, AgFirmwareMode fwMode) {
+  JSONVar root;
+
+  /// TVOx and NOx
+  if (utils::isValidVOC(mc.tvoc)) {
+    root[json_prop_tvoc] = ag->round2(mc.tvoc);
+  }
+  if (utils::isValidVOC(mc.tvoc_raw)) {
+    root[json_prop_tvocRaw] = ag->round2(mc.tvoc_raw);
+  }
+  if (utils::isValidNOx(mc.nox)) {
+    root[json_prop_nox] = ag->round2(mc.nox);
+  }
+  if (utils::isValidNOx(mc.nox_raw)) {
+    root[json_prop_noxRaw] = ag->round2(mc.nox_raw);
+  }
+
+  // CO2
+  if (utils::isValidCO2(mc.co2)) {
+    root[json_prop_co2] = ag->round2(mc.co2);
+  }
+
+  if (fwMode == FW_MODE_O_1PP || fwMode == FW_MODE_O_1PPT) {
+    // Have 2 PMS sensor using PM5003T
+    root["channels"]["1"][json_prop_pmFirmware] =
+        pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
+    root["channels"]["2"][json_prop_pmFirmware] =
+        pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
+
+    /// PM1.0 atmospheric environment
+    if (utils::isValidPm(mc.pm_01[0]) && utils::isValidPm(mc.pm_01[1])) {
+      float avg = (mc.pm_01[0] + mc.pm_01[1]) / 2.0f;
+      root[json_prop_pm01Ae] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm01Ae] = ag->round2(mc.pm_01[0]);
+      root["channels"]["2"][json_prop_pm01Ae] = ag->round2(mc.pm_01[1]);
+    } else if (utils::isValidPm(mc.pm_01[0])) {
+      root[json_prop_pm01Ae] = ag->round2(mc.pm_01[0]);
+      root["channels"]["1"][json_prop_pm01Ae] = ag->round2(mc.pm_01[0]);
+    } else if (utils::isValidPm(mc.pm_01[1])) {
+      root[json_prop_pm01Ae] = ag->round2(mc.pm_01[1]);
+      root["channels"]["2"][json_prop_pm01Ae] = ag->round2(mc.pm_01[1]);
+    }
+
+    /// PM2.5 atmospheric environment
+    if (utils::isValidPm(mc.pm_25[0]) && utils::isValidPm(mc.pm_25[1])) {
+      float avg = (mc.pm_25[0] + mc.pm_25[1]) / 2.0f;
+      root[json_prop_pm25Ae] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm25Ae] = ag->round2(mc.pm_25[0]);
+      root["channels"]["2"][json_prop_pm25Ae] = ag->round2(mc.pm_25[1]);
+    } else if (utils::isValidPm(mc.pm_25[0])) {
+      root[json_prop_pm25Ae] = ag->round2(mc.pm_25[0]);
+      root["channels"]["1"][json_prop_pm25Ae] = ag->round2(mc.pm_25[0]);
+    } else if (utils::isValidPm(mc.pm_25[1])) {
+      root[json_prop_pm25Ae] = ag->round2(mc.pm_25[1]);
+      root["channels"]["2"][json_prop_pm25Ae] = ag->round2(mc.pm_25[1]);
+    }
+
+    /// PM10 atmospheric environment
+    if (utils::isValidPm(mc.pm_10[0]) && utils::isValidPm(mc.pm_10[1])) {
+      float avg = (mc.pm_10[0] + mc.pm_10[1]) / 2.0f;
+      root[json_prop_pm10Ae] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm10Ae] = ag->round2(mc.pm_10[0]);
+      root["channels"]["2"][json_prop_pm10Ae] = ag->round2(mc.pm_10[1]);
+    } else if (utils::isValidPm(mc.pm_10[0])) {
+      root[json_prop_pm10Ae] = ag->round2(mc.pm_10[0]);
+      root["channels"]["1"][json_prop_pm10Ae] = ag->round2(mc.pm_10[0]);
+    } else if (utils::isValidPm(mc.pm_10[1])) {
+      root[json_prop_pm10Ae] = ag->round2(mc.pm_10[1]);
+      root["channels"]["2"][json_prop_pm10Ae] = ag->round2(mc.pm_10[1]);
+    }
+
+    /// PM1.0 standard particle
+    if (utils::isValidPm(mc.pm_01_sp[0]) && utils::isValidPm(mc.pm_01_sp[1])) {
+      float avg = (mc.pm_01_sp[0] + mc.pm_01_sp[1]) / 2.0f;
+      root[json_prop_pm01Sp] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[0]);
+      root["channels"]["2"][json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[1]);
+    } else if (utils::isValidPm(mc.pm_01_sp[0])) {
+      root[json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[0]);
+      root["channels"]["1"][json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[0]);
+    } else if (utils::isValidPm(mc.pm_01_sp[1])) {
+      root[json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[1]);
+      root["channels"]["2"][json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[1]);
+    }
+
+    /// PM2.5 standard particle
+    if (utils::isValidPm(mc.pm_25_sp[0]) && utils::isValidPm(mc.pm_25_sp[1])) {
+      float avg = (mc.pm_25_sp[0] + mc.pm_25_sp[1]) / 2.0f;
+      root[json_prop_pm25Sp] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[0]);
+      root["channels"]["2"][json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[1]);
+    } else if (utils::isValidPm(mc.pm_25_sp[0])) {
+      root[json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[0]);
+      root["channels"]["1"][json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[0]);
+    } else if (utils::isValidPm(mc.pm_25_sp[1])) {
+      root[json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[1]);
+      root["channels"]["2"][json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[1]);
+    }
+
+    /// PM10 standard particle
+    if (utils::isValidPm(mc.pm_10_sp[0]) && utils::isValidPm(mc.pm_10_sp[1])) {
+      float avg = (mc.pm_10_sp[0] + mc.pm_10_sp[1]) / 2.0f;
+      root[json_prop_pm10Sp] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[0]);
+      root["channels"]["2"][json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[1]);
+    } else if (utils::isValidPm(mc.pm_10_sp[0])) {
+      root[json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[0]);
+      root["channels"]["1"][json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[0]);
+    } else if (utils::isValidPm(mc.pm_10_sp[1])) {
+      root[json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[1]);
+      root["channels"]["2"][json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[1]);
+    }
+
+    /// PM003 particle count
+    if (utils::isValidPm03Count(mc.pm_03_pc[0]) &&
+        utils::isValidPm03Count(mc.pm_03_pc[1])) {
+      float avg = (mc.pm_03_pc[0] + mc.pm_03_pc[1]) / 2.0f;
+      root[json_prop_pm03Count] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm03Count] = ag->round2(mc.pm_03_pc[0]);
+      root["channels"]["2"][json_prop_pm03Count] = ag->round2(mc.pm_03_pc[1]);
+    } else if (utils::isValidPm03Count(mc.pm_03_pc[0])) {
+      root[json_prop_pm03Count] = ag->round2(mc.pm_03_pc[0]);
+      root["channels"]["1"][json_prop_pm03Count] = ag->round2(mc.pm_03_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_03_pc[1])) {
+      root[json_prop_pm03Count] = ag->round2(mc.pm_03_pc[1]);
+      root["channels"]["2"][json_prop_pm03Count] = ag->round2(mc.pm_03_pc[1]);
+    }
+
+    /// PM0.5 particle count
+    if (utils::isValidPm03Count(mc.pm_05_pc[0]) &&
+        utils::isValidPm03Count(mc.pm_05_pc[1])) {
+      float avg = (mc.pm_05_pc[0] + mc.pm_05_pc[1]) / 2.0f;
+      root[json_prop_pm05Count] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm05Count] = ag->round2(mc.pm_05_pc[0]);
+      root["channels"]["2"][json_prop_pm05Count] = ag->round2(mc.pm_05_pc[1]);
+    } else if (utils::isValidPm03Count(mc.pm_05_pc[0])) {
+      root[json_prop_pm05Count] = ag->round2(mc.pm_05_pc[0]);
+      root["channels"]["1"][json_prop_pm05Count] = ag->round2(mc.pm_05_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_05_pc[1])) {
+      root[json_prop_pm05Count] = ag->round2(mc.pm_05_pc[1]);
+      root["channels"]["2"][json_prop_pm05Count] = ag->round2(mc.pm_05_pc[1]);
+    }
+    /// PM1.0 particle count
+    if (utils::isValidPm03Count(mc.pm_01_pc[0]) &&
+        utils::isValidPm03Count(mc.pm_01_pc[1])) {
+      float avg = (mc.pm_01_pc[0] + mc.pm_01_pc[1]) / 2.0f;
+      root[json_prop_pm1Count] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm1Count] = ag->round2(mc.pm_01_pc[0]);
+      root["channels"]["2"][json_prop_pm1Count] = ag->round2(mc.pm_01_pc[1]);
+    } else if (utils::isValidPm03Count(mc.pm_01_pc[0])) {
+      root[json_prop_pm1Count] = ag->round2(mc.pm_01_pc[0]);
+      root["channels"]["1"][json_prop_pm1Count] = ag->round2(mc.pm_01_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_01_pc[1])) {
+      root[json_prop_pm1Count] = ag->round2(mc.pm_01_pc[1]);
+      root["channels"]["2"][json_prop_pm1Count] = ag->round2(mc.pm_01_pc[1]);
+    }
+
+    /// PM2.5 particle count
+    if (utils::isValidPm03Count(mc.pm_25_pc[0]) &&
+        utils::isValidPm03Count(mc.pm_25_pc[1])) {
+      float avg = (mc.pm_25_pc[0] + mc.pm_25_pc[1]) / 2.0f;
+      root[json_prop_pm25Count] = ag->round2(avg);
+      root["channels"]["1"][json_prop_pm25Count] = ag->round2(mc.pm_25_pc[0]);
+      root["channels"]["2"][json_prop_pm25Count] = ag->round2(mc.pm_25_pc[1]);
+    } else if (utils::isValidPm03Count(mc.pm_25_pc[0])) {
+      root[json_prop_pm25Count] = ag->round2(mc.pm_25_pc[0]);
+      root["channels"]["1"][json_prop_pm25Count] = ag->round2(mc.pm_25_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_25_pc[1])) {
+      root[json_prop_pm25Count] = ag->round2(mc.pm_25_pc[1]);
+      root["channels"]["2"][json_prop_pm25Count] = ag->round2(mc.pm_25_pc[1]);
+    }
+
+    /// Temperature
+    if (utils::isValidTemperature(mc.temperature[0]) &&
+        utils::isValidTemperature(mc.temperature[1])) {
+      float temperature = (mc.temperature[0] + mc.temperature[1]) / 2.0f;
+      root[json_prop_temp] = ag->round2(temperature);
+      root["channels"]["1"][json_prop_temp] = ag->round2(mc.temperature[0]);
+      root["channels"]["2"][json_prop_temp] = ag->round2(mc.temperature[1]);
+    } else if (utils::isValidTemperature(mc.temperature[0])) {
+      root[json_prop_temp] = ag->round2(mc.temperature[0]);
+      root["channels"]["1"][json_prop_temp] = ag->round2(mc.temperature[0]);
+    } else if (utils::isValidTemperature(mc.temperature[1])) {
+      root[json_prop_temp] = ag->round2(mc.temperature[1]);
+      root["channels"]["2"][json_prop_temp] = ag->round2(mc.temperature[1]);
+    }
+
+    /// Relative humidity
+    if (utils::isValidHumidity(mc.humidity[0]) &&
+        utils::isValidHumidity(mc.humidity[1])) {
+      float humidity = (mc.humidity[0] + mc.humidity[1]) / 2.0f;
+      root[json_prop_rhum] = ag->round2(humidity);
+      root["channels"]["1"][json_prop_rhum] = ag->round2(mc.humidity[0]);
+      root["channels"]["2"][json_prop_rhum] = ag->round2(mc.humidity[1]);
+    } else if (utils::isValidHumidity(mc.humidity[0])) {
+      root[json_prop_rhum] = ag->round2(mc.humidity[0]);
+      root["channels"]["1"][json_prop_rhum] = ag->round2(mc.humidity[0]);
+    } else if (utils::isValidHumidity(mc.humidity[1])) {
+      root[json_prop_rhum] = ag->round2(mc.humidity[1]);
+      root["channels"]["2"][json_prop_rhum] = ag->round2(mc.humidity[1]);
+    }
+
+  } else {
+    // Define PMS channel and add PMS firmware version
+    int chIndex;
+    if (config.hasSensorPMS1) {
+      chIndex = 0; // PMS connected to channel 1
+      if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+        root[json_prop_pmFirmware] =
+            pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
+      } else {
+        root[json_prop_pmFirmware] =
+            pms5003TFirmwareVersion(ag->pms5003t_1.getFirmwareVersion());
+      }
+    } else {
+      chIndex = 1; // PMS connected to channel 2
+      root[json_prop_pmFirmware] =
+          pms5003TFirmwareVersion(ag->pms5003t_2.getFirmwareVersion());
+    }
+    // Have 1 PMS sensor
+    if (utils::isValidPm(mc.pm_01[chIndex])) {
+      root[json_prop_pm01Ae] = ag->round2(mc.pm_01[chIndex]);
+    }
+    if (utils::isValidPm(mc.pm_25[chIndex])) {
+      root[json_prop_pm25Ae] = ag->round2(mc.pm_25[chIndex]);
+    }
+    if (utils::isValidPm(mc.pm_10[chIndex])) {
+      root[json_prop_pm10Ae] = ag->round2(mc.pm_10[chIndex]);
+    }
+    if (utils::isValidPm(mc.pm_01_sp[chIndex])) {
+      root[json_prop_pm01Sp] = ag->round2(mc.pm_01_sp[chIndex]);
+    }
+    if (utils::isValidPm(mc.pm_25_sp[chIndex])) {
+      root[json_prop_pm25Sp] = ag->round2(mc.pm_25_sp[chIndex]);
+    }
+    if (utils::isValidPm(mc.pm_10_sp[chIndex])) {
+      root[json_prop_pm10Sp] = ag->round2(mc.pm_10_sp[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_03_pc[chIndex])) {
+      root[json_prop_pm03Count] = ag->round2(mc.pm_03_pc[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_05_pc[chIndex])) {
+      root[json_prop_pm05Count] = ag->round2(mc.pm_05_pc[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_01_pc[chIndex])) {
+      root[json_prop_pm1Count] = ag->round2(mc.pm_01_pc[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_25_pc[chIndex])) {
+      root[json_prop_pm25Count] = ag->round2(mc.pm_25_pc[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_5_pc[chIndex])) {
+      root[json_prop_pm5Count] = ag->round2(mc.pm_5_pc[chIndex]);
+    }
+    if (utils::isValidPm03Count(mc.pm_10_pc[chIndex])) {
+      root[json_prop_pm10Count] = ag->round2(mc.pm_10_pc[chIndex]);
+    }
+    // Temperature and humidity
+    if (config.hasSensorSHT) {
+      // If SHT exists, it always on channel 1
+      if (utils::isValidTemperature(mc.temperature[0])) {
+        root[json_prop_temp] = ag->round2(mc.temperature[0]);
+      }
+      if (utils::isValidHumidity(mc.humidity[0])) {
+        root[json_prop_rhum] = ag->round2(mc.humidity[0]);
+      }
+    } else {
+      if (utils::isValidTemperature(mc.temperature[chIndex])) {
+        root[json_prop_temp] = ag->round2(mc.temperature[chIndex]);
+      }
+      if (utils::isValidHumidity(mc.humidity[chIndex])) {
+        root[json_prop_rhum] = ag->round2(mc.humidity[chIndex]);
+      }
+    }
+  }
+
+  // Others
+  root["boot"] = mc.bootCount;
+  root["bootCount"] = mc.bootCount;
+  root["wifi"] = mc.wifi;
+  root["freeHeap"] = mc.freeHeap;
+  root["resetReason"] = _resetReason;
+
+  String result = JSON.stringify(root);
+  Serial.printf("\n---- TRANSMISSION PAYLOAD\n %s \n-----\n", result.c_str());
+  return result;
+}
+
+
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi) {
   JSONVar root;
 

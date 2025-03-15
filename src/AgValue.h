@@ -7,6 +7,7 @@
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 #include "Main/utils.h"
 #include <Arduino.h>
+#include <cstdint>
 #include <vector>
 
 class Measurements {
@@ -36,6 +37,31 @@ private:
 public:
   Measurements(Configuration &config);
   ~Measurements() {}
+
+  struct MeasurementCycle {
+    float temperature[2];
+    float humidity[2];
+    float co2;
+    float tvoc; // Index value
+    float tvoc_raw;
+    float nox; // Index value
+    float nox_raw;
+    float pm_01[2];    // pm 1.0 atmospheric environment
+    float pm_25[2];    // pm 2.5 atmospheric environment
+    float pm_10[2];    // pm 10 atmospheric environment
+    float pm_01_sp[2]; // pm 1.0 standard particle
+    float pm_25_sp[2]; // pm 2.5 standard particle
+    float pm_10_sp[2]; // pm 10 standard particle
+    float pm_03_pc[2]; // particle count 0.3
+    float pm_05_pc[2]; // particle count 0.5
+    float pm_01_pc[2]; // particle count 1.0
+    float pm_25_pc[2]; // particle count 2.5
+    float pm_5_pc[2];  // particle count 5.0
+    float pm_10_pc[2]; // particle count 10
+    int bootCount;
+    int wifi;
+    uint32_t freeHeap;
+  };
 
   void setAirGradient(AirGradient *ag);
 
@@ -153,6 +179,10 @@ public:
    * build json payload for every measurements
    */
   String toString(bool localServer, AgFirmwareMode fwMode, int rssi);
+
+  MeasurementCycle getMeasurementCycle();
+
+  String buildMeasurementPayload(MeasurementCycle &mc, AgFirmwareMode fwMode);
 
   /**
    * Set to true if want to debug every update value
