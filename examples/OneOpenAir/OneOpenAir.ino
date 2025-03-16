@@ -1383,21 +1383,31 @@ int calculateMaxPeriod(int updateInterval) {
 }
 
 void networkingTask(void *args) {
+  // TODO: Need to better define delay value
+
+  // Reset scheduler
+  configSchedule.update();
+  transmissionSchedule.update();
   while (1) {
     // Handle reconnection based on mode
     if (networkOption == UseWifi) {
       wifiConnector.handle();
       if (wifiConnector.isConnected() == false) {
-        // NOTE: If not connect while mode is not offline, skip the rest of code
         delay(1000);
         continue;
       }
     }
     else if (networkOption == UseCellular) {
-      /// Handle reconnection cellular here
-      /// If failed fetch config or transmission it is an indication that the module might have a problem
-      /// cellular-client or the cell module it self need an inteface for last operation success or not
-      /// For example, httpGet() failed, then there's a state like isLastOperationSuccess
+      // Check if last fetch config and post measures failed
+      // It can be an indication that module has a problem
+      if (agClient->isLastFetchConfigSucceed() == false ||
+          agClient->isLastPostMeasureSucceed() == false) {
+        if (agClient->ensureClientConnection() == false) {
+          Serial.println("Cellular client connection not ready, retry in 5s...");
+          delay(5000);
+          continue;
+        }
+      }
     }
 
     // If connection to AirGradient server disable don't run config and transmission schedule
@@ -1418,7 +1428,6 @@ void networkingTask(void *args) {
 
 void newMeasurementCycle() {
   // TODO: Need to check max queue
-  // NOTE: Maybe define acquire mutex timeout
   if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdTRUE) {
     Measurements::MeasurementCycle mc = measurements.getMeasurementCycle(); 
     mc.wifi = wifiConnector.RSSI();
