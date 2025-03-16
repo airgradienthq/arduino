@@ -263,7 +263,7 @@ void setup() {
   mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
 
   BaseType_t xReturned =
-      xTaskCreate(networkingTask, "WD", 4096, null, 5, &handleNetworkTask);
+      xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
   if (xReturned == pdPASS) {
     Serial.println("Success create networking task");
   } else {
@@ -283,7 +283,7 @@ void setup() {
   if (networkOption == UseCellular) {
     configSchedule.setPeriod(CELLULAR_SERVER_CONFIG_SYNC_INTERVAL);
     transmissionSchedule.setPeriod(CELLULAR_TRANSMISSION_INTERVAL);
-    configSchedule.setPeriod(CELLULAR_MEASUREMENT_INTERVAL);
+    measurementSchedule.setPeriod(CELLULAR_MEASUREMENT_INTERVAL);
   }
 }
 
@@ -966,7 +966,7 @@ void initializeNetwork() {
 #ifdef ESP8266
 // ota not supported
 #else
-  // checkForFirmwareUpdate(); //! Temporary until ota cellular
+  // checkForFirmwareUpdate(); // FIX: Temporary until ota cellular
   // checkForUpdateSchedule.update();
 #endif
 
@@ -1287,14 +1287,8 @@ void sendDataToServer(void) {
     return;
   }
 
-  // TODO: Loop through measurementCycleQueue size
-
-
-  // Aquire queue mutex
-  if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdFALSE) {
-    // Sanity check to just release mutex
-    xSemaphoreGive(mutexMeasurementCycleQueue);
-  }
+  // Aquire queue mutex to get queue size
+  xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
   
   // Make sure measurement cycle available
   int queueSize = measurementCycleQueue.size();
@@ -1304,23 +1298,36 @@ void sendDataToServer(void) {
     return;
   }
 
-  // Get the oldest queue
-  auto mc = measurementCycleQueue.front();
-
-  // Release before actually post measures that might takes too long
+  Serial.printf("Measurement cycle queue size %d\n", queueSize);
   xSemaphoreGive(mutexMeasurementCycleQueue);
+  delay(10); // Wait for a moment in case new measurement schedule wait for it 
 
-  String payload = measurements.buildMeasurementPayload(mc, fwMode);
-  if (agClient->httpPostMeasures(ag->getDeviceId(), payload.c_str())) {
-    Serial.println();
-    Serial.println("Online mode and isPostToAirGradient = true");
+  for (int i = 1; i <= queueSize; i++) {
+    Serial.printf("Attempt post measurement cycle from queue %d\n", i);
+    // Aquire queue mutex to get oldest in queue 
+    xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
+
+    // Get the oldest queue
+    auto mc = measurementCycleQueue.front();
+
+    // Release before actually post measures that might takes too long
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+
+    String payload = measurements.buildMeasurementPayload(mc, fwMode);
+    if (agClient->httpPostMeasures(ag->getDeviceId(), payload.c_str()) == false) {
+      // Consider network has a problem, retry in next schedule 
+      Serial.println("Post measures failed, retry in next schedule");
+      break;
+    }
     Serial.println();
 
     // Post success, remove the oldest queue
-    if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdTRUE) {
-      measurementCycleQueue.erase(measurementCycleQueue.begin());
-      xSemaphoreGive(mutexMeasurementCycleQueue);
-    }
+    xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
+    measurementCycleQueue.erase(measurementCycleQueue.begin());
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+
+    // Wait a moment before post next in queue
+    delay(2000);
   }
 }
 
