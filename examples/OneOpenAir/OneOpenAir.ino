@@ -97,7 +97,13 @@ static AgSerial *agSerial;
 static CellularModule *cell;
 static AirgradientClient *agClient;
 
+enum NetworkOption {
+  UseWifi,
+  UseCellular
+};
+NetworkOption networkOption;
 TaskHandle_t handleNetworkTask = NULL;
+
 
 static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
@@ -109,7 +115,7 @@ SemaphoreHandle_t mutexMeasurementCycleQueue;
 static std::vector<Measurements::MeasurementCycle> measurementCycleQueue;
 
 static void boardInit(void);
-static void initializeNetwork(bool useWifi);
+static void initializeNetwork();
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
 static void configUpdateHandle(void); 
@@ -194,33 +200,6 @@ void setup() {
   // Comment below line to disable debug measurement readings
   measurements.setDebug(false);
 
-  // Check if cellular module available
-  bool cellularFound = false;
-  agSerial = new AgSerial(Wire);
-  agSerial->init(GPIO_IIC_RESET);
-  if (agSerial->open()) {
-    Serial.println("Cellular module found");
-    // Initialize cellular module and use cellular as agClient 
-    cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
-    agClient = new AirgradientCellularClient(cell);
-    cellularFound = true;
-
-    //! NOTE: TMP
-    configuration.setOfflineModeWithoutSave(false);
-  } else {
-    Serial.println("Cellular module not available, using wifi");
-    delete agSerial;
-    agSerial = nullptr;
-    // Use wifi as agClient
-    agClient = new AirgradientWifiClient;
-    cellularFound = false;
-  }
-
-  if (!agClient->begin()) {
-    // TODO: Need to do retry when agclient already in other task 
-    Serial.println("Failed start Airgradient Client FAILED");
-    assert(0);
-  }
 
   // bool connectToWifi = false;
   bool connectToNetwork = true;
@@ -250,17 +229,17 @@ void setup() {
       connectToNetwork = !configuration.isOfflineMode();
     } else {
       configuration.setOfflineModeWithoutSave(true);
+      connectToNetwork = false;
     }
   }
 
   // Initialize networking configuration
   if (connectToNetwork) {
-    bool useWifi = !cellularFound;
-    initializeNetwork(useWifi);
+    initializeNetwork();
   }
 
   /** Set offline mode without saving, cause wifi is not configured */
-  if (wifiConnector.hasConfigurated() == false && !cellularFound) {
+  if (wifiConnector.hasConfigurated() == false && networkOption == UseWifi) {
     Serial.println("Set offline mode cause wifi is not configurated");
     configuration.setOfflineModeWithoutSave(true);
   }
@@ -276,6 +255,8 @@ void setup() {
 
   // Allocate queue memory to avoid always reallocation
   measurementCycleQueue.reserve(10);
+  // Initialize mutex to access mesurementCycleQueue 
+  mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
 
   BaseType_t xReturned =
       xTaskCreate(networkingTask, "WD", 4096, null, 5, &handleNetworkTask);
@@ -286,8 +267,13 @@ void setup() {
     // TODO: What to do here?
   }
 
-  // Initialize mutex to access mesurementCycleQueue 
-  mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
+  // Log monitor mode for debugging purpose
+  if (configuration.isOfflineMode()) {
+    Serial.println("Running monitor in offline mode");
+  }
+  else if (configuration.isCloudConnectionDisabled()) {
+    Serial.println("Running monitor without connection to AirGradient server");
+  }
 }
 
 void loop() {
@@ -295,8 +281,13 @@ void loop() {
   dispLedSchedule.run();
   // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
-  // Schedule to take new measurement cycle
-  measurementSchedule.run();
+
+  // No need to run measurement cycle schedule when mode is offline or connection to AG disabled
+  if (configuration.isOfflineMode() == false ||
+      configuration.isCloudConnectionDisabled() == false) {
+    // Schedule to take new measurement cycle
+    measurementSchedule.run();
+  }
 
   if (configuration.hasSensorS8) {
     co2Schedule.run();
@@ -897,8 +888,32 @@ static void failedHandler(String msg) {
   }
 }
 
-void initializeNetwork(bool useWifi) {
-  if (useWifi) {
+void initializeNetwork() {
+  // Check if cellular module available
+  agSerial = new AgSerial(Wire);
+  agSerial->init(GPIO_IIC_RESET);
+  if (agSerial->open()) {
+    Serial.println("Cellular module found");
+    // Initialize cellular module and use cellular as agClient 
+    cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    agClient = new AirgradientCellularClient(cell);
+    networkOption = UseCellular;
+  } else {
+    Serial.println("Cellular module not available, using wifi");
+    delete agSerial;
+    agSerial = nullptr;
+    // Use wifi as agClient
+    agClient = new AirgradientWifiClient;
+    networkOption = UseWifi;
+  }
+
+  if (!agClient->begin()) {
+    // TODO: Need to do retry when agclient already in other task 
+    Serial.println("Failed start Airgradient Client FAILED");
+    assert(0);
+  }
+
+  if (networkOption == UseWifi) {
     if (!wifiConnector.connect()) {
       Serial.println("Cannot initiate wifi connection");
       return;
@@ -927,6 +942,10 @@ void initializeNetwork(bool useWifi) {
     if (configuration.isCloudConnectionDisabled()) {
       return;
     }
+  }
+  else if (networkOption == UseCellular) {
+    // TODO: check if cellular ready
+    // Display something on display if error, and ignore the rest of the function just like wifi
   }
 
   // Send data for the first time to AG server at boot 
@@ -962,10 +981,9 @@ void initializeNetwork(bool useWifi) {
 }
 
 static void configurationUpdateSchedule(void) {
-  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
-      configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
-    Serial.println("Ignore fetch server configuration. Either mode is offline or cloud connection "
-                   "disabled or configurationControl set to local");
+  if (configuration.getConfigurationControl() ==
+      ConfigurationControl::ConfigurationControlLocal) {
+    Serial.println("Ignore fetch server configuration, configurationControl set to local");
     agClient->resetFetchConfigurationStatus();
     return;
   }
@@ -1251,20 +1269,15 @@ static void updatePm(void) {
   }
 }
 
-static void sendDataToServer(void) {
-  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled() ||
-      !configuration.isPostDataToAirGradient()) {
-    Serial.println("Skipping transmission of data to AG server. Either mode is offline or cloud connection is "
-                   "disabled or post data to server disabled");
+void sendDataToServer(void) {
+  if (configuration.isPostDataToAirGradient() == false) {
+    Serial.println("Skipping transmission of data to AG server, post data to server disabled");
+    agClient->resetPostMeasuresStatus();
     return;
   }
 
-  // if (wifiConnector.isConnected() == false) {
-  //   Serial.println("WiFi not connected, skipping data transmission to AG server");
-  //   return;
-  // }
-
   // TODO: Loop through measurementCycleQueue size
+
 
   // Aquire queue mutex
   if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdFALSE) {
@@ -1272,6 +1285,14 @@ static void sendDataToServer(void) {
     xSemaphoreGive(mutexMeasurementCycleQueue);
   }
   
+  // Make sure measurement cycle available
+  int queueSize = measurementCycleQueue.size();
+  if (queueSize == 0) {
+    Serial.println("Skipping transmission, measurementCycle empty");
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+    return;
+  }
+
   // Get the oldest queue
   auto mc = measurementCycleQueue.front();
 
@@ -1290,7 +1311,6 @@ static void sendDataToServer(void) {
       xSemaphoreGive(mutexMeasurementCycleQueue);
     }
   }
-
 }
 
 static void tempHumUpdate(void) {
@@ -1364,26 +1384,31 @@ int calculateMaxPeriod(int updateInterval) {
 
 void networkingTask(void *args) {
   while (1) {
-    // First check if offline mode or disableCloudConnection
-    // If yes, don't continue. Even, don't create the task, but only if offline mode don't create the task
-    // So in configSchedule and transmission schedule only check for if that feature is disabled
-    
     // Handle reconnection based on mode
-    
-    /// Handle reconnection cellular here
-    /// If failed fetch config or transmission it is an indication that the module might have a problem
-    /// cellular-client or the cell module it self need an inteface for last operation success or not
-    /// For example, httpGet() failed, then there's a state like isLastOperationSuccess
+    if (networkOption == UseWifi) {
+      wifiConnector.handle();
+      if (wifiConnector.isConnected() == false) {
+        // NOTE: If not connect while mode is not offline, skip the rest of code
+        delay(1000);
+        continue;
+      }
+    }
+    else if (networkOption == UseCellular) {
+      /// Handle reconnection cellular here
+      /// If failed fetch config or transmission it is an indication that the module might have a problem
+      /// cellular-client or the cell module it self need an inteface for last operation success or not
+      /// For example, httpGet() failed, then there's a state like isLastOperationSuccess
+    }
 
-    /// Handle WiFi reconnection when disconnect
-    // wifiConnector.handle();
-    // if (wifiConnector.isConnected() == false) {
-    // // NOTE: If not connect while mode is not offline, skip the rest of code
-    // }
+    // If connection to AirGradient server disable don't run config and transmission schedule
+    if (configuration.isCloudConnectionDisabled()) {
+      delay(1000);
+      return;
+    }
 
+    // Run scheduler
     configSchedule.run();
     transmissionSchedule.run();
-
 
     delay(1000);
   }
