@@ -37,6 +37,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
+#include "Libraries/airgradient-client/src/cellularModule.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
@@ -52,20 +53,23 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Libraries/airgradient-client/src/airgradientCellularClient.h"
 #include "Libraries/airgradient-client/src/airgradientWifiClient.h"
 #include "freertos/projdefs.h"
- 
-#define LED_BAR_ANIMATION_PERIOD 100         /** ms */
-#define DISP_UPDATE_INTERVAL 2500            /** ms */
-#define SERVER_CONFIG_SYNC_INTERVAL 3 * 60000 /** ms */
-#define MEASUREMENT_INTERVAL 3 * 60000       /** ms */
-#define TRANSMISSION_INTERVAL 3 * 60000      /** ms */ // FIXME: should be 9 * 60000
-#define MQTT_SYNC_INTERVAL 60000             /** ms */
-#define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5     /** sec */
-#define SENSOR_TVOC_UPDATE_INTERVAL 1000     /** ms */
-#define SENSOR_CO2_UPDATE_INTERVAL 4000      /** ms */
-#define SENSOR_PM_UPDATE_INTERVAL 2000       /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000 /** ms */
-#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000   /** ms */
-#define FIRMWARE_CHECK_FOR_UPDATE_MS (60*60*1000)   /** ms */
+
+#define LED_BAR_ANIMATION_PERIOD 100                   /** ms */
+#define DISP_UPDATE_INTERVAL 2500                      /** ms */
+#define WIFI_SERVER_CONFIG_SYNC_INTERVAL 1 * 60000     /** ms */
+#define WIFI_MEASUREMENT_INTERVAL 1 * 60000            /** ms */
+#define WIFI_TRANSMISSION_INTERVAL 1 * 60000           /** ms */
+#define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 15 * 60000 /** ms */
+#define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000        /** ms */
+#define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000       /** ms */
+#define MQTT_SYNC_INTERVAL 60000                       /** ms */
+#define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5               /** sec */
+#define SENSOR_TVOC_UPDATE_INTERVAL 1000               /** ms */
+#define SENSOR_CO2_UPDATE_INTERVAL 4000                /** ms */
+#define SENSOR_PM_UPDATE_INTERVAL 2000                 /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000           /** ms */
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
+#define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
 
 /** I2C define */
 #define I2C_SDA_PIN 7
@@ -141,10 +145,10 @@ static void newMeasurementCycle();
 static void networkingTask(void *args);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
-AgSchedule configSchedule(SERVER_CONFIG_SYNC_INTERVAL,
+AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL,
                           configurationUpdateSchedule);
-AgSchedule transmissionSchedule(TRANSMISSION_INTERVAL, sendDataToServer);
-AgSchedule measurementSchedule(MEASUREMENT_INTERVAL, newMeasurementCycle);
+AgSchedule transmissionSchedule(WIFI_TRANSMISSION_INTERVAL, sendDataToServer);
+AgSchedule measurementSchedule(WIFI_MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
@@ -273,6 +277,13 @@ void setup() {
   }
   else if (configuration.isCloudConnectionDisabled()) {
     Serial.println("Running monitor without connection to AirGradient server");
+  }
+
+  // If using cellular re-set scheduler interval
+  if (networkOption == UseCellular) {
+    configSchedule.setPeriod(CELLULAR_SERVER_CONFIG_SYNC_INTERVAL);
+    transmissionSchedule.setPeriod(CELLULAR_TRANSMISSION_INTERVAL);
+    configSchedule.setPeriod(CELLULAR_MEASUREMENT_INTERVAL);
   }
 }
 
@@ -1379,7 +1390,12 @@ void setMeasurementMaxPeriod() {
 
 int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
-  return (MEASUREMENT_INTERVAL - (MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
+  if (networkOption == UseWifi) {
+    return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
+  } else {
+    // Cellular
+    return (CELLULAR_MEASUREMENT_INTERVAL - (CELLULAR_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
+  }
 }
 
 void networkingTask(void *args) {
@@ -1388,6 +1404,7 @@ void networkingTask(void *args) {
   // Reset scheduler
   configSchedule.update();
   transmissionSchedule.update();
+
   while (1) {
     // Handle reconnection based on mode
     if (networkOption == UseWifi) {
