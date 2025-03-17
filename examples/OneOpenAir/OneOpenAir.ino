@@ -938,8 +938,12 @@ void initializeNetwork() {
   }
 
   if (!agClient->begin()) {
-    // TODO: Is assert here properly added?
-    assert("Failed start Airgradient Client");
+    oledDisplay.setText("Client", "initialization", "failed");
+    delay(5000);
+    oledDisplay.showRebooting();
+    delay(2500);
+    oledDisplay.setText("", "", "");
+    ESP.restart();
   }
 
   if (networkOption == UseWifi) {
@@ -971,10 +975,6 @@ void initializeNetwork() {
     if (configuration.isCloudConnectionDisabled()) {
       return;
     }
-  }
-  else if (networkOption == UseCellular) {
-    // TODO: check if cellular ready
-    // Display something on display if error, and ignore the rest of the function just like wifi
   }
 
   // Send data for the first time to AG server at boot 
@@ -1108,12 +1108,12 @@ static void updateDisplayAndLedBar(void) {
     return;
   }
 
-  if (wifiConnector.isConnected() == false) {
+  if (wifiConnector.isConnected() == false && networkOption == UseWifi) {
     stateMachine.displayHandle(AgStateMachineWiFiLost);
     stateMachine.handleLeds(AgStateMachineWiFiLost);
     return;
   }
-  // TODO: Also show for cellular connection
+  // TODO: Also show for cellular connection problem
 
   if (configuration.isCloudConnectionDisabled()) {
     // Ignore API related check since cloud is disabled 
