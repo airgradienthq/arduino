@@ -37,21 +37,25 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
-#include "Libraries/airgradient-client/src/cellularModule.h"
+#include "Libraries/airgradient-ota/src/airgradientOta.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
-#include "OtaHandler.h"
 #include "WebServer.h"
 #include "esp32c3/rom/rtc.h"
 #include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <string>
 
 #include "Libraries/airgradient-client/src/agSerial.h"
+#include "Libraries/airgradient-client/src/cellularModule.h"
 #include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
 #include "Libraries/airgradient-client/src/airgradientCellularClient.h"
 #include "Libraries/airgradient-client/src/airgradientWifiClient.h"
+#include "Libraries/airgradient-ota/src/airgradientOtaWifi.h"
+#include "Libraries/airgradient-ota/src/airgradientOtaCellular.h"
+#include "esp_system.h"
 #include "freertos/projdefs.h"
 
 #define LED_BAR_ANIMATION_PERIOD 100                   /** ms */
@@ -94,7 +98,6 @@ static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
                                    configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
                                apiClient);
-static OtaHandler otaHandler;
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static AgSerial *agSerial;
@@ -137,8 +140,8 @@ static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
 static void checkForFirmwareUpdate(void);
-static void otaHandlerCallback(OtaHandler::OtaState state, String mesasge);
-static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing);
+static void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg);
+static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
@@ -337,9 +340,6 @@ void loop() {
 
   /** check that local configuration changed then do some action */
   configUpdateHandle();
-
-  /** Firmware check for update handle */
-  // checkForUpdateSchedule.run(); //! Temporary until ota cellular
 }
 
 static void co2Update(void) {
@@ -520,47 +520,48 @@ static bool sgp41Init(void) {
   return false;
 }
 
-static void checkForFirmwareUpdate(void) {
-  Serial.println();
-  Serial.print("checkForFirmwareUpdate: ");
-
-  if (configuration.isOfflineMode() || configuration.isCloudConnectionDisabled()) {
-    Serial.println("mode is offline or cloud connection disabled, ignored");
-    return;
+void checkForFirmwareUpdate(void) {
+  AirgradientOTA *agOta;
+  if (networkOption == UseWifi) {
+    agOta = new AirgradientOTAWifi;
+  } else {
+    agOta = new AirgradientOTACellular(cell);
   }
-  
-  // if (!wifiConnector.isConnected()) {
-  //   Serial.println("wifi not connected, ignored");
-  //   return;
-  // }
 
-  Serial.println("perform");
-  otaHandler.setHandlerCallback(otaHandlerCallback);
-  otaHandler.updateFirmwareIfOutdated(ag->deviceId());
+  // TODO: This might be too long and new measurement cycle queue will be big
+  Serial.println("Check for firmware update");
+  agOta->setHandlerCallback(otaHandlerCallback);
+  agOta->updateIfAvailable(ag->getDeviceId(), GIT_VERSION);
+  // agOta->updateIfAvailable("aabbccddeeff", GIT_VERSION);
+  delete agOta;
   Serial.println();
 }
 
-static void otaHandlerCallback(OtaHandler::OtaState state, String message) {
-  Serial.println("OTA message: " + message);
-  switch (state) {
-  case OtaHandler::OTA_STATE_BEGIN:
-    displayExecuteOta(state, fwNewVersion, 0);
+void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
+  switch (result) {
+  case AirgradientOTA::Starting:
+    displayExecuteOta(result, fwNewVersion, 0);
     break;
-  case OtaHandler::OTA_STATE_FAIL:
-    displayExecuteOta(state, "", 0);
+  case AirgradientOTA::InProgress:
+    displayExecuteOta(result, "", std::stoi(msg));
     break;
-  case OtaHandler::OTA_STATE_PROCESSING:
-  case OtaHandler::OTA_STATE_SUCCESS:
-    displayExecuteOta(state, "", message.toInt());
+  case AirgradientOTA::Failed:
+  case AirgradientOTA::Skipped:
+  case AirgradientOTA::AlreadyUpToDate:
+    displayExecuteOta(result, "", 0);
+    break;
+  case AirgradientOTA::Success:
+    displayExecuteOta(result, "", 0);
+    esp_restart();
     break;
   default:
     break;
   }
 }
 
-static void displayExecuteOta(OtaHandler::OtaState state, String msg, int processing) {
-  switch (state) {
-  case OtaHandler::OTA_STATE_BEGIN: {
+static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int processing) {
+  switch (result) {
+    case AirgradientOTA::Starting:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
@@ -568,49 +569,40 @@ static void displayExecuteOta(OtaHandler::OtaState state, String msg, int proces
     }
     delay(2500);
     break;
-  }
-  case OtaHandler::OTA_STATE_FAIL: {
+  case AirgradientOTA::Failed:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateFailed();
     } else {
       Serial.println("Error: Firmware update: failed");
     }
-
     delay(2500);
     break;
-  }
-  case OtaHandler::OTA_STATE_SKIP: {
+  case AirgradientOTA::Skipped:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateSkipped();
     } else {
       Serial.println("Firmware update: Skipped");
     }
-
     delay(2500);
     break;
-  }
-  case OtaHandler::OTA_STATE_UP_TO_DATE: {
+  case AirgradientOTA::AlreadyUpToDate:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateUpToDate();
     } else {
       Serial.println("Firmware update: up to date");
     }
-
     delay(2500);
     break;
-  }
-  case OtaHandler::OTA_STATE_PROCESSING: {
+  case AirgradientOTA::InProgress:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateProgress(processing);
     } else {
       Serial.println("Firmware update: " + String(processing) + String("%"));
     }
-
     break;
-  }
-  case OtaHandler::OTA_STATE_SUCCESS: {
+  case AirgradientOTA::Success: {
     int i = 6;
-    while(i != 0) {
+    while (i != 0) {
       i = i - 1;
       Serial.println("OTA update performed, restarting ...");
       int i = 6;
@@ -621,11 +613,10 @@ static void displayExecuteOta(OtaHandler::OtaState state, String msg, int proces
         } else {
           Serial.println("Rebooting... " + String(i));
         }
-        
+
         delay(1000);
       }
       oledDisplay.setBrightness(0);
-      esp_restart();
     }
     break;
   }
@@ -966,8 +957,8 @@ void initializeNetwork() {
 #ifdef ESP8266
 // ota not supported
 #else
-  // checkForFirmwareUpdate(); // FIX: Temporary until ota cellular
-  // checkForUpdateSchedule.update();
+  checkForFirmwareUpdate();
+  checkForUpdateSchedule.update();
 #endif
 
   std::string config = agClient->httpFetchConfig(ag->getDeviceId());
@@ -998,11 +989,6 @@ static void configurationUpdateSchedule(void) {
     agClient->resetFetchConfigurationStatus();
     return;
   }
-
-  // if (wifiConnector.isConnected() == false) {
-  //   Serial.println(" WiFi not connected, skipping fetch configuration from AG server");
-  //   return;
-  // }
 
   std::string config = agClient->httpFetchConfig(ag->getDeviceId());
   if (agClient->isLastFetchConfigSucceed() && configuration.parse(config.c_str(), false)) {
@@ -1443,6 +1429,7 @@ void networkingTask(void *args) {
     // Run scheduler
     configSchedule.run();
     transmissionSchedule.run();
+    checkForUpdateSchedule.run();
 
     delay(1000);
   }
