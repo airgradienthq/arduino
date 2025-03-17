@@ -110,11 +110,10 @@ enum NetworkOption {
 };
 NetworkOption networkOption;
 TaskHandle_t handleNetworkTask = NULL;
-
+static bool otaInProgress = false;
 
 static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
-
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
@@ -291,10 +290,17 @@ void setup() {
 }
 
 void loop() {
-  // Schedule to update display and led
-  dispLedSchedule.run();
   // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
+
+  if (otaInProgress) {
+    Serial.println("Firmware update in progress, pausing sensor readings");
+    delay(2 * 60000);
+    return;
+  }
+
+  // Schedule to update display and led
+  dispLedSchedule.run();
 
   // No need to run measurement cycle schedule when mode is offline or connection to AG disabled
   if (configuration.isOfflineMode() == false ||
@@ -528,11 +534,30 @@ void checkForFirmwareUpdate(void) {
     agOta = new AirgradientOTACellular(cell);
   }
 
-  // TODO: This might be too long and new measurement cycle queue will be big
+  // Indicate main task that ota is performing
+  // Only for cellular because it can disturb i2c line
+  if (networkOption == UseCellular) {
+    otaInProgress = true;
+    if (configuration.hasSensorSGP) {
+      ag->sgp41.end();
+    }
+  }
+
   Serial.println("Check for firmware update");
   agOta->setHandlerCallback(otaHandlerCallback);
   agOta->updateIfAvailable(ag->getDeviceId(), GIT_VERSION);
-  // agOta->updateIfAvailable("aabbccddeeff", GIT_VERSION);
+
+  // Only goes to this line if OTA is not success
+  // Handled by otaHandlerCallback
+  if (networkOption == UseCellular) {
+    otaInProgress = false;
+    if (configuration.hasSensorSGP) {
+      if (!sgp41Init()) {
+        Serial.println("Failed re-start SGP41 task");
+      }
+    }
+  }
+
   delete agOta;
   Serial.println();
 }
@@ -953,13 +978,6 @@ void initializeNetwork() {
   // Send data for the first time to AG server at boot 
   sendDataToAg();
 
-// OTA check
-#ifdef ESP8266
-// ota not supported
-#else
-  checkForFirmwareUpdate();
-  checkForUpdateSchedule.update();
-#endif
 
   std::string config = agClient->httpFetchConfig(ag->getDeviceId());
   configSchedule.update();
@@ -1392,6 +1410,15 @@ int calculateMaxPeriod(int updateInterval) {
 }
 
 void networkingTask(void *args) {
+  // OTA check on boot
+#ifdef ESP8266
+  // ota not supported
+#else
+  // because cellular it takes too long, watchdog triggered
+  checkForFirmwareUpdate();
+  checkForUpdateSchedule.update(); 
+#endif
+
   // TODO: Need to better define delay value
 
   // Reset scheduler
@@ -1412,6 +1439,7 @@ void networkingTask(void *args) {
       // It can be an indication that module has a problem
       if (agClient->isLastFetchConfigSucceed() == false ||
           agClient->isLastPostMeasureSucceed() == false) {
+        Serial.println("Last server communication might failed, checking...");
         if (agClient->ensureClientConnection() == false) {
           Serial.println("Cellular client connection not ready, retry in 5s...");
           delay(5000);
