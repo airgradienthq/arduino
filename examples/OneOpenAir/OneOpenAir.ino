@@ -204,8 +204,7 @@ void setup() {
   setMeasurementMaxPeriod();
 
   // Comment below line to disable debug measurement readings
-  measurements.setDebug(false);
-
+  measurements.setDebug(true);
 
   // bool connectToWifi = false;
   bool connectToNetwork = true;
@@ -241,6 +240,7 @@ void setup() {
 
   // Initialize networking configuration
   if (connectToNetwork) {
+    oledDisplay.setText("Initialize", "network...", "");
     initializeNetwork();
   }
 
@@ -264,13 +264,15 @@ void setup() {
   // Initialize mutex to access mesurementCycleQueue 
   mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
 
-  BaseType_t xReturned =
+  // Only run network task if monitor is not in offline mode
+  if (configuration.isOfflineMode() == false) {
+    BaseType_t xReturned =
       xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
-  if (xReturned == pdPASS) {
-    Serial.println("Success create networking task");
-  } else {
-    Serial.println("Failed to create networking task");
-    // TODO: What to do here?
+    if (xReturned == pdPASS) {
+      Serial.println("Success create networking task");
+    } else {
+      assert("Failed to create networking task");
+    }
   }
 
   // Log monitor mode for debugging purpose
@@ -294,8 +296,8 @@ void loop() {
   watchdogFeedSchedule.run();
 
   if (otaInProgress) {
-    Serial.println("Firmware update in progress, pausing sensor readings");
-    delay(2 * 60000);
+    // OTA currently in progress, temporarily disable running sensor schedules
+    delay(10000);
     return;
   }
 
@@ -536,14 +538,15 @@ void checkForFirmwareUpdate(void) {
 
   // Indicate main task that ota is performing
   // Only for cellular because it can disturb i2c line
+  Serial.println("Check for firmware update");
   if (networkOption == UseCellular) {
+    Serial.println("Disabling scheduler to read sensors for cellular OTA");
     otaInProgress = true;
     if (configuration.hasSensorSGP) {
       ag->sgp41.end();
     }
   }
 
-  Serial.println("Check for firmware update");
   agOta->setHandlerCallback(otaHandlerCallback);
   agOta->updateIfAvailable(ag->getDeviceId(), GIT_VERSION);
 
@@ -935,9 +938,8 @@ void initializeNetwork() {
   }
 
   if (!agClient->begin()) {
-    // TODO: Need to do retry when agclient already in other task 
-    Serial.println("Failed start Airgradient Client FAILED");
-    assert(0);
+    // TODO: Is assert here properly added?
+    assert("Failed start Airgradient Client");
   }
 
   if (networkOption == UseWifi) {
@@ -1106,11 +1108,12 @@ static void updateDisplayAndLedBar(void) {
     return;
   }
 
-  // if (wifiConnector.isConnected() == false) {
-  //   stateMachine.displayHandle(AgStateMachineWiFiLost);
-  //   stateMachine.handleLeds(AgStateMachineWiFiLost);
-  //   return;
-  // }
+  if (wifiConnector.isConnected() == false) {
+    stateMachine.displayHandle(AgStateMachineWiFiLost);
+    stateMachine.handleLeds(AgStateMachineWiFiLost);
+    return;
+  }
+  // TODO: Also show for cellular connection
 
   if (configuration.isCloudConnectionDisabled()) {
     // Ignore API related check since cloud is disabled 
