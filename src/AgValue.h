@@ -59,7 +59,7 @@ public:
     float pm_5_pc[2];  // particle count 5.0
     float pm_10_pc[2]; // particle count 10
     int bootCount;
-    int wifi;
+    int signal;
     uint32_t freeHeap;
   };
 
@@ -182,7 +182,7 @@ public:
 
   MeasurementCycle getMeasurementCycle();
 
-  String buildMeasurementPayload(MeasurementCycle &mc, AgFirmwareMode fwMode);
+  String buildMeasurementPayload(MeasurementCycle &mc);
 
   /**
    * Set to true if want to debug every update value
