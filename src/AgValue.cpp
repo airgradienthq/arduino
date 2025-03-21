@@ -801,11 +801,11 @@ String Measurements::buildMeasurementPayload(MeasurementCycle &mc) {
   }
 
   /// PM 0.3 particle count
-  if (utils::isValidPm(mc.pm_03_pc[0]) && utils::isValidPm(mc.pm_03_pc[1])) {
+  if (utils::isValidPm03Count(mc.pm_03_pc[0]) && utils::isValidPm03Count(mc.pm_03_pc[1])) {
     pm003Count = std::round((mc.pm_03_pc[0] + mc.pm_03_pc[1]) / 2.0f);
-  } else if (utils::isValidPm(mc.pm_03_pc[0])) {
+  } else if (utils::isValidPm03Count(mc.pm_03_pc[0])) {
     pm003Count = std::round(mc.pm_03_pc[0]);
-  } else if (utils::isValidPm(mc.pm_03_pc[1])) {
+  } else if (utils::isValidPm03Count(mc.pm_03_pc[1])) {
     pm003Count = std::round(mc.pm_03_pc[1]);
   }
 
