@@ -686,7 +686,7 @@ static void sendDataToAg() {
   root["wifi"] = wifiConnector.RSSI();
   root["boot"] = measurements.bootCount();
   std::string payload = JSON.stringify(root).c_str();
-  if (agClient->httpPostMeasures(ag->getDeviceId(), payload)) {
+  if (agClient->httpPostMeasures(payload)) {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
@@ -940,7 +940,7 @@ void initializeNetwork() {
     networkOption = UseWifi;
   }
 
-  if (!agClient->begin()) {
+  if (!agClient->begin(ag->getDeviceId())) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
     oledDisplay.showRebooting();
@@ -984,7 +984,7 @@ void initializeNetwork() {
   }
 
 
-  std::string config = agClient->httpFetchConfig(ag->getDeviceId());
+  std::string config = agClient->httpFetchConfig();
   configSchedule.update();
   // Check if fetch configuration failed or fetch succes but parsing failed
   if (agClient->isLastFetchConfigSucceed() == false ||
@@ -1013,7 +1013,7 @@ static void configurationUpdateSchedule(void) {
     return;
   }
 
-  std::string config = agClient->httpFetchConfig(ag->getDeviceId());
+  std::string config = agClient->httpFetchConfig();
   if (agClient->isLastFetchConfigSucceed() && configuration.parse(config.c_str(), false)) {
     configUpdateHandle();
   }
@@ -1296,7 +1296,7 @@ void postUsingWifi() {
   measurements.setBootCount(bootCount);
 
   String payload = measurements.toString(false, fwMode, wifiConnector.RSSI());
-  if (agClient->httpPostMeasures(ag->getDeviceId(), payload.c_str()) == false) {
+  if (agClient->httpPostMeasures(payload.c_str()) == false) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");
     Serial.println();
@@ -1332,7 +1332,7 @@ void postUsingCellular() {
 
   // Attempt to send
   Serial.println(payload);
-  if (agClient->httpPostMeasures(ag->getDeviceId(), payload.c_str()) == false) {
+  if (agClient->httpPostMeasures(payload.c_str()) == false) {
     // Consider network has a problem, retry in next schedule 
     Serial.println("Post measures failed, retry in next schedule");
     return;
