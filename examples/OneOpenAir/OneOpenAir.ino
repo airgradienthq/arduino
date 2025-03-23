@@ -34,6 +34,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "AgValue.h"
 #include "AgWiFiConnector.h"
 #include "AirGradient.h"
+#include "App/AppDef.h"
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
@@ -1111,12 +1112,21 @@ static void updateDisplayAndLedBar(void) {
     return;
   }
 
-  if (wifiConnector.isConnected() == false && networkOption == UseWifi) {
-    stateMachine.displayHandle(AgStateMachineWiFiLost);
-    stateMachine.handleLeds(AgStateMachineWiFiLost);
-    return;
+  if (networkOption == UseWifi) {
+    if (wifiConnector.isConnected() == false) {
+      stateMachine.displayHandle(AgStateMachineWiFiLost);
+      stateMachine.handleLeds(AgStateMachineWiFiLost);
+      return;
+    }
   }
-  // TODO: Also show for cellular connection problem
+  else if (networkOption == UseCellular) {
+    if (agClient->isClientReady() == false)  {
+      // Same action as wifi
+      stateMachine.displayHandle(AgStateMachineWiFiLost);
+      stateMachine.handleLeds(AgStateMachineWiFiLost);
+      return;
+    }
+  }
 
   if (configuration.isCloudConnectionDisabled()) {
     // Ignore API related check since cloud is disabled 

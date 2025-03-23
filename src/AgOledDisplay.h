@@ -16,17 +16,32 @@ private:
   Measurements &value;
   bool isDisplayOff = false;
 
-  void showTempHum(bool hasStatus, char* buf, int buf_size);
+  typedef struct {
+    int width;
+    int height;
+    unsigned char *icon;
+  } xbm_icon_t;
+
+  void showTempHum(bool hasStatus);
   void setCentralText(int y, String text);
   void setCentralText(int y, const char *text);
+  void showIcon(int x, int y, xbm_icon_t *icon);
 
 public:
-  OledDisplay(Configuration &config, Measurements &value,
-                Stream &log);
+  OledDisplay(Configuration &config, Measurements &value, Stream &log);
   ~OledDisplay();
 
+  enum DashboardStatus {
+    DashBoardStatusNone,
+    DashBoardStatusWiFiIssue,
+    DashBoardStatusServerIssue,
+    DashBoardStatusAddToDashboard,
+    DashBoardStatusDeviceId,
+    DashBoardStatusOfflineMode,
+  };
+
   void setAirGradient(AirGradient *ag);
-  bool begin(void); 
+  bool begin(void);
   void end(void);
   void setText(String &line1, String &line2, String &line3);
   void setText(const char *line1, const char *line2, const char *line3);
@@ -34,7 +49,7 @@ public:
   void setText(const char *line1, const char *line2, const char *line3,
                const char *line4);
   void showDashboard(void);
-  void showDashboard(const char *status);
+  void showDashboard(DashboardStatus status);
   void setBrightness(int percent);
 #ifdef ESP32
   void showFirmwareUpdateVersion(String version);
