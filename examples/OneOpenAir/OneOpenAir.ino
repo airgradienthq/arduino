@@ -1320,7 +1320,7 @@ void postUsingCellular() {
 
   // Build payload include all measurements from queue
   String payload;
-  payload += String(CELLULAR_MEASUREMENT_INTERVAL);
+  payload += String(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
