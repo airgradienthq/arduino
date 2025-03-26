@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          submodules: 'true'
       - uses: arduino/compile-sketches@v1.1.2
         with:
           fqbn: ${{ matrix.fqbn }}
