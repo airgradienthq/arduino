@@ -212,8 +212,6 @@ public:
    */
   String deviceId(void);
 
-  std::string getDeviceId(void);
-
 private:
   BoardType boardType;
 };

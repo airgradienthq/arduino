@@ -85,7 +85,3 @@ String AirGradient::deviceId(void) {
   mac.toLowerCase();
   return mac;
 }
-
-std::string AirGradient::getDeviceId(void) {
-  return std::string(deviceId().c_str());
-}
