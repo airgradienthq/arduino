@@ -27,7 +27,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 
-#include "AgApiClient.h"
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
@@ -91,7 +90,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
-static AgApiClient apiClient(Serial, configuration);
 static Measurements measurements(configuration);
 static AirGradient *ag;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
@@ -99,8 +97,7 @@ static StateMachine stateMachine(oledDisplay, Serial, measurements,
                                  configuration);
 static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
                                    configuration);
-static OpenMetrics openMetrics(measurements, configuration, wifiConnector,
-                               apiClient);
+static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static AgSerial *agSerial;
@@ -200,7 +197,7 @@ void setup() {
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
   wifiConnector.setAirGradient(ag);
-  openMetrics.setAirGradient(ag);
+  openMetrics.setAirGradient(ag, agClient);
   localServer.setAirGraident(ag);
   measurements.setAirGradient(ag);
 
@@ -577,7 +574,7 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
     displayExecuteOta(result, fwNewVersion, 0);
     break;
   case AirgradientOTA::InProgress:
-    Serial.printf("OTA progress: %s", msg);
+    Serial.printf("OTA progress: %s\n", msg);
     displayExecuteOta(result, "", std::stoi(msg));
     break;
   case AirgradientOTA::Failed:

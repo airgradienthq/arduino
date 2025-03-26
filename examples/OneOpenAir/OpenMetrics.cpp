@@ -1,13 +1,15 @@
 #include "OpenMetrics.h"
 
 OpenMetrics::OpenMetrics(Measurements &measure, Configuration &config,
-                         WifiConnector &wifiConnector, AgApiClient &apiClient)
-    : measure(measure), config(config), wifiConnector(wifiConnector),
-      apiClient(apiClient) {}
+                         WifiConnector &wifiConnector)
+    : measure(measure), config(config), wifiConnector(wifiConnector) {}
 
 OpenMetrics::~OpenMetrics() {}
 
-void OpenMetrics::setAirGradient(AirGradient *ag) { this->ag = ag; }
+void OpenMetrics::setAirGradient(AirGradient *ag, AirgradientClient *client) { 
+  this->ag = ag; 
+  this->agClient = client;
+}
 
 const char *OpenMetrics::getApiContentType(void) {
   return "application/openmetrics-text; version=1.0.0; charset=utf-8";
@@ -43,13 +45,13 @@ String OpenMetrics::getPayload(void) {
              "1 if the AirGradient device was able to successfully fetch its "
              "configuration from the server",
              "gauge");
-  add_metric_point("", apiClient.isFetchConfigurationFailed() ? "0" : "1");
+  add_metric_point("", agClient->isLastFetchConfigSucceed() ? "1" : "0");
 
   add_metric(
       "post_ok",
       "1 if the AirGradient device was able to successfully send to the server",
       "gauge");
-  add_metric_point("", apiClient.isPostToServerFailed() ? "0" : "1");
+  add_metric_point("", agClient->isLastPostMeasureSucceed() ? "1" : "0");
 
   add_metric(
       "wifi_rssi",
