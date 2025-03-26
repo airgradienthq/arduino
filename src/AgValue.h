@@ -182,7 +182,7 @@ public:
 
   MeasurementCycle getMeasurementCycle();
 
-  String buildMeasurementPayload(MeasurementCycle &mc);
+  std::string buildMeasurementPayload(MeasurementCycle &mc);
 
   /**
    * Set to true if want to debug every update value

@@ -38,7 +38,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
-#include "Libraries/airgradient-ota/src/airgradientOta.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
@@ -54,6 +53,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
 #include "Libraries/airgradient-client/src/airgradientCellularClient.h"
 #include "Libraries/airgradient-client/src/airgradientWifiClient.h"
+#include "Libraries/airgradient-ota/src/airgradientOta.h"
 #include "Libraries/airgradient-ota/src/airgradientOtaWifi.h"
 #include "Libraries/airgradient-ota/src/airgradientOtaCellular.h"
 #include "esp_system.h"
@@ -147,6 +147,7 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
+static void networkSignalCheck();
 static void networkingTask(void *args);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
@@ -160,6 +161,7 @@ AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
+AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
 
 void setup() {
   /** Serial for print debug message */
@@ -575,6 +577,7 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
     displayExecuteOta(result, fwNewVersion, 0);
     break;
   case AirgradientOTA::InProgress:
+    Serial.printf("OTA progress: %s", msg);
     displayExecuteOta(result, "", std::stoi(msg));
     break;
   case AirgradientOTA::Failed:
@@ -1329,8 +1332,8 @@ void postUsingCellular() {
   }
 
   // Build payload include all measurements from queue
-  String payload;
-  payload += String(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
+  std::string payload;
+  payload += std::to_string(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
@@ -1341,8 +1344,7 @@ void postUsingCellular() {
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  Serial.println(payload);
-  if (agClient->httpPostMeasures(payload.c_str()) == false) {
+  if (agClient->httpPostMeasures(payload) == false) {
     // Consider network has a problem, retry in next schedule 
     Serial.println("Post measures failed, retry in next schedule");
     return;
@@ -1364,7 +1366,7 @@ void sendDataToServer(void) {
 
   if (networkOption == UseWifi) {
     postUsingWifi();
-  } else {
+  } else if (networkOption == UseCellular) {
     postUsingCellular();
   }
 }
@@ -1443,6 +1445,20 @@ int calculateMaxPeriod(int updateInterval) {
   }
 }
 
+
+void networkSignalCheck() {
+  if (networkOption == UseWifi) {
+    Serial.printf("WiFi RSSI %d\n", wifiConnector.RSSI());
+  } else if (networkOption == UseCellular) {
+    auto result = cell->retrieveSignal();
+    if (result.status != CellReturnStatus::Ok) {
+      // TODO: Need to do something when get signal failed
+      return;
+    }
+    Serial.printf("Cellular signal strength %d\n", result.data);
+  }
+}
+
 void networkingTask(void *args) {
   // OTA check on boot
 #ifdef ESP8266
@@ -1453,7 +1469,15 @@ void networkingTask(void *args) {
   checkForUpdateSchedule.update(); 
 #endif
 
-  // TODO: Need to better define delay value
+  // Because cellular interval is longer, needs to send first measures cycle on
+  // boot to indicate that its online
+  if (networkOption == UseCellular) {
+    Serial.println("Prepare first measures cycle to send on boot for 20s");
+    delay(20000);
+    newMeasurementCycle();
+    sendDataToServer();
+    measurementSchedule.update();
+  }
 
   // Reset scheduler
   configSchedule.update();
@@ -1489,6 +1513,7 @@ void networkingTask(void *args) {
     }
 
     // Run scheduler
+    networkSignalCheckSchedule.run();
     configSchedule.run();
     transmissionSchedule.run();
     checkForUpdateSchedule.run();
