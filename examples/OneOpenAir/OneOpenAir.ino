@@ -551,7 +551,7 @@ void checkForFirmwareUpdate(void) {
   }
 
   agOta->setHandlerCallback(otaHandlerCallback);
-  agOta->updateIfAvailable(ag->getDeviceId(), GIT_VERSION);
+  agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION);
 
   // Only goes to this line if OTA is not success
   // Handled by otaHandlerCallback
@@ -941,7 +941,7 @@ void initializeNetwork() {
     networkOption = UseWifi;
   }
 
-  if (!agClient->begin(ag->getDeviceId())) {
+  if (!agClient->begin(ag->deviceId().c_str())) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
     oledDisplay.showRebooting();
