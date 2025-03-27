@@ -12,9 +12,19 @@ Arduino IDE version 2.x ([download](https://www.arduino.cc/en/software))
 
 ![board manager](images/esp32-board.png)
 
-2. Install AirGradient library on library manager using the latest version (Tools ➝ Manage Libraries... ➝ search for `"airgradient"`) 
+2. Install AirGradient library
+
+#### Version < 3.2.0
+
+Using library manager install the latest version (Tools ➝ Manage Libraries... ➝ search for `"airgradient"`) 
 
 ![Aigradient Library](images/ag-lib.png)
+
+#### Version >= 3.3.0
+
+- From your terminal, go to Arduino libraries folder (windows and mac: `Documents/Arduino/libraries` or linux: `~/Arduino/Libraries`).
+- With **git** cli, execute this command `git clone --recursive https://github.com/airgradienthq/arduino.git AirGradient_Air_Quality_Sensor` 
+- Restart Arduino IDE 
 
 3. On tools tab, follow settings below
 
@@ -22,7 +32,7 @@ Arduino IDE version 2.x ([download](https://www.arduino.cc/en/software))
 Board ➝ ESP32C3 Dev Module
 USB CDC On Boot ➝ Enabled
 CPU Frequency ➝ 160MHz (WiFi)
-Core Debug Level ➝ None (or choose as needed)
+Core Debug Level ➝ Info
 Erase All Flash Before Sketch Upload ➝ Enabled (or choose as needed)
 Flash Frequency ➝ 80MHz
 Flash Mode ➝ QIO
@@ -31,8 +41,6 @@ JTAG Adapter ➝ Disabled
 Partition Scheme ➝ Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)
 Upload Speed ➝ 921600
 ```
-
-![Compile Settings](images/settings.png)
 
 4. Open sketch to compile (File ➝ Examples ➝ AirGradient Air Quality Sensor ➝ OneOpenAir). This sketch for AirGradient ONE and Open Air monitor model
 5. Compile
