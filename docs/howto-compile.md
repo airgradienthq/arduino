@@ -90,9 +90,16 @@ Choose based on how python installed on your machine. But most user, using `apt`
 
 ## How to contribute
 
+The instructions above are the instructions for how to build an official release of the AirGradient firmware using the Arduino IDE. If you intend to make changes that will you intent to contribute back to the main project, instead of installing the AirGradient library, check out the repo at `Documents/Arduino/libraries` (for Windows and Mac), or `~/Arduino/Libraries` (Linux). If you installed the library, you can remove it from the library manager in the Arduino IDE, or just delete the directory.
+
+**NOTE:** When cloning the repository, for version >= 3.3.0 it has submodule, please use `--recursive` flag like this: `git clone --recursive https://github.com/airgradienthq/arduino.git AirGradient_Air_Quality_Sensor`
+
 Please follow github [contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) tutorial to contribute to this project.
 
 There are 2 environment options to compile this project, PlatformIO and ArduinoIDE.
 
 - For PlatformIO, it should work out of the box
-- For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for windows and mac, and `~/Arduino/Libraries` for linux
+- For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for Windows and Mac, and `~/Arduino/Libraries` for Linux
+
+
+
