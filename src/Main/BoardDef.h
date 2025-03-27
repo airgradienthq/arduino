@@ -10,7 +10,7 @@
   }
 #else
 #include <esp32-hal-log.h>
-#define AgLog(c, ...) log_d(c, ##__VA_ARGS__)
+#define AgLog(c, ...) log_i(c, ##__VA_ARGS__)
 #endif
 
 /**

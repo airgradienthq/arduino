@@ -1455,7 +1455,12 @@ void networkSignalCheck() {
   } else if (networkOption == UseCellular) {
     auto result = cell->retrieveSignal();
     if (result.status != CellReturnStatus::Ok) {
-      // TODO: Need to do something when get signal failed
+      agClient->setClientReady(false);
+      return;
+    }
+    if (result.data == 99) {
+      // 99 indicate cellular not attached to network
+      agClient->setClientReady(false);
       return;
     }
     Serial.printf("Cellular signal strength %d\n", result.data);
@@ -1496,11 +1501,8 @@ void networkingTask(void *args) {
       }
     }
     else if (networkOption == UseCellular) {
-      // Check if last fetch config and post measures failed
-      // It can be an indication that module has a problem
-      if (agClient->isLastFetchConfigSucceed() == false ||
-          agClient->isLastPostMeasureSucceed() == false) {
-        Serial.println("Last server communication might failed, checking...");
+      if (agClient->isClientReady() == false) {
+        Serial.println("Cellular client not ready, ensuring connection...");
         if (agClient->ensureClientConnection() == false) {
           Serial.println("Cellular client connection not ready, retry in 5s...");
           delay(5000);
