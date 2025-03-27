@@ -76,6 +76,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
 
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
+#define RESERVED_MEASUREMENT_CYCLE_CAPACITY 10
 
 /** I2C define */
 #define I2C_SDA_PIN 7
@@ -270,7 +271,7 @@ void setup() {
     measurementSchedule.update();
     // Queue now only applied for cellular
     // Allocate queue memory to avoid always reallocation
-    measurementCycleQueue.reserve(10);
+    measurementCycleQueue.reserve(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
     // Initialize mutex to access mesurementCycleQueue 
     mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
   }
@@ -1351,6 +1352,11 @@ void postUsingCellular() {
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
   measurementCycleQueue.erase(measurementCycleQueue.begin(),
                               measurementCycleQueue.begin() + queueSize);
+
+  if (measurementCycleQueue.capacity() > RESERVED_MEASUREMENT_CYCLE_CAPACITY) {
+    Serial.println("measurementCycleQueue capacity more than reserved space, resizing..");
+    measurementCycleQueue.resize(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
+  }
   xSemaphoreGive(mutexMeasurementCycleQueue);
 }
 
