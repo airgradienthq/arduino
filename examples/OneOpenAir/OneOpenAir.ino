@@ -209,7 +209,6 @@ void setup() {
   // Comment below line to disable debug measurement readings
   measurements.setDebug(true);
 
-  // bool connectToWifi = false;
   bool connectToNetwork = true;
   if (ag->isOne()) { // Offline mode only available for indoor monitor
     /** Show message confirm offline mode, should me perform if LED bar button
@@ -541,14 +540,12 @@ void checkForFirmwareUpdate(void) {
   }
 
   // Indicate main task that ota is performing
-  // Only for cellular because it can disturb i2c line
-  Serial.println("Check for firmware update");
-  if (networkOption == UseCellular) {
-    Serial.println("Disabling scheduler to read sensors for cellular OTA");
-    otaInProgress = true;
-    if (configuration.hasSensorSGP) {
-      ag->sgp41.end();
-    }
+  Serial.println("Check for firmware update, disabling main task");
+  otaInProgress = true;
+  if (configuration.hasSensorSGP && networkOption == UseCellular) {
+    // Only for cellular because it can disturb i2c line
+    Serial.println("Disable SGP41 task for cellular OTA");
+    ag->sgp41.end();
   }
 
   agOta->setHandlerCallback(otaHandlerCallback);
@@ -556,12 +553,12 @@ void checkForFirmwareUpdate(void) {
 
   // Only goes to this line if OTA is not success
   // Handled by otaHandlerCallback
-  if (networkOption == UseCellular) {
-    otaInProgress = false;
-    if (configuration.hasSensorSGP) {
-      if (!sgp41Init()) {
-        Serial.println("Failed re-start SGP41 task");
-      }
+
+  otaInProgress = false;
+  if (configuration.hasSensorSGP && networkOption == UseCellular) {
+    // Re-start SGP41 task
+    if (!sgp41Init()) {
+      Serial.println("Failed re-start SGP41 task");
     }
   }
 
@@ -634,23 +631,18 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
     }
     break;
   case AirgradientOTA::Success: {
-    int i = 6;
+    Serial.println("OTA update performed, restarting ...");
+    int i = 3;
     while (i != 0) {
       i = i - 1;
-      Serial.println("OTA update performed, restarting ...");
-      int i = 6;
-      while (i != 0) {
-        i = i - 1;
-        if (ag->isOne()) {
-          oledDisplay.showFirmwareUpdateSuccess(i);
-        } else {
-          Serial.println("Rebooting... " + String(i));
-        }
-
-        delay(1000);
+      if (ag->isOne()) {
+        oledDisplay.showFirmwareUpdateSuccess(i);
+      } else {
+        Serial.println("Rebooting... " + String(i));
       }
-      oledDisplay.setBrightness(0);
+      delay(1000);
     }
+    oledDisplay.setAirGradient(0);
     break;
   }
   default:
