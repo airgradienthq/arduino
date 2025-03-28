@@ -2,6 +2,8 @@
 #include "AgConfigure.h"
 #include "AirGradient.h"
 #include "App/AppDef.h"
+#include <cmath>
+#include <sstream>
 
 #define json_prop_pmFirmware     "firmware"
 #define json_prop_pm01Ae "pm01"
@@ -685,6 +687,153 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) 
 
   return corrected;
 }
+
+Measurements::Measures Measurements::getMeasures() {
+  Measures mc;
+  mc.bootCount = _bootCount;
+  mc.freeHeap = ESP.getFreeHeap();
+  // co2, tvoc, nox
+  mc.co2 = _co2.update.avg;
+  mc.tvoc = _tvoc.update.avg;
+  mc.tvoc_raw = _tvoc_raw.update.avg;
+  mc.nox = _nox.update.avg;
+  mc.nox_raw = _nox_raw.update.avg;
+  // Temperature & Humidity
+  mc.temperature[0] = _temperature[0].update.avg;
+  mc.humidity[0] = _humidity[0].update.avg;
+  mc.temperature[1] = _temperature[1].update.avg;
+  mc.humidity[1] = _humidity[1].update.avg;
+  // PM atmospheric
+  mc.pm_01[0] = _pm_01[0].update.avg;
+  mc.pm_25[0] = _pm_25[0].update.avg;
+  mc.pm_10[0] = _pm_10[0].update.avg;
+  mc.pm_01[1] = _pm_01[1].update.avg;
+  mc.pm_25[1] = _pm_25[1].update.avg;
+  mc.pm_10[1] = _pm_10[1].update.avg;
+  // PM standard particle
+  mc.pm_01_sp[0] = _pm_01_sp[0].update.avg;
+  mc.pm_25_sp[0] = _pm_25_sp[0].update.avg;
+  mc.pm_10_sp[0] = _pm_10_sp[0].update.avg;
+  mc.pm_01_sp[1] = _pm_01_sp[1].update.avg;
+  mc.pm_25_sp[1] = _pm_25_sp[1].update.avg;
+  mc.pm_10_sp[1] = _pm_10_sp[1].update.avg;
+  // Particle Count
+  mc.pm_03_pc[0] = _pm_03_pc[0].update.avg;
+  mc.pm_05_pc[0] = _pm_05_pc[0].update.avg;
+  mc.pm_01_pc[0] = _pm_01_pc[0].update.avg;
+  mc.pm_25_pc[0] = _pm_25_pc[0].update.avg;
+  mc.pm_5_pc[0] = _pm_5_pc[0].update.avg;
+  mc.pm_10_pc[0] = _pm_10_pc[0].update.avg;
+  mc.pm_03_pc[1] = _pm_03_pc[1].update.avg;
+  mc.pm_05_pc[1] = _pm_05_pc[1].update.avg;
+  mc.pm_01_pc[1] = _pm_01_pc[1].update.avg;
+  mc.pm_25_pc[1] = _pm_25_pc[1].update.avg;
+  mc.pm_5_pc[1] = _pm_5_pc[1].update.avg;
+  mc.pm_10_pc[1] = _pm_10_pc[1].update.avg;
+
+  return mc;
+}
+
+std::string Measurements::buildMeasuresPayload(Measures &mc) {
+  std::ostringstream oss;
+
+  // CO2
+  if (utils::isValidCO2(mc.co2)) {
+    oss << std::round(mc.co2);
+  }
+
+  oss << ",";
+
+  // Temperature 
+  if (utils::isValidTemperature(mc.temperature[0]) && utils::isValidTemperature(mc.temperature[1])) {
+    float temp = (mc.temperature[0] + mc.temperature[1]) / 2.0f;
+    oss << std::round(temp * 10);
+  } else if (utils::isValidTemperature(mc.temperature[0])) {
+    oss << std::round(mc.temperature[0] * 10);
+  } else if (utils::isValidTemperature(mc.temperature[1])) {
+    oss << std::round(mc.temperature[1] * 10);
+  }
+
+  oss << ",";
+
+  // Humidity
+  if (utils::isValidHumidity(mc.humidity[0]) && utils::isValidHumidity(mc.humidity[1])) {
+    float hum = (mc.humidity[0] + mc.humidity[1]) / 2.0f;
+    oss << std::round(hum * 10);
+  } else if (utils::isValidHumidity(mc.humidity[0])) {
+    oss << std::round(mc.humidity[0] * 10);
+  } else if (utils::isValidHumidity(mc.humidity[1])) {
+    oss << std::round(mc.humidity[1] * 10);
+  }
+
+  oss << ",";
+
+  /// PM1.0 atmospheric environment
+  if (utils::isValidPm(mc.pm_01[0]) && utils::isValidPm(mc.pm_01[1])) {
+    float pm01 = (mc.pm_01[0] + mc.pm_01[1]) / 2.0f;
+    oss << std::round(pm01 * 10);
+  } else if (utils::isValidPm(mc.pm_01[0])) {
+    oss << std::round(mc.pm_01[0] * 10);
+  } else if (utils::isValidPm(mc.pm_01[1])) {
+    oss << std::round(mc.pm_01[1] * 10);
+  }
+
+  oss << ",";
+
+  /// PM2.5 atmospheric environment
+  if (utils::isValidPm(mc.pm_25[0]) && utils::isValidPm(mc.pm_25[1])) {
+    float pm25 = (mc.pm_25[0] + mc.pm_25[1]) / 2.0f;
+    oss << std::round(pm25 * 10);
+  } else if (utils::isValidPm(mc.pm_25[0])) {
+    oss << std::round(mc.pm_25[0] * 10);
+  } else if (utils::isValidPm(mc.pm_25[1])) {
+    oss << std::round(mc.pm_25[1] * 10);
+  }
+
+  oss << ",";
+
+  /// PM10 atmospheric environment
+  if (utils::isValidPm(mc.pm_10[0]) && utils::isValidPm(mc.pm_10[1])) {
+    float pm10 = (mc.pm_10[0] + mc.pm_10[1]) / 2.0f;
+    oss << std::round(pm10 * 10);
+  } else if (utils::isValidPm(mc.pm_10[0])) {
+    oss << std::round(mc.pm_10[0] * 10);
+  } else if (utils::isValidPm(mc.pm_10[1])) {
+    oss << std::round(mc.pm_10[1] * 10);
+  }
+
+  oss << ",";
+
+  // NOx
+  if (utils::isValidNOx(mc.nox)) {
+    oss << std::round(mc.nox);
+  }
+
+  oss << ",";
+
+  // TVOC
+  if (utils::isValidVOC(mc.tvoc)) {
+    oss << std::round(mc.tvoc);
+  }
+
+  oss << ",";
+
+  /// PM 0.3 particle count
+  if (utils::isValidPm03Count(mc.pm_03_pc[0]) && utils::isValidPm03Count(mc.pm_03_pc[1])) {
+    oss << std::round((mc.pm_03_pc[0] + mc.pm_03_pc[1]) / 2.0f);
+  } else if (utils::isValidPm03Count(mc.pm_03_pc[0])) {
+    oss << std::round(mc.pm_03_pc[0]);
+  } else if (utils::isValidPm03Count(mc.pm_03_pc[1])) {
+    oss << std::round(mc.pm_03_pc[1]);
+  }
+
+  // char datapoint[128] = {0};
+  // snprintf(datapoint, 128, "%d,%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%d", co2, temp * 10,
+  //          hum * 10, pm01 * 10, pm25 * 10, pm10 * 10, tvoc, nox, pm003Count);
+
+  return oss.str();
+}
+
 
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi) {
   JSONVar root;

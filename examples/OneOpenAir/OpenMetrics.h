@@ -5,21 +5,21 @@
 #include "AgValue.h"
 #include "AgWiFiConnector.h"
 #include "AirGradient.h"
-#include "AgApiClient.h"
+#include "Libraries/airgradient-client/src/airgradientClient.h"
 
 class OpenMetrics {
 private:
   AirGradient *ag;
+  AirgradientClient *agClient;
   Measurements &measure;
   Configuration &config;
   WifiConnector &wifiConnector;
-  AgApiClient &apiClient;
 
 public:
-  OpenMetrics(Measurements &measure, Configuration &conig,
-              WifiConnector &wifiConnector, AgApiClient& apiClient);
+  OpenMetrics(Measurements &measure, Configuration &config,
+              WifiConnector &wifiConnector);
   ~OpenMetrics();
-  void setAirGradient(AirGradient *ag);
+  void setAirGradient(AirGradient *ag, AirgradientClient *client);
   const char *getApiContentType(void);
   const char* getApi(void);
   String getPayload(void);

@@ -5,12 +5,31 @@
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
 
+static const unsigned char WIFI_ISSUE_BITS[] = {
+    0xd8, 0xc6, 0xde, 0xde, 0xc7, 0xf8, 0xd1, 0xe2, 0xdc, 0xce, 0xcc,
+    0xcc, 0xc0, 0xc0, 0xd0, 0xc2, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
+
+static const unsigned char CLOUD_ISSUE_BITS[] = {
+    0x70, 0xc0, 0x88, 0xc0, 0x04, 0xc1, 0x04, 0xcf, 0x02, 0xd0, 0x01,
+    0xe0, 0x01, 0xe0, 0x01, 0xe0, 0xa2, 0xd0, 0x4c, 0xce, 0xa0, 0xc0};
+
+// Offline mode icon
+static unsigned char OFFLINE_BITS[] = {
+    0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x30, 0x00, 0x62, 0x00,
+    0xE6, 0x00, 0xFE, 0x1F, 0xFE, 0x1F, 0xE6, 0x00, 0x62, 0x00,
+    0x30, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+// {
+//   0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x60, 0x00, 0x62, 0x00, 0xE2, 0x00,
+//   0xFE, 0x1F, 0xFE, 0x1F, 0xE2, 0x00, 0x62, 0x00, 0x60, 0x00, 0x30, 0x00,
+//   0x00, 0x00, 0x00, 0x00, };
 /**
  * @brief Show dashboard temperature and humdity
  *
  * @param hasStatus
  */
-void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
+void OledDisplay::showTempHum(bool hasStatus) {
+  char buf[10];
   /** Temperature */
   float temp = value.getCorrectedTempHum(Measurements::Temperature, 1);
   if (utils::isValidTemperature(temp)) {
@@ -23,22 +42,22 @@ void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
 
     if (config.isTemperatureUnitInF()) {
       if (hasStatus) {
-        snprintf(buf, buf_size, "%0.1f", t);
+        snprintf(buf, sizeof(buf), "%0.1f", t);
       } else {
-        snprintf(buf, buf_size, "%0.1f°F", t);
+        snprintf(buf, sizeof(buf), "%0.1f°F", t);
       }
     } else {
       if (hasStatus) {
-        snprintf(buf, buf_size, "%.1f", t);
+        snprintf(buf, sizeof(buf), "%.1f", t);
       } else {
-        snprintf(buf, buf_size, "%.1f°C", t);
+        snprintf(buf, sizeof(buf), "%.1f°C", t);
       }
     }
   } else { /** Show invalid value */
     if (config.isTemperatureUnitInF()) {
-      snprintf(buf, buf_size, "-°F");
+      snprintf(buf, sizeof(buf), "-°F");
     } else {
-      snprintf(buf, buf_size, "-°C");
+      snprintf(buf, sizeof(buf), "-°C");
     }
   }
   DISP()->drawUTF8(1, 10, buf);
@@ -46,9 +65,9 @@ void OledDisplay::showTempHum(bool hasStatus, char *buf, int buf_size) {
   /** Show humidity */
   int rhum = round(value.getCorrectedTempHum(Measurements::Humidity, 1));
   if (utils::isValidHumidity(rhum)) {
-    snprintf(buf, buf_size, "%d%%", rhum);
+    snprintf(buf, sizeof(buf), "%d%%", rhum);
   } else {
-    snprintf(buf, buf_size, "-%%");
+    snprintf(buf, sizeof(buf), "-%%");
   }
 
   if (rhum > 99.0) {
@@ -67,6 +86,9 @@ void OledDisplay::setCentralText(int y, const char *text) {
   DISP()->drawStr(x, y, text);
 }
 
+void OledDisplay::showIcon(int x, int y, xbm_icon_t *icon) {
+  DISP()->drawXBM(x, y, icon->width, icon->height, icon->icon);
+}
 /**
  * @brief Construct a new Ag Oled Display:: Ag Oled Display object
  *
@@ -252,36 +274,60 @@ void OledDisplay::setText(const char *line1, const char *line2,
  * @brief Update dashboard content
  *
  */
-void OledDisplay::showDashboard(void) { showDashboard(NULL); }
+void OledDisplay::showDashboard(void) { showDashboard(DashBoardStatusNone); }
 
 /**
  * @brief Update dashboard content and error status
  *
  */
-void OledDisplay::showDashboard(const char *status) {
+void OledDisplay::showDashboard(DashboardStatus status) {
   if (isDisplayOff) {
     return;
   }
 
   char strBuf[16];
+  const int icon_pos_x = 64;
+  xbm_icon_t xbm_icon = {
+      .width = 0,
+      .height = 0,
+      .icon = nullptr,
+  };
+
   if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);
-      if ((status == NULL) || (strlen(status) == 0)) {
-        showTempHum(false, strBuf, sizeof(strBuf));
-      } else {
-        String strStatus = "Show status: " + String(status);
-        logInfo(strStatus);
-
-        int strWidth = DISP()->getStrWidth(status);
-        DISP()->drawStr((DISP()->getWidth() - strWidth) / 2, 10, status);
-
-        /** Show WiFi NA*/
-        if (strcmp(status, "WiFi N/A") == 0) {
-          DISP()->setFont(u8g2_font_t0_12_tf);
-          showTempHum(true, strBuf, sizeof(strBuf));
-        }
+      switch (status) {
+      case DashBoardStatusNone: {
+        // Maybe show signal strength?
+        showTempHum(false);
+        break;
+      }
+      case DashBoardStatusWiFiIssue: {
+        DISP()->drawXBM(icon_pos_x, 0, 14, 11, WIFI_ISSUE_BITS);
+        showTempHum(false);
+        break;
+      }
+      case DashBoardStatusServerIssue: {
+        DISP()->drawXBM(icon_pos_x, 0, 14, 11, CLOUD_ISSUE_BITS);
+        showTempHum(false);
+        break;
+      }
+      case DashBoardStatusAddToDashboard: {
+        setCentralText(10, "Add To Dashboard");
+        break;
+      }
+      case DashBoardStatusDeviceId: {
+        setCentralText(10, ag->deviceId().c_str());
+        break;
+      }
+      case DashBoardStatusOfflineMode: {
+        DISP()->drawXBM(icon_pos_x, 0, 14, 14, OFFLINE_BITS);
+        showTempHum(false); // First true
+        break;
+      }
+      default:
+        break;
       }
 
       /** Draw horizonal line */
@@ -392,7 +438,8 @@ void OledDisplay::showDashboard(const char *status) {
     float temp = value.getCorrectedTempHum(Measurements::Temperature, 1);
     if (utils::isValidTemperature(temp)) {
       if (config.isTemperatureUnitInF()) {
-        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F", utils::degreeC_To_F(temp));
+        snprintf(strBuf, sizeof(strBuf), "T:%0.1f F",
+                 utils::degreeC_To_F(temp));
       } else {
         snprintf(strBuf, sizeof(strBuf), "T:%0.1f C", temp);
       }
@@ -442,8 +489,7 @@ void OledDisplay::setBrightness(int percent) {
       // Clear display.
       ag->display.clear();
       ag->display.show();
-    }
-    else {
+    } else {
       isDisplayOff = false;
       ag->display.setContrast((255 * percent) / 100);
     }

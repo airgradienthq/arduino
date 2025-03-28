@@ -1,6 +1,7 @@
 #include "AgStateMachine.h"
+#include "AgOledDisplay.h"
 
-#define LED_TEST_BLINK_DELAY  50  /** ms */
+#define LED_TEST_BLINK_DELAY 50   /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
 #define LED_SLOW_BLINK_DELAY 1000 /** ms */
 #define LED_SHORT_BLINK_DELAY 500 /** ms */
@@ -8,9 +9,9 @@
 
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5 /** sec */
 
-#define RGB_COLOR_R 255, 0, 0    /** Red */
-#define RGB_COLOR_G 0, 255, 0    /** Green */
-#define RGB_COLOR_Y 255, 150, 0  /** Yellow */
+#define RGB_COLOR_R 255, 0, 0   /** Red */
+#define RGB_COLOR_G 0, 255, 0   /** Green */
+#define RGB_COLOR_Y 255, 150, 0 /** Yellow */
 #define RGB_COLOR_O 255, 40, 0  /** Orange */
 #define RGB_COLOR_P 180, 0, 255 /** Purple */
 #define RGB_COLOR_CLEAR 0, 0, 0 /** No color */
@@ -50,7 +51,7 @@ void StateMachine::ledStatusBlinkDelay(uint32_t ms) {
 /**
  * @brief Led bar show PM or CO2 led color status
  *
- * @return true if all led bar are used, false othwerwise 
+ * @return true if all led bar are used, false othwerwise
  */
 bool StateMachine::sensorhandleLeds(void) {
   int totalLedUsed = 0;
@@ -82,7 +83,7 @@ bool StateMachine::sensorhandleLeds(void) {
 /**
  * @brief Show CO2 LED status
  *
- * @return return total number of led that are used on the monitor 
+ * @return return total number of led that are used on the monitor
  */
 int StateMachine::co2handleLeds(void) {
   int totalUsed = ag->ledBar.getNumberOfLeds();
@@ -166,8 +167,8 @@ int StateMachine::co2handleLeds(void) {
 
 /**
  * @brief Show PM2.5 LED status
- * 
- * @return return total number of led that are used on the monitor 
+ *
+ * @return return total number of led that are used on the monitor
  */
 int StateMachine::pm25handleLeds(void) {
   int totalUsed = ag->ledBar.getNumberOfLeds();
@@ -369,18 +370,17 @@ void StateMachine::ledBarTest(void) {
       } else {
         ledBarRunTest();
       }
-    }
-    else if(ag->isOpenAir()) {
+    } else if (ag->isOpenAir()) {
       ledBarRunTest();
     }
   }
 }
 
-void StateMachine::ledBarPowerUpTest(void) { 
+void StateMachine::ledBarPowerUpTest(void) {
   if (ag->isOne()) {
     ag->ledBar.clear();
   }
-  ledBarRunTest(); 
+  ledBarRunTest();
 }
 
 void StateMachine::ledBarRunTest(void) {
@@ -544,11 +544,11 @@ void StateMachine::displayHandle(AgStateMachineState state) {
     break;
   }
   case AgStateMachineWiFiLost: {
-    disp.showDashboard("WiFi N/A");
+    disp.showDashboard(OledDisplay::DashBoardStatusWiFiIssue);
     break;
   }
   case AgStateMachineServerLost: {
-    disp.showDashboard("AG Server N/A");
+    disp.showDashboard(OledDisplay::DashBoardStatusServerIssue);
     break;
   }
   case AgStateMachineSensorConfigFailed: {
@@ -557,19 +557,24 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ms >= 5000) {
         addToDashboardTime = millis();
         if (addToDashBoardToggle) {
-          disp.showDashboard("Add to AG Dashb.");
+          disp.showDashboard(OledDisplay::DashBoardStatusAddToDashboard);
         } else {
-          disp.showDashboard(ag->deviceId().c_str());
+          disp.showDashboard(OledDisplay::DashBoardStatusDeviceId);
         }
         addToDashBoardToggle = !addToDashBoardToggle;
       }
     } else {
-      disp.showDashboard("");
+      disp.showDashboard();
     }
     break;
   }
   case AgStateMachineNormal: {
-    disp.showDashboard();
+    if (config.isOfflineMode()) {
+      disp.showDashboard(
+          OledDisplay::DashBoardStatusOfflineMode);
+    } else {
+      disp.showDashboard();
+    }
     break;
   }
   case AgStateMachineCo2Calibration:

@@ -12,9 +12,19 @@ Arduino IDE version 2.x ([download](https://www.arduino.cc/en/software))
 
 ![board manager](images/esp32-board.png)
 
-2. Install AirGradient library on library manager using the latest version (Tools ➝ Manage Libraries... ➝ search for `"airgradient"`) 
+2. Install AirGradient library
+
+#### Version < 3.2.0
+
+Using library manager install the latest version (Tools ➝ Manage Libraries... ➝ search for `"airgradient"`) 
 
 ![Aigradient Library](images/ag-lib.png)
+
+#### Version >= 3.3.0
+
+- From your terminal, go to Arduino libraries folder (windows and mac: `Documents/Arduino/libraries` or linux: `~/Arduino/Libraries`).
+- With **git** cli, execute this command `git clone --recursive https://github.com/airgradienthq/arduino.git AirGradient_Air_Quality_Sensor` 
+- Restart Arduino IDE 
 
 3. On tools tab, follow settings below
 
@@ -22,7 +32,7 @@ Arduino IDE version 2.x ([download](https://www.arduino.cc/en/software))
 Board ➝ ESP32C3 Dev Module
 USB CDC On Boot ➝ Enabled
 CPU Frequency ➝ 160MHz (WiFi)
-Core Debug Level ➝ None (or choose as needed)
+Core Debug Level ➝ Info
 Erase All Flash Before Sketch Upload ➝ Enabled (or choose as needed)
 Flash Frequency ➝ 80MHz
 Flash Mode ➝ QIO
@@ -31,8 +41,6 @@ JTAG Adapter ➝ Disabled
 Partition Scheme ➝ Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS)
 Upload Speed ➝ 921600
 ```
-
-![Compile Settings](images/settings.png)
 
 4. Open sketch to compile (File ➝ Examples ➝ AirGradient Air Quality Sensor ➝ OneOpenAir). This sketch for AirGradient ONE and Open Air monitor model
 5. Compile
@@ -82,9 +90,16 @@ Choose based on how python installed on your machine. But most user, using `apt`
 
 ## How to contribute
 
+The instructions above are the instructions for how to build an official release of the AirGradient firmware using the Arduino IDE. If you intend to make changes that will you intent to contribute back to the main project, instead of installing the AirGradient library, check out the repo at `Documents/Arduino/libraries` (for Windows and Mac), or `~/Arduino/Libraries` (Linux). If you installed the library, you can remove it from the library manager in the Arduino IDE, or just delete the directory.
+
+**NOTE:** When cloning the repository, for version >= 3.3.0 it has submodule, please use `--recursive` flag like this: `git clone --recursive https://github.com/airgradienthq/arduino.git AirGradient_Air_Quality_Sensor`
+
 Please follow github [contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) tutorial to contribute to this project.
 
 There are 2 environment options to compile this project, PlatformIO and ArduinoIDE.
 
 - For PlatformIO, it should work out of the box
-- For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for windows and mac, and `~/Arduino/Libraries` for linux
+- For arduino, files in `src` folder and also from `Examples` can be modified at `Documents/Arduino/libraries` for Windows and Mac, and `~/Arduino/Libraries` for Linux
+
+
+

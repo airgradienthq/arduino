@@ -18,6 +18,7 @@
 #define GIT_VERSION "3.2.0-snap"
 #endif
 
+
 #ifndef ESP8266
 // Airgradient server root ca certificate
 const char *const AG_SERVER_ROOT_CA =
