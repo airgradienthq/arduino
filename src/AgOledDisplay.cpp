@@ -5,16 +5,16 @@
 /** Cast U8G2 */
 #define DISP() ((U8G2_SH1106_128X64_NONAME_F_HW_I2C *)(this->u8g2))
 
-static const unsigned char wifi_issue_bits[] = {
+static const unsigned char WIFI_ISSUE_BITS[] = {
     0xd8, 0xc6, 0xde, 0xde, 0xc7, 0xf8, 0xd1, 0xe2, 0xdc, 0xce, 0xcc,
     0xcc, 0xc0, 0xc0, 0xd0, 0xc2, 0x00, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0};
 
-static const unsigned char cloud_issue_bits[] = {
+static const unsigned char CLOUD_ISSUE_BITS[] = {
     0x70, 0xc0, 0x88, 0xc0, 0x04, 0xc1, 0x04, 0xcf, 0x02, 0xd0, 0x01,
     0xe0, 0x01, 0xe0, 0x01, 0xe0, 0xa2, 0xd0, 0x4c, 0xce, 0xa0, 0xc0};
 
 // Offline mode icon
-static unsigned char offline_bits[] = {
+static unsigned char OFFLINE_BITS[] = {
     0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x30, 0x00, 0x62, 0x00,
     0xE6, 0x00, 0xFE, 0x1F, 0xFE, 0x1F, 0xE6, 0x00, 0x62, 0x00,
     0x30, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -304,12 +304,12 @@ void OledDisplay::showDashboard(DashboardStatus status) {
         break;
       }
       case DashBoardStatusWiFiIssue: {
-        DISP()->drawXBM(icon_pos_x, 0, 14, 11, wifi_issue_bits);
+        DISP()->drawXBM(icon_pos_x, 0, 14, 11, WIFI_ISSUE_BITS);
         showTempHum(false);
         break;
       }
       case DashBoardStatusServerIssue: {
-        DISP()->drawXBM(icon_pos_x, 0, 14, 11, cloud_issue_bits);
+        DISP()->drawXBM(icon_pos_x, 0, 14, 11, CLOUD_ISSUE_BITS);
         showTempHum(false);
         break;
       }
@@ -322,7 +322,7 @@ void OledDisplay::showDashboard(DashboardStatus status) {
         break;
       }
       case DashBoardStatusOfflineMode: {
-        DISP()->drawXBM(icon_pos_x, 0, 14, 14, offline_bits);
+        DISP()->drawXBM(icon_pos_x, 0, 14, 14, OFFLINE_BITS);
         showTempHum(false); // First true
         break;
       }

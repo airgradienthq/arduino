@@ -688,8 +688,8 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) 
   return corrected;
 }
 
-Measurements::MeasurementCycle Measurements::getMeasurementCycle() {
-  MeasurementCycle mc;
+Measurements::Measures Measurements::getMeasures() {
+  Measures mc;
   mc.bootCount = _bootCount;
   mc.freeHeap = ESP.getFreeHeap();
   // co2, tvoc, nox
@@ -734,7 +734,7 @@ Measurements::MeasurementCycle Measurements::getMeasurementCycle() {
   return mc;
 }
 
-std::string Measurements::buildMeasurementPayload(MeasurementCycle &mc) {
+std::string Measurements::buildMeasuresPayload(Measures &mc) {
   std::ostringstream oss;
 
   // CO2

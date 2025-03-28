@@ -119,7 +119,7 @@ static bool ledBarButtonTest = false;
 static String fwNewVersion;
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
-static std::vector<Measurements::MeasurementCycle> measurementCycleQueue;
+static std::vector<Measurements::Measures> measurementCycleQueue;
 
 static void boardInit(void);
 static void initializeNetwork();
@@ -1327,7 +1327,7 @@ void postUsingCellular() {
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
-    payload += measurements.buildMeasurementPayload(mc);
+    payload += measurements.buildMeasuresPayload(mc);
   }
 
   // Release before actually post measures that might takes too long
@@ -1529,7 +1529,7 @@ void newMeasurementCycle() {
       measurementCycleQueue.erase(measurementCycleQueue.begin());
     }
 
-    Measurements::MeasurementCycle mc = measurements.getMeasurementCycle(); 
+    auto mc = measurements.getMeasures(); 
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");
     // Release mutex

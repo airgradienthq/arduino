@@ -38,7 +38,7 @@ public:
   Measurements(Configuration &config);
   ~Measurements() {}
 
-  struct MeasurementCycle {
+  struct Measures {
     float temperature[2];
     float humidity[2];
     float co2;
@@ -180,9 +180,9 @@ public:
    */
   String toString(bool localServer, AgFirmwareMode fwMode, int rssi);
 
-  MeasurementCycle getMeasurementCycle();
+  Measures getMeasures();
 
-  std::string buildMeasurementPayload(MeasurementCycle &mc);
+  std::string buildMeasuresPayload(Measures &measures);
 
   /**
    * Set to true if want to debug every update value
