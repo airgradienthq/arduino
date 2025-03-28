@@ -5,4 +5,4 @@ build
 .pio
 .cache
 logs
-
+compile_commands.json
