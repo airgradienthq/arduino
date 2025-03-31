@@ -804,16 +804,16 @@ std::string Measurements::buildMeasuresPayload(Measures &mc) {
 
   oss << ",";
 
-  // NOx
-  if (utils::isValidNOx(mc.nox)) {
-    oss << std::round(mc.nox);
+  // TVOC
+  if (utils::isValidVOC(mc.tvoc)) {
+    oss << std::round(mc.tvoc);
   }
 
   oss << ",";
 
-  // TVOC
-  if (utils::isValidVOC(mc.tvoc)) {
-    oss << std::round(mc.tvoc);
+  // NOx
+  if (utils::isValidNOx(mc.nox)) {
+    oss << std::round(mc.nox);
   }
 
   oss << ",";
@@ -826,10 +826,6 @@ std::string Measurements::buildMeasuresPayload(Measures &mc) {
   } else if (utils::isValidPm03Count(mc.pm_03_pc[1])) {
     oss << std::round(mc.pm_03_pc[1]);
   }
-
-  // char datapoint[128] = {0};
-  // snprintf(datapoint, 128, "%d,%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%d", co2, temp * 10,
-  //          hum * 10, pm01 * 10, pm25 * 10, pm10 * 10, tvoc, nox, pm003Count);
 
   return oss.str();
 }
