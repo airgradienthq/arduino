@@ -423,6 +423,11 @@ static void initMqtt(void) {
     return;
   }
 
+  if (networkOption == UseCellular) {
+    Serial.println("MQTT not available for cellular options");
+    return;
+  }
+
   if (mqttClient.begin(mqttUri)) {
     Serial.println("Successfully connected to MQTT broker");
     createMqttTask();
