@@ -739,7 +739,13 @@ bool Configuration::parse(String data, bool isLocal) {
       jsonInvalid();
       return false;
     }
-  } else {
+  }
+  else if (JSON.typeof_(root[jprop_mqttBrokerUrl]) == "null" and !isLocal) {
+    // So if its not available on the json and json comes from aigradient server
+    // then set its value to default (empty) 
+    jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
+  }
+  else {
     if (jsonTypeInvalid(root[jprop_mqttBrokerUrl], "string")) {
       failedMessage =
           jsonTypeInvalidMessage(String(jprop_mqttBrokerUrl), "string");
