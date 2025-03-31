@@ -240,7 +240,7 @@ bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &ta
 
   JSONVar corrections = json[jprop_corrections];
   if (!corrections.hasOwnProperty(correctionName)) {
-    logWarning(String(correctionName) + " correction field not found on configuration");
+    logInfo(String(correctionName) + " correction field not found on configuration");
     return false;
   }
 
