@@ -939,6 +939,11 @@ void initializeNetwork() {
     networkOption = UseWifi;
   }
 
+  if (networkOption == UseCellular) {
+    // Enable serial stream debugging to check the AT command when doing registration 
+    agSerial->setDebug(true);
+  }
+
   if (!agClient->begin(ag->deviceId().c_str())) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
@@ -946,6 +951,11 @@ void initializeNetwork() {
     delay(2500);
     oledDisplay.setText("", "", "");
     ESP.restart();
+  }
+
+  if (networkOption == UseCellular) {
+    // Disabling it again
+    agSerial->setDebug(false);
   }
 
   if (networkOption == UseWifi) {
@@ -1500,11 +1510,13 @@ void networkingTask(void *args) {
     else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
         Serial.println("Cellular client not ready, ensuring connection...");
+        agSerial->setDebug(true); 
         if (agClient->ensureClientConnection() == false) {
           Serial.println("Cellular client connection not ready, retry in 5s...");
           delay(5000);
           continue;
         }
+        agSerial->setDebug(false);
       }
     }
 

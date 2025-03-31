@@ -4,5 +4,7 @@ build
 /.idea/
 .pio
 .cache
+.clangd
 logs
+gen_compile_commands.py
 compile_commands.json
