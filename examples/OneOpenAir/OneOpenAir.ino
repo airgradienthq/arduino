@@ -947,7 +947,9 @@ void initializeNetwork() {
   String httpDomain = configuration.getHttpDomain();
   if (httpDomain != "") {
     agClient->setHttpDomain(httpDomain.c_str());
-    Serial.printf("HTTP request domain set to: %s\n", httpDomain.c_str());
+    Serial.printf("HTTP domain name is set to: %s\n", httpDomain.c_str());
+    oledDisplay.setText("HTTP domain name", "using local", "configuration");
+    delay(2500);
   }
 
   if (!agClient->begin(ag->deviceId().c_str())) {
@@ -1049,11 +1051,11 @@ static void configUpdateHandle() {
 
   String httpDomain = configuration.getHttpDomain();
   if (httpDomain != "") {
-    Serial.printf("HTTP request domain set to: %s\n", httpDomain.c_str());
+    Serial.printf("HTTP domain name set to: %s\n", httpDomain.c_str());
     agClient->setHttpDomain(httpDomain.c_str());
   } else {
     // Its empty, set to default
-    Serial.println("HTTP domain from configuration empty, set to default");
+    Serial.println("HTTP domain name from configuration empty, set to default");
     agClient->setHttpDomainDefault();
   }
 
