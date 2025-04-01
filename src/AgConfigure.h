@@ -82,6 +82,7 @@ public:
   String getLedBarModeName(void);
   bool getDisplayMode(void);
   String getMqttBrokerUri(void);
+  String getHttpDomain(void);
   bool isPostDataToAirGradient(void);
   ConfigurationControl getConfigurationControl(void);
   bool isCo2CalibrationRequested(void);
