@@ -93,6 +93,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
   "tvocLearningOffset": 12,
   "noxLearningOffset": 12,
   "mqttBrokerUrl": "",
+  "httpDomain": "",
   "temperatureUnit": "c",
   "configurationControl": "local",
   "postDataToAirGradient": true,
