@@ -46,6 +46,7 @@ JSON_PROP_DEF(abcDays);
 JSON_PROP_DEF(tvocLearningOffset);
 JSON_PROP_DEF(noxLearningOffset);
 JSON_PROP_DEF(mqttBrokerUrl);
+JSON_PROP_DEF(httpDomain);
 JSON_PROP_DEF(temperatureUnit);
 JSON_PROP_DEF(configurationControl);
 JSON_PROP_DEF(postDataToAirGradient);
@@ -68,6 +69,7 @@ JSON_PROP_DEF(rhum);
 #define jprop_tvocLearningOffset_default              12
 #define jprop_noxLearningOffset_default               12
 #define jprop_mqttBrokerUrl_default                   ""
+#define jprop_httpDomain_default                      ""
 #define jprop_temperatureUnit_default                 "c"
 #define jprop_configurationControl_default            String(CONFIGURATION_CONTROL_NAME[ConfigurationControl::ConfigurationControlBoth])
 #define jprop_postDataToAirGradient_default           true
@@ -377,6 +379,7 @@ void Configuration::defaultConfig(void) {
 
   jconfig[jprop_country] = jprop_country_default;
   jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
+  jconfig[jprop_httpDomain] = jprop_httpDomain_default;
   jconfig[jprop_configurationControl] = jprop_configurationControl_default;
   jconfig[jprop_pmStandard] = jprop_pmStandard_default;
   jconfig[jprop_temperatureUnit] = jprop_temperatureUnit_default;
@@ -735,7 +738,7 @@ bool Configuration::parse(String data, bool isLocal) {
         jconfig[jprop_mqttBrokerUrl] = broker;
       }
     } else {
-      failedMessage = "\"mqttBrokerUrl\" length should <= 255";
+      failedMessage = "\"mqttBrokerUrl\" length should less than 255 character";
       jsonInvalid();
       return false;
     }
@@ -751,6 +754,32 @@ bool Configuration::parse(String data, bool isLocal) {
           jsonTypeInvalidMessage(String(jprop_mqttBrokerUrl), "string");
       jsonInvalid();
       return false;
+    }
+  }
+
+  if (isLocal) {
+    if (JSON.typeof_(root[jprop_httpDomain]) == "string") {
+      String httpDomain = root[jprop_httpDomain];
+      String oldHttpDomain = jconfig[jprop_httpDomain];
+      if (httpDomain.length() <= 255) {
+        if (httpDomain != oldHttpDomain) {
+          changed = true;
+          configLogInfo(String(jprop_httpDomain), oldHttpDomain, httpDomain);
+          jconfig[jprop_httpDomain] = httpDomain;
+        }
+      } else {
+        failedMessage = "\"httpDomain\" length should less than 255 character";
+        jsonInvalid();
+        return false;
+      }
+    }
+    else {
+      if (jsonTypeInvalid(root[jprop_httpDomain], "string")) {
+        failedMessage =
+            jsonTypeInvalidMessage(String(jprop_httpDomain), "string");
+        jsonInvalid();
+        return false;
+      }
     }
   }
 
@@ -1037,6 +1066,16 @@ String Configuration::getMqttBrokerUri(void) {
 }
 
 /**
+ * @brief Get HTTP domain for post measures and get configuration 
+ *
+ * @return String http domain, might be empty string
+ */
+String Configuration::getHttpDomain(void) {
+  String httpDomain = jconfig[jprop_httpDomain];
+  return httpDomain;
+}
+
+/**
  * @brief Get configuratoin post data to AirGradient cloud
  *
  * @return true Post
@@ -1121,7 +1160,7 @@ bool Configuration::isUpdated(void) {
 }
 
 String Configuration::jsonTypeInvalidMessage(String name, String type) {
-  return "'" + name + "' type invalid, it's should '" + type + "'";
+  return "'" + name + "' type is invalid, expecting '" + type + "'";
 }
 
 String Configuration::jsonValueInvalidMessage(String name, String value) {
@@ -1273,6 +1312,18 @@ void Configuration::toConfig(const char *buf) {
     changed = true;
     jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
     logInfo("toConfig: mqttBroker changed");
+  }
+
+  /** validate http domain */
+  if (JSON.typeof_(jconfig[jprop_httpDomain]) != "string") {
+    isConfigFieldInvalid = true;
+  } else {
+    isConfigFieldInvalid = false;
+  }
+  if (isConfigFieldInvalid) {
+    changed = true;
+    jconfig[jprop_httpDomain] = jprop_httpDomain_default;
+    logInfo("toConfig: httpDomain changed");
   }
 
   /** Validate temperature unit */

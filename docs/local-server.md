@@ -93,6 +93,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
   "tvocLearningOffset": 12,
   "noxLearningOffset": 12,
   "mqttBrokerUrl": "",
+  "httpDomain": "",
   "temperatureUnit": "c",
   "configurationControl": "local",
   "postDataToAirGradient": true,
@@ -146,7 +147,8 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 | `displayBrightness`               | Brightness of the Display.                                       | Number  | 0-100                                                                                                                                   | `{"displayBrightness": 50}`                     |
 | `ledBarBrightness`                | Brightness of the LEDBar.                                        | Number  | 0-100                                                                                                                                   | `{"ledBarBrightness": 40}`                      |
 | `abcDays`                         | Number of days for CO2 automatic baseline calibration.           | Number  | Maximum 200 days. Default 8 days.                                                                                                       | `{"abcDays": 8}`                                |
-| `mqttBrokerUrl`                   | MQTT broker URL.                                                 | String  |                                                                                                                                         | `{"mqttBrokerUrl": "mqtt://192.168.0.18:1883"}` |
+| `mqttBrokerUrl`                   | MQTT broker URL.                                                 | String  | Maximum 255 characters. Set value to empty string to disable mqtt connection.                                                           | `{"mqttBrokerUrl": "mqtt://192.168.0.18:1883"}` |
+| `httpDomain`                      | Domain name for http request. (version > 3.3.2)                  | String  | Maximum 255 characters. Set value to empty string to set http domain to default airgradient                                             | `{"httpDomain": "sub.domain.com"}`              |
 | `temperatureUnit`                 | Temperature unit shown on the display.                           | String  | `c` or `C`: Degree Celsius °C <br>`f` or `F`: Degree Fahrenheit °F                                                                      | `{"temperatureUnit": "c"}`                      |
 | `configurationControl`            | The configuration source of the device.                          | String  | `both`: Accept local and cloud configuration <br>`local`: Accept only local configuration  <br>`cloud`: Accept only cloud configuration | `{"configurationControl": "both"}`              |
 | `postDataToAirGradient`           | Send data to AirGradient cloud.                                  | Boolean | `true`: Enabled <br>`false`: Disabled                                                                                                   | `{"postDataToAirGradient": true}`               |
@@ -154,8 +156,8 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 | `ledBarTestRequested`             | Can be set to trigger a test.                                    | Boolean | `true` : LEDs will run test sequence                                                                                                    | `{"ledBarTestRequested": true}`                 |
 | `noxLearningOffset`               | Set NOx learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"noxLearningOffset": 12}`                     |
 | `tvocLearningOffset`              | Set VOC learning gain offset.                                    | Number  | 0-720 (default 12)                                                                                                                      | `{"tvocLearningOffset": 12}`                    |
-| `monitorDisplayCompensatedValues` | Set the display show the PM value with/without compensate  value (only on [3.1.9]()) | Boolean | `false`: Without compensate (default) <br> `true`: with compensate                                                                      | `{"monitorDisplayCompensatedValues": false }`   |
-| `corrections`                     | Sets correction options to display and measurement values on local server response. (version >= [3.1.11]())    | Object |  _see corrections section_             | _see corrections section_                         |
+| `monitorDisplayCompensatedValues` | Set the display show the PM value with/without compensate  value (only on 3.1.9) | Boolean | `false`: Without compensate (default) <br> `true`: with compensate                                                  | `{"monitorDisplayCompensatedValues": false }`   |
+| `corrections`                     | Sets correction options to display and measurement values on local server response. (version >= 3.1.11)    | Object |  _see corrections section_             | _see corrections section_                         |
 
 
 **Notes**
