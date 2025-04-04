@@ -813,8 +813,6 @@ static void openAirInit(void) {
       Serial.println("CO2 S8 sensor not found");
       Serial.println("Can not detect S8 run mode 'PPT'");
       fwMode = FW_MODE_O_1PPT;
-
-      Serial0.end();
       delay(200);
     } else {
       Serial.println("Found S8 on Serial0");
