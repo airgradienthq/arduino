@@ -1463,12 +1463,8 @@ void setMeasurementMaxPeriod() {
 
 int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
-  if (networkOption == UseWifi) {
-    return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
-  } else {
-    // Cellular
-    return (CELLULAR_MEASUREMENT_INTERVAL - (CELLULAR_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
-  }
+  // NOTE: Both network option use the same measurement interval 
+  return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
 }
 
 
