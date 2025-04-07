@@ -117,6 +117,7 @@ static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
+static int lastCellSignalQuality = 99; // CSQ 
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
 static std::vector<Measurements::Measures> measurementCycleQueue;
@@ -1475,14 +1476,20 @@ void networkSignalCheck() {
     auto result = cell->retrieveSignal();
     if (result.status != CellReturnStatus::Ok) {
       agClient->setClientReady(false);
+      lastCellSignalQuality = 99;
       return;
     }
+
+    // Save last signal quality
+    lastCellSignalQuality = result.data; 
+
     if (result.data == 99) {
       // 99 indicate cellular not attached to network
       agClient->setClientReady(false);
       return;
     }
-    Serial.printf("Cellular signal strength %d\n", result.data);
+
+    Serial.printf("Cellular signal quality %d\n", result.data);
   }
 }
 
@@ -1501,6 +1508,7 @@ void networkingTask(void *args) {
   if (networkOption == UseCellular) {
     Serial.println("Prepare first measures cycle to send on boot for 20s");
     delay(20000);
+    networkSignalCheck();
     newMeasurementCycle();
     sendDataToServer();
     measurementSchedule.update();
@@ -1558,7 +1566,10 @@ void newMeasurementCycle() {
       measurementCycleQueue.erase(measurementCycleQueue.begin());
     }
 
+    // Get current measures
     auto mc = measurements.getMeasures(); 
+    mc.signal = cell->csqToDbm(lastCellSignalQuality); // convert to RSSI
+
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");
     // Release mutex

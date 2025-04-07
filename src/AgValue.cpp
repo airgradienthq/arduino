@@ -827,6 +827,12 @@ std::string Measurements::buildMeasuresPayload(Measures &mc) {
     oss << std::round(mc.pm_03_pc[1]);
   }
 
+  oss << ",";
+
+  if (mc.signal < 0) {
+    oss << mc.signal;
+  }
+
   return oss.str();
 }
 
