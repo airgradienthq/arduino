@@ -37,6 +37,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
+#include "Libraries/airgradient-client/src/common.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
@@ -1514,6 +1515,9 @@ void networkingTask(void *args) {
     measurementSchedule.update();
   }
 
+  // Default value is 0, indicate its not started yet
+  uint32_t startTimeClientNotReady = 0;
+
   // Reset scheduler
   configSchedule.update();
   transmissionSchedule.update();
@@ -1529,14 +1533,56 @@ void networkingTask(void *args) {
     }
     else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
-        Serial.println("Cellular client not ready, ensuring connection...");
+        // Start time if value still default
+        if (startTimeClientNotReady == 0) {
+          startTimeClientNotReady = millis();
+        }
+
+        // TODO: Need to handle if millis is overflow (back to 0)
+
+        // Enable at command debug
         agSerial->setDebug(true); 
-        if (agClient->ensureClientConnection() == false) {
-          Serial.println("Cellular client connection not ready, retry in 5s...");
-          delay(5000);
+
+        // If in 2 hours still not ready, then restart esp
+        if ((millis() - startTimeClientNotReady) > (2 * 60 * 60000)) {
+          Serial.println("CLIENT NOT READY TAKING TOO LONG! Rebooting ...");
+          int i = 3;
+          while (i != 0) {
+            if (ag->isOne()) {
+              String tmp = "Reboot in " + String(i);
+              oledDisplay.setText("CE error", "too long", tmp.c_str());
+            } else {
+              Serial.println("Rebooting... " + String(i));
+            }
+            i = i - 1;
+            delay(1000);
+          }
+          oledDisplay.setBrightness(0);
+          esp_restart();
+        }
+        
+        // Starting from 1 hour since its not ready, power cycling the module
+        bool resetModule = true;
+        if ((millis() - startTimeClientNotReady) > (60 * 60000)) {
+          Serial.println("Power cycling module");
+          cell->powerOff();
+          delay(2000);
+          cell->powerOn();
+          delay(10000);
+          resetModule = false; // No need to reset module anymore
+        }
+
+        // Attempt to reconnect
+        Serial.println("Cellular client not ready, ensuring connection...");
+        if (agClient->ensureClientConnection(resetModule) == false) {
+          Serial.println("Cellular client connection not ready, retry in 30s...");
+          delay(30000); // before retry, wait for 30s
           continue;
         }
-        agSerial->setDebug(false);
+
+        // Client is ready
+        startTimeClientNotReady = 0; // reset to default
+        agSerial->setDebug(false); // disable at command debug
       }
     }
 
