@@ -120,6 +120,9 @@ static bool ledBarButtonTest = false;
 static String fwNewVersion;
 static int lastCellSignalQuality = 99; // CSQ 
 
+// Default value is 0, indicate its not started yet
+uint32_t startTimeClientNotReady = 0;
+
 SemaphoreHandle_t mutexMeasurementCycleQueue;
 static std::vector<Measurements::Measures> measurementCycleQueue;
 
@@ -147,6 +150,7 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
+static void checkCellularClientNotReady(); 
 static void networkSignalCheck();
 static void networkingTask(void *args);
 
@@ -299,6 +303,12 @@ void setup() {
 }
 
 void loop() {
+  if (networkOption == UseCellular) {
+    // Check if cellular client not ready until certain time
+    // Redundant check in both task to make sure its executed 
+    checkCellularClientNotReady();
+  }
+
   // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
 
@@ -1494,6 +1504,30 @@ void networkSignalCheck() {
   }
 }
 
+/**
+* If in 2 hours still not ready, then restart esp
+*/
+void checkCellularClientNotReady() {
+  if (startTimeClientNotReady > 0 &&
+      (millis() - startTimeClientNotReady) > (2 * 60 * 60000)) {
+    // Give up wait
+    Serial.println("CLIENT NOT READY TAKING TOO LONG! Rebooting ...");
+    int i = 3;
+    while (i != 0) {
+      if (ag->isOne()) {
+        String tmp = "Reboot in " + String(i);
+        oledDisplay.setText("CE error", "too long", tmp.c_str());
+      } else {
+        Serial.println("Rebooting... " + String(i));
+      }
+      i = i - 1;
+      delay(1000);
+    }
+    oledDisplay.setBrightness(0);
+    esp_restart();
+  }
+}
+
 void networkingTask(void *args) {
   // OTA check on boot
 #ifdef ESP8266
@@ -1514,9 +1548,6 @@ void networkingTask(void *args) {
     sendDataToServer();
     measurementSchedule.update();
   }
-
-  // Default value is 0, indicate its not started yet
-  uint32_t startTimeClientNotReady = 0;
 
   // Reset scheduler
   configSchedule.update();
@@ -1543,24 +1574,10 @@ void networkingTask(void *args) {
         // Enable at command debug
         agSerial->setDebug(true); 
 
-        // If in 2 hours still not ready, then restart esp
-        if ((millis() - startTimeClientNotReady) > (2 * 60 * 60000)) {
-          Serial.println("CLIENT NOT READY TAKING TOO LONG! Rebooting ...");
-          int i = 3;
-          while (i != 0) {
-            if (ag->isOne()) {
-              String tmp = "Reboot in " + String(i);
-              oledDisplay.setText("CE error", "too long", tmp.c_str());
-            } else {
-              Serial.println("Rebooting... " + String(i));
-            }
-            i = i - 1;
-            delay(1000);
-          }
-          oledDisplay.setBrightness(0);
-          esp_restart();
-        }
-        
+        // Check if cellular client not ready until certain time
+        // Redundant check in both task to make sure its executed 
+        checkCellularClientNotReady();
+
         // Starting from 1 hour since its not ready, power cycling the module
         bool resetModule = true;
         if ((millis() - startTimeClientNotReady) > (60 * 60000)) {
