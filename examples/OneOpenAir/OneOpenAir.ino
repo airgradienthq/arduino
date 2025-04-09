@@ -66,7 +66,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define WIFI_TRANSMISSION_INTERVAL 1 * 60000           /** ms */
 #define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 30 * 60000 /** ms */
 #define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000        /** ms */
-#define CELLULAR_TRANSMISSION_INTERVAL 9 * 60000       /** ms */
+#define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000       /** ms */
 #define MQTT_SYNC_INTERVAL 60000                       /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5               /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000               /** ms */
@@ -1353,7 +1353,10 @@ void postUsingWifi() {
   Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
-void postUsingCellular() {
+/**
+* forcePost to force post without checking transmit cycle
+*/
+void postUsingCellular(bool forcePost) {
   // Aquire queue mutex to get queue size
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
   
@@ -1366,9 +1369,10 @@ void postUsingCellular() {
   }
 
   // Check queue size if its ready to transmit
-  // It is ready if size is 1 or divisible by 3 
-  if (queueSize != 1 && (queueSize % MEASUREMENT_TRANSMIT_CYCLE) > 0) {
+  // It is ready if size is divisible by 3 
+  if (!forcePost && (queueSize % MEASUREMENT_TRANSMIT_CYCLE) > 0) {
     Serial.printf("Not ready to transmit, queue size are %d\n", queueSize);
+    xSemaphoreGive(mutexMeasurementCycleQueue);
     return;
   }
 
@@ -1413,7 +1417,7 @@ void sendDataToServer(void) {
   if (networkOption == UseWifi) {
     postUsingWifi();
   } else if (networkOption == UseCellular) {
-    postUsingCellular();
+    postUsingCellular(false);
   }
 }
 
@@ -1553,7 +1557,7 @@ void networkingTask(void *args) {
     delay(20000);
     networkSignalCheck();
     newMeasurementCycle();
-    sendDataToServer();
+    postUsingCellular(true);
     measurementSchedule.update();
   }
 
