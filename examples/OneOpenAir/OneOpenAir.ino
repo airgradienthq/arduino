@@ -76,6 +76,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
 
+#define MEASUREMENT_TRANSMIT_CYCLE 3
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
 #define RESERVED_MEASUREMENT_CYCLE_CAPACITY 10
 
@@ -1361,6 +1362,13 @@ void postUsingCellular() {
   if (queueSize == 0) {
     Serial.println("Skipping transmission, measurementCycle empty");
     xSemaphoreGive(mutexMeasurementCycleQueue);
+    return;
+  }
+
+  // Check queue size if its ready to transmit
+  // It is ready if size is 1 or divisible by 3 
+  if (queueSize != 1 && (queueSize % MEASUREMENT_TRANSMIT_CYCLE) > 0) {
+    Serial.printf("Not ready to transmit, queue size are %d\n", queueSize);
     return;
   }
 
