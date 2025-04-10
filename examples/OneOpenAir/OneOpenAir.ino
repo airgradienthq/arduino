@@ -26,7 +26,6 @@ https://forum.airgradient.com/
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
-
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
@@ -46,6 +45,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <cstdint>
 #include <string>
 
 #include "Libraries/airgradient-client/src/agSerial.h"
@@ -75,6 +75,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000           /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
+#define TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE (1 * 60) /** minutes */ 
+#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY    (2 * 60) /** minutes */ 
 
 #define MEASUREMENT_TRANSMIT_CYCLE 3
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
@@ -89,6 +91,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define GPIO_POWER_MODULE_PIN  5
 #define GPIO_EXPANSION_CARD_POWER 4
 #define GPIO_IIC_RESET 3
+
+#define MICROS_TO_MINUTES() ((uint32_t)(esp_timer_get_time() / 1000 / 1000 / 60))
 
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
@@ -122,6 +126,7 @@ static String fwNewVersion;
 static int lastCellSignalQuality = 99; // CSQ 
 
 // Default value is 0, indicate its not started yet
+// In minutes
 uint32_t agCeClientProblemDetectedTime = 0;
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
@@ -1521,14 +1526,15 @@ void networkSignalCheck() {
 */
 void checkCellularClientNotReady() {
   if (agCeClientProblemDetectedTime > 0 &&
-      (millis() - agCeClientProblemDetectedTime) > (2 * 60 * 60000)) {
+      (MICROS_TO_MINUTES() - agCeClientProblemDetectedTime) >
+          TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
     // Give up wait
     Serial.println("Rebooting because CE client issues for 2 hours detected");
     int i = 3;
     while (i != 0) {
       if (ag->isOne()) {
         String tmp = "Rebooting in " + String(i);
-        oledDisplay.setText("CE error", "too long", tmp.c_str());
+        oledDisplay.setText("CE error", "since 1h", tmp.c_str());
       } else {
         Serial.println("Rebooting... " + String(i));
       }
@@ -1565,6 +1571,9 @@ void networkingTask(void *args) {
   configSchedule.update();
   transmissionSchedule.update();
 
+
+  uint32_t startTime = millis();
+
   while (1) {
     // Handle reconnection based on mode
     if (networkOption == UseWifi) {
@@ -1578,10 +1587,8 @@ void networkingTask(void *args) {
       if (agClient->isClientReady() == false) {
         // Start time if value still default
         if (agCeClientProblemDetectedTime == 0) {
-          agCeClientProblemDetectedTime = millis();
+          agCeClientProblemDetectedTime = MICROS_TO_MINUTES();
         }
-
-        // TODO: Need to handle if millis is overflow (back to 0)
 
         // Enable at command debug
         agSerial->setDebug(true); 
@@ -1592,14 +1599,16 @@ void networkingTask(void *args) {
 
         // Power cycling cellular module due to network issues for more than 1 hour
         bool resetModule = true;
-        if ((millis() - agCeClientProblemDetectedTime) > (60 * 60000)) {
-          Serial.println("Power cycling module");
+        if ((MICROS_TO_MINUTES() - agCeClientProblemDetectedTime) >
+            TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
+          Serial.println("The CE client hasn't recovered in more than 1 hour, "
+                         "performing a power cycle");
           cellularModule->powerOff();
           delay(2000);
           cellularModule->powerOn();
           delay(10000);
           // no need to reset module when calling ensureClientConnection()
-          resetModule = false; 
+          resetModule = false;
         }
 
         // Attempt to reconnect
