@@ -1571,9 +1571,6 @@ void networkingTask(void *args) {
   configSchedule.update();
   transmissionSchedule.update();
 
-
-  uint32_t startTime = millis();
-
   while (1) {
     // Handle reconnection based on mode
     if (networkOption == UseWifi) {
