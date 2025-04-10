@@ -104,7 +104,7 @@ static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static AgSerial *agSerial;
-static CellularModule *cell;
+static CellularModule *cellularModule;
 static AirgradientClient *agClient;
 
 enum NetworkOption {
@@ -122,7 +122,7 @@ static String fwNewVersion;
 static int lastCellSignalQuality = 99; // CSQ 
 
 // Default value is 0, indicate its not started yet
-uint32_t startTimeClientNotReady = 0;
+uint32_t agCeClientProblemDetectedTime = 0;
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
 static std::vector<Measurements::Measures> measurementCycleQueue;
@@ -554,7 +554,7 @@ void checkForFirmwareUpdate(void) {
   if (networkOption == UseWifi) {
     agOta = new AirgradientOTAWifi;
   } else {
-    agOta = new AirgradientOTACellular(cell);
+    agOta = new AirgradientOTACellular(cellularModule);
   }
 
   // Indicate main task that ota is performing
@@ -938,8 +938,8 @@ void initializeNetwork() {
   if (agSerial->open()) {
     Serial.println("Cellular module found");
     // Initialize cellular module and use cellular as agClient 
-    cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
-    agClient = new AirgradientCellularClient(cell);
+    cellularModule = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    agClient = new AirgradientCellularClient(cellularModule);
     networkOption = UseCellular;
   } else {
     Serial.println("Cellular module not available, using wifi");
@@ -1496,7 +1496,7 @@ void networkSignalCheck() {
   if (networkOption == UseWifi) {
     Serial.printf("WiFi RSSI %d\n", wifiConnector.RSSI());
   } else if (networkOption == UseCellular) {
-    auto result = cell->retrieveSignal();
+    auto result = cellularModule->retrieveSignal();
     if (result.status != CellReturnStatus::Ok) {
       agClient->setClientReady(false);
       lastCellSignalQuality = 99;
@@ -1520,14 +1520,14 @@ void networkSignalCheck() {
 * If in 2 hours still not ready, then restart esp
 */
 void checkCellularClientNotReady() {
-  if (startTimeClientNotReady > 0 &&
-      (millis() - startTimeClientNotReady) > (2 * 60 * 60000)) {
+  if (agCeClientProblemDetectedTime > 0 &&
+      (millis() - agCeClientProblemDetectedTime) > (2 * 60 * 60000)) {
     // Give up wait
-    Serial.println("CLIENT NOT READY TAKING TOO LONG! Rebooting ...");
+    Serial.println("Rebooting because CE client issues for 2 hours detected");
     int i = 3;
     while (i != 0) {
       if (ag->isOne()) {
-        String tmp = "Reboot in " + String(i);
+        String tmp = "Rebooting in " + String(i);
         oledDisplay.setText("CE error", "too long", tmp.c_str());
       } else {
         Serial.println("Rebooting... " + String(i));
@@ -1577,8 +1577,8 @@ void networkingTask(void *args) {
     else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
         // Start time if value still default
-        if (startTimeClientNotReady == 0) {
-          startTimeClientNotReady = millis();
+        if (agCeClientProblemDetectedTime == 0) {
+          agCeClientProblemDetectedTime = millis();
         }
 
         // TODO: Need to handle if millis is overflow (back to 0)
@@ -1590,15 +1590,16 @@ void networkingTask(void *args) {
         // Redundant check in both task to make sure its executed 
         checkCellularClientNotReady();
 
-        // Starting from 1 hour since its not ready, power cycling the module
+        // Power cycling cellular module due to network issues for more than 1 hour
         bool resetModule = true;
-        if ((millis() - startTimeClientNotReady) > (60 * 60000)) {
+        if ((millis() - agCeClientProblemDetectedTime) > (60 * 60000)) {
           Serial.println("Power cycling module");
-          cell->powerOff();
+          cellularModule->powerOff();
           delay(2000);
-          cell->powerOn();
+          cellularModule->powerOn();
           delay(10000);
-          resetModule = false; // No need to reset module anymore
+          // no need to reset module when calling ensureClientConnection()
+          resetModule = false; 
         }
 
         // Attempt to reconnect
@@ -1610,7 +1611,7 @@ void networkingTask(void *args) {
         }
 
         // Client is ready
-        startTimeClientNotReady = 0; // reset to default
+        agCeClientProblemDetectedTime = 0; // reset to default
         agSerial->setDebug(false); // disable at command debug
       }
     }
@@ -1643,7 +1644,7 @@ void newMeasurementCycle() {
 
     // Get current measures
     auto mc = measurements.getMeasures(); 
-    mc.signal = cell->csqToDbm(lastCellSignalQuality); // convert to RSSI
+    mc.signal = cellularModule->csqToDbm(lastCellSignalQuality); // convert to RSSI
 
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");
