@@ -117,7 +117,7 @@ enum NetworkOption {
 };
 NetworkOption networkOption;
 TaskHandle_t handleNetworkTask = NULL;
-static bool otaInProgress = false;
+static bool firmwareUpdateInProgress = false;
 
 static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
@@ -318,8 +318,8 @@ void loop() {
   // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
 
-  if (otaInProgress) {
-    // OTA currently in progress, temporarily disable running sensor schedules
+  if (firmwareUpdateInProgress) {
+    // Firmare update currently in progress, temporarily disable running sensor schedules
     delay(10000);
     return;
   }
@@ -562,28 +562,17 @@ void checkForFirmwareUpdate(void) {
     agOta = new AirgradientOTACellular(cellularCard);
   }
 
-  // Indicate main task that ota is performing
-  Serial.println("Check for firmware update, disabling main task");
-  otaInProgress = true;
-  if (configuration.hasSensorSGP && networkOption == UseCellular) {
-    // Only for cellular because it can disturb i2c line
-    Serial.println("Disable SGP41 task for cellular OTA");
-    ag->sgp41.end();
-  }
+  // Indicate main task that firmware update is in progress
+  firmwareUpdateInProgress = true;
 
   agOta->setHandlerCallback(otaHandlerCallback);
   agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION);
 
-  // Only goes to this line if OTA is not success
+  // Only goes to this line if firmware update is not success
   // Handled by otaHandlerCallback
 
-  otaInProgress = false;
-  if (configuration.hasSensorSGP && networkOption == UseCellular) {
-    // Re-start SGP41 task
-    if (!sgp41Init()) {
-      Serial.println("Failed re-start SGP41 task");
-    }
-  }
+  // Indicate main task that firmware update finish
+  firmwareUpdateInProgress = false;
 
   delete agOta;
   Serial.println();
@@ -591,9 +580,15 @@ void checkForFirmwareUpdate(void) {
 
 void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
   switch (result) {
-  case AirgradientOTA::Starting:
+  case AirgradientOTA::Starting: {
+    Serial.println("Firmware update starting...");
+    if (configuration.hasSensorSGP && networkOption == UseCellular) {
+      // Temporary pause SGP41 task while cellular firmware update is in progress
+      ag->sgp41.pauseHandle();
+    }
     displayExecuteOta(result, fwNewVersion, 0);
     break;
+  }
   case AirgradientOTA::InProgress:
     Serial.printf("OTA progress: %s\n", msg);
     displayExecuteOta(result, "", std::stoi(msg));
@@ -602,6 +597,10 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
   case AirgradientOTA::Skipped:
   case AirgradientOTA::AlreadyUpToDate:
     displayExecuteOta(result, "", 0);
+    if (configuration.hasSensorSGP && networkOption == UseCellular) {
+      // Cellular firmware update finish, resuming SGP41 task
+      ag->sgp41.resumeHandle();
+    }
     break;
   case AirgradientOTA::Success:
     displayExecuteOta(result, "", 0);
@@ -665,7 +664,11 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
       }
       delay(1000);
     }
-    oledDisplay.setAirGradient(0);
+
+    if (ag->isOne()) {
+      oledDisplay.setAirGradient(0);
+      oledDisplay.setBrightness(0);
+    }
     break;
   }
   default:
@@ -1548,10 +1551,7 @@ void restartIfCeClientIssueOverTwoHours() {
 
 void networkingTask(void *args) {
   // OTA check on boot
-#ifdef ESP8266
-  // ota not supported
-#else
-  // because cellular it takes too long, watchdog triggered
+#ifndef ESP8266
   checkForFirmwareUpdate();
   checkForUpdateSchedule.update(); 
 #endif
