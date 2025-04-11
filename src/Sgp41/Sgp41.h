@@ -18,6 +18,10 @@ public:
   bool begin(TwoWire &wire, Stream &stream);
   void handle(void);
 #else
+  /* pause _handle task to read sensor */
+  void pauseHandle();
+  /* resume _handle task to read sensor */
+  void resumeHandle();
   void _handle(void);
 #endif
   void end(void);
@@ -32,6 +36,7 @@ public:
   int getTvocLearningOffset(void);
 
 private:
+  bool onPause = false;
   bool onConditioning = true;
   bool ready = false;
   bool _isBegin = false;
