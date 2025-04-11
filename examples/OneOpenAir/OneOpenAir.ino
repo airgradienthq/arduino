@@ -92,7 +92,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define GPIO_EXPANSION_CARD_POWER 4
 #define GPIO_IIC_RESET 3
 
-#define MICROS_TO_MINUTES() ((uint32_t)(esp_timer_get_time() / 1000 / 1000 / 60))
+#define MINUTES() ((uint32_t)(esp_timer_get_time() / 1000 / 1000 / 60))
 
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
@@ -1526,7 +1526,7 @@ void networkSignalCheck() {
 */
 void restartIfCeClientIssueOverTwoHours() {
   if (agCeClientProblemDetectedTime > 0 &&
-      (MICROS_TO_MINUTES() - agCeClientProblemDetectedTime) >
+      (MINUTES() - agCeClientProblemDetectedTime) >
           TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
     // Give up wait
     Serial.println("Rebooting because CE client issues for 2 hours detected");
@@ -1584,7 +1584,7 @@ void networkingTask(void *args) {
       if (agClient->isClientReady() == false) {
         // Start time if value still default
         if (agCeClientProblemDetectedTime == 0) {
-          agCeClientProblemDetectedTime = MICROS_TO_MINUTES();
+          agCeClientProblemDetectedTime = MINUTES();
         }
 
         // Enable at command debug
@@ -1596,7 +1596,7 @@ void networkingTask(void *args) {
 
         // Power cycling cellular module due to network issues for more than 1 hour
         bool resetModule = true;
-        if ((MICROS_TO_MINUTES() - agCeClientProblemDetectedTime) >
+        if ((MINUTES() - agCeClientProblemDetectedTime) >
             TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
           Serial.println("The CE client hasn't recovered in more than 1 hour, "
                          "performing a power cycle");
