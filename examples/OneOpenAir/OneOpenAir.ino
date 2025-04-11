@@ -26,7 +26,6 @@ https://forum.airgradient.com/
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
-
 #include "AgConfigure.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
@@ -37,6 +36,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
+#include "Libraries/airgradient-client/src/common.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
 #include "OpenMetrics.h"
@@ -45,6 +45,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <cstdint>
 #include <string>
 
 #include "Libraries/airgradient-client/src/agSerial.h"
@@ -65,7 +66,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define WIFI_TRANSMISSION_INTERVAL 1 * 60000           /** ms */
 #define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 30 * 60000 /** ms */
 #define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000        /** ms */
-#define CELLULAR_TRANSMISSION_INTERVAL 9 * 60000       /** ms */
+#define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000       /** ms */
 #define MQTT_SYNC_INTERVAL 60000                       /** ms */
 #define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5               /** sec */
 #define SENSOR_TVOC_UPDATE_INTERVAL 1000               /** ms */
@@ -74,7 +75,10 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000           /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
+#define TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE (1 * 60) /** minutes */ 
+#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY    (2 * 60) /** minutes */ 
 
+#define MEASUREMENT_TRANSMIT_CYCLE 3
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
 #define RESERVED_MEASUREMENT_CYCLE_CAPACITY 10
 
@@ -87,6 +91,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define GPIO_POWER_MODULE_PIN  5
 #define GPIO_EXPANSION_CARD_POWER 4
 #define GPIO_IIC_RESET 3
+
+#define MINUTES() ((uint32_t)(esp_timer_get_time() / 1000 / 1000 / 60))
 
 static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
@@ -102,7 +108,7 @@ static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static AgSerial *agSerial;
-static CellularModule *cell;
+static CellularModule *cellularCard;
 static AirgradientClient *agClient;
 
 enum NetworkOption {
@@ -118,6 +124,10 @@ static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
 static int lastCellSignalQuality = 99; // CSQ 
+
+// Default value is 0, indicate its not started yet
+// In minutes
+uint32_t agCeClientProblemDetectedTime = 0;
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
 static std::vector<Measurements::Measures> measurementCycleQueue;
@@ -146,6 +156,7 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
+static void restartIfCeClientIssueOverTwoHours(); 
 static void networkSignalCheck();
 static void networkingTask(void *args);
 
@@ -298,6 +309,12 @@ void setup() {
 }
 
 void loop() {
+  if (networkOption == UseCellular) {
+    // Check if cellular client not ready until certain time
+    // Redundant check in both task to make sure its executed 
+    restartIfCeClientIssueOverTwoHours();
+  }
+
   // Schedule to feed external watchdog
   watchdogFeedSchedule.run();
 
@@ -542,7 +559,7 @@ void checkForFirmwareUpdate(void) {
   if (networkOption == UseWifi) {
     agOta = new AirgradientOTAWifi;
   } else {
-    agOta = new AirgradientOTACellular(cell);
+    agOta = new AirgradientOTACellular(cellularCard);
   }
 
   // Indicate main task that ota is performing
@@ -926,8 +943,8 @@ void initializeNetwork() {
   if (agSerial->open()) {
     Serial.println("Cellular module found");
     // Initialize cellular module and use cellular as agClient 
-    cell = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
-    agClient = new AirgradientCellularClient(cell);
+    cellularCard = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    agClient = new AirgradientCellularClient(cellularCard);
     networkOption = UseCellular;
   } else {
     Serial.println("Cellular module not available, using wifi");
@@ -1341,7 +1358,10 @@ void postUsingWifi() {
   Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
 }
 
-void postUsingCellular() {
+/**
+* forcePost to force post without checking transmit cycle
+*/
+void postUsingCellular(bool forcePost) {
   // Aquire queue mutex to get queue size
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
   
@@ -1349,6 +1369,14 @@ void postUsingCellular() {
   int queueSize = measurementCycleQueue.size();
   if (queueSize == 0) {
     Serial.println("Skipping transmission, measurementCycle empty");
+    xSemaphoreGive(mutexMeasurementCycleQueue);
+    return;
+  }
+
+  // Check queue size if its ready to transmit
+  // It is ready if size is divisible by 3 
+  if (!forcePost && (queueSize % MEASUREMENT_TRANSMIT_CYCLE) > 0) {
+    Serial.printf("Not ready to transmit, queue size are %d\n", queueSize);
     xSemaphoreGive(mutexMeasurementCycleQueue);
     return;
   }
@@ -1394,7 +1422,7 @@ void sendDataToServer(void) {
   if (networkOption == UseWifi) {
     postUsingWifi();
   } else if (networkOption == UseCellular) {
-    postUsingCellular();
+    postUsingCellular(false);
   }
 }
 
@@ -1473,7 +1501,7 @@ void networkSignalCheck() {
   if (networkOption == UseWifi) {
     Serial.printf("WiFi RSSI %d\n", wifiConnector.RSSI());
   } else if (networkOption == UseCellular) {
-    auto result = cell->retrieveSignal();
+    auto result = cellularCard->retrieveSignal();
     if (result.status != CellReturnStatus::Ok) {
       agClient->setClientReady(false);
       lastCellSignalQuality = 99;
@@ -1490,6 +1518,31 @@ void networkSignalCheck() {
     }
 
     Serial.printf("Cellular signal quality %d\n", result.data);
+  }
+}
+
+/**
+* If in 2 hours cellular client still not ready, then restart system 
+*/
+void restartIfCeClientIssueOverTwoHours() {
+  if (agCeClientProblemDetectedTime > 0 &&
+      (MINUTES() - agCeClientProblemDetectedTime) >
+          TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
+    // Give up wait
+    Serial.println("Rebooting because CE client issues for 2 hours detected");
+    int i = 3;
+    while (i != 0) {
+      if (ag->isOne()) {
+        String tmp = "Rebooting in " + String(i);
+        oledDisplay.setText("CE error", "since 2h", tmp.c_str());
+      } else {
+        Serial.println("Rebooting... " + String(i));
+      }
+      i = i - 1;
+      delay(1000);
+    }
+    oledDisplay.setBrightness(0);
+    esp_restart();
   }
 }
 
@@ -1510,7 +1563,7 @@ void networkingTask(void *args) {
     delay(20000);
     networkSignalCheck();
     newMeasurementCycle();
-    sendDataToServer();
+    postUsingCellular(true);
     measurementSchedule.update();
   }
 
@@ -1529,14 +1582,43 @@ void networkingTask(void *args) {
     }
     else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
-        Serial.println("Cellular client not ready, ensuring connection...");
+        // Start time if value still default
+        if (agCeClientProblemDetectedTime == 0) {
+          agCeClientProblemDetectedTime = MINUTES();
+        }
+
+        // Enable at command debug
         agSerial->setDebug(true); 
-        if (agClient->ensureClientConnection() == false) {
-          Serial.println("Cellular client connection not ready, retry in 5s...");
-          delay(5000);
+
+        // Check if cellular client not ready until certain time
+        // Redundant check in both task to make sure its executed 
+        restartIfCeClientIssueOverTwoHours();
+
+        // Power cycling cellular module due to network issues for more than 1 hour
+        bool resetModule = true;
+        if ((MINUTES() - agCeClientProblemDetectedTime) >
+            TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
+          Serial.println("The CE client hasn't recovered in more than 1 hour, "
+                         "performing a power cycle");
+          cellularCard->powerOff();
+          delay(2000);
+          cellularCard->powerOn();
+          delay(10000);
+          // no need to reset module when calling ensureClientConnection()
+          resetModule = false;
+        }
+
+        // Attempt to reconnect
+        Serial.println("Cellular client not ready, ensuring connection...");
+        if (agClient->ensureClientConnection(resetModule) == false) {
+          Serial.println("Cellular client connection not ready, retry in 30s...");
+          delay(30000); // before retry, wait for 30s
           continue;
         }
-        agSerial->setDebug(false);
+
+        // Client is ready
+        agCeClientProblemDetectedTime = 0; // reset to default
+        agSerial->setDebug(false); // disable at command debug
       }
     }
 
@@ -1568,7 +1650,7 @@ void newMeasurementCycle() {
 
     // Get current measures
     auto mc = measurements.getMeasures(); 
-    mc.signal = cell->csqToDbm(lastCellSignalQuality); // convert to RSSI
+    mc.signal = cellularCard->csqToDbm(lastCellSignalQuality); // convert to RSSI
 
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");
