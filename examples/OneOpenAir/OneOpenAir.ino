@@ -108,7 +108,7 @@ static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
 static LocalServer localServer(Serial, openMetrics, measurements, configuration,
                                wifiConnector);
 static AgSerial *agSerial;
-static CellularModule *cellularModule;
+static CellularModule *cellularCard;
 static AirgradientClient *agClient;
 
 enum NetworkOption {
@@ -156,7 +156,7 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
-static void checkCellularClientNotReady(); 
+static void restartIfCeClientIssueOverTwoHours(); 
 static void networkSignalCheck();
 static void networkingTask(void *args);
 
@@ -312,7 +312,7 @@ void loop() {
   if (networkOption == UseCellular) {
     // Check if cellular client not ready until certain time
     // Redundant check in both task to make sure its executed 
-    checkCellularClientNotReady();
+    restartIfCeClientIssueOverTwoHours();
   }
 
   // Schedule to feed external watchdog
@@ -559,7 +559,7 @@ void checkForFirmwareUpdate(void) {
   if (networkOption == UseWifi) {
     agOta = new AirgradientOTAWifi;
   } else {
-    agOta = new AirgradientOTACellular(cellularModule);
+    agOta = new AirgradientOTACellular(cellularCard);
   }
 
   // Indicate main task that ota is performing
@@ -943,8 +943,8 @@ void initializeNetwork() {
   if (agSerial->open()) {
     Serial.println("Cellular module found");
     // Initialize cellular module and use cellular as agClient 
-    cellularModule = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
-    agClient = new AirgradientCellularClient(cellularModule);
+    cellularCard = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    agClient = new AirgradientCellularClient(cellularCard);
     networkOption = UseCellular;
   } else {
     Serial.println("Cellular module not available, using wifi");
@@ -1501,7 +1501,7 @@ void networkSignalCheck() {
   if (networkOption == UseWifi) {
     Serial.printf("WiFi RSSI %d\n", wifiConnector.RSSI());
   } else if (networkOption == UseCellular) {
-    auto result = cellularModule->retrieveSignal();
+    auto result = cellularCard->retrieveSignal();
     if (result.status != CellReturnStatus::Ok) {
       agClient->setClientReady(false);
       lastCellSignalQuality = 99;
@@ -1522,9 +1522,9 @@ void networkSignalCheck() {
 }
 
 /**
-* If in 2 hours still not ready, then restart esp
+* If in 2 hours cellular client still not ready, then restart system 
 */
-void checkCellularClientNotReady() {
+void restartIfCeClientIssueOverTwoHours() {
   if (agCeClientProblemDetectedTime > 0 &&
       (MICROS_TO_MINUTES() - agCeClientProblemDetectedTime) >
           TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
@@ -1534,7 +1534,7 @@ void checkCellularClientNotReady() {
     while (i != 0) {
       if (ag->isOne()) {
         String tmp = "Rebooting in " + String(i);
-        oledDisplay.setText("CE error", "since 1h", tmp.c_str());
+        oledDisplay.setText("CE error", "since 2h", tmp.c_str());
       } else {
         Serial.println("Rebooting... " + String(i));
       }
@@ -1592,7 +1592,7 @@ void networkingTask(void *args) {
 
         // Check if cellular client not ready until certain time
         // Redundant check in both task to make sure its executed 
-        checkCellularClientNotReady();
+        restartIfCeClientIssueOverTwoHours();
 
         // Power cycling cellular module due to network issues for more than 1 hour
         bool resetModule = true;
@@ -1600,9 +1600,9 @@ void networkingTask(void *args) {
             TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
           Serial.println("The CE client hasn't recovered in more than 1 hour, "
                          "performing a power cycle");
-          cellularModule->powerOff();
+          cellularCard->powerOff();
           delay(2000);
-          cellularModule->powerOn();
+          cellularCard->powerOn();
           delay(10000);
           // no need to reset module when calling ensureClientConnection()
           resetModule = false;
@@ -1650,7 +1650,7 @@ void newMeasurementCycle() {
 
     // Get current measures
     auto mc = measurements.getMeasures(); 
-    mc.signal = cellularModule->csqToDbm(lastCellSignalQuality); // convert to RSSI
+    mc.signal = cellularCard->csqToDbm(lastCellSignalQuality); // convert to RSSI
 
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");
