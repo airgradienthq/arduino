@@ -19,9 +19,9 @@ public:
   void handle(void);
 #else
   /* pause _handle task to read sensor */
-  void pauseHandle();
+  void pause();
   /* resume _handle task to read sensor */
-  void resumeHandle();
+  void resume();
   void _handle(void);
 #endif
   void end(void);

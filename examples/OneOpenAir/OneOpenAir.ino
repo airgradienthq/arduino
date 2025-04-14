@@ -584,7 +584,7 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
     Serial.println("Firmware update starting...");
     if (configuration.hasSensorSGP && networkOption == UseCellular) {
       // Temporary pause SGP41 task while cellular firmware update is in progress
-      ag->sgp41.pauseHandle();
+      ag->sgp41.pause();
     }
     displayExecuteOta(result, fwNewVersion, 0);
     break;
@@ -594,13 +594,15 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
     displayExecuteOta(result, "", std::stoi(msg));
     break;
   case AirgradientOTA::Failed:
+      displayExecuteOta(result, "", 0);
+      if (configuration.hasSensorSGP && networkOption == UseCellular) {
+        // Cellular firmware update finish, resuming SGP41 task
+        ag->sgp41.resume();
+      }
+      break;
   case AirgradientOTA::Skipped:
   case AirgradientOTA::AlreadyUpToDate:
     displayExecuteOta(result, "", 0);
-    if (configuration.hasSensorSGP && networkOption == UseCellular) {
-      // Cellular firmware update finish, resuming SGP41 task
-      ag->sgp41.resumeHandle();
-    }
     break;
   case AirgradientOTA::Success:
     displayExecuteOta(result, "", 0);

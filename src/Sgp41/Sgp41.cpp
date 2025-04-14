@@ -132,7 +132,7 @@ void Sgp41::handle(void) {
 
 #else
 
-void Sgp41::pauseHandle() {
+void Sgp41::pause() {
   onPause = true;
   Serial.println("Pausing SGP41 handler task");
   // Set latest value to invalid
@@ -142,9 +142,9 @@ void Sgp41::pauseHandle() {
   nox = utils::getInvalidNOx();
 } 
 
-void Sgp41::resumeHandle() {
+void Sgp41::resume() {
   onPause = false;
-  Serial.println("Resume SGP41 handler task");
+  Serial.println("Resuming SGP41 handler task");
 }
 
 /**
