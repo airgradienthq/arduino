@@ -596,7 +596,6 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
   case AirgradientOTA::Failed:
       displayExecuteOta(result, "", 0);
       if (configuration.hasSensorSGP && networkOption == UseCellular) {
-        // Cellular firmware update finish, resuming SGP41 task
         ag->sgp41.resume();
       }
       break;
