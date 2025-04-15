@@ -131,6 +131,22 @@ void Sgp41::handle(void) {
 }
 
 #else
+
+void Sgp41::pause() {
+  onPause = true;
+  Serial.println("Pausing SGP41 handler task");
+  // Set latest value to invalid
+  tvocRaw = utils::getInvalidVOC();
+  tvoc = utils::getInvalidVOC();
+  noxRaw = utils::getInvalidNOx();
+  nox = utils::getInvalidNOx();
+} 
+
+void Sgp41::resume() {
+  onPause = false;
+  Serial.println("Resuming SGP41 handler task");
+}
+
 /**
  * @brief Handle the sensor conditioning and run time udpate value, This method
  * must not call, it's called on private task
@@ -152,6 +168,11 @@ void Sgp41::_handle(void) {
   uint16_t srawVoc, srawNox;
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+    if (onPause) {
+      continue;
+    }
+
     if (getRawSignal(srawVoc, srawNox)) {
       tvocRaw = srawVoc;
       noxRaw = srawNox;
