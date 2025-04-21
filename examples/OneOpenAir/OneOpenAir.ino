@@ -352,7 +352,7 @@ void loop() {
       static bool pmsConnected = false;
       if (pmsConnected != ag->pms5003.connected()) {
         pmsConnected = ag->pms5003.connected();
-        Serial.printf("PMS sensor %s ", pmsConnected?"connected":"removed");
+        Serial.printf("PMS sensor %s \n", pmsConnected?"connected":"removed");
       }
     }
   } else {
@@ -566,7 +566,15 @@ void checkForFirmwareUpdate(void) {
   firmwareUpdateInProgress = true;
 
   agOta->setHandlerCallback(otaHandlerCallback);
-  agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION);
+
+  String httpDomain = configuration.getHttpDomain();
+  if (httpDomain != "") {
+    Serial.printf("httpDomain configuration available, start OTA with custom domain\n",
+                  httpDomain.c_str());
+    agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION, httpDomain.c_str());
+  } else {
+    agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION);
+  }
 
   // Only goes to this line if firmware update is not success
   // Handled by otaHandlerCallback
