@@ -19,7 +19,8 @@ public:
   OpenMetrics(Measurements &measure, Configuration &config,
               WifiConnector &wifiConnector);
   ~OpenMetrics();
-  void setAirGradient(AirGradient *ag, AirgradientClient *client);
+  void setAirGradient(AirGradient *ag);
+  void setAirgradientClient(AirgradientClient *client);
   const char *getApiContentType(void);
   const char* getApi(void);
   String getPayload(void);

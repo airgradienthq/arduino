@@ -210,7 +210,7 @@ void setup() {
   oledDisplay.setAirGradient(ag);
   stateMachine.setAirGradient(ag);
   wifiConnector.setAirGradient(ag);
-  openMetrics.setAirGradient(ag, agClient);
+  openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
   measurements.setAirGradient(ag);
 
@@ -988,6 +988,9 @@ void initializeNetwork() {
     oledDisplay.setText("", "", "");
     ESP.restart();
   }
+
+  // Provide openmetrics to have access to last transmission result 
+  openMetrics.setAirgradientClient(agClient);
 
   if (networkOption == UseCellular) {
     // Disabling it again
