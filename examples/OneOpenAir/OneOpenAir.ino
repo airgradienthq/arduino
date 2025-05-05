@@ -555,6 +555,11 @@ static bool sgp41Init(void) {
 }
 
 void checkForFirmwareUpdate(void) {
+  if (configuration.isCloudConnectionDisabled()) {
+    Serial.println("Cloud connection is disabled, skip firmware update");
+    return;
+  }
+
   AirgradientOTA *agOta;
   if (networkOption == UseWifi) {
     agOta = new AirgradientOTAWifi;
@@ -1562,26 +1567,28 @@ void restartIfCeClientIssueOverTwoHours() {
 }
 
 void networkingTask(void *args) {
-  // OTA check on boot
+  // If cloud connection enabled, run first transmission to server at boot
+  if (configuration.isCloudConnectionDisabled() == false) {
+    // OTA check on boot
 #ifndef ESP8266
-  checkForFirmwareUpdate();
-  checkForUpdateSchedule.update(); 
+    checkForFirmwareUpdate();
+    checkForUpdateSchedule.update();
 #endif
 
-  // Because cellular interval is longer, needs to send first measures cycle on
-  // boot to indicate that its online
-  if (networkOption == UseCellular) {
-    Serial.println("Prepare first measures cycle to send on boot for 20s");
-    delay(20000);
-    networkSignalCheck();
-    newMeasurementCycle();
-    postUsingCellular(true);
-    measurementSchedule.update();
+    // Because cellular interval is longer, needs to send first measures cycle on
+    // boot to indicate that its online
+    if (networkOption == UseCellular) {
+      Serial.println("Prepare first measures cycle to send on boot for 20s");
+      delay(20000);
+      networkSignalCheck();
+      newMeasurementCycle();
+      postUsingCellular(true);
+      measurementSchedule.update();
+    }
+    // Reset scheduler
+    configSchedule.update();
+    transmissionSchedule.update();
   }
-
-  // Reset scheduler
-  configSchedule.update();
-  transmissionSchedule.update();
 
   while (1) {
     // Handle reconnection based on mode
