@@ -1644,7 +1644,7 @@ void networkingTask(void *args) {
     // If connection to AirGradient server disable don't run config and transmission schedule
     if (configuration.isCloudConnectionDisabled()) {
       delay(1000);
-      return;
+      continue;
     }
 
     // Run scheduler
