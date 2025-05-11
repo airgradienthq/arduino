@@ -143,6 +143,7 @@ static void updatePm(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
+static void printMeasurements();
 static void mdnsInit(void);
 static void createMqttTask(void);
 static void initMqtt(void);
@@ -172,6 +173,7 @@ AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
 AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
+AgSchedule printMeasurementsSchedule(6000, printMeasurements);
 
 void setup() {
   /** Serial for print debug message */
@@ -217,9 +219,6 @@ void setup() {
   /** Init sensor */
   boardInit();
   setMeasurementMaxPeriod();
-
-  // Comment below line to disable debug measurement readings
-  measurements.setDebug(true);
 
   bool connectToNetwork = true;
   if (ag->isOne()) { // Offline mode only available for indoor monitor
@@ -364,6 +363,9 @@ void loop() {
     }
   }
 
+  /* Run measurement schedule */
+  printMeasurementsSchedule.run();
+
   /** factory reset handle */
   factoryConfigReset();
 
@@ -383,6 +385,10 @@ static void co2Update(void) {
   } else {
     measurements.update(Measurements::CO2, utils::getInvalidCO2());
   }
+}
+
+void printMeasurements() {
+  measurements.printCurrentAverage();
 }
 
 static void mdnsInit(void) {
