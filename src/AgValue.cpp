@@ -5,7 +5,7 @@
 #include <cmath>
 #include <sstream>
 
-#define json_prop_pmFirmware     "firmware"
+#define json_prop_pmFirmware "firmware"
 #define json_prop_pm01Ae "pm01"
 #define json_prop_pm25Ae "pm02"
 #define json_prop_pm10Ae "pm10"
@@ -33,7 +33,7 @@ Measurements::Measurements(Configuration &config) : config(config) {
 #ifndef ESP8266
   _resetReason = (int)ESP_RST_UNKNOWN;
 #endif
-  
+
   /* Set invalid value for each measurements as default value when initialized*/
   _temperature[0].update.avg = utils::getInvalidTemperature();
   _temperature[1].update.avg = utils::getInvalidTemperature();
@@ -51,7 +51,7 @@ Measurements::Measurements(Configuration &config) : config(config) {
   _pm_05_pc[1].update.avg = utils::getInvalidPmValue();
   _pm_5_pc[0].update.avg = utils::getInvalidPmValue();
   _pm_5_pc[1].update.avg = utils::getInvalidPmValue();
-  
+
   _pm_01[0].update.avg = utils::getInvalidPmValue();
   _pm_01_sp[0].update.avg = utils::getInvalidPmValue();
   _pm_01_pc[0].update.avg = utils::getInvalidPmValue();
@@ -75,6 +75,86 @@ Measurements::Measurements(Configuration &config) : config(config) {
 }
 
 void Measurements::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+void Measurements::printCurrentAverage() {
+  Serial.println();
+  if (config.hasSensorS8) {
+    if (utils::isValidCO2(_co2.update.avg)) {
+      Serial.printf("CO2 = %.2f ppm\n", _co2.update.avg);
+    } else {
+      Serial.printf("CO2 = -\n");
+    }
+  }
+
+  if (config.hasSensorSHT) {
+    if (utils::isValidTemperature(_temperature[0].update.avg)) {
+      Serial.printf("Temperature = %.2f C\n", _temperature[0].update.avg);
+    } else {
+      Serial.printf("Temperature = -\n");
+    }
+    if (utils::isValidHumidity(_humidity[0].update.avg)) {
+      Serial.printf("Relative Humidity = %.2f\n", _humidity[0].update.avg);
+    } else {
+      Serial.printf("Relative Humidity = -\n");
+    }
+  }
+
+  if (config.hasSensorSGP) {
+    if (utils::isValidVOC(_tvoc.update.avg)) {
+      Serial.printf("TVOC Index = %.1f\n", _tvoc.update.avg);
+    } else {
+      Serial.printf("TVOC Index = -\n");
+    }
+    if (utils::isValidVOC(_tvoc_raw.update.avg)) {
+      Serial.printf("TVOC Raw = %.1f\n", _tvoc_raw.update.avg);
+    } else {
+      Serial.printf("TVOC Raw = -\n");
+    }
+    if (utils::isValidNOx(_nox.update.avg)) {
+      Serial.printf("NOx Index = %.1f\n", _nox.update.avg);
+    } else {
+      Serial.printf("NOx Index = -\n");
+    }
+    if (utils::isValidNOx(_nox_raw.update.avg)) {
+      Serial.printf("NOx Raw = %.1f\n", _nox_raw.update.avg);
+    } else {
+      Serial.printf("NOx Raw = -\n");
+    }
+  }
+
+  if (config.hasSensorPMS1) {
+    printCurrentPMAverage(1);
+    if (!config.hasSensorSHT) {
+      if (utils::isValidTemperature(_temperature[0].update.avg)) {
+        Serial.printf("[1] Temperature = %.2f C\n", _temperature[0].update.avg);
+      } else {
+        Serial.printf("[1] Temperature = -\n");
+      }
+      if (utils::isValidHumidity(_humidity[0].update.avg)) {
+        Serial.printf("[1] Relative Humidity = %.2f\n", _humidity[0].update.avg);
+      } else {
+        Serial.printf("[1] Relative Humidity = -\n");
+      }
+    }
+  }
+  if (config.hasSensorPMS2) {
+    printCurrentPMAverage(2);
+    if (!config.hasSensorSHT) {
+      if (utils::isValidTemperature(_temperature[1].update.avg)) {
+        Serial.printf("[2] Temperature = %.2f C\n", _temperature[1].update.avg);
+      } else {
+        Serial.printf("[2] Temperature = -\n");
+      }
+      if (utils::isValidHumidity(_humidity[1].update.avg)) {
+        Serial.printf("[2] Relative Humidity = %.2f\n", _humidity[1].update.avg);
+      } else {
+        Serial.printf("[2] Relative Humidity = -\n");
+      }
+    }
+  }
+
+  Serial.println();
+}
 
 void Measurements::maxPeriod(MeasurementType type, int max) {
   switch (type) {
@@ -568,6 +648,77 @@ String Measurements::measurementTypeStr(MeasurementType type) {
   };
 
   return str;
+}
+
+void Measurements::printCurrentPMAverage(int ch) {
+  int idx = ch - 1;
+
+  if (utils::isValidPm(_pm_01[idx].update.avg)) {
+    Serial.printf("[%d] Atmospheric PM 1.0 = %.2f ug/m3\n", ch, _pm_01[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Atmospheric PM 1.0 = -\n");
+  }
+  if (utils::isValidPm(_pm_25[idx].update.avg)) {
+    Serial.printf("[%d] Atmospheric PM 2.5 = %.2f ug/m3\n", ch, _pm_25[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Atmospheric PM 2.5 = -\n");
+  }
+  if (utils::isValidPm(_pm_10[idx].update.avg)) {
+    Serial.printf("[%d] Atmospheric PM 10 = %.2f ug/m3\n", ch, _pm_10[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Atmospheric PM 10 = -\n");
+  }
+  if (utils::isValidPm(_pm_01_sp[idx].update.avg)) {
+    Serial.printf("[%d] Standard Particle PM 1.0 = %.2f ug/m3\n", ch, _pm_01_sp[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Standard Particle PM 1.0 = -\n");
+  }
+  if (utils::isValidPm(_pm_25_sp[idx].update.avg)) {
+    Serial.printf("[%d] Standard Particle PM 2.5 = %.2f ug/m3\n", ch, _pm_25_sp[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Standard Particle PM 2.5 = -\n");
+  }
+  if (utils::isValidPm(_pm_10_sp[idx].update.avg)) {
+    Serial.printf("[%d] Standard Particle PM 10 = %.2f ug/m3\n", ch, _pm_10_sp[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Standard Particle PM 10 = -\n");
+  }
+  if (utils::isValidPm03Count(_pm_03_pc[idx].update.avg)) {
+    Serial.printf("[%d] Particle Count 0.3 = %.1f\n", ch, _pm_03_pc[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Particle Count 0.3 = -\n");
+  }
+  if (utils::isValidPm03Count(_pm_05_pc[idx].update.avg)) {
+    Serial.printf("[%d] Particle Count 0.5 = %.1f\n", ch, _pm_05_pc[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Particle Count 0.5 = -\n");
+  }
+  if (utils::isValidPm03Count(_pm_01_pc[idx].update.avg)) {
+    Serial.printf("[%d] Particle Count 1.0 = %.1f\n", ch, _pm_01_pc[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Particle Count 1.0 = -\n");
+  }
+  if (utils::isValidPm03Count(_pm_25_pc[idx].update.avg)) {
+    Serial.printf("[%d] Particle Count 2.5 = %.1f\n", ch, _pm_25_pc[idx].update.avg);
+  } else {
+    Serial.printf("[%d] Particle Count 2.5 = -\n");
+  }
+
+  if (_pm_5_pc[idx].listValues.empty() == false) {
+    if (utils::isValidPm03Count(_pm_5_pc[idx].update.avg)) {
+      Serial.printf("[%d] Particle Count 5.0 = %.1f\n", ch, _pm_5_pc[idx].update.avg);
+    } else {
+      Serial.printf("[%d] Particle Count 5.0 = -\n");
+    }
+  }
+
+  if (_pm_10_pc[idx].listValues.empty() == false) {
+    if (utils::isValidPm03Count(_pm_10_pc[idx].update.avg)) {
+      Serial.printf("[%d] Particle Count 10 = %.1f\n", ch, _pm_10_pc[idx].update.avg);
+    } else {
+      Serial.printf("[%d] Particle Count 10 = -\n");
+    }
+  }
 }
 
 void Measurements::validateChannel(int ch) {

@@ -88,6 +88,8 @@ public:
     PM10_PC, // Particle 10 count
   };
 
+  void printCurrentAverage();
+
   /**
    * @brief Set each MeasurementType maximum period length for moving average
    *
@@ -257,6 +259,8 @@ private:
    * abort program if invalid
    */
   void validateChannel(int ch);
+
+  void printCurrentPMAverage(int ch);
 
   JSONVar buildOutdoor(bool localServer, AgFirmwareMode fwMode);
   JSONVar buildIndoor(bool localServer);
