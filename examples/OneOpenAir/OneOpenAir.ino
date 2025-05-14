@@ -271,6 +271,7 @@ void setup() {
 
     Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
+    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
 
