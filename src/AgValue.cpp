@@ -656,59 +656,59 @@ void Measurements::printCurrentPMAverage(int ch) {
   if (utils::isValidPm(_pm_01[idx].update.avg)) {
     Serial.printf("[%d] Atmospheric PM 1.0 = %.2f ug/m3\n", ch, _pm_01[idx].update.avg);
   } else {
-    Serial.printf("[%d] Atmospheric PM 1.0 = -\n");
+    Serial.printf("[%d] Atmospheric PM 1.0 = -\n", ch);
   }
   if (utils::isValidPm(_pm_25[idx].update.avg)) {
     Serial.printf("[%d] Atmospheric PM 2.5 = %.2f ug/m3\n", ch, _pm_25[idx].update.avg);
   } else {
-    Serial.printf("[%d] Atmospheric PM 2.5 = -\n");
+    Serial.printf("[%d] Atmospheric PM 2.5 = -\n", ch);
   }
   if (utils::isValidPm(_pm_10[idx].update.avg)) {
     Serial.printf("[%d] Atmospheric PM 10 = %.2f ug/m3\n", ch, _pm_10[idx].update.avg);
   } else {
-    Serial.printf("[%d] Atmospheric PM 10 = -\n");
+    Serial.printf("[%d] Atmospheric PM 10 = -\n", ch);
   }
   if (utils::isValidPm(_pm_01_sp[idx].update.avg)) {
     Serial.printf("[%d] Standard Particle PM 1.0 = %.2f ug/m3\n", ch, _pm_01_sp[idx].update.avg);
   } else {
-    Serial.printf("[%d] Standard Particle PM 1.0 = -\n");
+    Serial.printf("[%d] Standard Particle PM 1.0 = -\n", ch);
   }
   if (utils::isValidPm(_pm_25_sp[idx].update.avg)) {
     Serial.printf("[%d] Standard Particle PM 2.5 = %.2f ug/m3\n", ch, _pm_25_sp[idx].update.avg);
   } else {
-    Serial.printf("[%d] Standard Particle PM 2.5 = -\n");
+    Serial.printf("[%d] Standard Particle PM 2.5 = -\n", ch);
   }
   if (utils::isValidPm(_pm_10_sp[idx].update.avg)) {
     Serial.printf("[%d] Standard Particle PM 10 = %.2f ug/m3\n", ch, _pm_10_sp[idx].update.avg);
   } else {
-    Serial.printf("[%d] Standard Particle PM 10 = -\n");
+    Serial.printf("[%d] Standard Particle PM 10 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_03_pc[idx].update.avg)) {
     Serial.printf("[%d] Particle Count 0.3 = %.1f\n", ch, _pm_03_pc[idx].update.avg);
   } else {
-    Serial.printf("[%d] Particle Count 0.3 = -\n");
+    Serial.printf("[%d] Particle Count 0.3 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_05_pc[idx].update.avg)) {
     Serial.printf("[%d] Particle Count 0.5 = %.1f\n", ch, _pm_05_pc[idx].update.avg);
   } else {
-    Serial.printf("[%d] Particle Count 0.5 = -\n");
+    Serial.printf("[%d] Particle Count 0.5 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_01_pc[idx].update.avg)) {
     Serial.printf("[%d] Particle Count 1.0 = %.1f\n", ch, _pm_01_pc[idx].update.avg);
   } else {
-    Serial.printf("[%d] Particle Count 1.0 = -\n");
+    Serial.printf("[%d] Particle Count 1.0 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_25_pc[idx].update.avg)) {
     Serial.printf("[%d] Particle Count 2.5 = %.1f\n", ch, _pm_25_pc[idx].update.avg);
   } else {
-    Serial.printf("[%d] Particle Count 2.5 = -\n");
+    Serial.printf("[%d] Particle Count 2.5 = -\n", ch);
   }
 
   if (_pm_5_pc[idx].listValues.empty() == false) {
     if (utils::isValidPm03Count(_pm_5_pc[idx].update.avg)) {
       Serial.printf("[%d] Particle Count 5.0 = %.1f\n", ch, _pm_5_pc[idx].update.avg);
     } else {
-      Serial.printf("[%d] Particle Count 5.0 = -\n");
+      Serial.printf("[%d] Particle Count 5.0 = -\n", ch);
     }
   }
 
@@ -716,7 +716,7 @@ void Measurements::printCurrentPMAverage(int ch) {
     if (utils::isValidPm03Count(_pm_10_pc[idx].update.avg)) {
       Serial.printf("[%d] Particle Count 10 = %.1f\n", ch, _pm_10_pc[idx].update.avg);
     } else {
-      Serial.printf("[%d] Particle Count 10 = -\n");
+      Serial.printf("[%d] Particle Count 10 = -\n", ch);
     }
   }
 }
