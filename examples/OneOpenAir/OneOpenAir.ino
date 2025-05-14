@@ -270,6 +270,7 @@ void setup() {
 
     Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
+    delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
 
@@ -1428,13 +1429,17 @@ void postUsingCellular(bool forcePost) {
 
   // Post success, remove the data that previously sent from queue
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
-  measurementCycleQueue.erase(measurementCycleQueue.begin(),
-                              measurementCycleQueue.begin() + queueSize);
 
   if (measurementCycleQueue.capacity() > RESERVED_MEASUREMENT_CYCLE_CAPACITY) {
     Serial.println("measurementCycleQueue capacity more than reserved space, resizing..");
-    measurementCycleQueue.resize(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
+    std::vector<Measurements::Measures> tmp;
+    tmp.reserve(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
+    measurementCycleQueue.swap(tmp);
+  } else {
+    // If not more than the capacity, then just clear all the values
+    measurementCycleQueue.clear();
   }
+
   xSemaphoreGive(mutexMeasurementCycleQueue);
 }
 
