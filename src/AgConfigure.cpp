@@ -456,6 +456,10 @@ bool Configuration::begin(void) {
   return true;
 }
 
+void Configuration::setConfigurationUpdatedCallback(ConfigurationUpdatedCallback_t callback) {
+  _callback = callback;
+}
+
 /**
  * @brief Parse JSON configura string to local configure
  *
@@ -955,6 +959,7 @@ bool Configuration::parse(String data, bool isLocal) {
     updated = true;
     saveConfig();
     printConfig();
+    _callback();
   } else {
     if (ledBarTestRequested || co2CalibrationRequested) {
       updated = true;

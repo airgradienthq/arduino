@@ -70,6 +70,9 @@ public:
   bool hasSensorSGP = true;
   bool hasSensorSHT = true;
 
+  typedef void (*ConfigurationUpdatedCallback_t)();
+  void setConfigurationUpdatedCallback(ConfigurationUpdatedCallback_t callback);
+
   bool begin(void);
   bool parse(String data, bool isLocal);
   String toString(void);
@@ -116,6 +119,8 @@ public:
   PMCorrection getPMCorrection(void);
   TempHumCorrection getTempCorrection(void);
   TempHumCorrection getHumCorrection(void);
+private:
+  ConfigurationUpdatedCallback_t _callback;
 };
 
 #endif /** _AG_CONFIG_H_ */
