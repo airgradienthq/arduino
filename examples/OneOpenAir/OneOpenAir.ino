@@ -193,6 +193,7 @@ void setup() {
 
   /** Initialize local configure */
   configuration.begin();
+  configuration.setConfigurationUpdatedCallback(configUpdateHandle);
 
   /** Init I2C */
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
@@ -369,9 +370,6 @@ void loop() {
 
   /** factory reset handle */
   factoryConfigReset();
-
-  /** check that local configuration changed then do some action */
-  configUpdateHandle();
 }
 
 static void co2Update(void) {
@@ -1074,8 +1072,8 @@ static void configurationUpdateSchedule(void) {
   }
 
   std::string config = agClient->httpFetchConfig();
-  if (agClient->isLastFetchConfigSucceed() && configuration.parse(config.c_str(), false)) {
-    configUpdateHandle();
+  if (agClient->isLastFetchConfigSucceed()) {
+    configuration.parse(config.c_str(), false);
   }
 }
 
@@ -1084,7 +1082,9 @@ static void configUpdateHandle() {
     return;
   }
 
-  stateMachine.executeCo2Calibration();
+  if (configuration.isCo2CalibrationRequested()) {
+    stateMachine.executeCo2Calibration();
+  }
 
   String mqttUri = configuration.getMqttBrokerUri();
   if (mqttClient.isCurrentUri(mqttUri) == false) {
