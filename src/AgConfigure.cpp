@@ -955,16 +955,18 @@ bool Configuration::parse(String data, bool isLocal) {
     changed = true;
   }
 
+  if (ledBarTestRequested || co2CalibrationRequested) {
+    commandRequested = true;
+    updated = true;
+  }
+
   if (changed) {
     updated = true;
     saveConfig();
     printConfig();
     _callback();
-  } else {
-    if (ledBarTestRequested || co2CalibrationRequested) {
-      updated = true;
-    }
   }
+
   return true;
 }
 
@@ -1162,6 +1164,12 @@ bool Configuration::isUpdated(void) {
   bool updated = this->updated;
   this->updated = false;
   return updated;
+}
+
+bool Configuration::isCommandRequested(void) {
+  bool oldState = this->commandRequested;
+  this->commandRequested = false;
+  return oldState;
 }
 
 String Configuration::jsonTypeInvalidMessage(String name, String type) {

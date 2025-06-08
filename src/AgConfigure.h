@@ -28,6 +28,7 @@ private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
   bool updated;
+  bool commandRequested = false;
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
@@ -93,6 +94,7 @@ public:
   void reset(void);
   String getModel(void);
   bool isUpdated(void);
+  bool isCommandRequested(void);
   String getFailedMesage(void);
   void setPostToAirGradient(bool enable);
   bool noxLearnOffsetChanged(void);
