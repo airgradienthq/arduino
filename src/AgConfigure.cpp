@@ -456,6 +456,10 @@ bool Configuration::begin(void) {
   return true;
 }
 
+void Configuration::setConfigurationUpdatedCallback(ConfigurationUpdatedCallback_t callback) {
+  _callback = callback;
+}
+
 /**
  * @brief Parse JSON configura string to local configure
  *
@@ -951,15 +955,18 @@ bool Configuration::parse(String data, bool isLocal) {
     changed = true;
   }
 
+  if (ledBarTestRequested || co2CalibrationRequested) {
+    commandRequested = true;
+    updated = true;
+  }
+
   if (changed) {
     updated = true;
     saveConfig();
     printConfig();
-  } else {
-    if (ledBarTestRequested || co2CalibrationRequested) {
-      updated = true;
-    }
+    _callback();
   }
+
   return true;
 }
 
@@ -1157,6 +1164,12 @@ bool Configuration::isUpdated(void) {
   bool updated = this->updated;
   this->updated = false;
   return updated;
+}
+
+bool Configuration::isCommandRequested(void) {
+  bool oldState = this->commandRequested;
+  this->commandRequested = false;
+  return oldState;
 }
 
 String Configuration::jsonTypeInvalidMessage(String name, String type) {

@@ -28,6 +28,7 @@ private:
   bool co2CalibrationRequested;
   bool ledBarTestRequested;
   bool updated;
+  bool commandRequested = false;
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
@@ -70,6 +71,9 @@ public:
   bool hasSensorSGP = true;
   bool hasSensorSHT = true;
 
+  typedef void (*ConfigurationUpdatedCallback_t)();
+  void setConfigurationUpdatedCallback(ConfigurationUpdatedCallback_t callback);
+
   bool begin(void);
   bool parse(String data, bool isLocal);
   String toString(void);
@@ -90,6 +94,7 @@ public:
   void reset(void);
   String getModel(void);
   bool isUpdated(void);
+  bool isCommandRequested(void);
   String getFailedMesage(void);
   void setPostToAirGradient(bool enable);
   bool noxLearnOffsetChanged(void);
@@ -116,6 +121,8 @@ public:
   PMCorrection getPMCorrection(void);
   TempHumCorrection getTempCorrection(void);
   TempHumCorrection getHumCorrection(void);
+private:
+  ConfigurationUpdatedCallback_t _callback;
 };
 
 #endif /** _AG_CONFIG_H_ */
