@@ -1051,6 +1051,7 @@ void initializeNetwork() {
 
   // Skip fetch configuration if configuration control is set to "local" only
   if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    ledBarEnabledUpdate();
     return;
   }
 
