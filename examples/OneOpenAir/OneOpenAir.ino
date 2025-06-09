@@ -1043,10 +1043,17 @@ void initializeNetwork() {
       return;
     }
 
-    // Send data for the first time to AG server at boot 
-    sendDataToAg();
+    // Send data for the first time to AG server at boot only if postDataToAirgradient is enabled
+    if (configuration.isPostDataToAirGradient()) {
+      sendDataToAg();
+    }
   }
 
+  // Skip fetch configuration if configuration control is set to "local" only
+  if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    ledBarEnabledUpdate();
+    return;
+  }
 
   std::string config = agClient->httpFetchConfig();
   configSchedule.update();
