@@ -1047,6 +1047,10 @@ void initializeNetwork() {
     sendDataToAg();
   }
 
+  // Skip fetch configuration if configuration control is set to "local" only
+  if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+    return;
+  }
 
   std::string config = agClient->httpFetchConfig();
   configSchedule.update();
