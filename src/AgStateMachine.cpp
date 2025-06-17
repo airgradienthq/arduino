@@ -11,8 +11,8 @@
 
 #define RGB_COLOR_R 255, 0, 0   /** Red */
 #define RGB_COLOR_G 0, 255, 0   /** Green */
-#define RGB_COLOR_Y 255, 150, 0 /** Yellow */
-#define RGB_COLOR_O 255, 40, 0  /** Orange */
+#define RGB_COLOR_Y 255, 255, 0 /** Yellow */
+#define RGB_COLOR_O 255, 128, 0 /** Orange */
 #define RGB_COLOR_P 180, 0, 255 /** Purple */
 #define RGB_COLOR_CLEAR 0, 0, 0 /** No color */
 
