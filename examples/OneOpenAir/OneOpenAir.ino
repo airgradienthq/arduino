@@ -575,7 +575,7 @@ void checkForFirmwareUpdate(void) {
   if (networkOption == UseWifi) {
     agOta = new AirgradientOTAWifi;
   } else {
-    agOta = new AirgradientOTACellular(cellularCard);
+    agOta = new AirgradientOTACellular(cellularCard, agClient->getICCID());
   }
 
   // Indicate main task that firmware update is in progress
