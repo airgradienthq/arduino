@@ -1664,11 +1664,11 @@ void networkingTask(void *args) {
 
     // Run scheduler
     networkSignalCheckSchedule.run();
-    configSchedule.run();
     transmissionSchedule.run();
+    configSchedule.run();
     checkForUpdateSchedule.run();
 
-    delay(1000);
+    delay(50);
   }
 
   vTaskDelete(handleNetworkTask);
