@@ -8,8 +8,8 @@ AgSchedule::~AgSchedule() {}
 void AgSchedule::run(void) {
   uint32_t ms = (uint32_t)(millis() - count);
   if (ms >= period) {
-    handler();
     count = millis();
+    handler();
   }
 }
 
