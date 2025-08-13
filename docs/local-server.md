@@ -106,7 +106,6 @@ Compensated values apply correction algorithms to make the sensor values more ac
     "pm02": {
       "correctionAlgorithm": "epa_2021",
       "slr": {}
-      }
     }
   }
 }
