@@ -260,13 +260,14 @@ bool MqttClient::connect(String id) {
   connected = false;
   if (user.isEmpty()) {
     logInfo("Connect without auth");
-    if(CLIENT()->connect(id.c_str())) {
-      connected = true;
-    }
-    return connected;
+    connected = CLIENT()->connect(id.c_str());
+  } else {
+    logInfo("Connect with auth");
+    connected = CLIENT()->connect(id.c_str(), user.c_str(), password.c_str());
   }
-  return CLIENT()->connect(id.c_str(), user.c_str(), password.c_str());
+  return connected;
 }
+
 void MqttClient::handle(void) {
   if (isBegin == false) {
     return;
