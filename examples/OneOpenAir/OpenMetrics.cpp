@@ -202,14 +202,14 @@ String OpenMetrics::getPayload(void) {
     }
     if (utils::isValidNOx(nox)) {
       add_metric("nox_index",
-                 "The processed Nitrous Oxide (NOx) index as measured by the "
+                 "The processed Nitrogen Oxide (NOx) index as measured by the "
                  "AirGradient SGP sensor",
                  "gauge");
       add_metric_point("", String(nox));
     }
     if (utils::isValidNOx(noxRaw)) {
       add_metric("nox_raw",
-                 "The raw input value to the Nitrous Oxide (NOx) index as "
+                 "The raw input value to the Nitrogen Oxide (NOx) index as "
                  "measured by the AirGradient SGP sensor",
                  "gauge");
       add_metric_point("", String(noxRaw));
