@@ -20,6 +20,16 @@ Make sure you have exactly the versions of libraries and boards installed as des
 
 If you have an older version of the AirGradient PCB not mentioned in the example files, please downgrade this library to version 2.4.15 to support these legacy boards.
 
+### Release Process
+
+Releases published on GitHub are **not immediately deployed to all devices in the market**. Each release first goes through internal testing, including limited deployments in select locations to verify stability and functionality.
+
+If the tests pass, the firmware is then made available for:
+- **FOTA (Firmware Over-The-Air) updates** from AirGradient dashboard
+- **Manual flashing** via ![Airgradient](https://www.airgradient.com/documentation/firmwares/) website
+
+Each GitHub release note will also include the planned rollout date for wider availability.
+
 ## Help & Support
 
 If you have any questions or problems, check out [our forum](https://forum.airgradient.com/). 
