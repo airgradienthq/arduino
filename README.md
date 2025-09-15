@@ -26,7 +26,7 @@ Releases published on GitHub are **not immediately deployed to all devices in th
 
 If the tests pass, the firmware is then made available for:
 - **FOTA (Firmware Over-The-Air) updates** from AirGradient dashboard
-- **Manual flashing** via ![Airgradient](https://www.airgradient.com/documentation/firmwares/) website
+- **Manual flashing** via [Airgradient](https://www.airgradient.com/documentation/firmwares/) website
 
 Each GitHub release note will also include the planned rollout date for wider availability.
 
