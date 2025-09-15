@@ -26,7 +26,7 @@ If you have any questions or problems, check out [our forum](https://forum.airgr
 
 ## Development
 
-* See [compilation instructions](/docs/local-server.md) for details about how to customize AirGradient's firmware and flash it to your device.
+* See [compilation instructions](/docs/howto-compile.md) for details about how to customize AirGradient's firmware and flash it to your device.
 
 ## Over the air (OTA) updates
 
