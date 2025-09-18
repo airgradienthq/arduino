@@ -1,6 +1,6 @@
 ## Local Server API
 
-From [firmware version 3.0.10](firmwares) onwards, the AirGradient ONE and Open Air monitors have below API available. 
+From [firmware version 3.0.10](firmwares) onwards, the AirGradient ONE and Open Air monitors have below API available.
 
 ### Discovery
 
@@ -20,7 +20,7 @@ http://airgradient_ecda3b1eaaaf.local/measures/current
 “ecda3b1eaaaf” being the serial number of your monitor.
 
 You get the following response:
-```json 
+```json
 {
   "wifi": -46,
   "serialno": "ecda3b1eaaaf",
@@ -84,7 +84,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
 
 "/config" path returns the current configuration of the monitor.
 
-```json 
+```json
 {
   "country": "TH",
   "pmStandard": "ugm3",
@@ -118,22 +118,22 @@ Configuration parameters can be changed with a PUT request to the monitor, e.g.
 Example to force CO2 calibration
 
  ```bash
- curl -X PUT -H "Content-Type: application/json" -d '{"co2CalibrationRequested":true}' http://airgradient_84fce612eff4.local/config 
+ curl -X PUT -H "Content-Type: application/json" -d '{"co2CalibrationRequested":true}' http://airgradient_84fce612eff4.local/config
  ```
 
 Example to set monitor to Celsius
 
  ```bash
- curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config 
+ curl -X PUT -H "Content-Type: application/json" -d '{"temperatureUnit":"c"}' http://airgradient_84fce612eff4.local/config
  ```
 
  If you use command prompt on Windows, you need to escape the quotes:
- 
+
   ``` -d "{\"param\":\"value\"}" ```
 
 ### Avoiding Conflicts with Configuration on AirGradient Server
 
-If the monitor is set up on the AirGradient dashboard, it will also receive the configuration parameters from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset. 
+If the monitor is set up on the AirGradient dashboard, it will also receive the configuration parameters from there. In case you do not want this, please set `configurationControl` to `local`. In case you set it to `cloud` and want to change it to `local`, you need to make a factory reset.
 
 ### Configuration Parameters (GET/PUT)
 
@@ -204,34 +204,34 @@ Example correction configuration:
 Field Name: `pm02`
 
 | Algorithm | Value | Description | SLR required |
-|------------|-------------|------|---------| 
+|------------|-------------|------|---------|
 | Raw | `"none"` | No correction (default) | No |
 | EPA 2021 | `"epa_2021"` | Use EPA 2021 correction factors on top of raw value | No |
-| PMS5003_20240104 | `"slr_PMS5003_20240104"` | Correction for PMS5003 sensor batch 20240104| Yes | 
+| PMS5003_20240104 | `"slr_PMS5003_20240104"` | Correction for PMS5003 sensor batch 20240104| Yes |
 | PMS5003_20231218 | `"slr_PMS5003_20231218"` | Correction for PMS5003 sensor batch 20231218| Yes |
 | PMS5003_20231030 | `"slr_PMS5003_20231030"` | Correction for PMS5003 sensor batch 20231030| Yes |
 
-**NOTES**: 
+**NOTES**:
 
 - Set `useEpa2021` to `true` if want to apply EPA 2021 correction factors on top of SLR correction value, otherwise `false`
 - `intercept` and `scalingFactor` values can be obtained from [this article](https://www.airgradient.com/blog/low-readings-from-pms5003/)
-- If `configurationControl` is set to `local` (eg. when using Home Assistant), correction need to be set manually, see examples below 
+- If `configurationControl` is set to `local` (eg. when using Home Assistant), correction need to be set manually, see examples below
 
 **Examples**:
 
-- PMS5003_20231030 
+- PMS5003_20231030
 
 ```bash
 curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231030","slr":{"intercept":0,"scalingFactor":0.02838,"useEpa2021":true}}}}'
 ```
 
-- PMS5003_20231218 
+- PMS5003_20231218
 
 ```bash
 curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20231218","slr":{"intercept":0,"scalingFactor":0.03525,"useEpa2021":true}}}}'
 ```
 
-- PMS5003_20240104 
+- PMS5003_20240104
 
 ```bash
 curl --location -X PUT 'http://airgradient_84fce612eff4.local/config' --header 'Content-Type: application/json' --data '{"corrections":{"pm02":{"correctionAlgorithm":"slr_PMS5003_20240104","slr":{"intercept":0,"scalingFactor":0.02896,"useEpa2021":true}}}}'
@@ -244,10 +244,10 @@ Field Name:
 - Humidity: `rhum`
 
 | Algorithm | Value | Description | SLR required |
-|------------|-------------|------|---------| 
+|------------|-------------|------|---------|
 | Raw | `"none"` | No correction (default) | No |
 | AirGradient Standard Correction | `"ag_pms5003t_2024"` | Using standard airgradient correction (for outdoor monitor)| No |
-| Custom | `"custom"` | custom corrections constant, set `intercept` and `scalingFactor` manually | Yes | 
+| Custom | `"custom"` | custom corrections constant, set `intercept` and `scalingFactor` manually | Yes |
 
 *Table above apply for both Temperature and Humidity*
 

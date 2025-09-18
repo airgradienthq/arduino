@@ -316,10 +316,10 @@ int PMSBase::pm25ToAQI(int pm02) {
 
 
 /**
- * @brief SLR correction for PM2.5 
- * 
+ * @brief SLR correction for PM2.5
+ *
  * Reference: https://www.airgradient.com/blog/low-readings-from-pms5003/
- * 
+ *
  * @param pm25 PM2.5 raw value
  * @param pm003Count PM0.3 count
  * @param scalingFactor Scaling factor

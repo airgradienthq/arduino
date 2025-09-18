@@ -47,7 +47,7 @@ bool AgApiClient::fetchServerConfiguration(void) {
   }
 #else
   HTTPClient client;
-  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server 
+  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server
   client.setTimeout(timeoutMs); // Timeout when waiting for response from AG server
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
@@ -114,7 +114,7 @@ bool AgApiClient::postToServer(String data) {
   }
 #else
   HTTPClient client;
-  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server 
+  client.setConnectTimeout(timeoutMs); // Set timeout when establishing connection to server
   client.setTimeout(timeoutMs); // Timeout when waiting for response from AG server
   if (apiRootChanged) {
     // If apiRoot is changed, assume not using https
@@ -185,13 +185,13 @@ void AgApiClient::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
 /**
  * @brief Send the package to check the connection with cloud
- * 
+ *
  * @param rssi WiFi RSSI
  * @param bootCount Boot count
  * @return true Success
  * @return false Failure
  */
-bool AgApiClient::sendPing(int rssi, int bootCount) { 
+bool AgApiClient::sendPing(int rssi, int bootCount) {
   JSONVar root;
   root["wifi"] = rssi;
   root["boot"] = bootCount;

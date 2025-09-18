@@ -1,5 +1,36 @@
 on: [push, pull_request]
 jobs:
+  trailing-whitespace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Check for trailing whitespace
+        run: |
+          set -u
+
+          # Don't enforce checks on vendored libraries.
+          readonly EXCLUDED_DIR='src/Libraries'
+
+          has_trailing_whitespace=false
+
+          while read -r line; do
+            if grep \
+              "\s$" \
+              --line-number \
+              --with-filename \
+              --binary-files=without-match \
+              "${line}"; then
+              has_trailing_whitespace=true
+            fi
+          done < <(git ls-files | grep --invert-match "^${EXCLUDED_DIR}/")
+
+          if [ "$has_trailing_whitespace" = true ]; then
+            echo "ERROR: Found trailing whitespace"
+            exit 1
+          fi
+
   compile:
     strategy:
       fail-fast: false

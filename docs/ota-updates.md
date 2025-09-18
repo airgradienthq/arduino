@@ -1,6 +1,6 @@
 ## OTA Updates
 
-From [firmware version 3.1.1](https://github.com/airgradienthq/arduino/tree/3.1.1) onwards, the AirGradient ONE and Open Air monitors support over the air (OTA) updates. 
+From [firmware version 3.1.1](https://github.com/airgradienthq/arduino/tree/3.1.1) onwards, the AirGradient ONE and Open Air monitors support over the air (OTA) updates.
 
 #### Mechanism
 
@@ -10,7 +10,7 @@ The device attempts to update to the latest version on startup and in regular in
 
 http://hw.airgradient.com/sensors/{deviceId}/generic/os/firmware.bin?current_firmware={GIT_VERSION}
 
-If does pass the version it is currently running on along to the server through URL parameter 'current_firmware'. 
+If does pass the version it is currently running on along to the server through URL parameter 'current_firmware'.
 This allows the server to identify if the device is already running on the latest version or should update.
 
 The following scenarios are possible

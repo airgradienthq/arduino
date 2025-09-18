@@ -177,9 +177,9 @@ public:
 
   /**
    * @brief Check that Airgradient object is OPEN_AIR
-   * 
-   * @return true 
-   * @return false 
+   *
+   * @return true
+   * @return false
    */
   bool isOpenAir(void);
 

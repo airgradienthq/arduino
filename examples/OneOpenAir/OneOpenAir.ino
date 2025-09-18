@@ -75,8 +75,8 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000           /** ms */
 #define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
 #define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
-#define TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE (1 * 60) /** minutes */ 
-#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY    (2 * 60) /** minutes */ 
+#define TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE (1 * 60) /** minutes */
+#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY    (2 * 60) /** minutes */
 
 #define MEASUREMENT_TRANSMIT_CYCLE 3
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
@@ -123,7 +123,7 @@ static uint32_t factoryBtnPressTime = 0;
 static AgFirmwareMode fwMode = FW_MODE_I_9PSL;
 static bool ledBarButtonTest = false;
 static String fwNewVersion;
-static int lastCellSignalQuality = 99; // CSQ 
+static int lastCellSignalQuality = 99; // CSQ
 
 // Default value is 0, indicate its not started yet
 // In minutes
@@ -136,7 +136,7 @@ static void boardInit(void);
 static void initializeNetwork();
 static void failedHandler(String msg);
 static void configurationUpdateSchedule(void);
-static void configUpdateHandle(void); 
+static void configUpdateHandle(void);
 static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
@@ -157,7 +157,7 @@ static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int 
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
-static void restartIfCeClientIssueOverTwoHours(); 
+static void restartIfCeClientIssueOverTwoHours();
 static void networkSignalCheck();
 static void networkingTask(void *args);
 
@@ -180,7 +180,7 @@ void setup() {
   Serial.begin(115200);
   delay(100); /** For bester show log */
 
-  // Enable cullular module power board 
+  // Enable cullular module power board
   pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
   digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
 
@@ -284,7 +284,7 @@ void setup() {
     // Queue now only applied for cellular
     // Allocate queue memory to avoid always reallocation
     measurementCycleQueue.reserve(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
-    // Initialize mutex to access mesurementCycleQueue 
+    // Initialize mutex to access mesurementCycleQueue
     mutexMeasurementCycleQueue = xSemaphoreCreateMutex();
   }
 
@@ -312,7 +312,7 @@ void setup() {
 void loop() {
   if (networkOption == UseCellular) {
     // Check if cellular client not ready until certain time
-    // Redundant check in both task to make sure its executed 
+    // Redundant check in both task to make sure its executed
     restartIfCeClientIssueOverTwoHours();
   }
 
@@ -725,7 +725,7 @@ static void sendDataToAg() {
       "task_led", 2048, NULL, 5, NULL);
 
   delay(1500);
-  
+
   // Build payload to check connection to airgradient server
   JSONVar root;
   root["wifi"] = wifiConnector.RSSI();
@@ -970,7 +970,7 @@ void initializeNetwork() {
   agSerial->init(GPIO_IIC_RESET);
   if (agSerial->open()) {
     Serial.println("Cellular module found");
-    // Initialize cellular module and use cellular as agClient 
+    // Initialize cellular module and use cellular as agClient
     cellularCard = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
     agClient = new AirgradientCellularClient(cellularCard);
     networkOption = UseCellular;
@@ -984,7 +984,7 @@ void initializeNetwork() {
   }
 
   if (networkOption == UseCellular) {
-    // Enable serial stream debugging to check the AT command when doing registration 
+    // Enable serial stream debugging to check the AT command when doing registration
     agSerial->setDebug(true);
   }
 
@@ -1005,7 +1005,7 @@ void initializeNetwork() {
     ESP.restart();
   }
 
-  // Provide openmetrics to have access to last transmission result 
+  // Provide openmetrics to have access to last transmission result
   openMetrics.setAirgradientClient(agClient);
 
   if (networkOption == UseCellular) {
@@ -1018,7 +1018,7 @@ void initializeNetwork() {
       Serial.println("Cannot initiate wifi connection");
       return;
     }
-  
+
     if (!wifiConnector.isConnected()) {
       Serial.println("Failed connect to WiFi");
       if (wifiConnector.isConfigurePorttalTimeout()) {
@@ -1027,17 +1027,17 @@ void initializeNetwork() {
         oledDisplay.setText("", "", "");
         ESP.restart();
       }
-  
+
       // Directly return because the rest of the function applied if wifi is connect only
       return;
     }
-  
+
     // Initiate local network configuration
     mdnsInit();
     localServer.begin();
     // Apply mqtt connection if configured
     initMqtt();
-  
+
     // Ignore the rest if cloud connection to AirGradient is disabled
     if (configuration.isCloudConnectionDisabled()) {
       return;
@@ -1202,7 +1202,7 @@ static void updateDisplayAndLedBar(void) {
   }
 
   if (configuration.isCloudConnectionDisabled()) {
-    // Ignore API related check since cloud is disabled 
+    // Ignore API related check since cloud is disabled
     stateMachine.displayHandle(AgStateMachineNormal);
     stateMachine.handleLeds(AgStateMachineNormal);
     return;
@@ -1395,7 +1395,7 @@ void postUsingWifi() {
 void postUsingCellular(bool forcePost) {
   // Aquire queue mutex to get queue size
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
-  
+
   // Make sure measurement cycle available
   int queueSize = measurementCycleQueue.size();
   if (queueSize == 0) {
@@ -1405,7 +1405,7 @@ void postUsingCellular(bool forcePost) {
   }
 
   // Check queue size if its ready to transmit
-  // It is ready if size is divisible by 3 
+  // It is ready if size is divisible by 3
   if (!forcePost && (queueSize % MEASUREMENT_TRANSMIT_CYCLE) > 0) {
     Serial.printf("Not ready to transmit, queue size are %d\n", queueSize);
     xSemaphoreGive(mutexMeasurementCycleQueue);
@@ -1426,7 +1426,7 @@ void postUsingCellular(bool forcePost) {
 
   // Attempt to send
   if (agClient->httpPostMeasures(payload) == false) {
-    // Consider network has a problem, retry in next schedule 
+    // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;
   }
@@ -1527,7 +1527,7 @@ void setMeasurementMaxPeriod() {
 
 int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
-  // NOTE: Both network option use the same measurement interval 
+  // NOTE: Both network option use the same measurement interval
   return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
 }
 
@@ -1544,7 +1544,7 @@ void networkSignalCheck() {
     }
 
     // Save last signal quality
-    lastCellSignalQuality = result.data; 
+    lastCellSignalQuality = result.data;
 
     if (result.data == 99) {
       // 99 indicate cellular not attached to network
@@ -1557,7 +1557,7 @@ void networkSignalCheck() {
 }
 
 /**
-* If in 2 hours cellular client still not ready, then restart system 
+* If in 2 hours cellular client still not ready, then restart system
 */
 void restartIfCeClientIssueOverTwoHours() {
   if (agCeClientProblemDetectedTime > 0 &&
@@ -1622,10 +1622,10 @@ void networkingTask(void *args) {
         }
 
         // Enable at command debug
-        agSerial->setDebug(true); 
+        agSerial->setDebug(true);
 
         // Check if cellular client not ready until certain time
-        // Redundant check in both task to make sure its executed 
+        // Redundant check in both task to make sure its executed
         restartIfCeClientIssueOverTwoHours();
 
         // Power cycling cellular module due to network issues for more than 1 hour
@@ -1676,14 +1676,14 @@ void networkingTask(void *args) {
 
 void newMeasurementCycle() {
   if (xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY) == pdTRUE) {
-    // Make sure queue not overflow 
+    // Make sure queue not overflow
     if (measurementCycleQueue.size() >= MAXIMUM_MEASUREMENT_CYCLE_QUEUE) {
       // Remove the oldest data from queue if queue reach max
       measurementCycleQueue.erase(measurementCycleQueue.begin());
     }
 
     // Get current measures
-    auto mc = measurements.getMeasures(); 
+    auto mc = measurements.getMeasures();
     mc.signal = cellularCard->csqToDbm(lastCellSignalQuality); // convert to RSSI
 
     measurementCycleQueue.push_back(mc);

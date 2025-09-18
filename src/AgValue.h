@@ -149,7 +149,7 @@ public:
    *
    * @param type measurement type that will be retrieve
    * @param ch target type value channel
-   * @return moving average value of target measurements type  
+   * @return moving average value of target measurements type
    */
   float getAverage(MeasurementType type, int ch = 1);
 

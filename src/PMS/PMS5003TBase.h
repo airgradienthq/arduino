@@ -4,7 +4,7 @@
 class PMS5003TBase
 {
 private:
-  
+
 public:
   PMS5003TBase();
   ~PMS5003TBase();

@@ -6,8 +6,8 @@ OpenMetrics::OpenMetrics(Measurements &measure, Configuration &config,
 
 OpenMetrics::~OpenMetrics() {}
 
-void OpenMetrics::setAirGradient(AirGradient *ag) { 
-  this->ag = ag; 
+void OpenMetrics::setAirGradient(AirGradient *ag) {
+  this->ag = ag;
 }
 
 void OpenMetrics::setAirgradientClient(AirgradientClient *client) {

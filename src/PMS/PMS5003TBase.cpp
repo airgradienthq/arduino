@@ -6,11 +6,11 @@ PMS5003TBase::~PMS5003TBase() {}
 
 /**
  * @brief Compensate the temperature
- * 
+ *
  * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
- * 
- * @param temp 
- * @return * float 
+ *
+ * @param temp
+ * @return * float
  */
 float PMS5003TBase::compensateTemp(float temp) {
   if (temp < 10.0f) {
@@ -21,11 +21,11 @@ float PMS5003TBase::compensateTemp(float temp) {
 
 /**
  * @brief Compensate the humidity
- * 
+ *
  * Reference formula: https://www.airgradient.com/documentation/correction-algorithms/
- * 
- * @param temp 
- * @return * float 
+ *
+ * @param temp
+ * @return * float
  */
 float PMS5003TBase::compensateHum(float hum) {
   hum = hum * 1.259f + 7.34f;

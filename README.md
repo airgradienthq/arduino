@@ -32,7 +32,7 @@ Each GitHub release note will also include the planned rollout date for wider av
 
 ## Help & Support
 
-If you have any questions or problems, check out [our forum](https://forum.airgradient.com/). 
+If you have any questions or problems, check out [our forum](https://forum.airgradient.com/).
 
 ## Development
 

@@ -568,7 +568,7 @@ float Measurements::getAverage(MeasurementType type, int ch) {
     assert(0);
   }
 
-  return measurementAverage; 
+  return measurementAverage;
 }
 
 String Measurements::pms5003FirmwareVersion(int fwCode) {
@@ -895,7 +895,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc) {
 
   oss << ",";
 
-  // Temperature 
+  // Temperature
   if (utils::isValidTemperature(mc.temperature[0]) && utils::isValidTemperature(mc.temperature[1])) {
     float temp = (mc.temperature[0] + mc.temperature[1]) / 2.0f;
     oss << std::round(temp * 10);

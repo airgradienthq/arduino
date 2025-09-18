@@ -1,7 +1,7 @@
 #include "AirGradient.h"
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
-#else 
+#else
 #include "WiFi.h"
 #endif
 
@@ -57,7 +57,7 @@ String AirGradient::getBoardName(void) {
 
 /**
  * @brief Board Type is ONE_INDOOR
- * 
+ *
  * @return true ONE_INDOOR
  * @return false Other
  */
@@ -65,15 +65,15 @@ bool AirGradient::isOne(void) {
   return boardType == BoardType::ONE_INDOOR;
 }
 
-bool AirGradient::isOpenAir(void) { 
-  return boardType == BoardType::OPEN_AIR_OUTDOOR; 
+bool AirGradient::isOpenAir(void) {
+  return boardType == BoardType::OPEN_AIR_OUTDOOR;
 }
 
 bool AirGradient::isPro4_2(void) {
   return boardType == BoardType::DIY_PRO_INDOOR_V4_2;
 }
 
-bool AirGradient::isPro3_3(void) { 
+bool AirGradient::isPro3_3(void) {
   return boardType == BoardType::DIY_PRO_INDOOR_V3_3;
 }
 
