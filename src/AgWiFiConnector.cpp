@@ -358,7 +358,7 @@ bool WifiConnector::isConnected(void) { return WiFi.isConnected(); }
  * this method
  *
  */
-void WifiConnector::reset(void) { 
+void WifiConnector::reset(void) {
   if(this->wifi == NULL) {
     this->wifi = new WiFiManager();
     if(this->wifi == NULL){
@@ -366,7 +366,7 @@ void WifiConnector::reset(void) {
       return;
     }
   }
-  WIFI()->resetSettings(); 
+  WIFI()->resetSettings();
 }
 
 /**
@@ -406,7 +406,7 @@ bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
 
 /**
  * @brief Set wifi connect to default WiFi
- * 
+ *
  */
 void WifiConnector::setDefault(void) {
   WiFi.begin("airgradient", "cleanair");

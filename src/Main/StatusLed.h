@@ -6,7 +6,7 @@
 
 /**
  * @brief The class define how to handle the LED
- * 
+ *
  */
 class StatusLed {
 public:

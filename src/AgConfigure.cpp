@@ -114,7 +114,7 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
 
   const size_t enumSize = COR_ALGO_PM_SLR_CUSTOM + 1; // Get the actual size of the enum
   PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;;
-  
+
   // Loop through enum values
   for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
     if (algorithm == PM_CORRECTION_ALGORITHM_NAMES[enumVal]) {
@@ -122,7 +122,7 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
     }
   }
 
-  // If string not match from enum, check if correctionAlgorithm is one of the PM batch corrections 
+  // If string not match from enum, check if correctionAlgorithm is one of the PM batch corrections
   if (result == COR_ALGO_PM_UNKNOWN) {
     // Check the substring "slr_PMS5003_xxxxxxxx"
     if (algorithm.substring(0, 11) == "slr_PMS5003") {
@@ -749,7 +749,7 @@ bool Configuration::parse(String data, bool isLocal) {
   }
   else if (JSON.typeof_(root[jprop_mqttBrokerUrl]) == "null" and !isLocal) {
     // So if its not available on the json and json comes from aigradient server
-    // then set its value to default (empty) 
+    // then set its value to default (empty)
     jconfig[jprop_mqttBrokerUrl] = jprop_mqttBrokerUrl_default;
   }
   else {
@@ -1073,7 +1073,7 @@ String Configuration::getMqttBrokerUri(void) {
 }
 
 /**
- * @brief Get HTTP domain for post measures and get configuration 
+ * @brief Get HTTP domain for post measures and get configuration
  *
  * @return String http domain, might be empty string
  */
@@ -1562,13 +1562,13 @@ void Configuration::setDisableCloudConnection(bool disable) {
   saveConfig();
 }
 
-bool Configuration::isLedBarModeChanged(void) { 
+bool Configuration::isLedBarModeChanged(void) {
   bool changed = _ledBarModeChanged;
   _ledBarModeChanged = false;
   return changed;
 }
 
-bool Configuration::isMonitorDisplayCompensatedValues(void) { 
+bool Configuration::isMonitorDisplayCompensatedValues(void) {
   return jconfig[jprop_monitorDisplayCompensatedValues];
 }
 
@@ -1591,8 +1591,8 @@ bool Configuration::isPMCorrectionChanged(void) {
 }
 
 /**
- * @brief Check if PM correction is enabled 
- * 
+ * @brief Check if PM correction is enabled
+ *
  * @return true if PM correction algorithm is not None, otherwise false
  */
 bool Configuration::isPMCorrectionEnabled(void) {

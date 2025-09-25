@@ -140,7 +140,7 @@ void Sgp41::pause() {
   tvoc = utils::getInvalidVOC();
   noxRaw = utils::getInvalidNOx();
   nox = utils::getInvalidNOx();
-} 
+}
 
 void Sgp41::resume() {
   onPause = false;

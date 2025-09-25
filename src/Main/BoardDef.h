@@ -27,7 +27,7 @@ enum BoardType {
 
 /**
  * @brief Board definitions
- * 
+ *
  */
 struct BoardDef {
   /** Board Support CO2 SenseS8 */
