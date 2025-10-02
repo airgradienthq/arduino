@@ -952,6 +952,8 @@ static void boardInit(void) {
     } else {
       Serial.println("Set S8 AbcDays failure");
     }
+
+    ag->s8.printInformation();
   }
 
   localServer.setFwMode(fwMode);

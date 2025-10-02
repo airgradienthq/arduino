@@ -835,3 +835,13 @@ bool S8::setAbcPeriod(int hours) {
  * @return int Hour
  */
 int S8::getAbcPeriod(void) { return getCalibPeriodABC(); }
+
+
+void S8::printInformation(void) {
+  Serial.print("S8 type ID: 0x");
+  Serial.println(getSensorTypeId(), HEX);
+  Serial.print("S8 serial number: 0x");
+  Serial.println(getSensorId(), HEX);
+  Serial.print("S8 memory map version: 0x");
+  Serial.println(getMemoryMapVersion(), HEX);
+}
