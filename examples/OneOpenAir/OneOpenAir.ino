@@ -59,24 +59,24 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "esp_system.h"
 #include "freertos/projdefs.h"
 
-#define LED_BAR_ANIMATION_PERIOD 100                   /** ms */
-#define DISP_UPDATE_INTERVAL 2500                      /** ms */
-#define WIFI_SERVER_CONFIG_SYNC_INTERVAL 1 * 60000     /** ms */
-#define WIFI_MEASUREMENT_INTERVAL 1 * 60000            /** ms */
-#define WIFI_TRANSMISSION_INTERVAL 1 * 60000           /** ms */
-#define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 30 * 60000 /** ms */
-#define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000        /** ms */
-#define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000       /** ms */
-#define MQTT_SYNC_INTERVAL 60000                       /** ms */
-#define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5               /** sec */
-#define SENSOR_TVOC_UPDATE_INTERVAL 1000               /** ms */
-#define SENSOR_CO2_UPDATE_INTERVAL 4000                /** ms */
-#define SENSOR_PM_UPDATE_INTERVAL 2000                 /** ms */
-#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000           /** ms */
-#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000             /** ms */
-#define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)  /** ms */
+#define LED_BAR_ANIMATION_PERIOD 100                       /** ms */
+#define DISP_UPDATE_INTERVAL 2500                          /** ms */
+#define WIFI_SERVER_CONFIG_SYNC_INTERVAL 1 * 60000         /** ms */
+#define WIFI_MEASUREMENT_INTERVAL 1 * 60000                /** ms */
+#define WIFI_TRANSMISSION_INTERVAL 1 * 60000               /** ms */
+#define CELLULAR_SERVER_CONFIG_SYNC_INTERVAL 30 * 60000    /** ms */
+#define CELLULAR_MEASUREMENT_INTERVAL 3 * 60000            /** ms */
+#define CELLULAR_TRANSMISSION_INTERVAL 3 * 60000           /** ms */
+#define MQTT_SYNC_INTERVAL 60000                           /** ms */
+#define SENSOR_CO2_CALIB_COUNTDOWN_MAX 5                   /** sec */
+#define SENSOR_TVOC_UPDATE_INTERVAL 1000                   /** ms */
+#define SENSOR_CO2_UPDATE_INTERVAL 4000                    /** ms */
+#define SENSOR_PM_UPDATE_INTERVAL 2000                     /** ms */
+#define SENSOR_TEMP_HUM_UPDATE_INTERVAL 6000               /** ms */
+#define DISPLAY_DELAY_SHOW_CONTENT_MS 2000                 /** ms */
+#define FIRMWARE_CHECK_FOR_UPDATE_MS (60 * 60 * 1000)      /** ms */
 #define TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE (1 * 60) /** minutes */
-#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY    (2 * 60) /** minutes */
+#define TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY (2 * 60)    /** minutes */
 
 #define MEASUREMENT_TRANSMIT_CYCLE 3
 #define MAXIMUM_MEASUREMENT_CYCLE_QUEUE 80
@@ -87,8 +87,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
 
+#include <Arduino.h>
+#include <NimBLEDevice.h>
+
+static NimBLEServer *pServer;
+
 /** Power pin */
-#define GPIO_POWER_MODULE_PIN  5
+#define GPIO_POWER_MODULE_PIN 5
 #define GPIO_EXPANSION_CARD_POWER 4
 #define GPIO_IIC_RESET 3
 
@@ -100,21 +105,15 @@ static Configuration configuration(Serial);
 static Measurements measurements(configuration);
 static AirGradient *ag;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
-static StateMachine stateMachine(oledDisplay, Serial, measurements,
-                                 configuration);
-static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
-                                   configuration);
+static StateMachine stateMachine(oledDisplay, Serial, measurements, configuration);
+static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
-static LocalServer localServer(Serial, openMetrics, measurements, configuration,
-                               wifiConnector);
+static LocalServer localServer(Serial, openMetrics, measurements, configuration, wifiConnector);
 static AgSerial *agSerial;
 static CellularModule *cellularCard;
 static AirgradientClient *agClient;
 
-enum NetworkOption {
-  UseWifi,
-  UseCellular
-};
+enum NetworkOption { UseWifi, UseCellular };
 NetworkOption networkOption;
 TaskHandle_t handleNetworkTask = NULL;
 static bool firmwareUpdateInProgress = false;
@@ -162,8 +161,7 @@ static void networkSignalCheck();
 static void networkingTask(void *args);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
-AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL,
-                          configurationUpdateSchedule);
+AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL, configurationUpdateSchedule);
 AgSchedule transmissionSchedule(WIFI_TRANSMISSION_INTERVAL, sendDataToServer);
 AgSchedule measurementSchedule(WIFI_MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
@@ -174,6 +172,8 @@ AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
 AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
 AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
 AgSchedule printMeasurementsSchedule(6000, printMeasurements);
+
+static void setupBLE();
 
 void setup() {
   /** Serial for print debug message */
@@ -221,22 +221,25 @@ void setup() {
   boardInit();
   setMeasurementMaxPeriod();
 
+  setupBLE();
+  oledDisplay.setText("BT", "ON", "");
+  Serial.println("Bluetooth server ready");
+  while(1) {delay(100);}
+
   bool connectToNetwork = true;
   if (ag->isOne()) { // Offline mode only available for indoor monitor
     /** Show message confirm offline mode, should me perform if LED bar button
      * test pressed */
     if (ledBarButtonTest == false) {
-      oledDisplay.setText(
-          "Press now for",
-          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+      oledDisplay.setText("Press now for",
+                          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
       uint32_t startTime = millis();
       while (true) {
         if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
           configuration.setOfflineMode(!configuration.isOfflineMode());
 
-          oledDisplay.setText(
-              "Offline Mode",
-              configuration.isOfflineMode() ? " = True" : "  = False", "");
+          oledDisplay.setText("Offline Mode",
+                              configuration.isOfflineMode() ? " = True" : "  = False", "");
           delay(1000);
           break;
         }
@@ -274,7 +277,6 @@ void setup() {
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
 
-
   if (networkOption == UseCellular) {
     // If using cellular re-set scheduler interval
     configSchedule.setPeriod(CELLULAR_SERVER_CONFIG_SYNC_INTERVAL);
@@ -291,7 +293,7 @@ void setup() {
   // Only run network task if monitor is not in offline mode
   if (configuration.isOfflineMode() == false) {
     BaseType_t xReturned =
-      xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
+        xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
     if (xReturned == pdPASS) {
       Serial.println("Success create networking task");
     } else {
@@ -302,11 +304,9 @@ void setup() {
   // Log monitor mode for debugging purpose
   if (configuration.isOfflineMode()) {
     Serial.println("Running monitor in offline mode");
-  }
-  else if (configuration.isCloudConnectionDisabled()) {
+  } else if (configuration.isCloudConnectionDisabled()) {
     Serial.println("Running monitor without connection to AirGradient server");
   }
-
 }
 
 void loop() {
@@ -353,7 +353,7 @@ void loop() {
       static bool pmsConnected = false;
       if (pmsConnected != ag->pms5003.connected()) {
         pmsConnected = ag->pms5003.connected();
-        Serial.printf("PMS sensor %s \n", pmsConnected?"connected":"removed");
+        Serial.printf("PMS sensor %s \n", pmsConnected ? "connected" : "removed");
       }
     }
   } else {
@@ -392,9 +392,7 @@ static void co2Update(void) {
   }
 }
 
-void printMeasurements() {
-  measurements.printCurrentAverage();
-}
+void printMeasurements() { measurements.printCurrentAverage(); }
 
 static void mdnsInit(void) {
   if (!MDNS.begin(localServer.getHostname().c_str())) {
@@ -403,8 +401,7 @@ static void mdnsInit(void) {
   }
 
   MDNS.addService("_airgradient", "_tcp", 80);
-  MDNS.addServiceTxt("_airgradient", "_tcp", "model",
-                     AgFirmwareModeName(fwMode));
+  MDNS.addServiceTxt("_airgradient", "_tcp", "model", AgFirmwareModeName(fwMode));
   MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", ag->deviceId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag->getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
@@ -428,8 +425,7 @@ static void createMqttTask(void) {
             String payload = measurements.toString(true, fwMode, wifiConnector.RSSI());
             String topic = "airgradient/readings/" + ag->deviceId();
 
-            if (mqttClient.publish(topic.c_str(), payload.c_str(),
-                                   payload.length())) {
+            if (mqttClient.publish(topic.c_str(), payload.c_str(), payload.length())) {
               Serial.println("MQTT sync success");
             } else {
               Serial.println("MQTT sync failure");
@@ -447,8 +443,7 @@ static void createMqttTask(void) {
 static void initMqtt(void) {
   String mqttUri = configuration.getMqttBrokerUri();
   if (mqttUri.isEmpty()) {
-    Serial.println(
-        "MQTT is not configured, skipping initialization of MQTT client");
+    Serial.println("MQTT is not configured, skipping initialization of MQTT client");
     return;
   }
 
@@ -509,7 +504,7 @@ static void factoryConfigReset(void) {
               Serial.println("Factory reset successful");
             }
             delay(3000);
-            oledDisplay.setText("","","");
+            oledDisplay.setText("", "", "");
             ESP.restart();
           }
         }
@@ -547,7 +542,7 @@ static void ledBarEnabledUpdate(void) {
       ag->ledBar.setBrightness(brightness);
       ag->ledBar.setEnable(configuration.getLedBarMode() != LedBarModeOff);
     }
-     ag->ledBar.show();
+    ag->ledBar.show();
   }
 }
 
@@ -618,11 +613,11 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
     displayExecuteOta(result, "", std::stoi(msg));
     break;
   case AirgradientOTA::Failed:
-      displayExecuteOta(result, "", 0);
-      if (configuration.hasSensorSGP && networkOption == UseCellular) {
-        ag->sgp41.resume();
-      }
-      break;
+    displayExecuteOta(result, "", 0);
+    if (configuration.hasSensorSGP && networkOption == UseCellular) {
+      ag->sgp41.resume();
+    }
+    break;
   case AirgradientOTA::Skipped:
   case AirgradientOTA::AlreadyUpToDate:
     displayExecuteOta(result, "", 0);
@@ -638,7 +633,7 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
 
 static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int processing) {
   switch (result) {
-    case AirgradientOTA::Starting:
+  case AirgradientOTA::Starting:
     if (ag->isOne()) {
       oledDisplay.showFirmwareUpdateVersion(msg);
     } else {
@@ -714,8 +709,7 @@ static void sendDataToAg() {
         for (;;) {
           // ledSmHandler();
           stateMachine.handleLeds();
-          if (stateMachine.getLedState() !=
-              AgStateMachineWiFiOkServerConnecting) {
+          if (stateMachine.getLedState() != AgStateMachineWiFiOkServerConnecting) {
             break;
           }
           delay(LED_BAR_ANIMATION_PERIOD);
@@ -761,8 +755,7 @@ static void oneIndoorInit(void) {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
 
-  oledDisplay.setText("AirGradient ONE",
-                      "FW Version: ", ag->getVersion().c_str());
+  oledDisplay.setText("AirGradient ONE", "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   ag->ledBar.begin();
@@ -793,9 +786,9 @@ static void oneIndoorInit(void) {
       WiFi.begin("airgradient", "cleanair");
       oledDisplay.setText("Configure WiFi", "connect to", "\'airgradient\'");
       delay(2500);
-      oledDisplay.setText("Rebooting...", "","");
+      oledDisplay.setText("Rebooting...", "", "");
       delay(2500);
-      oledDisplay.setText("","","");
+      oledDisplay.setText("", "", "");
       ESP.restart();
     }
   }
@@ -921,8 +914,7 @@ static void openAirInit(void) {
     }
 
     if (fwMode == FW_MODE_O_1PP) {
-      int count = (configuration.hasSensorPMS1 ? 1 : 0) +
-                  (configuration.hasSensorPMS2 ? 1 : 0);
+      int count = (configuration.hasSensorPMS1 ? 1 : 0) + (configuration.hasSensorPMS2 ? 1 : 0);
       if (count == 1) {
         fwMode = FW_MODE_O_1P;
       }
@@ -1070,15 +1062,13 @@ void initializeNetwork() {
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
-  }
-  else {
+  } else {
     ledBarEnabledUpdate();
   }
 }
 
 static void configurationUpdateSchedule(void) {
-  if (configuration.getConfigurationControl() ==
-      ConfigurationControl::ConfigurationControlLocal) {
+  if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
     Serial.println("Ignore fetch server configuration, configurationControl set to local");
     agClient->resetFetchConfigurationStatus();
     return;
@@ -1112,8 +1102,7 @@ static void configUpdateHandle() {
   }
 
   if (configuration.hasSensorSGP) {
-    if (configuration.noxLearnOffsetChanged() ||
-        configuration.tvocLearnOffsetChanged()) {
+    if (configuration.noxLearnOffsetChanged() || configuration.tvocLearnOffsetChanged()) {
       ag->sgp41.end();
 
       int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
@@ -1124,14 +1113,12 @@ static void configUpdateHandle() {
         resultStr = "failure";
       }
       if (oldTvocOffset != configuration.getTvocLearningOffset()) {
-        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
-                      oldTvocOffset, configuration.getTvocLearningOffset(),
-                      resultStr);
+        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n", oldTvocOffset,
+                      configuration.getTvocLearningOffset(), resultStr);
       }
       if (oldNoxOffset != configuration.getNoxLearningOffset()) {
-        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
-                      oldNoxOffset, configuration.getNoxLearningOffset(),
-                      resultStr);
+        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n", oldNoxOffset,
+                      configuration.getNoxLearningOffset(), resultStr);
       }
     }
   }
@@ -1153,7 +1140,7 @@ static void configUpdateHandle() {
       if (configuration.getLedBarBrightness() == 0) {
         ag->ledBar.setEnable(false);
       } else {
-        if(configuration.getLedBarMode() == LedBarMode::LedBarModeOff) {
+        if (configuration.getLedBarMode() == LedBarMode::LedBarModeOff) {
           ag->ledBar.setEnable(false);
         } else {
           ag->ledBar.setEnable(true);
@@ -1191,9 +1178,8 @@ static void updateDisplayAndLedBar(void) {
       stateMachine.handleLeds(AgStateMachineWiFiLost);
       return;
     }
-  }
-  else if (networkOption == UseCellular) {
-    if (agClient->isClientReady() == false)  {
+  } else if (networkOption == UseCellular) {
+    if (agClient->isClientReady() == false) {
       // Same action as wifi
       stateMachine.displayHandle(AgStateMachineWiFiLost);
       stateMachine.handleLeds(AgStateMachineWiFiLost);
@@ -1390,8 +1376,8 @@ void postUsingWifi() {
 }
 
 /**
-* forcePost to force post without checking transmit cycle
-*/
+ * forcePost to force post without checking transmit cycle
+ */
 void postUsingCellular(bool forcePost) {
   // Aquire queue mutex to get queue size
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
@@ -1531,7 +1517,6 @@ int calculateMaxPeriod(int updateInterval) {
   return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
 }
 
-
 void networkSignalCheck() {
   if (networkOption == UseWifi) {
     Serial.printf("WiFi RSSI %d\n", wifiConnector.RSSI());
@@ -1557,12 +1542,11 @@ void networkSignalCheck() {
 }
 
 /**
-* If in 2 hours cellular client still not ready, then restart system
-*/
+ * If in 2 hours cellular client still not ready, then restart system
+ */
 void restartIfCeClientIssueOverTwoHours() {
   if (agCeClientProblemDetectedTime > 0 &&
-      (MINUTES() - agCeClientProblemDetectedTime) >
-          TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
+      (MINUTES() - agCeClientProblemDetectedTime) > TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
     // Give up wait
     Serial.println("Rebooting because CE client issues for 2 hours detected");
     int i = 3;
@@ -1613,8 +1597,7 @@ void networkingTask(void *args) {
         delay(1000);
         continue;
       }
-    }
-    else if (networkOption == UseCellular) {
+    } else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
         // Start time if value still default
         if (agCeClientProblemDetectedTime == 0) {
@@ -1652,7 +1635,7 @@ void networkingTask(void *args) {
 
         // Client is ready
         agCeClientProblemDetectedTime = 0; // reset to default
-        agSerial->setDebug(false); // disable at command debug
+        agSerial->setDebug(false);         // disable at command debug
       }
     }
 
@@ -1695,3 +1678,62 @@ void newMeasurementCycle() {
   }
 }
 
+class ServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo) override {
+    Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
+  }
+
+  void onDisconnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo, int reason) override {
+    Serial.printf("Client disconnected - start advertising\n");
+    NimBLEDevice::startAdvertising();
+  }
+
+  void onAuthenticationComplete(NimBLEConnInfo &connInfo) override {
+    Serial.println("\n========== PAIRING COMPLETE ==========");
+    Serial.printf("Peer Address: %s\n", connInfo.getAddress().toString().c_str());
+
+    Serial.printf("Encrypted: %s\n", connInfo.isEncrypted() ? "YES" : "NO");
+    Serial.printf("Authenticated: %s\n", connInfo.isAuthenticated() ? "YES" : "NO");
+    Serial.printf("Key Size: %d bits\n", connInfo.getSecKeySize() * 8);
+
+    Serial.println("======================================\n");
+  }
+};
+
+/** Handler class for characteristic actions */
+class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
+  void onRead(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
+    Serial.printf("%s : onRead(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
+                  pCharacteristic->getValue().c_str());
+  }
+
+  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
+    Serial.printf("%s : onWrite(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
+                  pCharacteristic->getValue().c_str());
+  }
+};
+
+void setupBLE() {
+  NimBLEDevice::init("AirGradient");
+  NimBLEDevice::setPower(3); /** +3db */
+
+  /** bonding, MITM, don't need BLE secure connections as we are using passkey pairing */
+  NimBLEDevice::setSecurityAuth(false, false, true);
+  NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
+  NimBLEServer *pServer = NimBLEDevice::createServer();
+  pServer->setCallbacks(new ServerCallbacks());
+
+  NimBLEService *pService = pServer->createService("acbcfea8-e541-4c40-9bfd-17820f16c95c");
+  NimBLECharacteristic *pSecureCharacteristic =
+      pService->createCharacteristic("703fa252-3d2a-4da9-a05c-83b0d9cacb8e",
+                                     NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC |
+                                         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC);
+  pSecureCharacteristic->setCallbacks(new CharacteristicCallbacks());
+
+  pService->start();
+
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(pService->getUUID());
+  pAdvertising->start();
+}
