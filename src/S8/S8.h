@@ -80,6 +80,7 @@ public:
   bool isBaseLineCalibrationDone(void);
   bool setAbcPeriod(int hours);
   int getAbcPeriod(void);
+  void printInformation(void);
 
 private:
   /** Variables */
