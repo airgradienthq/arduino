@@ -266,3 +266,44 @@ int PMS5003::getFailCount(void) { return pms.getFailCount(); }
  * @return int
  */
 int PMS5003::getFailCountMax(void) { return pms.getFailCountMax(); }
+
+// Standby mode. For low power consumption and prolong the life of the sensor.
+void PMS5003::sleep() {
+  uint8_t command[] = {0x42, 0x4D, 0xE4, 0x00, 0x00, 0x01, 0x73};
+  size_t bytesWritten = this->_serial->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+}
+
+// Operating mode. Stable data should be got at least 30 seconds after the sensor wakeup from the sleep mode because of the fan's performance.
+void PMS5003::wakeUp() {
+  uint8_t command[] = {0x42, 0x4D, 0xE4, 0x00, 0x01, 0x01, 0x74};
+  size_t bytesWritten = this->_serial->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+}
+
+// Active mode. Default mode after power up. In this mode sensor would send serial data to the host automatically.
+void PMS5003::activeMode() {
+  uint8_t command[] = {0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71};
+  size_t bytesWritten = this->_serial->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+  // _mode = MODE_ACTIVE;
+}
+
+// Passive mode. In this mode sensor would send serial data to the host only for request.
+void PMS5003::passiveMode() {
+  uint8_t command[] = {0x42, 0x4D, 0xE1, 0x00, 0x00, 0x01, 0x70};
+  size_t bytesWritten = this->_serial->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+  // _mode = MODE_PASSIVE;
+}
+
+// Request read in Passive Mode.
+void PMS5003::requestRead() {
+  // if (_mode == MODE_PASSIVE)
+  // {
+  uint8_t command[] = {0x42, 0x4D, 0xE2, 0x00, 0x00, 0x01, 0x71};
+  size_t bytesWritten = this->_serial->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+
+  // }
+}

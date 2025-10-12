@@ -21,10 +21,15 @@ bool PMSBase::begin(Stream *stream) {
   }
   Serial.printf("cleared %d byte(s)\n", bytesCleared);
 
+
+  uint8_t command[] = {0x42, 0x4D, 0xE4, 0x00, 0x01, 0x01, 0x74};
+  size_t bytesWritten = stream->write(command, sizeof(command));
+  Serial.printf("%d byte(s) written\n", bytesWritten);
+
   // explicitly put the sensor into active mode, this seems to be be needed for the Cubic PM2009X
   Serial.printf("setting active mode\n");
-  uint8_t activeModeCommand[] = { 0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71 };
-  size_t bytesWritten = stream->write(activeModeCommand, sizeof(activeModeCommand));
+  uint8_t activeModeCommand[] = {0x42, 0x4D, 0xE1, 0x00, 0x01, 0x01, 0x71};
+  bytesWritten = stream->write(activeModeCommand, sizeof(activeModeCommand));
   Serial.printf("%d byte(s) written\n", bytesWritten);
 
   // Run and check sensor data for 4sec
@@ -313,7 +318,6 @@ int PMSBase::pm25ToAQI(int pm02) {
   else
     return 500;
 }
-
 
 /**
  * @brief SLR correction for PM2.5

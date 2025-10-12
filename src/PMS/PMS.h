@@ -48,7 +48,7 @@ private:
   /** In normal package interval is 200-800ms, In case small changed on sensor
    * it's will interval reach to 2.3sec
    */
-  const uint16_t READ_PACKGE_TIMEOUT = 3000;   /** ms */
+  const uint16_t READ_PACKGE_TIMEOUT = 3000; /** ms */
   const int failCountMax = 10;
   int failCount = 0;
 
@@ -76,15 +76,15 @@ private:
   uint16_t pms_count2_5;
   uint16_t pms_count5_0;
   uint16_t pms_count10;
-  int16_t  pms_temp;
+  int16_t pms_temp;
   uint16_t pms_hum;
-  uint8_t  pms_errorCode;
-  uint8_t  pms_firmwareVersion;
+  uint8_t pms_errorCode;
+  uint8_t pms_firmwareVersion;
 
   int16_t toI16(const uint8_t *buf);
   uint16_t toU16(const uint8_t *buf);
   bool validate(const uint8_t *buf);
-  void parse(const uint8_t* buf);
+  void parse(const uint8_t *buf);
 };
 
 #endif /** _PMS5003_BASE_H_ */

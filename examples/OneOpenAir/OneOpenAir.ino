@@ -175,6 +175,9 @@ AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmware
 AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
 AgSchedule printMeasurementsSchedule(6000, printMeasurements);
 
+
+static int pmsValueTaken = 0;
+
 void setup() {
   /** Serial for print debug message */
   Serial.begin(115200);
@@ -275,6 +278,9 @@ void setup() {
   }
 
 
+  configSchedule.setPeriod(CELLULAR_TRANSMISSION_INTERVAL);
+  transmissionSchedule.setPeriod(CELLULAR_TRANSMISSION_INTERVAL);
+
   if (networkOption == UseCellular) {
     // If using cellular re-set scheduler interval
     configSchedule.setPeriod(CELLULAR_SERVER_CONFIG_SYNC_INTERVAL);
@@ -347,21 +353,24 @@ void loop() {
   if (configuration.hasSensorSGP) {
     tvocSchedule.run();
   }
-  if (ag->isOne()) {
-    if (configuration.hasSensorPMS1) {
-      ag->pms5003.handle();
-      static bool pmsConnected = false;
-      if (pmsConnected != ag->pms5003.connected()) {
-        pmsConnected = ag->pms5003.connected();
-        Serial.printf("PMS sensor %s \n", pmsConnected?"connected":"removed");
+
+  if (pmsValueTaken < 60) {
+    if (ag->isOne()) {
+      if (configuration.hasSensorPMS1) {
+        ag->pms5003.handle();
+        static bool pmsConnected = false;
+        if (pmsConnected != ag->pms5003.connected()) {
+          pmsConnected = ag->pms5003.connected();
+          Serial.printf("PMS sensor %s \n", pmsConnected?"connected":"removed");
+        }
       }
-    }
-  } else {
-    if (configuration.hasSensorPMS1) {
-      ag->pms5003t_1.handle();
-    }
-    if (configuration.hasSensorPMS2) {
-      ag->pms5003t_2.handle();
+    } else {
+      if (configuration.hasSensorPMS1) {
+        ag->pms5003t_1.handle();
+      }
+      if (configuration.hasSensorPMS2) {
+        ag->pms5003t_2.handle();
+      }
     }
   }
 
@@ -1239,6 +1248,16 @@ static void updateTvoc(void) {
 }
 
 static void updatePMS5003() {
+  pmsValueTaken++;
+  if (pmsValueTaken >= 60) {
+    if (pmsValueTaken == 60) {
+      ag->pms5003.sleep();
+      Serial.println("PMS go sleep");
+    }
+    return;
+  }
+
+
   if (ag->pms5003.connected()) {
     measurements.update(Measurements::PM01, ag->pms5003.getPm01Ae());
     measurements.update(Measurements::PM25, ag->pms5003.getPm25Ae());
@@ -1461,6 +1480,11 @@ void sendDataToServer(void) {
   } else if (networkOption == UseCellular) {
     postUsingCellular(false);
   }
+
+  pmsValueTaken = 0;
+  ag->pms5003.wakeUp();
+  ag->pms5003.activeMode();
+  Serial.println("run PMS again");
 }
 
 static void tempHumUpdate(void) {

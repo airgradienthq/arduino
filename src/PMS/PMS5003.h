@@ -19,6 +19,14 @@ public:
 #else
   bool begin(HardwareSerial &serial);
 #endif
+
+  // Modes
+  void sleep();
+  void wakeUp();
+  void activeMode();
+  void passiveMode();
+  void requestRead();
+
   void end(void);
   void handle(void);
   void updateFailCount(void);
