@@ -87,11 +87,6 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #define I2C_SCL_PIN 6
 #define OLED_I2C_ADDR 0x3C
 
-#include <Arduino.h>
-#include <NimBLEDevice.h>
-
-static NimBLEServer *pServer;
-
 /** Power pin */
 #define GPIO_POWER_MODULE_PIN 5
 #define GPIO_EXPANSION_CARD_POWER 4
@@ -173,8 +168,6 @@ AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmware
 AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
 AgSchedule printMeasurementsSchedule(6000, printMeasurements);
 
-static void setupBLE();
-
 void setup() {
   /** Serial for print debug message */
   Serial.begin(115200);
@@ -220,11 +213,6 @@ void setup() {
   /** Init sensor */
   boardInit();
   setMeasurementMaxPeriod();
-
-  setupBLE();
-  oledDisplay.setText("BT", "ON", "");
-  Serial.println("Bluetooth server ready");
-  while(1) {delay(100);}
 
   bool connectToNetwork = true;
   if (ag->isOne()) { // Offline mode only available for indoor monitor
@@ -1676,64 +1664,4 @@ void newMeasurementCycle() {
     // Log current free heap size
     Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
   }
-}
-
-class ServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo) override {
-    Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
-  }
-
-  void onDisconnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo, int reason) override {
-    Serial.printf("Client disconnected - start advertising\n");
-    NimBLEDevice::startAdvertising();
-  }
-
-  void onAuthenticationComplete(NimBLEConnInfo &connInfo) override {
-    Serial.println("\n========== PAIRING COMPLETE ==========");
-    Serial.printf("Peer Address: %s\n", connInfo.getAddress().toString().c_str());
-
-    Serial.printf("Encrypted: %s\n", connInfo.isEncrypted() ? "YES" : "NO");
-    Serial.printf("Authenticated: %s\n", connInfo.isAuthenticated() ? "YES" : "NO");
-    Serial.printf("Key Size: %d bits\n", connInfo.getSecKeySize() * 8);
-
-    Serial.println("======================================\n");
-  }
-};
-
-/** Handler class for characteristic actions */
-class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
-  void onRead(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
-    Serial.printf("%s : onRead(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
-                  pCharacteristic->getValue().c_str());
-  }
-
-  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
-    Serial.printf("%s : onWrite(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
-                  pCharacteristic->getValue().c_str());
-  }
-};
-
-void setupBLE() {
-  NimBLEDevice::init("AirGradient");
-  NimBLEDevice::setPower(3); /** +3db */
-
-  /** bonding, MITM, don't need BLE secure connections as we are using passkey pairing */
-  NimBLEDevice::setSecurityAuth(false, false, true);
-  NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
-
-  NimBLEServer *pServer = NimBLEDevice::createServer();
-  pServer->setCallbacks(new ServerCallbacks());
-
-  NimBLEService *pService = pServer->createService("acbcfea8-e541-4c40-9bfd-17820f16c95c");
-  NimBLECharacteristic *pSecureCharacteristic =
-      pService->createCharacteristic("703fa252-3d2a-4da9-a05c-83b0d9cacb8e",
-                                     NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC |
-                                         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC);
-  pSecureCharacteristic->setCallbacks(new CharacteristicCallbacks());
-
-  pService->start();
-
-  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(pService->getUUID());
-  pAdvertising->start();
 }

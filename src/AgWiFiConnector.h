@@ -6,8 +6,11 @@
 #include "AirGradient.h"
 #include "AgConfigure.h"
 #include "Main/PrintLog.h"
+#include "NimBLECharacteristic.h"
+#include "NimBLEService.h"
 
 #include <Arduino.h>
+#include <NimBLEDevice.h>
 
 class WifiConnector : public PrintLog {
 private:
@@ -25,6 +28,11 @@ private:
 
   bool wifiClientConnected(void);
 
+  void setupBLE();
+  void stopBLE();
+
+  NimBLEServer *pServer;
+
 public:
   void setAirGradient(AirGradient *ag);
 
@@ -39,6 +47,7 @@ public:
   void _wifiSaveParamCallback(void);
   bool _wifiConfigPortalActive(void);
   void _wifiTimeoutCallback(void);
+  void _wifiStop();
   void _wifiProcess();
   bool isConnected(void);
   void reset(void);

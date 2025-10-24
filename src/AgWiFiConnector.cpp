@@ -1,10 +1,51 @@
 #include "AgWiFiConnector.h"
+#include "Arduino.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
 
 #define WIFI() ((WiFiManager *)(this->wifi))
+
+static bool g_isBLEConnect = false;
+
+
+class ServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo) override {
+    Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
+    g_isBLEConnect = true;
+  }
+
+  void onDisconnect(NimBLEServer *pServer, NimBLEConnInfo &connInfo, int reason) override {
+    Serial.printf("Client disconnected - start advertising\n");
+    NimBLEDevice::startAdvertising();
+    g_isBLEConnect = false;
+  }
+
+  void onAuthenticationComplete(NimBLEConnInfo &connInfo) override {
+    Serial.println("\n========== PAIRING COMPLETE ==========");
+    Serial.printf("Peer Address: %s\n", connInfo.getAddress().toString().c_str());
+
+    Serial.printf("Encrypted: %s\n", connInfo.isEncrypted() ? "YES" : "NO");
+    Serial.printf("Authenticated: %s\n", connInfo.isAuthenticated() ? "YES" : "NO");
+    Serial.printf("Key Size: %d bits\n", connInfo.getSecKeySize() * 8);
+
+    Serial.println("======================================\n");
+  }
+};
+
+/** Handler class for characteristic actions */
+class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
+  void onRead(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
+    Serial.printf("%s : onRead(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
+                  pCharacteristic->getValue().c_str());
+  }
+
+  void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override {
+    Serial.printf("%s : onWrite(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
+                  pCharacteristic->getValue().c_str());
+  }
+};
 
 /**
  * @brief Set reference AirGradient instance
@@ -101,6 +142,11 @@ bool WifiConnector::connect(void) {
       [](void *obj) {
         WifiConnector *connector = (WifiConnector *)obj;
         while (connector->_wifiConfigPortalActive()) {
+          if (g_isBLEConnect) {
+            Serial.println("Stopping portal because BLE connected");
+            connector->_wifiStop();
+            break;
+          }
           connector->_wifiProcess();
           vTaskDelay(1);
         }
@@ -113,9 +159,11 @@ bool WifiConnector::connect(void) {
   uint32_t ledPeriod = millis();
   bool clientConnectChanged = false;
 
+  setupBLE();
+
   AgStateMachineState stateOld = sm.getDisplayState();
   while (WIFI()->getConfigPortalActive()) {
-    /** LED animatoin and display update content */
+    /** LED animation and display update content */
     if (WiFi.isConnected() == false) {
       /** Display countdown */
       uint32_t ms;
@@ -145,6 +193,8 @@ bool WifiConnector::connect(void) {
         clientConnectChanged = clientConnected;
         if (clientConnectChanged) {
           sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
+          Serial.println("Stopping BLE since wifi is connected");
+          stopBLE();
         } else {
           sm.ledAnimationInit();
           sm.handleLeds(AgStateMachineWiFiManagerMode);
@@ -160,6 +210,26 @@ bool WifiConnector::connect(void) {
 #else
   _wifiProcess();
 #endif
+
+  while (1) {
+    delay(1000);
+  }
+
+
+  /** Set wifi connect */
+  WiFi.begin("hbonfam", "51burian");
+
+  /** Wait for wifi connect to AP */
+  int count = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    count++;
+    if (count >= 15) {
+      logError("Try connect to default wifi \"" + String(this->defaultSsid) +
+               String("\" failed"));
+      break;
+    }
+  }
 
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
@@ -247,6 +317,10 @@ bool WifiConnector::_wifiConfigPortalActive(void) {
   return WIFI()->getConfigPortalActive();
 }
 void WifiConnector::_wifiTimeoutCallback(void) { connectorTimeout = true; }
+
+void WifiConnector::_wifiStop() {
+  WIFI()->stopConfigPortal();
+}
 
 /**
  * @brief Process WiFiManager connection
@@ -410,4 +484,35 @@ bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
  */
 void WifiConnector::setDefault(void) {
   WiFi.begin("airgradient", "cleanair");
+}
+
+
+void WifiConnector::setupBLE() {
+  NimBLEDevice::init("AirGradient");
+  NimBLEDevice::setPower(3); /** +3db */
+
+  /** bonding, MITM, don't need BLE secure connections as we are using passkey pairing */
+  NimBLEDevice::setSecurityAuth(false, false, true);
+  NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
+  NimBLEServer *pServer = NimBLEDevice::createServer();
+  pServer->setCallbacks(new ServerCallbacks());
+
+  NimBLEService *pService = pServer->createService("acbcfea8-e541-4c40-9bfd-17820f16c95c");
+  NimBLECharacteristic *pSecureCharacteristic =
+      pService->createCharacteristic("703fa252-3d2a-4da9-a05c-83b0d9cacb8e",
+                                     NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC |
+                                         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC);
+  pSecureCharacteristic->setCallbacks(new CharacteristicCallbacks());
+
+  pService->start();
+
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(pService->getUUID());
+  pAdvertising->start();
+}
+
+void WifiConnector::stopBLE() {
+  NimBLEDevice::deinit();
+
 }
