@@ -247,6 +247,7 @@ void setup() {
   if (connectToNetwork) {
     oledDisplay.setText("Initialize", "network...", "");
     initializeNetwork();
+    wifiConnector.stopBLE();
   }
 
   /** Set offline mode without saving, cause wifi is not configured */
@@ -690,6 +691,7 @@ static void sendDataToAg() {
     stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
   }
   stateMachine.handleLeds(AgStateMachineWiFiOkServerConnecting);
+  wifiConnector.bleNotifyStatus(1);
 
   /** Task handle led connecting animation */
   xTaskCreate(
@@ -718,11 +720,13 @@ static void sendDataToAg() {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerConnected);
+    wifiConnector.bleNotifyStatus(2); 
   } else {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerConnectFailed);
+    wifiConnector.bleNotifyStatus(11); 
   }
 
   stateMachine.handleLeds(AgStateMachineNormal);
@@ -1044,14 +1048,17 @@ void initializeNetwork() {
       if (agClient->isRegisteredOnAgServer() == false) {
         stateMachine.displaySetAddToDashBoard();
         stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        wifiConnector.bleNotifyStatus(13);
       } else {
         stateMachine.displayClearAddToDashBoard();
+        wifiConnector.bleNotifyStatus(12);
       }
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   } else {
     ledBarEnabledUpdate();
+    wifiConnector.bleNotifyStatus(3);
   }
 }
 
