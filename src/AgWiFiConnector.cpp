@@ -8,7 +8,11 @@
 
 
 #define BLE_SERVICE_UUID "acbcfea8-e541-4c40-9bfd-17820f16c95c"
-#define BLE_CHARACTERISTIC_UUID "703fa252-3d2a-4da9-a05c-83b0d9cacb8e"
+#define BLE_CRED_CHAR_UUID "703fa252-3d2a-4da9-a05c-83b0d9cacb8e"
+#define BLE_SCAN_CHAR_UUID "467a080f-e50f-42c9-b9b2-a2ab14d82725"
+
+#define BLE_CRED_BIT (1 << 0)
+#define BLE_SCAN_BIT (1 << 1)
 
 #define WIFI() ((WiFiManager *)(this->wifi))
 
@@ -125,7 +129,7 @@ bool WifiConnector::connect(void) {
   uint32_t ledPeriod = millis();
   bool clientConnectChanged = false;
 
-  setupBLE(ssid);
+  setupBLE();
 
   AgStateMachineState stateOld = sm.getDisplayState();
   while (WIFI()->getConfigPortalActive()) {
@@ -183,21 +187,50 @@ bool WifiConnector::connect(void) {
   if (provisionMethod == ProvisionMethod::BLE) {
     disp.setText("Provision by", "BLE", "");
 
-    while (isBleClientConnected() && !wifiConnecting) {
-      Serial.println("Wait for WiFi credentials through BLE");
-      delay(1000);
-    }
-
     int count = 0;
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(1000);
-      count++;
-      if (count >= 15) {
-        // give up
-        WiFi.disconnect();
-        break;
+
+    // Loop until the BLE client disconnected or WiFi connected
+    while (isBleClientConnected() && !WiFi.isConnected()) {
+      Serial.println("Wait for BLE provision command");
+      EventBits_t bits = xEventGroupWaitBits(
+        bleEventGroup,
+        BLE_SCAN_BIT | BLE_CRED_BIT,
+        pdTRUE,
+        pdFALSE,
+        portMAX_DELAY
+      );
+
+      if (bits & BLE_CRED_BIT) {
+        count = 0;
+        wifiConnecting = true;
+        Serial.printf("Connecting to %s...\n", ssid.c_str());
+        while (WiFi.status() != WL_CONNECTED) {
+          delay(1000);
+          Serial.print(".");
+          count++;
+          if (count >= 15) {
+            WiFi.disconnect();
+            wifiConnecting = false;
+            bleNotifyStatus(10);
+            break;
+          }
+        }
+      }
+      else if (bits & BLE_SCAN_BIT) {
+        String result = scanFilteredWiFiJSON();
+        NimBLEService* pSvc = pServer->getServiceByUUID(BLE_SERVICE_UUID);
+        if (pSvc) {
+          NimBLECharacteristic* pChr = pSvc->getCharacteristic(BLE_SCAN_CHAR_UUID);
+          if (pChr) {
+            pChr->setValue(result);
+            pChr->notify();
+            Serial.println("List of scanned networks sent through BLE notify");
+          }
+        }
       }
     }
+
+    Serial.println("Exit provision by BLE");
   }
 
   /** Show display wifi connect result failed */
@@ -206,7 +239,6 @@ bool WifiConnector::connect(void) {
     if (ag->isOne() || ag->isPro4_2() || ag->isPro3_3() || ag->isBasic()) {
       sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
     }
-    bleNotifyStatus(10);
     delay(6000);
   } else {
     hasConfig = true;
@@ -456,10 +488,14 @@ bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
 
 
 void WifiConnector::bleNotifyStatus(int status) {
+  if (!bleServerRunning) {
+    return;
+  }
+
   if (pServer->getConnectedCount()) {
     NimBLEService* pSvc = pServer->getServiceByUUID(BLE_SERVICE_UUID);
     if (pSvc) {
-      NimBLECharacteristic* pChr = pSvc->getCharacteristic(BLE_CHARACTERISTIC_UUID);
+      NimBLECharacteristic* pChr = pSvc->getCharacteristic(BLE_CRED_CHAR_UUID);
       if (pChr) {
         char tosend[50];
         memset(tosend, 0, 50);
@@ -480,9 +516,89 @@ void WifiConnector::setDefault(void) {
   WiFi.begin("airgradient", "cleanair");
 }
 
+String WifiConnector::scanFilteredWiFiJSON() {
+  Serial.println("Scanning for Wi-Fi networks...");
+  int n = WiFi.scanNetworks(false, true);  // async=false, show_hidden=true
+  Serial.printf("Found %d networks\n", n);
 
-void WifiConnector::setupBLE(String bleName) {
-  NimBLEDevice::init(bleName.c_str());
+  const int MAX_NETWORKS = 50;
+  const int MAX_RESULTS = 15;
+
+  if (n <= 0) {
+    Serial.println("No networks found");
+    return "[]";
+  }
+
+  WiFiNetwork allNetworks[MAX_NETWORKS];
+  int allCount = 0;
+
+  // Collect valid networks (filter weak or empty SSID)
+  for (int i = 0; i < n && allCount < MAX_NETWORKS; ++i) {
+    String ssid = WiFi.SSID(i);
+    int32_t rssi = WiFi.RSSI(i);
+    bool open = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN);
+
+    if (ssid.length() == 0 || rssi < -70) continue;
+
+    allNetworks[allCount++] = {ssid, rssi, open};
+  }
+
+  // Remove duplicates (keep the strongest)
+  WiFiNetwork uniqueNetworks[MAX_NETWORKS];
+  int uniqueCount = 0;
+
+  for (int i = 0; i < allCount; i++) {
+    bool exists = false;
+    for (int j = 0; j < uniqueCount; j++) {
+      if (uniqueNetworks[j].ssid == allNetworks[i].ssid) {
+        exists = true;
+        if (allNetworks[i].rssi > uniqueNetworks[j].rssi)
+          uniqueNetworks[j] = allNetworks[i]; // keep stronger one
+        break;
+      }
+    }
+    if (!exists && uniqueCount < MAX_NETWORKS) {
+      uniqueNetworks[uniqueCount++] = allNetworks[i];
+    }
+  }
+
+  // Sort by RSSI descending (simple bubble sort for small lists)
+  for (int i = 0; i < uniqueCount - 1; i++) {
+    for (int j = i + 1; j < uniqueCount; j++) {
+      if (uniqueNetworks[j].rssi > uniqueNetworks[i].rssi) {
+        WiFiNetwork temp = uniqueNetworks[i];
+        uniqueNetworks[i] = uniqueNetworks[j];
+        uniqueNetworks[j] = temp;
+      }
+    }
+  }
+
+  // Limit to top X
+  if (uniqueCount > MAX_RESULTS)
+    uniqueCount = MAX_RESULTS;
+
+  // Build JSON array
+  JSONVar jsonArray;
+  for (int i = 0; i < uniqueCount; i++) {
+    JSONVar obj;
+    obj["ssid"] = uniqueNetworks[i].ssid;
+    obj["rssi"] = uniqueNetworks[i].rssi;
+    obj["open"] = uniqueNetworks[i].open;
+    jsonArray[i] = obj;
+  }
+
+  String jsonString = JSON.stringify(jsonArray);
+
+  Serial.println("Filtered Wi-Fi Networks (JSON):");
+  Serial.println(jsonString);
+
+  return jsonString;
+}
+
+
+void WifiConnector::setupBLE() {
+  Serial.printf("Setup BLE with device name %s\n", ssid.c_str());
+  NimBLEDevice::init(ssid.c_str());
   NimBLEDevice::setPower(3); /** +3db */
 
   /** bonding, MITM, don't need BLE secure connections as we are using passkey pairing */
@@ -492,12 +608,20 @@ void WifiConnector::setupBLE(String bleName) {
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks(this));
 
+
+  auto characteristicCallback = new CharacteristicCallbacks(this);
+
   NimBLEService *pService = pServer->createService(BLE_SERVICE_UUID);
-  NimBLECharacteristic *pSecureCharacteristic =
-      pService->createCharacteristic(BLE_CHARACTERISTIC_UUID,
+  NimBLECharacteristic *pCredentialCharacteristic =
+      pService->createCharacteristic(BLE_CRED_CHAR_UUID,
                                      NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC |
                                          NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY);
-  pSecureCharacteristic->setCallbacks(new CharacteristicCallbacks(this));
+  pCredentialCharacteristic->setCallbacks(characteristicCallback);
+
+  NimBLECharacteristic *pScanCharacteristic =
+      pService->createCharacteristic(BLE_SCAN_CHAR_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY);
+  pScanCharacteristic->setCallbacks(characteristicCallback);
+
 
   pService->start();
 
@@ -505,6 +629,14 @@ void WifiConnector::setupBLE(String bleName) {
   pAdvertising->addServiceUUID(pService->getUUID());
   pAdvertising->start();
   bleServerRunning = true;
+
+  // Create event group
+  bleEventGroup = xEventGroupCreate();
+  if (bleEventGroup == NULL) {
+    Serial.println("Failed to create BLE event group!");
+    // This case is very unlikely
+  }
+
   Serial.println("Provision by BLE ready");
 }
 
@@ -556,13 +688,20 @@ void WifiConnector::CharacteristicCallbacks::onWrite(NimBLECharacteristic *pChar
   Serial.printf("%s : onWrite(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
                 pCharacteristic->getValue().c_str());
 
-  JSONVar root = JSON.parse(pCharacteristic->getValue().c_str());
+  auto bleCred = NimBLEUUID(BLE_CRED_CHAR_UUID);
+  if (pCharacteristic->getUUID().equals(bleCred)) {
+    if (!parent->wifiConnecting) {
+      JSONVar root = JSON.parse(pCharacteristic->getValue().c_str());
 
-  String ssid = root["ssid"];
-  String pass = root["password"];
+      String ssid = root["ssid"];
+      String pass = root["password"];
 
-  Serial.printf("Connecting to %s...\n", ssid.c_str());
-  WiFi.begin(ssid.c_str(), pass.c_str());
-  parent->wifiConnecting = true;
+      WiFi.begin(ssid.c_str(), pass.c_str());
+      xEventGroupSetBits(parent->bleEventGroup, BLE_CRED_BIT);
+    }
+  } else {
+    xEventGroupSetBits(parent->bleEventGroup, BLE_SCAN_BIT);
+  }
+
 }
 

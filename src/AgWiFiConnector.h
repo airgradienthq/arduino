@@ -8,6 +8,7 @@
 #include "Main/PrintLog.h"
 #include "NimBLECharacteristic.h"
 #include "NimBLEService.h"
+#include "esp32-hal.h"
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -20,12 +21,20 @@ public:
     BLE
   };
 
+  struct WiFiNetwork {
+    String ssid;
+    int32_t rssi;
+    bool open;
+  };
+
 private:
   AirGradient *ag;
   OledDisplay &disp;
   StateMachine &sm;
   Configuration &config;
   NimBLEServer *pServer;
+
+  EventGroupHandle_t bleEventGroup;
 
   String ssid;
   void *wifi = NULL;
@@ -40,6 +49,7 @@ private:
 
   bool wifiClientConnected(void);
   bool isBleClientConnected();
+  String scanFilteredWiFiJSON();
 
   // BLE server handler
   class ServerCallbacks : public NimBLEServerCallbacks {
@@ -70,7 +80,7 @@ public:
   WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm, Configuration &config);
   ~WifiConnector();
 
-  void setupBLE(String bleName);
+  void setupBLE();
   void stopBLE();
   bool connect(void);
   void disconnect(void);
