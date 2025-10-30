@@ -2,6 +2,8 @@
 #include "Arduino.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+#include "WiFiType.h"
+#include "esp32-hal.h"
 
 #define WIFI_CONNECT_COUNTDOWN_MAX 180
 #define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
@@ -58,6 +60,8 @@ bool WifiConnector::connect(void) {
             String(this->defaultSsid) + String("\""));
 
     /** Set wifi connect */
+    WiFi.persistent(false);
+    WiFi.disconnect(true);
     WiFi.begin(this->defaultSsid, this->defaultPassword);
 
     /** Wait for wifi connect to AP */
@@ -71,66 +75,87 @@ bool WifiConnector::connect(void) {
         break;
       }
     }
-  }
 
-  WIFI()->setConfigPortalBlocking(false);
-  WIFI()->setConnectTimeout(15);
-  WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
-
-  WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
-  WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
-  WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
-  WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
-  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
-    disp.setText("Connecting to", "WiFi", "...");
+    // if (!WiFi.isConnected()) {
+    //   // Set the persistence back
+    //   WiFi.persistent(true);
+    // }
   } else {
-    logInfo("Connecting to WiFi...");
+    Serial.printf("Attempt connect to configured ssid: %d\n", wifiSSID.c_str());
+    // WiFi.begin() already called before, it will attempt connect when wifi creds already persist
+
+    sm.ledAnimationInit();
+    sm.handleLeds(AgStateMachineWiFiManagerStaConnecting);
+    sm.displayHandle(AgStateMachineWiFiManagerStaConnecting);
+
+    uint32_t ledPeriod = millis();
+    uint32_t startTime = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < 15000) {
+      /** LED animations */
+      if ((millis() - ledPeriod) >= 100) {
+        ledPeriod = millis();
+        sm.handleLeds();
+      }
+      delay(1);
+    }
+
+    if (!WiFi.isConnected()) {
+      // WiFi not connect, show indicator.
+      sm.ledAnimationInit();
+      sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
+      sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
+      delay(3000);
+    }
   }
-  ssid = "airgradient-" + ag->deviceId();
 
-  // ssid = "AG-" + String(ESP.getChipId(), HEX);
-  WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+  if (WiFi.isConnected()) {
+    sm.handleLeds(AgStateMachineWiFiManagerStaConnected);
+    return true;
+  }
 
+  // Enable provision by both BLE and WiFi portal
+  WiFi.persistent(true);
   WiFiManagerParameter disableCloud("chbPostToAg", "Prevent Connection to AirGradient Server", "T",
                                     2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
-  WIFI()->addParameter(&disableCloud);
   WiFiManagerParameter disableCloudInfo(
       "<p>Prevent connection to the AirGradient Server. Important: Only enable "
       "it if you are sure you don't want to use any AirGradient cloud "
       "features. As a result you will not receive automatic firmware updates, "
       "configuration settings from cloud and the measure data will not reach the AirGradient dashboard.</p>");
-  WIFI()->addParameter(&disableCloudInfo);
-
-  WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
-
-  logInfo("Wait for configure portal");
+  setupProvisionByPortal(&disableCloud, &disableCloudInfo);
 
 #ifdef ESP32
-  // Task handle WiFi connection.
-  xTaskCreate(
-      [](void *obj) {
-        WifiConnector *connector = (WifiConnector *)obj;
-        while (connector->_wifiConfigPortalActive()) {
-          if (connector->isBleClientConnected()) {
-            Serial.println("Stopping portal because BLE connected");
-            connector->_wifiStop();
-            connector->provisionMethod = ProvisionMethod::BLE;
-            break;
-          }
-          connector->_wifiProcess();
-          vTaskDelay(1);
-        }
-        vTaskDelete(NULL);
-      },
-      "wifi_cfg", 4096, this, 10, NULL);
+  // Provision by BLE only for ESP32
+  setupProvisionByBLE();
 
-  /** Wait for WiFi connect and show LED, display status */
+  // Task handling WiFi portal
+  xTaskCreate(
+    [](void *obj) {
+      WifiConnector *connector = (WifiConnector *)obj;
+      while (connector->_wifiConfigPortalActive()) {
+        if (connector->isBleClientConnected()) {
+          Serial.println("Stopping portal because BLE connected");
+          connector->_wifiStop();
+          connector->provisionMethod = ProvisionMethod::BLE;
+          break;
+        }
+        connector->_wifiProcess();
+        vTaskDelay(1);
+      }
+      vTaskDelete(NULL);
+    },
+    "wifi_cfg", 4096, this, 10, NULL);
+
+
+  // Wait for WiFi connect and show LED, display status
   uint32_t dispPeriod = millis();
   uint32_t ledPeriod = millis();
   bool clientConnectChanged = false;
 
-  setupBLE();
-
+  // By default wifi portal loops run first
+  // Provision method defined when either wifi or ble client connected first
+  // If wifi client connect, then ble server will be stopped
+  // If ble client connect, then wifi portal will be stopped (see wifi_cfg task)
   AgStateMachineState stateOld = sm.getDisplayState();
   while (WIFI()->getConfigPortalActive()) {
     /** LED animation and display update content */
@@ -180,40 +205,53 @@ bool WifiConnector::connect(void) {
 
     delay(1); // avoid watchdog timer reset.
   }
-#else
-  _wifiProcess();
-#endif
 
   if (provisionMethod == ProvisionMethod::BLE) {
     disp.setText("Provision by", "BLE", "");
 
-    int count = 0;
-
     // Loop until the BLE client disconnected or WiFi connected
     while (isBleClientConnected() && !WiFi.isConnected()) {
-      Serial.println("Wait for BLE provision command");
       EventBits_t bits = xEventGroupWaitBits(
         bleEventGroup,
         BLE_SCAN_BIT | BLE_CRED_BIT,
         pdTRUE,
         pdFALSE,
-        portMAX_DELAY
+        10 / portTICK_PERIOD_MS
       );
 
       if (bits & BLE_CRED_BIT) {
-        count = 0;
-        wifiConnecting = true;
         Serial.printf("Connecting to %s...\n", ssid.c_str());
-        while (WiFi.status() != WL_CONNECTED) {
-          delay(1000);
-          Serial.print(".");
-          count++;
-          if (count >= 15) {
-            WiFi.disconnect();
-            wifiConnecting = false;
-            bleNotifyStatus(10);
-            break;
+        wifiConnecting = true;
+
+        sm.ledAnimationInit();
+        sm.handleLeds(AgStateMachineWiFiManagerStaConnecting);
+        sm.displayHandle(AgStateMachineWiFiManagerStaConnecting);
+
+        uint32_t startTime = millis();
+        while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < 15000) {
+          // Led animations
+          if ((millis() - ledPeriod) >= 100) {
+            ledPeriod = millis();
+            sm.handleLeds();
           }
+          delay(1);
+        }
+
+        if (WiFi.status() != WL_CONNECTED) {
+          Serial.println("Failed connect to WiFi");
+          // If not connect send status through BLE while also turn led and display indicator
+          WiFi.disconnect();
+          wifiConnecting = false;
+          bleNotifyStatus(10);
+
+          // Show failed inficator then revert back to provision mode
+          sm.ledAnimationInit();
+          sm.handleLeds(AgStateMachineWiFiManagerConnectFailed);
+          sm.displayHandle(AgStateMachineWiFiManagerConnectFailed);
+          delay(3000);
+          sm.ledAnimationInit();
+          disp.setText("Provision by", "BLE", "");
+          sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
         }
       }
       else if (bits & BLE_SCAN_BIT) {
@@ -228,10 +266,15 @@ bool WifiConnector::connect(void) {
           }
         }
       }
+
+      delay(1);
     }
 
     Serial.println("Exit provision by BLE");
   }
+#else
+  _wifiProcess();
+#endif
 
   /** Show display wifi connect result failed */
   if (WiFi.isConnected() == false) {
@@ -596,7 +639,35 @@ String WifiConnector::scanFilteredWiFiJSON() {
 }
 
 
-void WifiConnector::setupBLE() {
+void WifiConnector::setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo) {
+  WIFI()->setConfigPortalBlocking(false);
+  WIFI()->setConnectTimeout(15);
+  WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+  WIFI()->setBreakAfterConfig(true);
+
+  WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
+  WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
+  WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
+  WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+    disp.setText("Connecting to", "WiFi", "...");
+  } else {
+    logInfo("Connecting to WiFi...");
+  }
+  ssid = "airgradient-" + ag->deviceId();
+
+  // ssid = "AG-" + String(ESP.getChipId(), HEX);
+  WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+
+  WIFI()->addParameter(disableCloudParam);
+  WIFI()->addParameter(disableCloudInfo);
+
+  WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
+
+  logInfo("Wait for configure portal");
+}
+
+void WifiConnector::setupProvisionByBLE() {
   Serial.printf("Setup BLE with device name %s\n", ssid.c_str());
   NimBLEDevice::init(ssid.c_str());
   NimBLEDevice::setPower(3); /** +3db */

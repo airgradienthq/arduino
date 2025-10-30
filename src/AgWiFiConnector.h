@@ -5,6 +5,7 @@
 #include "AgStateMachine.h"
 #include "AirGradient.h"
 #include "AgConfigure.h"
+#include "Libraries/WiFiManager/WiFiManager.h"
 #include "Main/PrintLog.h"
 #include "NimBLECharacteristic.h"
 #include "NimBLEService.h"
@@ -80,7 +81,8 @@ public:
   WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm, Configuration &config);
   ~WifiConnector();
 
-  void setupBLE();
+  void setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo);
+  void setupProvisionByBLE();
   void stopBLE();
   bool connect(void);
   void disconnect(void);
