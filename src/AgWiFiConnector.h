@@ -14,6 +14,18 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
+// Provisioning Status Codes
+#define PROV_WIFI_CONNECT                         0   // WiFi Connect
+#define PROV_CONNECTING_TO_SERVER                 1   // Connecting to server
+#define PROV_SERVER_REACHABLE                     2   // Server reachable
+#define PROV_MONITOR_CONFIGURED                   3   // Monitor configured properly on dashboard
+
+// Provisioning Error Codes
+#define PROV_ERR_WIFI_CONNECT_FAILED             10   // Failed to connect to WiFi
+#define PROV_ERR_SERVER_UNREACHABLE              11   // Server unreachable
+#define PROV_ERR_GET_MONITOR_CONFIG_FAILED       12   // Failed to get monitor configuration from dashboard
+#define PROV_ERR_MONITOR_NOT_REGISTERED          13   // Monitor is not registered on dashboard
+
 class WifiConnector : public PrintLog {
 public:
   enum class ProvisionMethod {

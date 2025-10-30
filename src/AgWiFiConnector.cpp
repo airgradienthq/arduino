@@ -242,7 +242,7 @@ bool WifiConnector::connect(void) {
           // If not connect send status through BLE while also turn led and display indicator
           WiFi.disconnect();
           wifiConnecting = false;
-          bleNotifyStatus(10);
+          bleNotifyStatus(PROV_ERR_WIFI_CONNECT_FAILED);
 
           // Show failed inficator then revert back to provision mode
           sm.ledAnimationInit();
@@ -295,7 +295,7 @@ bool WifiConnector::connect(void) {
       config.setDisableCloudConnection(result == "T");
     }
     hasPortalConfig = false;
-    bleNotifyStatus(0);
+    bleNotifyStatus(PROV_WIFI_CONNECT);
   }
 
   return true;
@@ -715,7 +715,7 @@ void WifiConnector::stopBLE() {
   if (bleServerRunning) {
     Serial.println("Stopping BLE");
     NimBLEDevice::deinit();
-  } 
+  }
   bleServerRunning = false;
 }
 

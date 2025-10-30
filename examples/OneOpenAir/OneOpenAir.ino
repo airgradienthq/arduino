@@ -691,7 +691,7 @@ static void sendDataToAg() {
     stateMachine.displayHandle(AgStateMachineWiFiOkServerConnecting);
   }
   stateMachine.handleLeds(AgStateMachineWiFiOkServerConnecting);
-  wifiConnector.bleNotifyStatus(1);
+  wifiConnector.bleNotifyStatus(PROV_CONNECTING_TO_SERVER);
 
   /** Task handle led connecting animation */
   xTaskCreate(
@@ -720,13 +720,13 @@ static void sendDataToAg() {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnected);
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerConnected);
-    wifiConnector.bleNotifyStatus(2); 
+    wifiConnector.bleNotifyStatus(PROV_SERVER_REACHABLE);
   } else {
     if (ag->isOne()) {
       stateMachine.displayHandle(AgStateMachineWiFiOkServerConnectFailed);
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerConnectFailed);
-    wifiConnector.bleNotifyStatus(11); 
+    wifiConnector.bleNotifyStatus(PROV_ERR_SERVER_UNREACHABLE);
   }
 
   stateMachine.handleLeds(AgStateMachineNormal);
@@ -1048,17 +1048,17 @@ void initializeNetwork() {
       if (agClient->isRegisteredOnAgServer() == false) {
         stateMachine.displaySetAddToDashBoard();
         stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
-        wifiConnector.bleNotifyStatus(13);
+        wifiConnector.bleNotifyStatus(PROV_ERR_MONITOR_NOT_REGISTERED);
       } else {
         stateMachine.displayClearAddToDashBoard();
-        wifiConnector.bleNotifyStatus(12);
+        wifiConnector.bleNotifyStatus(PROV_ERR_GET_MONITOR_CONFIG_FAILED);
       }
     }
     stateMachine.handleLeds(AgStateMachineWiFiOkServerOkSensorConfigFailed);
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   } else {
     ledBarEnabledUpdate();
-    wifiConnector.bleNotifyStatus(3);
+    wifiConnector.bleNotifyStatus(PROV_MONITOR_CONFIGURED);
   }
 }
 
