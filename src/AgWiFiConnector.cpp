@@ -60,8 +60,6 @@ bool WifiConnector::connect(void) {
             String(this->defaultSsid) + String("\""));
 
     /** Set wifi connect */
-    WiFi.persistent(false);
-    WiFi.disconnect(true);
     WiFi.begin(this->defaultSsid, this->defaultPassword);
 
     /** Wait for wifi connect to AP */
@@ -76,10 +74,10 @@ bool WifiConnector::connect(void) {
       }
     }
 
-    // if (!WiFi.isConnected()) {
-    //   // Set the persistence back
-    //   WiFi.persistent(true);
-    // }
+    if (!WiFi.isConnected()) {
+      // Erase already saved default credentials
+      WiFi.disconnect(false, true);
+    }
   } else {
     Serial.printf("Attempt connect to configured ssid: %d\n", wifiSSID.c_str());
     // WiFi.begin() already called before, it will attempt connect when wifi creds already persist
@@ -114,7 +112,6 @@ bool WifiConnector::connect(void) {
   }
 
   // Enable provision by both BLE and WiFi portal
-  WiFi.persistent(true);
   WiFiManagerParameter disableCloud("chbPostToAg", "Prevent Connection to AirGradient Server", "T",
                                     2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
   WiFiManagerParameter disableCloudInfo(
