@@ -205,6 +205,8 @@ bool WifiConnector::connect(String modelName) {
 
   if (provisionMethod == ProvisionMethod::BLE) {
     disp.setText("Provision by", "BLE", "");
+    sm.ledAnimationInit();
+    sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
 
     // Loop until the BLE client disconnected or WiFi connected
     while (isBleClientConnected() && !WiFi.isConnected()) {
