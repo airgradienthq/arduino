@@ -94,9 +94,9 @@ public:
   ~WifiConnector();
 
   void setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo);
-  void setupProvisionByBLE();
+  void setupProvisionByBLE(const char *modelName);
   void stopBLE();
-  bool connect(void);
+  bool connect(String modelName = "");
   void disconnect(void);
   void handle(void);
   void _wifiApCallback(void);

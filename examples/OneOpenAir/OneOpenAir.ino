@@ -998,7 +998,8 @@ void initializeNetwork() {
   }
 
   if (networkOption == UseWifi) {
-    if (!wifiConnector.connect()) {
+    String modelName = AgFirmwareModeName(fwMode);
+    if (!wifiConnector.connect(modelName)) {
       Serial.println("Cannot initiate wifi connection");
       return;
     }

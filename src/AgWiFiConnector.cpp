@@ -44,7 +44,7 @@ WifiConnector::~WifiConnector() {}
  * @return true Success
  * @return false Failure
  */
-bool WifiConnector::connect(void) {
+bool WifiConnector::connect(String modelName) {
   if (wifi == NULL) {
     wifi = new WiFiManager();
     if (wifi == NULL) {
@@ -123,7 +123,7 @@ bool WifiConnector::connect(void) {
 
 #ifdef ESP32
   // Provision by BLE only for ESP32
-  setupProvisionByBLE();
+  setupProvisionByBLE(modelName.c_str());
 
   // Task handling WiFi portal
   xTaskCreate(
@@ -664,9 +664,8 @@ void WifiConnector::setupProvisionByPortal(WiFiManagerParameter *disableCloudPar
   logInfo("Wait for configure portal");
 }
 
-void WifiConnector::setupProvisionByBLE() {
-  Serial.printf("Setup BLE with device name %s\n", ssid.c_str());
-  NimBLEDevice::init(ssid.c_str());
+void WifiConnector::setupProvisionByBLE(const char *modelName) {
+  NimBLEDevice::init("AirGradient");
   NimBLEDevice::setPower(3); /** +3db */
 
   /** bonding, MITM, don't need BLE secure connections as we are using passkey pairing */
@@ -676,25 +675,38 @@ void WifiConnector::setupProvisionByBLE() {
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks(this));
 
+  // Service and characteristics for device information
+  NimBLEService *pServDeviceInfo = pServer->createService("180A");
+  NimBLECharacteristic *pModelCharacteristic = pServDeviceInfo->createCharacteristic("2A24", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
+  pModelCharacteristic->setValue(modelName);
+  NimBLECharacteristic *pSerialCharacteristic = pServDeviceInfo->createCharacteristic("2A25", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
+  pSerialCharacteristic->setValue(ag->deviceId().c_str());
+  NimBLECharacteristic *pFwCharacteristic = pServDeviceInfo->createCharacteristic("2A26", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
+  pFwCharacteristic->setValue(ag->getVersion().c_str());
+  NimBLECharacteristic *pManufCharacteristic = pServDeviceInfo->createCharacteristic("2A29", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
+  pManufCharacteristic->setValue("AirGradient");
 
+  // Service and characteristics for wifi provisioning 
+  NimBLEService *pServProvisioning = pServer->createService(BLE_SERVICE_UUID);
   auto characteristicCallback = new CharacteristicCallbacks(this);
-
-  NimBLEService *pService = pServer->createService(BLE_SERVICE_UUID);
   NimBLECharacteristic *pCredentialCharacteristic =
-      pService->createCharacteristic(BLE_CRED_CHAR_UUID,
+      pServProvisioning->createCharacteristic(BLE_CRED_CHAR_UUID,
                                      NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC |
                                          NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY);
   pCredentialCharacteristic->setCallbacks(characteristicCallback);
-
   NimBLECharacteristic *pScanCharacteristic =
-      pService->createCharacteristic(BLE_SCAN_CHAR_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY);
+      pServProvisioning->createCharacteristic(BLE_SCAN_CHAR_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY);
   pScanCharacteristic->setCallbacks(characteristicCallback);
 
+  // Start services
+  pServProvisioning->start();
+  pServDeviceInfo->start();
 
-  pService->start();
-
+  // Advertise
   NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(pService->getUUID());
+  // pAdvertising->setName(ssid.c_str());
+  pAdvertising->addServiceUUID(pServDeviceInfo->getUUID());
+  pAdvertising->addServiceUUID(pServProvisioning->getUUID());
   pAdvertising->start();
   bleServerRunning = true;
 
