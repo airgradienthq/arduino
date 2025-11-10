@@ -494,13 +494,10 @@ void StateMachine::displayHandle(AgStateMachineState state) {
       if (ag->isBasic()) {
         String ssid = "\"airgradient-" + ag->deviceId() + "\"    " +
                       String(wifiConnectCountDown) + String("s");
-        disp.setText("Connect tohotspot:", ssid.c_str(), "");
+        disp.setText("Connect to hotspot:", ssid.c_str(), "");
       } else {
-        String line1 = String(wifiConnectCountDown) + "s to connect";
-        String line2 = "to WiFi hotspot:";
-        String line3 = "\"airgradient-";
-        String line4 = ag->deviceId() + "\"";
-        disp.setText(line1, line2, line3, line4);
+        // NOTE: This bool is hardcoded!
+        disp.showWiFiProvisioning((wifiConnectCountDown == 180), wifiConnectCountDown);
       }
       wifiConnectCountDown--;
     }
