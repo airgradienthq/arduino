@@ -60,6 +60,7 @@ JSON_PROP_DEF(monitorDisplayCompensatedValues);
 JSON_PROP_DEF(corrections);
 JSON_PROP_DEF(atmp);
 JSON_PROP_DEF(rhum);
+JSON_PROP_DEF(extendedPmMeasures);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
@@ -78,6 +79,7 @@ JSON_PROP_DEF(rhum);
 #define jprop_displayBrightness_default               100
 #define jprop_offlineMode_default                     false
 #define jprop_monitorDisplayCompensatedValues_default false
+#define jprop_extendedPmMeasures_default              false
 
 JSONVar jconfig;
 
@@ -400,6 +402,7 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_model] = jprop_model_default;
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   jconfig[jprop_monitorDisplayCompensatedValues] = jprop_monitorDisplayCompensatedValues_default;
+  jconfig[jprop_extendedPmMeasures] = jprop_extendedPmMeasures_default;
 
   // PM2.5 default correction
   pmCorrection.algorithm = COR_ALGO_PM_NONE;
@@ -940,6 +943,26 @@ bool Configuration::parse(String data, bool isLocal) {
     }
   }
 
+  if (JSON.typeof_(root[jprop_extendedPmMeasures]) == "boolean") {
+    bool value = root[jprop_extendedPmMeasures];
+    bool oldValue = jconfig[jprop_extendedPmMeasures];
+    if (value != oldValue) {
+      changed = true;
+      configLogInfo(String(jprop_extendedPmMeasures),
+                    String(oldValue ? "true" : "false"),
+                    String(value ? "true" : "false"));
+      jconfig[jprop_extendedPmMeasures] = value;
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_extendedPmMeasures], "boolean")) {
+      failedMessage = jsonTypeInvalidMessage(
+          String(jprop_extendedPmMeasures), "boolean");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+
   // PM2.5 Corrections
   if (updatePmCorrection(root)) {
     changed = true;
@@ -1000,6 +1023,11 @@ String Configuration::toString(AgFirmwareMode fwMode) {
 bool Configuration::isTemperatureUnitInF(void) {
   String unit = jconfig[jprop_temperatureUnit];
   return (unit == "f");
+}
+
+
+bool Configuration::isExtendedPmMeasuresEnabled(void) {
+  return jconfig[jprop_extendedPmMeasures];
 }
 
 /**
@@ -1366,6 +1394,18 @@ void Configuration::toConfig(const char *buf) {
     jconfig[jprop_disableCloudConnection] = jprop_disableCloudConnection_default;
     changed = true;
     logInfo("toConfig: disableCloudConnection changed");
+  }
+
+  /** validate extendedPmMeasures configuration */
+  if (JSON.typeof_(jconfig[jprop_extendedPmMeasures]) != "boolean") {
+    isConfigFieldInvalid = true;
+  } else {
+    isConfigFieldInvalid = false;
+  }
+  if (isConfigFieldInvalid) {
+    jconfig[jprop_extendedPmMeasures] = jprop_extendedPmMeasures_default;
+    changed = true;
+    logInfo("toConfig: extendedPmMeasures changed");
   }
 
   /** validate configuration control */
