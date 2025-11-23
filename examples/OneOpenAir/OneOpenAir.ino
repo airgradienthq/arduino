@@ -1428,7 +1428,7 @@ void postUsingCellular(bool forcePost) {
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  if (agClient->httpPostMeasures(payload) == false) {
+  if (agClient->httpPostMeasures(payload, extendPmMeasures) == false) {
     // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;
