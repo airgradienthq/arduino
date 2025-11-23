@@ -184,7 +184,7 @@ public:
 
   Measures getMeasures();
 
-  std::string buildMeasuresPayload(Measures &measures);
+  std::string buildMeasuresPayload(Measures &mc, bool extendedPmMeasures);
 
   /**
    * Set to true if want to debug every update value

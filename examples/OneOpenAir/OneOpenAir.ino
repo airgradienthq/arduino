@@ -1416,11 +1416,12 @@ void postUsingCellular(bool forcePost) {
 
   // Build payload include all measurements from queue
   std::string payload;
+  bool extendPmMeasures = configuration.isExtendedPmMeasuresEnabled();
   payload += std::to_string(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
-    payload += measurements.buildMeasuresPayload(mc);
+    payload += measurements.buildMeasuresPayload(mc, extendPmMeasures);
   }
 
   // Release before actually post measures that might takes too long

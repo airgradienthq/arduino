@@ -885,7 +885,7 @@ Measurements::Measures Measurements::getMeasures() {
   return mc;
 }
 
-std::string Measurements::buildMeasuresPayload(Measures &mc) {
+std::string Measurements::buildMeasuresPayload(Measures &mc, bool extendedPmMeasures) {
   std::ostringstream oss;
 
   // CO2
@@ -982,6 +982,76 @@ std::string Measurements::buildMeasuresPayload(Measures &mc) {
 
   if (mc.signal < 0) {
     oss << mc.signal;
+  }
+
+
+  if (extendedPmMeasures) {
+    oss << ",,,,,,,,"; // Add placeholder for MAX payload (BMS & O3/NO2)
+
+    /// PM 0.5 particle count
+    if (utils::isValidPm03Count(mc.pm_05_pc[0]) && utils::isValidPm03Count(mc.pm_05_pc[1])) {
+      oss << std::round((mc.pm_05_pc[0] + mc.pm_05_pc[1]) / 2.0f);
+    } else if (utils::isValidPm03Count(mc.pm_05_pc[0])) {
+      oss << std::round(mc.pm_05_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_05_pc[1])) {
+      oss << std::round(mc.pm_05_pc[1]);
+    }
+
+    oss << ",";
+
+    /// PM 1.0 particle count
+    if (utils::isValidPm03Count(mc.pm_01_pc[0]) && utils::isValidPm03Count(mc.pm_01_pc[1])) {
+      oss << std::round((mc.pm_01_pc[0] + mc.pm_01_pc[1]) / 2.0f);
+    } else if (utils::isValidPm03Count(mc.pm_01_pc[0])) {
+      oss << std::round(mc.pm_01_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_01_pc[1])) {
+      oss << std::round(mc.pm_01_pc[1]);
+    }
+
+    oss << ",";
+
+    /// PM 2.5 particle count
+    if (utils::isValidPm03Count(mc.pm_25_pc[0]) && utils::isValidPm03Count(mc.pm_25_pc[1])) {
+      oss << std::round((mc.pm_25_pc[0] + mc.pm_25_pc[1]) / 2.0f);
+    } else if (utils::isValidPm03Count(mc.pm_25_pc[0])) {
+      oss << std::round(mc.pm_25_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_25_pc[1])) {
+      oss << std::round(mc.pm_25_pc[1]);
+    }
+
+    oss << ",";
+
+    /// PM 5.0 particle count
+    if (utils::isValidPm03Count(mc.pm_5_pc[0]) && utils::isValidPm03Count(mc.pm_5_pc[1])) {
+      oss << std::round((mc.pm_5_pc[0] + mc.pm_5_pc[1]) / 2.0f);
+    } else if (utils::isValidPm03Count(mc.pm_5_pc[0])) {
+      oss << std::round(mc.pm_5_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_5_pc[1])) {
+      oss << std::round(mc.pm_5_pc[1]);
+    }
+
+    oss << ",";
+
+    /// PM 10 particle count
+    if (utils::isValidPm03Count(mc.pm_10_pc[0]) && utils::isValidPm03Count(mc.pm_10_pc[1])) {
+      oss << std::round((mc.pm_10_pc[0] + mc.pm_10_pc[1]) / 2.0f);
+    } else if (utils::isValidPm03Count(mc.pm_10_pc[0])) {
+      oss << std::round(mc.pm_10_pc[0]);
+    } else if (utils::isValidPm03Count(mc.pm_10_pc[1])) {
+      oss << std::round(mc.pm_10_pc[1]);
+    }
+
+    oss << ",";
+
+    /// PM2.5 standard particle
+    if (utils::isValidPm(mc.pm_25_sp[0]) && utils::isValidPm(mc.pm_25_sp[1])) {
+      float pm10 = (mc.pm_25_sp[0] + mc.pm_25_sp[1]) / 2.0f;
+      oss << std::round(pm10 * 10);
+    } else if (utils::isValidPm(mc.pm_25_sp[0])) {
+      oss << std::round(mc.pm_25_sp[0] * 10);
+    } else if (utils::isValidPm(mc.pm_25_sp[1])) {
+      oss << std::round(mc.pm_25_sp[1] * 10);
+    }
   }
 
   return oss.str();
