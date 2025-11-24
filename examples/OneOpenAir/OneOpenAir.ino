@@ -1416,18 +1416,19 @@ void postUsingCellular(bool forcePost) {
 
   // Build payload include all measurements from queue
   std::string payload;
+  bool extendPmMeasures = configuration.isExtendedPmMeasuresEnabled();
   payload += std::to_string(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
-    payload += measurements.buildMeasuresPayload(mc);
+    payload += measurements.buildMeasuresPayload(mc, extendPmMeasures);
   }
 
   // Release before actually post measures that might takes too long
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  if (agClient->httpPostMeasures(payload) == false) {
+  if (agClient->httpPostMeasures(payload, extendPmMeasures) == false) {
     // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;

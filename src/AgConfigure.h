@@ -79,6 +79,7 @@ public:
   String toString(void);
   String toString(AgFirmwareMode fwMode);
   bool isTemperatureUnitInF(void);
+  bool isExtendedPmMeasuresEnabled(void);
   String getCountry(void);
   bool isPmStandardInUSAQI(void);
   int getCO2CalibrationAbcDays(void);
