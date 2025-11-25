@@ -570,7 +570,7 @@ int WifiConnector::scanAndFilterWiFi(WiFiNetwork networks[], int maxResults) {
     int32_t rssi = WiFi.RSSI(i);
     bool open = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN);
 
-    if (ssid.length() == 0 || rssi < -70) continue;
+    if (ssid.length() == 0 || rssi < -75) continue;
 
     allNetworks[allCount++] = {ssid, rssi, open};
   }
