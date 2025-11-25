@@ -62,7 +62,10 @@ private:
 
   bool wifiClientConnected(void);
   bool isBleClientConnected();
-  String scanFilteredWiFiJSON();
+  int scanAndFilterWiFi(WiFiNetwork networks[], int maxResults);
+  String buildPaginatedWiFiJSON(WiFiNetwork networks[], int totalCount,
+                                 int page, int batchSize, int totalPages);
+  void handleBleScanRequest();
 
   // BLE server handler
   class ServerCallbacks : public NimBLEServerCallbacks {

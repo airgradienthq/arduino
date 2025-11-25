@@ -254,16 +254,7 @@ bool WifiConnector::connect(String modelName) {
         }
       }
       else if (bits & BLE_SCAN_BIT) {
-        String result = scanFilteredWiFiJSON();
-        NimBLEService* pSvc = pServer->getServiceByUUID(BLE_SERVICE_UUID);
-        if (pSvc) {
-          NimBLECharacteristic* pChr = pSvc->getCharacteristic(BLE_SCAN_CHAR_UUID);
-          if (pChr) {
-            pChr->setValue(result);
-            pChr->notify();
-            Serial.println("List of scanned networks sent through BLE notify");
-          }
-        }
+        handleBleScanRequest();
       }
 
       delay(1);
@@ -558,17 +549,16 @@ void WifiConnector::setDefault(void) {
   WiFi.begin("airgradient", "cleanair");
 }
 
-String WifiConnector::scanFilteredWiFiJSON() {
+int WifiConnector::scanAndFilterWiFi(WiFiNetwork networks[], int maxResults) {
   Serial.println("Scanning for Wi-Fi networks...");
   int n = WiFi.scanNetworks(false, true);  // async=false, show_hidden=true
   Serial.printf("Found %d networks\n", n);
 
   const int MAX_NETWORKS = 50;
-  const int MAX_RESULTS = 15;
 
   if (n <= 0) {
     Serial.println("No networks found");
-    return "[]";
+    return 0;
   }
 
   WiFiNetwork allNetworks[MAX_NETWORKS];
@@ -615,28 +605,97 @@ String WifiConnector::scanFilteredWiFiJSON() {
     }
   }
 
-  // Limit to top X
-  if (uniqueCount > MAX_RESULTS)
-    uniqueCount = MAX_RESULTS;
-
-  // Build JSON array
-  JSONVar jsonArray;
-  for (int i = 0; i < uniqueCount; i++) {
-    JSONVar obj;
-    obj["ssid"] = uniqueNetworks[i].ssid;
-    obj["rssi"] = uniqueNetworks[i].rssi;
-    obj["open"] = uniqueNetworks[i].open;
-    jsonArray[i] = obj;
+  // Copy to output array
+  int resultCount = (uniqueCount > maxResults) ? maxResults : uniqueCount;
+  for (int i = 0; i < resultCount; i++) {
+    networks[i] = uniqueNetworks[i];
   }
 
-  String jsonString = JSON.stringify(jsonArray);
+  Serial.printf("Returning %d filtered networks\n", resultCount);
+  return resultCount;
+}
 
-  Serial.println("Filtered Wi-Fi Networks (JSON):");
-  Serial.println(jsonString);
+String WifiConnector::buildPaginatedWiFiJSON(WiFiNetwork networks[], int totalFound,
+                                              int page, int batchSize, int totalPages) {
+  // Calculate start and end indices for this page
+  int startIdx = (page - 1) * batchSize;
+  int endIdx = startIdx + batchSize;
+  if (endIdx > totalFound) {
+    endIdx = totalFound;
+  }
+
+  // Build JSON object with pagination
+  JSONVar jsonRoot;
+  JSONVar jsonArray;
+
+  for (int i = startIdx; i < endIdx; i++) {
+    JSONVar obj;
+    obj["ssid"] = networks[i].ssid;
+    obj["rssi"] = networks[i].rssi;
+    obj["open"] = networks[i].open;
+    jsonArray[i - startIdx] = obj;
+  }
+
+  jsonRoot["wifi"] = jsonArray;
+  jsonRoot["page"] = page;
+  jsonRoot["totalPage"] = totalPages;
+  jsonRoot["found"] = totalFound;
+
+  String jsonString = JSON.stringify(jsonRoot);
+
+  Serial.printf("Page %d/%d JSON: %s\n", page, totalPages, jsonString.c_str());
 
   return jsonString;
 }
 
+void WifiConnector::handleBleScanRequest() {
+  const int BATCH_SIZE = 3;
+  const int MAX_RESULTS = 30;
+  WiFiNetwork networks[MAX_RESULTS];
+
+  // Scan and filter networks once
+  int networkCount = scanAndFilterWiFi(networks, MAX_RESULTS);
+
+  // Calculate total pages
+  int totalFound = (networkCount + BATCH_SIZE - 1) / BATCH_SIZE;
+
+  NimBLEService* pSvc = pServer->getServiceByUUID(BLE_SERVICE_UUID);
+  if (!pSvc) {
+    Serial.println("BLE service not found");
+    return;
+  }
+
+  NimBLECharacteristic* pChr = pSvc->getCharacteristic(BLE_SCAN_CHAR_UUID);
+  if (!pChr) {
+    Serial.println("BLE scan characteristic not found");
+    return;
+  }
+
+  if (networkCount == 0) {
+    Serial.println("No networks found to send");
+    String tosend = "{\"found\":0}";
+    pChr->setValue(tosend);
+    pChr->notify();
+    return;
+  }
+
+  // Send results in batches
+  for (int page = 1; page <= totalFound; page++) {
+    String batchJson = buildPaginatedWiFiJSON(networks, networkCount,
+                                              page, BATCH_SIZE, totalFound);
+    pChr->setValue(batchJson);
+    pChr->notify();
+
+    Serial.printf("Sent WiFi scan page %d/%d through BLE notify\n", page, totalFound);
+
+    // Delay between batches (except last one)
+    if (page < totalFound) {
+      delay(100);
+    }
+  }
+
+  Serial.println("All WiFi scan pages sent successfully");
+}
 
 void WifiConnector::setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo) {
   WIFI()->setConfigPortalBlocking(false);
