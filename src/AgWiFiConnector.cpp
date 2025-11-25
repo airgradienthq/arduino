@@ -630,15 +630,15 @@ String WifiConnector::buildPaginatedWiFiJSON(WiFiNetwork networks[], int totalFo
 
   for (int i = startIdx; i < endIdx; i++) {
     JSONVar obj;
-    obj["ssid"] = networks[i].ssid;
-    obj["rssi"] = networks[i].rssi;
-    obj["open"] = networks[i].open;
+    obj["s"] = networks[i].ssid;
+    obj["r"] = networks[i].rssi;
+    obj["o"] = networks[i].open ? 1 : 0;
     jsonArray[i - startIdx] = obj;
   }
 
   jsonRoot["wifi"] = jsonArray;
   jsonRoot["page"] = page;
-  jsonRoot["totalPage"] = totalPages;
+  jsonRoot["tpage"] = totalPages;
   jsonRoot["found"] = totalFound;
 
   String jsonString = JSON.stringify(jsonRoot);
