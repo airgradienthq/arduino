@@ -765,9 +765,15 @@ void WifiConnector::setupProvisionByBLE(const char *modelName) {
 
   // Advertise
   NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
-  // pAdvertising->setName(ssid.c_str());
-  pAdvertising->addServiceUUID(pServDeviceInfo->getUUID());
-  pAdvertising->addServiceUUID(pServProvisioning->getUUID());
+  // Format advertising data
+  String mdata;
+  mdata += (char)0xFF;
+  mdata += (char)0xFF;
+  mdata += modelName;
+  mdata += '#';
+  mdata += ag->deviceId();
+  pAdvertising->setManufacturerData(mdata.c_str());
+  // Start advertise
   pAdvertising->start();
   bleServerRunning = true;
 
