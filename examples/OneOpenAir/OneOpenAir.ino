@@ -250,12 +250,6 @@ void setup() {
     wifiConnector.stopBLE();
   }
 
-  /** Set offline mode without saving, cause wifi is not configured */
-  if (wifiConnector.hasConfigurated() == false && networkOption == UseWifi) {
-    Serial.println("Set offline mode cause wifi is not configurated");
-    configuration.setOfflineModeWithoutSave(true);
-  }
-
   /** Show display Warning up */
   if (ag->isOne()) {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
@@ -1006,15 +1000,10 @@ void initializeNetwork() {
 
     if (!wifiConnector.isConnected()) {
       Serial.println("Failed connect to WiFi");
-      if (wifiConnector.isConfigurePorttalTimeout()) {
-        oledDisplay.showRebooting();
-        delay(2500);
-        oledDisplay.setText("", "", "");
-        ESP.restart();
-      }
-
-      // Directly return because the rest of the function applied if wifi is connect only
-      return;
+      oledDisplay.showRebooting();
+      delay(2500);
+      oledDisplay.setText("", "", "");
+      ESP.restart();
     }
 
     // Initiate local network configuration
