@@ -20,13 +20,6 @@ static unsigned char OFFLINE_BITS[] = {
     0x30, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-static unsigned char BLUETOOTH_BITS[] = {
-  0x00, 0x02, 0x00, 0x00, 0x06, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x3a, 0x00, 0x60, 
-  0x72, 0x00, 0xe0, 0x72, 0x00, 0xc0, 0x3b, 0x00, 0x80, 0x1f, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x0f, 
-  0x00, 0x80, 0x1f, 0x00, 0xc0, 0x3b, 0x00, 0xe0, 0x72, 0x00, 0x60, 0x72, 0x00, 0x00, 0x3a, 0x00, 
-  0x00, 0x1e, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x06, 0x00, 0x00, 0x02, 0x00
-};
-
 /**
  * @brief Show dashboard temperature and humdity
  *
@@ -275,24 +268,33 @@ void OledDisplay::setText(const char *line1, const char *line2,
 }
 
 void OledDisplay::showWiFiProvisioning(bool firstRun, int countdown) {
-if (firstRun) {
+  if (firstRun) {
     DISP()->clearBuffer();
     DISP()->setFont(u8g2_font_t0_16_tf);
     DISP()->drawStr(1, 25, "to WiFi hotspot:");
     DISP()->drawStr(1, 40, "\"airgradient-");
     DISP()->drawStr(1, 55, (ag->deviceId() + "\"").c_str());
-    DISP()->drawXBM(108, 44, 20, 20, BLUETOOTH_BITS);
-    DISP()->sendBuffer();
   }
 
   // Now just update countdown area
   char buf[16];
   snprintf(buf, sizeof(buf), "%ds to connect", countdown);
   DISP()->setDrawColor(0);  // erase previous text
-  DISP()->drawBox(0, 0, 128, 16); // clear top region
+  DISP()->drawBox(0, 0, 128, 14); // clear top region
   DISP()->setDrawColor(1);  // draw new text in white
   DISP()->setFont(u8g2_font_t0_16_tf);
   DISP()->drawStr(1, 10, buf);
+
+  // Blink the BLE mark section
+  if (countdown % 2 == 0) {
+    DISP()->setFont(u8g2_font_t0_12b_tf);
+    DISP()->drawStr(108, 60, "BLE");
+  } else {
+    DISP()->setDrawColor(0);
+    DISP()->drawBox(108, 48, 20, 16);
+    DISP()->setDrawColor(1);
+  }
+
   DISP()->sendBuffer();
 }
 
