@@ -208,6 +208,8 @@ bool WifiConnector::connect(String modelName) {
     sm.ledAnimationInit();
     sm.handleLeds(AgStateMachineWiFiManagerPortalActive);
 
+    uint32_t wdMillis = 0;
+
     // Loop until the BLE client disconnected or WiFi connected
     while (isBleClientConnected() && !WiFi.isConnected()) {
       EventBits_t bits = xEventGroupWaitBits(
@@ -255,6 +257,12 @@ bool WifiConnector::connect(String modelName) {
       }
       else if (bits & BLE_SCAN_BIT) {
         handleBleScanRequest();
+      }
+
+      // Ensure watchdog fed every minute
+      if ((millis() - wdMillis) >= 60000) {
+        wdMillis = millis();
+        ag->watchdog.reset();
       }
 
       delay(1);
