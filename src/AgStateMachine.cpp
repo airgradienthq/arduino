@@ -645,7 +645,7 @@ void StateMachine::handleLeds(AgStateMachineState state) {
       ag->ledBar.clear();
       ag->ledBar.setColor(0, 0, 255, ag->ledBar.getNumberOfLeds() / 2);
     } else {
-      ag->statusLed.setToggle();
+      ag->statusLed.setStep();
     }
     break;
   }
