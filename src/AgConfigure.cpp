@@ -953,7 +953,7 @@ bool Configuration::parse(String data, bool isLocal) {
                     String(value ? "true" : "false"));
       jconfig[jprop_extendedPmMeasures] = value;
     }
-  } 
+  }
   else if (JSON.typeof_(root[jprop_extendedPmMeasures]) == "null" and !isLocal) {
     // So if its not available on the json and json comes from aigradient server
     // then set its value to default (false)
