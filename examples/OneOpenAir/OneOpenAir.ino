@@ -998,7 +998,7 @@ void initializeNetwork() {
     delay(2500);
   }
 
-  if (!agClient->begin(ag->deviceId().c_str())) {
+  if (!agClient->begin(ag->deviceId().c_str(), AirgradientClient::ONE_OPENAIR)) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
     oledDisplay.showRebooting();
@@ -1057,7 +1057,7 @@ void initializeNetwork() {
     return;
   }
 
-  std::string config = agClient->httpFetchConfig();
+  std::string config = agClient->coapFetchConfig(); 
   configSchedule.update();
   // Check if fetch configuration failed or fetch succes but parsing failed
   if (agClient->isLastFetchConfigSucceed() == false ||
@@ -1086,7 +1086,7 @@ static void configurationUpdateSchedule(void) {
     return;
   }
 
-  std::string config = agClient->httpFetchConfig();
+  std::string config = agClient->coapFetchConfig(); 
   if (agClient->isLastFetchConfigSucceed()) {
     configuration.parse(config.c_str(), false);
   }
@@ -1428,7 +1428,7 @@ void postUsingCellular(bool forcePost) {
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  if (agClient->httpPostMeasures(payload, extendPmMeasures) == false) {
+  if (agClient->coapPostMeasures(payload) == false) {
     // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;
