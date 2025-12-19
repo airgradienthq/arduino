@@ -25,6 +25,7 @@ public:
   void setOn(void);
   void setOff(void);
   void setToggle(void);
+  void setStep(void);
   State getState(void);
   String toString(StatusLed::State state);
 

@@ -19,10 +19,7 @@ static unsigned char OFFLINE_BITS[] = {
     0xE6, 0x00, 0xFE, 0x1F, 0xFE, 0x1F, 0xE6, 0x00, 0x62, 0x00,
     0x30, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-// {
-//   0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x60, 0x00, 0x62, 0x00, 0xE2, 0x00,
-//   0xFE, 0x1F, 0xFE, 0x1F, 0xE2, 0x00, 0x62, 0x00, 0x60, 0x00, 0x30, 0x00,
-//   0x00, 0x00, 0x00, 0x00, };
+
 /**
  * @brief Show dashboard temperature and humdity
  *
@@ -268,6 +265,37 @@ void OledDisplay::setText(const char *line1, const char *line2,
     ag->display.setText(line3);
     ag->display.show();
   }
+}
+
+void OledDisplay::showWiFiProvisioning(bool firstRun, int countdown) {
+  if (firstRun) {
+    DISP()->clearBuffer();
+    DISP()->setFont(u8g2_font_t0_16_tf);
+    DISP()->drawStr(1, 25, "to WiFi hotspot:");
+    DISP()->drawStr(1, 40, "\"airgradient-");
+    DISP()->drawStr(1, 55, (ag->deviceId() + "\"").c_str());
+  }
+
+  // Now just update countdown area
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%ds to connect", countdown);
+  DISP()->setDrawColor(0);  // erase previous text
+  DISP()->drawBox(0, 0, 128, 14); // clear top region
+  DISP()->setDrawColor(1);  // draw new text in white
+  DISP()->setFont(u8g2_font_t0_16_tf);
+  DISP()->drawStr(1, 10, buf);
+
+  // Blink the BLE mark section
+  if (countdown % 2 == 0) {
+    DISP()->setFont(u8g2_font_t0_12b_tf);
+    DISP()->drawStr(108, 60, "BLE");
+  } else {
+    DISP()->setDrawColor(0);
+    DISP()->drawBox(108, 48, 20, 16);
+    DISP()->setDrawColor(1);
+  }
+
+  DISP()->sendBuffer();
 }
 
 /**

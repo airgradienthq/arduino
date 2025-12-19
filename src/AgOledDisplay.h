@@ -48,6 +48,7 @@ public:
   void setText(String &line1, String &line2, String &line3, String &line4);
   void setText(const char *line1, const char *line2, const char *line3,
                const char *line4);
+  void showWiFiProvisioning(bool firstRun, int countdown);
   void showDashboard(void);
   void showDashboard(DashboardStatus status);
   void setBrightness(int percent);

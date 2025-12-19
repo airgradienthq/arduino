@@ -72,6 +72,36 @@ void StatusLed::setToggle(void) {
   }
 }
 
+
+void StatusLed::setStep(void) {
+  static uint8_t step = 0;
+
+  // Pattern definition
+  const bool pattern[] = {
+      true,  // 0: ON
+      false, // 1: OFF
+      true,  // 2: ON
+      false, // 3: OFF
+      false, // 4: OFF
+      false, // 5: OFF
+      false, // 6: OFF
+      false, // 7: OFF
+      false, // 8: OFF
+      false  // 9: OFF
+  };
+
+  if (pattern[step]) {
+      this->setOn();
+  } else {
+      this->setOff();
+  }
+
+  step++;
+  if (step >= sizeof(pattern)) {
+      step = 0; // restart pattern
+  }
+}
+
 /**
  * @brief Get current LED state
  *
