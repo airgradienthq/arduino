@@ -26,6 +26,11 @@ Using library manager install the latest version (Tools ➝ Manage Libraries... 
 - With **git** cli, execute this command `git clone --recursive https://github.com/airgradienthq/arduino.git AirGradient_Air_Quality_Sensor`
 - Restart Arduino IDE
 
+#### Version >= 3.6.0
+
+- Ensure `NimBLE-Arduino` by h2zero library version `2.3.7` is installed using Arduino library manager
+- Follow steps of ">= 3.3.0"
+
 3. On tools tab, follow settings below
 
 ```

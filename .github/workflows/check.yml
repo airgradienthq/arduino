@@ -78,6 +78,8 @@ jobs:
             examples/${{ matrix.example }}
           libraries: |
             - source-path: ./
+	    - name: NimBLE-Arduino
+              version: 2.3.7
           cli-compile-flags: |
             - --warnings
             - none

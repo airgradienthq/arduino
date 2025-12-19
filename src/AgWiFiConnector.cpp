@@ -755,7 +755,7 @@ void WifiConnector::setupProvisionByBLE(const char *modelName) {
   NimBLECharacteristic *pManufCharacteristic = pServDeviceInfo->createCharacteristic("2A29", NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::READ_ENC);
   pManufCharacteristic->setValue("AirGradient");
 
-  // Service and characteristics for wifi provisioning 
+  // Service and characteristics for wifi provisioning
   NimBLEService *pServProvisioning = pServer->createService(BLE_SERVICE_UUID);
   auto characteristicCallback = new CharacteristicCallbacks(this);
   NimBLECharacteristic *pCredentialCharacteristic =

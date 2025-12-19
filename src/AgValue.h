@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include <cstdint>
 #include <vector>
+#include <string>
 
 class Measurements {
 private:

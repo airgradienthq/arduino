@@ -1,18 +1,18 @@
 #ifndef _AG_WIFI_CONNECTOR_H_
 #define _AG_WIFI_CONNECTOR_H_
 
+#include <Arduino.h>
 #include "AgOledDisplay.h"
 #include "AgStateMachine.h"
 #include "AirGradient.h"
 #include "AgConfigure.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 #include "Main/PrintLog.h"
-#include "NimBLECharacteristic.h"
-#include "NimBLEService.h"
 #include "esp32-hal.h"
 
-#include <Arduino.h>
 #include <NimBLEDevice.h>
+#include "NimBLECharacteristic.h"
+#include "NimBLEService.h"
 
 // Provisioning Status Codes
 #define PROV_WIFI_CONNECT                         0   // WiFi Connect
