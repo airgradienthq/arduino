@@ -8,11 +8,14 @@
 #include "AgConfigure.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 #include "Main/PrintLog.h"
-#include "esp32-hal.h"
 
+#ifdef ESP32
+#include "esp32-hal.h"
 #include <NimBLEDevice.h>
 #include "NimBLECharacteristic.h"
 #include "NimBLEService.h"
+
+#endif
 
 // Provisioning Status Codes
 #define PROV_WIFI_CONNECT                         0   // WiFi Connect
@@ -45,9 +48,10 @@ private:
   OledDisplay &disp;
   StateMachine &sm;
   Configuration &config;
+  #ifdef ESP32
   NimBLEServer *pServer;
-
   EventGroupHandle_t bleEventGroup;
+  #endif // ESP32
 
   String ssid;
   void *wifi = NULL;
@@ -62,6 +66,7 @@ private:
 
   bool wifiClientConnected(void);
   bool isBleClientConnected();
+#ifdef ESP32
   int scanAndFilterWiFi(WiFiNetwork networks[], int maxResults);
   String buildPaginatedWiFiJSON(WiFiNetwork networks[], int totalCount,
                                  int page, int batchSize, int totalPages);
@@ -89,6 +94,7 @@ private:
     WifiConnector *parent;
   };
 
+#endif // ESP32
 
 public:
   void setAirGradient(AirGradient *ag);
@@ -96,9 +102,11 @@ public:
   WifiConnector(OledDisplay &disp, Stream &log, StateMachine &sm, Configuration &config);
   ~WifiConnector();
 
-  void setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo);
+  #ifdef ESP32
   void setupProvisionByBLE(const char *modelName);
   void stopBLE();
+  #endif // ESP32
+  void setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo);
   bool connect(String modelName = "");
   void disconnect(void);
   void handle(void);
@@ -115,7 +123,6 @@ public:
   String localIpStr(void);
   bool hasConfigurated(void);
   bool isConfigurePorttalTimeout(void);
-
 
   void bleNotifyStatus(int status);
 

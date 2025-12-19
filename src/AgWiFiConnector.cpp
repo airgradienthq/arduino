@@ -2,12 +2,10 @@
 #include "Arduino.h"
 #include "Libraries/WiFiManager/WiFiManager.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+
+#ifdef ESP32
 #include "WiFiType.h"
 #include "esp32-hal.h"
-
-#define WIFI_CONNECT_COUNTDOWN_MAX 180
-#define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
-
 
 #define BLE_SERVICE_UUID "acbcfea8-e541-4c40-9bfd-17820f16c95c"
 #define BLE_CRED_CHAR_UUID "703fa252-3d2a-4da9-a05c-83b0d9cacb8e"
@@ -15,6 +13,10 @@
 
 #define BLE_CRED_BIT (1 << 0)
 #define BLE_SCAN_BIT (1 << 1)
+#endif // ESP32
+
+#define WIFI_CONNECT_COUNTDOWN_MAX 180
+#define WIFI_HOTSPOT_PASSWORD_DEFAULT "cleanair"
 
 #define WIFI() ((WiFiManager *)(this->wifi))
 
@@ -527,8 +529,44 @@ bool WifiConnector::hasConfigurated(void) {
  */
 bool WifiConnector::isConfigurePorttalTimeout(void) { return connectorTimeout; }
 
+/**
+ * @brief Set wifi connect to default WiFi
+ *
+ */
+void WifiConnector::setDefault(void) {
+  WiFi.begin("airgradient", "cleanair");
+}
+
+void WifiConnector::setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo) {
+  WIFI()->setConfigPortalBlocking(false);
+  WIFI()->setConnectTimeout(15);
+  WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+  WIFI()->setBreakAfterConfig(true);
+
+  WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
+  WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
+  WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
+  WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
+  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
+    disp.setText("Connecting to", "WiFi", "...");
+  } else {
+    logInfo("Connecting to WiFi...");
+  }
+  ssid = "airgradient-" + ag->deviceId();
+
+  // ssid = "AG-" + String(ESP.getChipId(), HEX);
+  WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
+
+  WIFI()->addParameter(disableCloudParam);
+  WIFI()->addParameter(disableCloudInfo);
+
+  WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
+
+  logInfo("Wait for configure portal");
+}
 
 void WifiConnector::bleNotifyStatus(int status) {
+#ifdef ESP32
   if (!bleServerRunning) {
     return;
   }
@@ -547,15 +585,10 @@ void WifiConnector::bleNotifyStatus(int status) {
       }
     }
   }
+#endif // ESP32
 }
 
-/**
- * @brief Set wifi connect to default WiFi
- *
- */
-void WifiConnector::setDefault(void) {
-  WiFi.begin("airgradient", "cleanair");
-}
+#ifdef ESP32
 
 int WifiConnector::scanAndFilterWiFi(WiFiNetwork networks[], int maxResults) {
   Serial.println("Scanning for Wi-Fi networks...");
@@ -705,34 +738,6 @@ void WifiConnector::handleBleScanRequest() {
   Serial.println("All WiFi scan pages sent successfully");
 }
 
-void WifiConnector::setupProvisionByPortal(WiFiManagerParameter *disableCloudParam, WiFiManagerParameter *disableCloudInfo) {
-  WIFI()->setConfigPortalBlocking(false);
-  WIFI()->setConnectTimeout(15);
-  WIFI()->setTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
-  WIFI()->setBreakAfterConfig(true);
-
-  WIFI()->setAPCallback([this](WiFiManager *obj) { _wifiApCallback(); });
-  WIFI()->setSaveConfigCallback([this]() { _wifiSaveConfig(); });
-  WIFI()->setSaveParamsCallback([this]() { _wifiSaveParamCallback(); });
-  WIFI()->setConfigPortalTimeoutCallback([this]() {_wifiTimeoutCallback();});
-  if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
-    disp.setText("Connecting to", "WiFi", "...");
-  } else {
-    logInfo("Connecting to WiFi...");
-  }
-  ssid = "airgradient-" + ag->deviceId();
-
-  // ssid = "AG-" + String(ESP.getChipId(), HEX);
-  WIFI()->setConfigPortalTimeout(WIFI_CONNECT_COUNTDOWN_MAX);
-
-  WIFI()->addParameter(disableCloudParam);
-  WIFI()->addParameter(disableCloudInfo);
-
-  WIFI()->autoConnect(ssid.c_str(), WIFI_HOTSPOT_PASSWORD_DEFAULT);
-
-  logInfo("Wait for configure portal");
-}
-
 void WifiConnector::setupProvisionByBLE(const char *modelName) {
   NimBLEDevice::init("AirGradient");
   NimBLEDevice::setPower(3); /** +3db */
@@ -860,3 +865,4 @@ void WifiConnector::CharacteristicCallbacks::onWrite(NimBLECharacteristic *pChar
 
 }
 
+#endif // ESP32
