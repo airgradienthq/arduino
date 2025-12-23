@@ -11,6 +11,9 @@
 #include <vector>
 #include <string>
 
+// Forward declaration
+class AgSatellites;
+
 class Measurements {
 private:
   // Generic struct for update indication for respective value
@@ -65,6 +68,7 @@ public:
   };
 
   void setAirGradient(AirGradient *ag);
+  void setSatellites(AgSatellites* satellites);
 
   // Enumeration for every AG measurements
   enum MeasurementType {
@@ -202,6 +206,7 @@ public:
 private:
   Configuration &config;
   AirGradient *ag;
+  AgSatellites* satellites_ = nullptr;
 
   // Some declared as an array (channel), because FW_MODE_O_1PPx has two PMS5003T
   FloatValue _temperature[2];

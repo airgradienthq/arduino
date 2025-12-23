@@ -1,5 +1,6 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
+#include "AgSatellites.h"
 #include "AirGradient.h"
 #include "App/AppDef.h"
 #include <cmath>
@@ -75,6 +76,8 @@ Measurements::Measurements(Configuration &config) : config(config) {
 }
 
 void Measurements::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+void Measurements::setSatellites(AgSatellites* satellites) { this->satellites_ = satellites; }
 
 void Measurements::printCurrentAverage() {
   Serial.println();
@@ -1104,6 +1107,31 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
     root["resetReason"] = _resetReason;
     root["freeHeap"] = ESP.getFreeHeap();
 #endif
+  }
+
+  // Add satellites data
+  if (satellites_ && config.isSatellitesEnabled()) {
+    AgSatellites::Satellite* satellites = satellites_->getSatellites();
+    JSONVar satellitesObj;
+    int count = 0;
+
+    for (int i = 0; i < MAX_SATELLITES; i++) {
+      if (satellites[i].id.length() > 0 &&
+          satellites[i].data.useCount < 2 &&
+          utils::isValidTemperature(satellites[i].data.temp) &&
+          utils::isValidHumidity(satellites[i].data.rhum)) {
+
+        String macKey = satellites[i].id;
+        satellitesObj[macKey.c_str()]["atmp"] = ag->round2(satellites[i].data.temp);
+        satellitesObj[macKey.c_str()]["rhum"] = ag->round2(satellites[i].data.rhum);
+        satellites[i].data.useCount++;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      root["satellites"] = satellitesObj;
+    }
   }
 
   String result = JSON.stringify(root);
