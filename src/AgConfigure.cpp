@@ -390,6 +390,8 @@ bool Configuration::updateSatellites(JSONVar &json) {
     }
 
     _satellitesChanged = true;
+    // Deep copy satellites from root to jconfig, so it will be saved later
+    jconfig[jprop_satellites] = satellites;
   }
 
   // Ensure flag is set
