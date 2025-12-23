@@ -119,6 +119,7 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
   }
 
   if (index >= 0) {
+    // TODO: What happen if old satellites is removed?
     // Only set ID if it's a new entry
     if (isNewEntry) {
       _satellites[index].id = macAddress;
