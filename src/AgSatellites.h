@@ -46,6 +46,7 @@ private:
   // Helper methods
   bool isSatelliteInList(String macAddress);
   void processAdvertisedDevice(const NimBLEAdvertisedDevice *device);
+  bool decodeBTHome(const uint8_t* payload, size_t size, SatelliteData &data);
 
 public:
   AgSatellites(Measurements &measurement, Configuration &config);

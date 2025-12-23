@@ -1,8 +1,8 @@
 #include "AgSatellites.h"
 
 AgSatellites::AgSatellites(Measurements &measurement, Configuration &config)
-    : _measurements(measurement), _config(config), _pScan(nullptr),
-      _initialized(false), _scanCallbacks(nullptr) {
+    : _measurements(measurement), _config(config), _pScan(nullptr), _initialized(false),
+      _scanCallbacks(nullptr) {
   // Initialize satellite array
   for (int i = 0; i < MAX_SATELLITES; i++) {
     _satellites[i].id = "";
@@ -47,8 +47,8 @@ bool AgSatellites::run() {
     _pScan->setScanCallbacks(_scanCallbacks, false);
 
     // Configure scan parameters
-    _pScan->setInterval(100);  // Scan interval in ms
-    _pScan->setWindow(99);     // Scan window in ms
+    _pScan->setInterval(100);    // Scan interval in ms
+    _pScan->setWindow(99);       // Scan window in ms
     _pScan->setActiveScan(true); // Active scan for scan response data
 
     // Start continuous scanning (0 = scan forever)
@@ -94,8 +94,11 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
     return;
   }
 
-  // TODO: Parse advertising data for temperature and humidity
-  // For now, just store the MAC address to verify scanning works
+  // Get advertising payload
+  const std::vector<uint8_t> &payload = device->getPayload();
+  if (payload.empty()) {
+    return;
+  }
 
   // Find or create entry in satellites array
   int index = -1;
@@ -118,17 +121,122 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
       _satellites[index].id = macAddress;
     }
 
-    // TODO: Extract temperature and humidity from advertising data
-    // This depends on the format your satellite devices use
-    // Example placeholder values:
-    // _satellites[index].data.temp = extractedTemp;
-    // _satellites[index].data.rhum = extractedHumidity;
-
-    // Reset use count when new data is received
-    _satellites[index].data.useCount = 0;
+    // Parse BTHome advertising data
+    SatelliteData newData;
+    if (decodeBTHome(payload.data(), payload.size(), newData)) {
+      // Successfully parsed - reset use count when new data is received
+      _satellites[index].data.temp = newData.temp;
+      _satellites[index].data.rhum = newData.rhum;
+      _satellites[index].data.useCount = 0;
+    }
   }
 }
 
-AgSatellites::Satellite* AgSatellites::getSatellites() {
-  return _satellites;
+bool AgSatellites::decodeBTHome(const uint8_t *payload, size_t size, SatelliteData &data) {
+  // Initialize with invalid values
+  data.temp = -1000.0f;
+  data.rhum = -1.0f;
+
+  // Walk through BLE AD structures: [len][type][data...]
+  for (size_t i = 0; i + 1 < size;) {
+    uint8_t len = payload[i];
+    if (len == 0) {
+      break; // No more AD structures
+    }
+
+    // Check if we have enough data
+    if (i + 1 + len > size) {
+      break; // Malformed
+    }
+
+    uint8_t type = payload[i + 1];
+
+    // Service Data - 16-bit UUID (type 0x16)
+    if (type == 0x16 && len >= 3) {
+      // UUID is at i+2 (little-endian)
+      uint16_t uuid = payload[i + 2] | (payload[i + 3] << 8);
+
+      // Check for BTHome UUID (0xFCD2)
+      if (uuid == 0xFCD2) {
+        // BTHome payload begins after UUID
+        size_t p = i + 4;
+        size_t end = i + 1 + len; // End of this AD structure
+
+        if (p >= end) {
+          return false;
+        }
+
+        uint8_t device_info = payload[p++];
+
+        // Check if encrypted
+        bool encrypted = (device_info & 0x01);
+        if (encrypted) {
+          // Not handling encryption
+          return false;
+        }
+
+        bool found_data = false;
+
+        // Parse BTHome v2 objects
+        while (p < end) {
+          uint8_t obj_id = payload[p++];
+
+          switch (obj_id) {
+          case 0x02: // Temperature (sint16, ×0.01 °C)
+            if (p + 2 > end)
+              return false;
+            {
+              int16_t raw = (int16_t)(payload[p] | (payload[p + 1] << 8));
+              data.temp = raw * 0.01f;
+              p += 2;
+              found_data = true;
+            }
+            break;
+
+          case 0x03: // Humidity (uint16, ×0.01 %)
+            if (p + 2 > end)
+              return false;
+            {
+              uint16_t raw = (uint16_t)(payload[p] | (payload[p + 1] << 8));
+              data.rhum = raw * 0.01f;
+              p += 2;
+              found_data = true;
+            }
+            break;
+
+          case 0x00: // Packet ID (uint8) - skip
+            if (p + 1 > end)
+              return false;
+            p += 1;
+            break;
+
+          case 0x01: // Battery (uint8) - skip
+            if (p + 1 > end)
+              return false;
+            p += 1;
+            break;
+
+          case 0x0C: // Voltage (uint16) - skip
+            if (p + 2 > end)
+              return false;
+            p += 2;
+            break;
+
+          default:
+            // Unknown object ID - stop parsing but return what we have
+            return found_data;
+          }
+        }
+
+        return found_data;
+      }
+    }
+
+    // Go to next AD structure
+    i += 1 + len;
+  }
+
+  return false; // No BTHome data found
 }
+
+AgSatellites::Satellite *AgSatellites::getSatellites() { return _satellites; }
