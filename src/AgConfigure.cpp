@@ -317,6 +317,93 @@ bool Configuration::updateTempHumCorrection(JSONVar &json, TempHumCorrection &ta
   return true;
 }
 
+bool Configuration::updateSatellites(JSONVar &json) {
+  if (!json.hasOwnProperty(jprop_satellites)) {
+    emptySatellites();
+    return false;
+  }
+
+  if (JSON.typeof_(json[jprop_satellites]) != "array") {
+    emptySatellites();
+    return false;
+  }
+
+  JSONVar satellites = json[jprop_satellites];
+
+  if (satellites.length() == 0) {
+    if (_satellitesEnabled) {
+      // No satellites available and previously its enabled
+      emptySatellites();
+      return true; // then config is changed
+    }
+    return false;
+  }
+
+  bool changed = false;
+
+  // Check JSON → stored (new satellites)
+  for (int i = 0; i < satellites.length(); i++) {
+    bool found = false;
+
+    for (int j = 0; j < MAX_SATELLITES; j++) {
+      if (_satellites[j] == (const char *)satellites[i]) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      changed = true;
+      break;
+    }
+  }
+
+  // Check stored → JSON (removed satellites) only if no new satellites
+  if (!changed) {
+    for (int j = 0; j < MAX_SATELLITES; j++) {
+      if (_satellites[j].length() == 0) {
+        continue;
+      }
+
+      bool found = false;
+      for (int i = 0; i < satellites.length(); i++) {
+        if (_satellites[j] == (const char *)satellites[i]) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  // Sync stored list with JSON
+  if (changed) {
+    emptySatellites();
+    int count = min((int)satellites.length(), MAX_SATELLITES);
+    for (int i = 0; i < count; i++) {
+      _satellites[i] = (const char *)satellites[i];
+    }
+
+    _satellitesChanged = true;
+  }
+
+  // Ensure flag is set
+  _satellitesEnabled = true;
+
+  return changed;
+}
+
+void Configuration::emptySatellites() {
+  for (int j = 0; j < MAX_SATELLITES; j++) {
+    _satellites[j] = "";
+  }
+  _satellitesEnabled = false;
+}
+
 /**
  * @brief Save configure to device storage (EEPROM)
  *
@@ -851,6 +938,11 @@ bool Configuration::parse(String data, bool isLocal) {
         jsonInvalid();
         return false;
       }
+    }
+
+    // Check for satellites
+    if (updateSatellites(root)) {
+      changed = true;
     }
   }
 
@@ -1656,3 +1748,13 @@ Configuration::PMCorrection Configuration::getPMCorrection(void) { return pmCorr
 Configuration::TempHumCorrection Configuration::getTempCorrection(void) { return tempCorrection; }
 
 Configuration::TempHumCorrection Configuration::getHumCorrection(void) { return rhumCorrection; }
+
+bool Configuration::isSatellitesChanged(void) {
+  bool changed = _satellitesChanged;
+  _satellitesChanged = false;
+  return changed;
+}
+
+bool Configuration::isSatellitesEnabled(void) { return _satellitesEnabled; }
+
+const String *Configuration::getSatellites() const { return _satellites; }

@@ -7,6 +7,8 @@
 #include <Arduino.h>
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
 
+#define MAX_SATELLITES 10
+
 class Configuration : public PrintLog {
 public:
   struct PMCorrection {
@@ -40,6 +42,9 @@ private:
   PMCorrection pmCorrection;
   TempHumCorrection tempCorrection;
   TempHumCorrection rhumCorrection;
+  bool _satellitesEnabled = false;
+  String _satellites[MAX_SATELLITES];
+  bool _satellitesChanged = false;
 
   AirGradient* ag;
 
@@ -49,6 +54,8 @@ private:
   bool updatePmCorrection(JSONVar &json);
   bool updateTempHumCorrection(JSONVar &json, TempHumCorrection &target,
                                const char *correctionName);
+  bool updateSatellites(JSONVar &json);
+  void emptySatellites();
   void saveConfig(void);
   void loadConfig(void);
   void defaultConfig(void);
@@ -122,6 +129,10 @@ public:
   PMCorrection getPMCorrection(void);
   TempHumCorrection getTempCorrection(void);
   TempHumCorrection getHumCorrection(void);
+  bool isSatellitesChanged(void);
+  bool isSatellitesEnabled(void);
+  const String* getSatellites() const;
+
 private:
   ConfigurationUpdatedCallback_t _callback;
 };
