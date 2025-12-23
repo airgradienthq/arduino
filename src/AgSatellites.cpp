@@ -44,9 +44,10 @@ bool AgSatellites::run() {
 
     // Create and set scan callbacks
     _scanCallbacks = new ScanCallbacks(this);
-    _pScan->setScanCallbacks(_scanCallbacks, false);
+    _pScan->setScanCallbacks(_scanCallbacks, true);
 
     // Configure scan parameters
+    // TODO: Might need to adjust for reliablity coex wifi
     _pScan->setInterval(100);    // Scan interval in ms
     _pScan->setWindow(99);       // Scan window in ms
     _pScan->setActiveScan(true); // Active scan for scan response data
@@ -93,6 +94,8 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
   if (!isSatelliteInList(macAddress)) {
     return;
   }
+
+  Serial.printf("Found satellites: %s\n", macAddress.c_str());
 
   // Get advertising payload
   const std::vector<uint8_t> &payload = device->getPayload();

@@ -61,6 +61,7 @@ JSON_PROP_DEF(corrections);
 JSON_PROP_DEF(atmp);
 JSON_PROP_DEF(rhum);
 JSON_PROP_DEF(extendedPmMeasures);
+JSON_PROP_DEF(satellites);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
