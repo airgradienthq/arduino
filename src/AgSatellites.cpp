@@ -89,17 +89,21 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
 
   // Get MAC address
   String macAddress = device->getAddress().toString().c_str();
+  macAddress.replace(":", "");
 
   // Check if this device is in our satellite list
+ 
   if (!isSatelliteInList(macAddress)) {
+    //Serial.printf("Data from satellite %s discarded\n", macAddress.c_str());
     return;
   }
+  Serial.printf("Got data from satellite %s\n", macAddress.c_str());
 
-  Serial.printf("Found satellites: %s\n", macAddress.c_str());
-
+  
   // Get advertising payload
   const std::vector<uint8_t> &payload = device->getPayload();
   if (payload.empty()) {
+    Serial.printf("Empty payload from satellite %s\n", macAddress.c_str());
     return;
   }
 
@@ -132,6 +136,9 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
       _satellites[index].data.temp = newData.temp;
       _satellites[index].data.rhum = newData.rhum;
       _satellites[index].data.useCount = 0;
+      Serial.printf("Satellite %s reported temp %.1f, hum %.1f\n", macAddress.c_str(), _satellites[index].data.temp, _satellites[index].data.rhum);
+    } else {
+      Serial.printf("Failed to parse data from satellite %s\n", macAddress.c_str());
     }
   }
 }

@@ -382,9 +382,9 @@ bool Configuration::updateSatellites(JSONVar &json) {
   }
 
   // Sync stored list with JSON
+  int count = min((int)satellites.length(), MAX_SATELLITES);
   if (changed) {
     emptySatellites();
-    int count = min((int)satellites.length(), MAX_SATELLITES);
     for (int i = 0; i < count; i++) {
       _satellites[i] = (const char *)satellites[i];
     }
@@ -396,7 +396,7 @@ bool Configuration::updateSatellites(JSONVar &json) {
 
   // Ensure flag is set
   _satellitesEnabled = true;
-
+  logInfo(String(count) + " satellite(s) configured");
   return changed;
 }
 
@@ -405,6 +405,7 @@ void Configuration::emptySatellites() {
     _satellites[j] = "";
   }
   _satellitesEnabled = false;
+  logInfo("no satellites configured");
 }
 
 /**
