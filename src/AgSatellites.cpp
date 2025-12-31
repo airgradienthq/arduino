@@ -45,6 +45,7 @@ bool AgSatellites::run() {
     // Create and set scan callbacks
     _scanCallbacks = new ScanCallbacks(this);
     _pScan->setScanCallbacks(_scanCallbacks, true);
+    _pScan->setMaxResults(0); // Do not store scan results, use callbacks only. Prevents memory leak.
 
     // Configure scan parameters
     // TODO: Might need to adjust for reliablity coex wifi
