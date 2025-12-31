@@ -53,15 +53,15 @@ bool AgSatellites::run() {
     _pScan->setWindow(99);       // Scan window in ms
     _pScan->setActiveScan(true); // Active scan for scan response data
 
-    // Start continuous scanning (0 = scan forever)
-    _pScan->start(0, false);
+    // Start scanning for 30 seconds
+    _pScan->start(30, false);
 
     _initialized = true;
   }
 
   // Check if scan is still running, restart if needed
   if (_pScan && !_pScan->isScanning()) {
-    _pScan->start(0, false);
+    _pScan->start(30, false);
   }
 
   return true;
