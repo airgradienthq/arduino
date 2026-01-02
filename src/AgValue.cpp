@@ -1124,6 +1124,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
         String macKey = satellites[i].id;
         satellitesObj[macKey.c_str()]["atmp"] = ag->round2(satellites[i].data.temp);
         satellitesObj[macKey.c_str()]["rhum"] = ag->round2(satellites[i].data.rhum);
+        satellitesObj[macKey.c_str()]["wifi"] = ag->round2(satellites[i].data.rssi);
         satellites[i].data.useCount++;
         count++;
       }

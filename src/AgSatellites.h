@@ -11,6 +11,7 @@ public:
   struct SatelliteData {
     float temp;
     float rhum;
+    int rssi;
     uint8_t useCount;
   };
 

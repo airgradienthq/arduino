@@ -8,6 +8,7 @@ AgSatellites::AgSatellites(Measurements &measurement, Configuration &config)
     _satellites[i].id = "";
     _satellites[i].data.temp = -1000.0f;
     _satellites[i].data.rhum = -1.0f;
+    _satellites[i].data.rssi = -1000;
     _satellites[i].data.useCount = 0;
   }
 }
@@ -98,9 +99,11 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
     //Serial.printf("Data from satellite %s discarded\n", macAddress.c_str());
     return;
   }
-  Serial.printf("Got data from satellite %s\n", macAddress.c_str());
-
   
+  int rssi = device->getRSSI();
+  Serial.printf("Got data from satellite %s (rssi: %d)\n", macAddress.c_str(), rssi);
+
+
   // Get advertising payload
   const std::vector<uint8_t> &payload = device->getPayload();
   if (payload.empty()) {
@@ -136,8 +139,9 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
       // Successfully parsed - reset use count when new data is received
       _satellites[index].data.temp = newData.temp;
       _satellites[index].data.rhum = newData.rhum;
+      _satellites[index].data.rssi = rssi;
       _satellites[index].data.useCount = 0;
-      Serial.printf("Satellite %s reported temp %.1f, hum %.1f\n", macAddress.c_str(), _satellites[index].data.temp, _satellites[index].data.rhum);
+      Serial.printf("Satellite %s reported temp %.1f, hum %.1f, rssi %d\n", macAddress.c_str(), _satellites[index].data.temp, _satellites[index].data.rhum, _satellites[index].data.rssi);
     } else {
       Serial.printf("Failed to parse data from satellite %s\n", macAddress.c_str());
     }
