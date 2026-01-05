@@ -1,6 +1,8 @@
 #ifndef _AG_SATELLITES_H_
 #define _AG_SATELLITES_H_
 
+#ifdef ESP32
+
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "AgConfigure.h"
@@ -47,14 +49,15 @@ private:
   // Helper methods
   bool isSatelliteInList(String macAddress);
   void processAdvertisedDevice(const NimBLEAdvertisedDevice *device);
-  bool decodeBTHome(const uint8_t* payload, size_t size, SatelliteData &data);
+  bool decodeBTHome(const uint8_t *payload, size_t size, SatelliteData &data);
 
 public:
   AgSatellites(Measurements &measurement, Configuration &config);
   ~AgSatellites();
 
   bool run();
-  Satellite* getSatellites();
+  Satellite *getSatellites();
 };
 
+#endif
 #endif // _AG_SATELLITES_H_

@@ -46,7 +46,7 @@ private:
   String _satellites[MAX_SATELLITES];
   bool _satellitesChanged = false;
 
-  AirGradient* ag;
+  AirGradient *ag;
 
   String getLedBarModeName(LedBarMode mode);
   PMCorrectionAlgorithm matchPmAlgorithm(String algorithm);
@@ -131,7 +131,7 @@ public:
   TempHumCorrection getHumCorrection(void);
   bool isSatellitesChanged(void);
   bool isSatellitesEnabled(void);
-  const String* getSatellites() const;
+  const String *getSatellites() const;
 
 private:
   ConfigurationUpdatedCallback_t _callback;
