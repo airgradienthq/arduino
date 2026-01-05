@@ -1111,6 +1111,8 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
 #endif
   }
 
+
+#ifndef ESP8266
   // Add satellites data
   if (satellites_ && config.isSatellitesEnabled()) {
     AgSatellites::Satellite *satellites = satellites_->getSatellites();
@@ -1135,6 +1137,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
       root["satellites"] = satellitesObj;
     }
   }
+#endif // ESP8266
 
   String result = JSON.stringify(root);
   Serial.printf("\n---- PAYLOAD\n %s \n-----\n", result.c_str());
