@@ -99,6 +99,7 @@ enum PMCorrectionAlgorithm {
   COR_ALGO_PM_NONE,    // No PM correction
   COR_ALGO_PM_EPA_2021,
   COR_ALGO_PM_SLR_CUSTOM,
+  COR_ALGO_PM_SLR_FACTORY_CALIBRATION,
 };
 
 // Don't change the order of the enum

@@ -832,7 +832,7 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) 
     corrected = ag->pms5003.compensate(pm25, humidity);
     break;
   default: {
-    // All SLR correction using the same flow, hence default condition
+    // All SLR correction (Batch, Custom, Factory) using the same flow, hence default condition
     corrected = ag->pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor,
                                           pmCorrection.intercept);
     if (pmCorrection.useEPA) {
