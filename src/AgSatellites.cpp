@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "AgSatellites.h"
 
 AgSatellites::AgSatellites(Measurements &measurement, Configuration &config)
@@ -46,7 +48,9 @@ bool AgSatellites::run() {
     // Create and set scan callbacks
     _scanCallbacks = new ScanCallbacks(this);
     _pScan->setScanCallbacks(_scanCallbacks, true);
-    _pScan->setMaxResults(0); // Do not store scan results, use callbacks only. Prevents memory leak.
+
+    // Do not store scan results, use callbacks only. Prevents memory leak.
+    _pScan->setMaxResults(0);
 
     // Configure scan parameters
     // TODO: Might need to adjust for reliablity coex wifi
@@ -94,15 +98,14 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
   macAddress.replace(":", "");
 
   // Check if this device is in our satellite list
- 
+
   if (!isSatelliteInList(macAddress)) {
     //Serial.printf("Data from satellite %s discarded\n", macAddress.c_str());
     return;
   }
-  
+
   int rssi = device->getRSSI();
   Serial.printf("Got data from satellite %s (rssi: %d)\n", macAddress.c_str(), rssi);
-
 
   // Get advertising payload
   const std::vector<uint8_t> &payload = device->getPayload();
@@ -141,7 +144,9 @@ void AgSatellites::processAdvertisedDevice(const NimBLEAdvertisedDevice *device)
       _satellites[index].data.rhum = newData.rhum;
       _satellites[index].data.rssi = rssi;
       _satellites[index].data.useCount = 0;
-      Serial.printf("Satellite %s reported temp %.1f, hum %.1f, rssi %d\n", macAddress.c_str(), _satellites[index].data.temp, _satellites[index].data.rhum, _satellites[index].data.rssi);
+      Serial.printf("Satellite %s reported temp %.1f, hum %.1f, rssi %d\n", macAddress.c_str(),
+                    _satellites[index].data.temp, _satellites[index].data.rhum,
+                    _satellites[index].data.rssi);
     } else {
       Serial.printf("Failed to parse data from satellite %s\n", macAddress.c_str());
     }
@@ -256,3 +261,5 @@ bool AgSatellites::decodeBTHome(const uint8_t *payload, size_t size, SatelliteDa
 }
 
 AgSatellites::Satellite *AgSatellites::getSatellites() { return _satellites; }
+
+#endif // ESP32
