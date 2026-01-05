@@ -26,6 +26,7 @@ const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
     [COR_ALGO_PM_NONE] = "none",
     [COR_ALGO_PM_EPA_2021] = "epa_2021",
     [COR_ALGO_PM_SLR_CUSTOM] = "custom",
+    [COR_ALGO_PM_SLR_FACTORY_CALIBRATION] = "factory_calibration",
 };
 
 const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
