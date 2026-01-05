@@ -27,6 +27,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
 #include "AgConfigure.h"
+#include "AgSatellites.h"
 #include "AgSchedule.h"
 #include "AgStateMachine.h"
 #include "AgValue.h"
@@ -99,6 +100,7 @@ static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
 static Measurements measurements(configuration);
 static AirGradient *ag;
+static AgSatellites *satellites = nullptr;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
 static StateMachine stateMachine(oledDisplay, Serial, measurements, configuration);
 static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
@@ -209,6 +211,12 @@ void setup() {
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
   measurements.setAirGradient(ag);
+
+  if (configuration.isSatellitesEnabled()) {
+    satellites = new AgSatellites(measurements, configuration);
+    measurements.setSatellites(satellites);
+    Serial.println("Satellites enabled on boot");
+  }
 
   /** Init sensor */
   boardInit();
@@ -346,6 +354,11 @@ void loop() {
     if (configuration.hasSensorPMS2) {
       ag->pms5003t_2.handle();
     }
+  }
+
+  /* Run satellite BLE scanning */
+  if (satellites != nullptr) {
+    satellites->run();
   }
 
   /* Run measurement schedule */
@@ -1139,6 +1152,15 @@ static void configUpdateHandle() {
 
     if (configuration.isDisplayBrightnessChanged()) {
       oledDisplay.setBrightness(configuration.getDisplayBrightness());
+    }
+  }
+
+  if (configuration.isSatellitesChanged() && configuration.isSatellitesEnabled()) {
+    if (satellites == nullptr) {
+      // Initialized if satellites enabled on run time
+      satellites = new AgSatellites(measurements, configuration);
+      measurements.setSatellites(satellites);
+      Serial.println("Satellites enabled on runtime");
     }
   }
 

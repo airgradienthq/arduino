@@ -1,5 +1,6 @@
 #include "AgValue.h"
 #include "AgConfigure.h"
+#include "AgSatellites.h"
 #include "AirGradient.h"
 #include "App/AppDef.h"
 #include <cmath>
@@ -75,6 +76,8 @@ Measurements::Measurements(Configuration &config) : config(config) {
 }
 
 void Measurements::setAirGradient(AirGradient *ag) { this->ag = ag; }
+
+void Measurements::setSatellites(AgSatellites *satellites) { this->satellites_ = satellites; }
 
 void Measurements::printCurrentAverage() {
   Serial.println();
@@ -563,7 +566,8 @@ float Measurements::getAverage(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is not defined
   if (undefined) {
-    Serial.printf("ERROR! %s is not defined on get average value function\n", measurementTypeStr(type).c_str());
+    Serial.printf("ERROR! %s is not defined on get average value function\n",
+                  measurementTypeStr(type).c_str());
     delay(1000);
     assert(0);
   }
@@ -748,7 +752,8 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
     // Apply 'standard' correction if its defined or correction forced
     if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateTemp(rawValue);
-    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE && forceCorrection) {
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
+               forceCorrection) {
       return ag->pms5003t_1.compensateTemp(rawValue);
     }
 
@@ -764,7 +769,8 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool force
     // Apply 'standard' correction if its defined or correction forced
     if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateHum(rawValue);
-    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE && forceCorrection) {
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
+               forceCorrection) {
       return ag->pms5003t_1.compensateHum(rawValue);
     }
 
@@ -896,7 +902,8 @@ std::string Measurements::buildMeasuresPayload(Measures &mc, bool extendedPmMeas
   oss << ",";
 
   // Temperature
-  if (utils::isValidTemperature(mc.temperature[0]) && utils::isValidTemperature(mc.temperature[1])) {
+  if (utils::isValidTemperature(mc.temperature[0]) &&
+      utils::isValidTemperature(mc.temperature[1])) {
     float temp = (mc.temperature[0] + mc.temperature[1]) / 2.0f;
     oss << std::round(temp * 10);
   } else if (utils::isValidTemperature(mc.temperature[0])) {
@@ -984,7 +991,6 @@ std::string Measurements::buildMeasuresPayload(Measures &mc, bool extendedPmMeas
     oss << mc.signal;
   }
 
-
   if (extendedPmMeasures) {
     oss << ",,,,,,,,"; // Add placeholder for MAX payload (BMS & O3/NO2)
 
@@ -1057,7 +1063,6 @@ std::string Measurements::buildMeasuresPayload(Measures &mc, bool extendedPmMeas
   return oss.str();
 }
 
-
 String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi) {
   JSONVar root;
 
@@ -1105,6 +1110,34 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
     root["freeHeap"] = ESP.getFreeHeap();
 #endif
   }
+
+
+#ifndef ESP8266
+  // Add satellites data
+  if (satellites_ && config.isSatellitesEnabled()) {
+    AgSatellites::Satellite *satellites = satellites_->getSatellites();
+    JSONVar satellitesObj;
+    int count = 0;
+
+    for (int i = 0; i < MAX_SATELLITES; i++) {
+      if (satellites[i].id.length() > 0 && satellites[i].data.useCount < 2 &&
+          utils::isValidTemperature(satellites[i].data.temp) &&
+          utils::isValidHumidity(satellites[i].data.rhum)) {
+
+        String macKey = satellites[i].id;
+        satellitesObj[macKey.c_str()]["atmp"] = ag->round2(satellites[i].data.temp);
+        satellitesObj[macKey.c_str()]["rhum"] = ag->round2(satellites[i].data.rhum);
+        satellitesObj[macKey.c_str()]["wifi"] = ag->round2(satellites[i].data.rssi);
+        satellites[i].data.useCount++;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      root["satellites"] = satellitesObj;
+    }
+  }
+#endif // ESP8266
 
   String result = JSON.stringify(root);
   Serial.printf("\n---- PAYLOAD\n %s \n-----\n", result.c_str());
@@ -1266,7 +1299,6 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compen
           }
         }
       }
-
     }
 
     // Add pm25 compensated value only if PM2.5 and humidity value is valid
