@@ -109,6 +109,7 @@ bool WifiConnector::connect(String modelName) {
   }
 
   if (WiFi.isConnected()) {
+    hasConfig = true;
     sm.handleLeds(AgStateMachineWiFiManagerStaConnected);
     return true;
   }

@@ -55,8 +55,8 @@ private:
 
   String ssid;
   void *wifi = NULL;
-  bool hasConfig;
-  uint32_t lastRetry;
+  bool hasConfig = false;
+  uint32_t lastRetry = 0;
   bool hasPortalConfig = false;
   bool connectorTimeout = false;
   bool bleServerRunning = false;
