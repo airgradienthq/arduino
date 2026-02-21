@@ -66,8 +66,7 @@ private:
 #endif
   bool isBegin(void);
   bool boardSupported(void);
-  bool getRawSignal(uint16_t &raw_voc, uint16_t &raw_nox,
-                    uint16_t defaultRh = 0x8000, uint16_t defaultT = 0x6666);
+  bool getRawSignal(uint16_t &raw_voc, uint16_t &raw_nox);
   bool _noxConditioning(void);
 };
 
