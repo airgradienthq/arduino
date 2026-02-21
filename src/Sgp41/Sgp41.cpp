@@ -266,20 +266,17 @@ bool Sgp41::boardSupported(void) {
  * @brief Get raw signal
  *
  * @param raw_voc Raw VOC output
- * @param row_nox Raw NOx output
- * @param defaultRh
- * @param defaultT
+ * @param raw_nox Raw NOx output
  * @return true Success
  * @return false Failure
  */
-bool Sgp41::getRawSignal(uint16_t &raw_voc, uint16_t &row_nox,
-                         uint16_t defaultRh, uint16_t defaultT) {
+bool Sgp41::getRawSignal(uint16_t &raw_voc, uint16_t &raw_nox) {
   if (this->isBegin() == false) {
     return false;
   }
 
-  if (sgpSensor()->measureRawSignals(defaultRh, defaultT, raw_voc, row_nox) ==
-      0) {
+  if (sgpSensor()->measureRawSignals(this->defaultRh, this->defaultT,
+                                     raw_voc, raw_nox) == 0) {
     return true;
   }
   return false;
