@@ -27,6 +27,7 @@ const char *PM_CORRECTION_ALGORITHM_NAMES[] = {
     [COR_ALGO_PM_EPA_2021] = "epa_2021",
     [COR_ALGO_PM_SLR_CUSTOM] = "custom",
     [COR_ALGO_PM_SLR_FACTORY_CALIBRATION] = "factory_calibration",
+    [COR_ALGO_PM_SLR_CUSTOM_VIA_PM_RAW] = "custom_via_pm25_raw",
 };
 
 const char *TEMP_HUM_CORRECTION_ALGORITHM_NAMES[] = {
@@ -129,9 +130,9 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If string not match from enum, check if correctionAlgorithm is one of the PM batch corrections
   if (result == COR_ALGO_PM_UNKNOWN) {
     // Check the substring "slr_PMS5003_xxxxxxxx"
-    if (algorithm.substring(0, 11) == "slr_PMS5003") {
+    if (algorithm.substring(0, 4) == "slr_") {
       // If it is, then its a custom correction
-      result = COR_ALGO_PM_SLR_CUSTOM;
+      result = COR_ALGO_PM_SLR_BATCH;
     }
   }
 

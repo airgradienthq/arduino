@@ -40,6 +40,8 @@ public:
 
   int pm25ToAQI(int pm02);
   float slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept);
+  float slrCorrectionBy003Count(float pm003Count, float scalingFactor, float intercept);
+  float slrCorrectionByPm25Raw(float pm25, float scalingFactor, float intercept);
   float compensate(float pm25, float humidity);
 
 private:

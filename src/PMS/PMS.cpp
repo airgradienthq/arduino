@@ -344,6 +344,35 @@ float PMSBase::slrCorrection(float pm25, float pm003Count, float scalingFactor, 
   return calibrated;
 }
 
+
+float PMSBase::slrCorrectionBy003Count(float pm003Count, float scalingFactor, float intercept) {
+  float calibrated = (scalingFactor * pm003Count) + intercept;
+
+  // No negative value for pm2.5
+  if (calibrated < 0) {
+    return 0.0;
+  }
+
+  return calibrated;
+}
+
+float PMSBase::slrCorrectionByPm25Raw(float pm25, float scalingFactor,
+                                      float intercept) {
+  float calibrated;
+  if (pm25 == 0.0) {
+    calibrated = 0.0;
+  } else {
+    calibrated = (scalingFactor * pm25) + intercept;
+  }
+
+  // No negative value for pm2.5
+  if (calibrated < 0) {
+    return 0.0;
+  }
+
+  return calibrated;
+}
+
 /**
  * @brief Correction PM2.5
  *

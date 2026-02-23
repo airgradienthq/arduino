@@ -176,6 +176,14 @@ float PMS5003::slrCorrection(float pm25, float pm003Count, float scalingFactor, 
   return pms.slrCorrection(pm25, pm003Count, scalingFactor, intercept);
 }
 
+float PMS5003::slrCorrectionBy003Count(float pm003Count, float scalingFactor, float intercept) {
+  return pms.slrCorrectionBy003Count(pm003Count, scalingFactor, intercept);
+}
+
+float PMS5003::slrCorrectionByPm25Raw(float pm25, float scalingFactor, float intercept) {
+  return pms.slrCorrectionByPm25Raw(pm25, scalingFactor, intercept);
+}
+
 /**
  * @brief Correct PM2.5
  *
