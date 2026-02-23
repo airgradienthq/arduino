@@ -130,9 +130,9 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If string not match from enum, check if correctionAlgorithm is one of the PM batch corrections
   if (result == COR_ALGO_PM_UNKNOWN) {
     // Check the substring "slr_PMS5003_xxxxxxxx"
-    if (algorithm.substring(0, 11) == "slr_PMS5003") {
+    if (algorithm.substring(0, 4) == "slr_") {
       // If it is, then its a custom correction
-      result = COR_ALGO_PM_SLR_CUSTOM;
+      result = COR_ALGO_PM_SLR_BATCH;
     }
   }
 

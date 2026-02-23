@@ -98,8 +98,10 @@ enum PMCorrectionAlgorithm {
   COR_ALGO_PM_UNKNOWN, // Unknown algorithm
   COR_ALGO_PM_NONE,    // No PM correction
   COR_ALGO_PM_EPA_2021,
-  COR_ALGO_PM_SLR_CUSTOM,
+  COR_ALGO_PM_SLR_CUSTOM, // Via PM 0.3 count
   COR_ALGO_PM_SLR_FACTORY_CALIBRATION,
+  COR_ALGO_PM_SLR_CUSTOM_VIA_PM_RAW,
+  COR_ALGO_PM_SLR_BATCH,
 };
 
 // Don't change the order of the enum
