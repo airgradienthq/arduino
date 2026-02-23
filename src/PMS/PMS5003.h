@@ -43,6 +43,8 @@ public:
 
   int convertPm25ToUsAqi(int pm25);
   float slrCorrection(float pm25, float pm003Count, float scalingFactor, float intercept);
+  float slrCorrectionBy003Count(float pm003Count, float scalingFactor, float intercept);
+  float slrCorrectionByPm25Raw(float pm25, float scalingFactor, float intercept);
   float compensate(float pm25, float humidity);
   int getFirmwareVersion(void);
   uint8_t getErrorCode(void);

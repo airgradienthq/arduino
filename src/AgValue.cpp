@@ -831,14 +831,29 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) 
   case PMCorrectionAlgorithm::COR_ALGO_PM_EPA_2021:
     corrected = ag->pms5003.compensate(pm25, humidity);
     break;
-  default: {
-    // All SLR correction (Batch, Custom, Factory) using the same flow, hence default condition
+  case PMCorrectionAlgorithm::COR_ALGO_PM_SLR_CUSTOM_VIA_PM_RAW:
+    corrected = ag->pms5003.slrCorrectionByPm25Raw(pm25, pmCorrection.scalingFactor, pmCorrection.intercept);
+    if (pmCorrection.useEPA) {
+      // Add EPA compensation on top of SLR
+      corrected = ag->pms5003.compensate(corrected, humidity);
+    }
+    break;
+  case PMCorrectionAlgorithm::COR_ALGO_PM_SLR_BATCH:
     corrected = ag->pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor,
                                           pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
       corrected = ag->pms5003.compensate(corrected, humidity);
     }
+    break;
+  default: {
+    // custom by 0.3 count and factory
+    corrected = ag->pms5003.slrCorrectionBy003Count(pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
+    if (pmCorrection.useEPA) {
+      // Add EPA compensation on top of SLR
+      corrected = ag->pms5003.compensate(corrected, humidity);
+    }
+    break;
   }
   }
 
