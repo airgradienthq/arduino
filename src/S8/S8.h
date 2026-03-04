@@ -104,6 +104,7 @@ private:
   bool isBegin(void);
 
   void uartWriteBytes(uint8_t size); // Send bytes to sensor
+  void uartDrainRx(void);
   uint8_t
   uartReadBytes(uint8_t max_bytes,
                 uint32_t timeout_seconds); // Read received bytes from sensor
