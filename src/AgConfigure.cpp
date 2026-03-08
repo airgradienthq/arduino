@@ -116,8 +116,8 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If the input string matches an algorithm name, return the corresponding enum value
   // Else return Unknown
 
-  const size_t enumSize = COR_ALGO_PM_SLR_CUSTOM + 1; // Get the actual size of the enum
-  PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;;
+  const size_t enumSize = COR_ALGO_PM_SLR_FACTORY_CALIBRATION + 1;
+  PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;
 
   // Loop through enum values
   for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
