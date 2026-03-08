@@ -117,8 +117,8 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
   // If the input string matches an algorithm name, return the corresponding enum value
   // Else return Unknown
 
-  const size_t enumSize = COR_ALGO_PM_SLR_CUSTOM + 1; // Get the actual size of the enum
-  PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;;
+  const size_t enumSize = sizeof(PM_CORRECTION_ALGORITHM_NAMES) / sizeof(PM_CORRECTION_ALGORITHM_NAMES[0]);
+  PMCorrectionAlgorithm result = COR_ALGO_PM_UNKNOWN;
 
   // Loop through enum values
   for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
@@ -140,12 +140,10 @@ PMCorrectionAlgorithm Configuration::matchPmAlgorithm(String algorithm) {
 }
 
 TempHumCorrectionAlgorithm Configuration::matchTempHumAlgorithm(String algorithm) {
-  // Get the actual size of the enum
-  const int enumSize = static_cast<int>(COR_ALGO_TEMP_HUM_SLR_CUSTOM);
+  const size_t enumSize = sizeof(TEMP_HUM_CORRECTION_ALGORITHM_NAMES) / sizeof(TEMP_HUM_CORRECTION_ALGORITHM_NAMES[0]);
   TempHumCorrectionAlgorithm result = COR_ALGO_TEMP_HUM_UNKNOWN;
 
-  // Loop through enum values
-  for (size_t enumVal = 0; enumVal <= enumSize; enumVal++) {
+  for (size_t enumVal = 0; enumVal < enumSize; enumVal++) {
     if (algorithm == TEMP_HUM_CORRECTION_ALGORITHM_NAMES[enumVal]) {
       result = static_cast<TempHumCorrectionAlgorithm>(enumVal);
     }
