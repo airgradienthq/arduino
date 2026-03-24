@@ -247,7 +247,7 @@ int16_t S8::getCo2(void) {
     co2 = ((buf_msg[3] << 8) & 0xFF00) | (buf_msg[4] & 0x00FF);
     AgLog("CO2 value = %d ppm", co2);
   } else {
-    Serial.println("[S8] Error getting CO2 value!");
+    AgLog("[S8] Error getting CO2 value!");
   }
 
   return co2;
@@ -784,13 +784,13 @@ bool S8::validResponse(uint8_t func, uint8_t nb) {
         AgLog("Valid response");
         result = true;
       } else {
-        Serial.println("[S8] Error Unexpected response!");
+        AgLog("[S8] Error Unexpected response!");
       }
     } else {
-      Serial.println("[S8] Checksum/length is invalid!");
+      AgLog("[S8] Checksum/length is invalid!");
     }
   } else {
-    Serial.println("[S8] Invalid length!");
+    AgLog("[S8] Invalid length!");
   }
 
   return result;
@@ -810,7 +810,7 @@ bool S8::validResponseLenght(uint8_t func, uint8_t nb, uint8_t len) {
   if (nb == len) {
     result = validResponse(func, nb);
   } else {
-    Serial.println("[S8] Error Unexpected length!");
+    AgLog("[S8] Error Unexpected length!");
   }
 
   return result;
