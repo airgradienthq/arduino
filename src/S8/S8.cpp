@@ -231,6 +231,10 @@ int16_t S8::getCo2(void) {
 
   int16_t co2 = -1;
 
+
+  // Clean up rx buffer first
+  uartDrainRx();
+
   // Ask CO2 value
   sendCommand(MODBUS_FUNC_READ_INPUT_REGISTERS, MODBUS_IR4, 0x0001);
 
@@ -243,7 +247,7 @@ int16_t S8::getCo2(void) {
     co2 = ((buf_msg[3] << 8) & 0xFF00) | (buf_msg[4] & 0x00FF);
     AgLog("CO2 value = %d ppm", co2);
   } else {
-    AgLog("Error getting CO2 value!");
+    AgLog("[S8] Error getting CO2 value!");
   }
 
   return co2;
@@ -708,6 +712,29 @@ void S8::uartWriteBytes(uint8_t size) {
   this->_uartStream->flush();
 }
 
+void S8::uartDrainRx(void) {
+  if (this->_uartStream == nullptr) {
+    return;
+  }
+
+  const uint32_t start_ms = millis();
+  while ((uint32_t)(millis() - start_ms) < 20) {
+    bool drained_any = false;
+    while (this->_uartStream->available() > 0) {
+      drained_any = true;
+      (void)this->_uartStream->read();
+    }
+
+    if (!drained_any) {
+      break;
+    }
+
+#if defined(ESP32)
+    vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+  }
+}
+
 uint8_t S8::uartReadBytes(uint8_t max_bytes, uint32_t timeout_ms) {
   uint8_t nb = 0;
   uint32_t stime = millis();
@@ -757,13 +784,13 @@ bool S8::validResponse(uint8_t func, uint8_t nb) {
         AgLog("Valid response");
         result = true;
       } else {
-        AgLog("Err: Unexpected response!");
+        AgLog("[S8] Error Unexpected response!");
       }
     } else {
-      AgLog("Err: Checksum/length is invalid!");
+      AgLog("[S8] Checksum/length is invalid!");
     }
   } else {
-    AgLog("Err: Invalid length!");
+    AgLog("[S8] Invalid length!");
   }
 
   return result;
@@ -783,7 +810,7 @@ bool S8::validResponseLenght(uint8_t func, uint8_t nb, uint8_t len) {
   if (nb == len) {
     result = validResponse(func, nb);
   } else {
-    AgLog("Err: Unexpected length!");
+    AgLog("[S8] Error Unexpected length!");
   }
 
   return result;
