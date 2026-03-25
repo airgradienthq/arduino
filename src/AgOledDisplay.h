@@ -15,6 +15,7 @@ private:
   void *u8g2 = NULL;
   Measurements &value;
   bool isDisplayOff = false;
+  uint32_t lastDashboardSoftResetMs = 0;
 
   typedef struct {
     int width;
