@@ -80,6 +80,8 @@ jobs:
             - source-path: ./
             - name: NimBLE-Arduino
               version: 2.3.7
+            - name: ArduinoJson
+              version: 7.4.3
           cli-compile-flags: |
             - --warnings
             - none
