@@ -156,6 +156,7 @@ static void newMeasurementCycle();
 static void restartIfCeClientIssueOverTwoHours();
 static void networkSignalCheck();
 static void networkingTask(void *args);
+static AirgradientClient::PayloadType getClientPayloadType();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL, configurationUpdateSchedule);
@@ -179,9 +180,6 @@ void setup() {
   pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
   digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
 
-  /** Print device ID into log */
-  Serial.println("Serial nr: " + ag->deviceId());
-
   // Set reason why esp is reset
   esp_reset_reason_t reason = esp_reset_reason();
   measurements.setResetReason(reason);
@@ -203,6 +201,9 @@ void setup() {
     ag = new AirGradient(BoardType::OPEN_AIR_OUTDOOR);
   }
   Serial.println("Detected " + ag->getBoardName());
+
+  /** Print device ID into log */
+  Serial.println("Serial nr: " + ag->deviceId());
 
   configuration.setAirGradient(ag);
   oledDisplay.setAirGradient(ag);
@@ -957,6 +958,15 @@ static void failedHandler(String msg) {
   }
 }
 
+static AirgradientClient::PayloadType getClientPayloadType() {
+  if (!ag->isOne() &&
+      (fwMode == FW_MODE_O_1PPT || fwMode == FW_MODE_O_1PP)) {
+    return AirgradientClient::ONE_OPENAIR_TWO_PMS;
+  }
+
+  return AirgradientClient::ONE_OPENAIR;
+}
+
 void initializeNetwork() {
   // Check if cellular module available
   agSerial = new AgSerial(Wire);
@@ -989,7 +999,9 @@ void initializeNetwork() {
     delay(2500);
   }
 
-  if (!agClient->begin(ag->deviceId().c_str())) {
+  agClient->setExtendedPmMeasures(configuration.isExtendedPmMeasuresEnabled());
+
+  if (!agClient->begin(ag->deviceId().c_str(), getClientPayloadType())) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
     oledDisplay.showRebooting();
@@ -1100,6 +1112,8 @@ static void configUpdateHandle() {
     Serial.println("HTTP domain name from configuration empty, set to default");
     agClient->setHttpDomainDefault();
   }
+
+  agClient->setExtendedPmMeasures(configuration.isExtendedPmMeasuresEnabled());
 
   if (configuration.hasSensorSGP) {
     if (configuration.noxLearnOffsetChanged() || configuration.tvocLearnOffsetChanged()) {
@@ -1421,7 +1435,7 @@ void postUsingCellular(bool forcePost) {
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  if (agClient->httpPostMeasures(payload, extendPmMeasures) == false) {
+  if (agClient->httpPostMeasures(payload) == false) {
     // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;
