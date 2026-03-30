@@ -26,6 +26,10 @@ https://forum.airgradient.com/
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
+#ifndef ARDUINOJSON_ENABLE_PROGMEM
+#define ARDUINOJSON_ENABLE_PROGMEM 0
+#endif
+
 #include "AgConfigure.h"
 #include "AgSatellites.h"
 #include "AgSchedule.h"

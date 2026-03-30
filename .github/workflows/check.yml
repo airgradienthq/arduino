@@ -85,6 +85,8 @@ jobs:
           cli-compile-flags: |
             - --warnings
             - none
+            - --build-property
+            - compiler.cpp.extra_flags=-DARDUINOJSON_ENABLE_PROGMEM=0
             - --board-options
             - "${{ matrix.board_options }}"
           platforms: |
