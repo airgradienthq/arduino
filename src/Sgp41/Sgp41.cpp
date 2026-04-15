@@ -361,5 +361,6 @@ void Sgp41::setVocAlgorithmStates(float mean, float std) {
   if (this->isBegin() == false) {
     return;
   }
+  vocAlgorithm()->reset();
   vocAlgorithm()->set_states(mean, std);
 }
