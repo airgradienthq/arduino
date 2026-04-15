@@ -34,6 +34,8 @@ public:
   void setTvocLearningOffset(int offset);
   int getNoxLearningOffset(void);
   int getTvocLearningOffset(void);
+  void getVocAlgorithmStates(float &mean, float &std);
+  void setVocAlgorithmStates(float mean, float std);
 
 private:
   bool onPause = false;

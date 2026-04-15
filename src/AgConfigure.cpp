@@ -64,6 +64,8 @@ JSON_PROP_DEF(atmp);
 JSON_PROP_DEF(rhum);
 JSON_PROP_DEF(extendedPmMeasures);
 JSON_PROP_DEF(satellites);
+JSON_PROP_DEF(vocAlgorithmMean);
+JSON_PROP_DEF(vocAlgorithmStd);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
@@ -83,6 +85,8 @@ JSON_PROP_DEF(satellites);
 #define jprop_offlineMode_default                     false
 #define jprop_monitorDisplayCompensatedValues_default false
 #define jprop_extendedPmMeasures_default              false
+#define jprop_vocAlgorithmMean_default               0.0
+#define jprop_vocAlgorithmStd_default               0.0
 
 JSONVar jconfig;
 
@@ -494,6 +498,8 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   jconfig[jprop_monitorDisplayCompensatedValues] = jprop_monitorDisplayCompensatedValues_default;
   jconfig[jprop_extendedPmMeasures] = jprop_extendedPmMeasures_default;
+  jconfig[jprop_vocAlgorithmMean] = jprop_vocAlgorithmMean_default;
+  jconfig[jprop_vocAlgorithmStd] = jprop_vocAlgorithmStd_default;
 
   // PM2.5 default correction
   pmCorrection.algorithm = COR_ALGO_PM_NONE;
@@ -821,6 +827,45 @@ bool Configuration::parse(String data, bool isLocal) {
     if (jsonTypeInvalid(root[jprop_noxLearningOffset], "number")) {
       failedMessage =
           jsonTypeInvalidMessage(String(jprop_noxLearningOffset), "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  _vocAlgorithmStatesChanged = false;
+  if (JSON.typeof_(root[jprop_vocAlgorithmMean]) == "number") {
+    float mean = (float)((double)root[jprop_vocAlgorithmMean]);
+    float oldMean = (float)((double)jconfig[jprop_vocAlgorithmMean]);
+    if (mean != oldMean) {
+      changed = true;
+      _vocAlgorithmStatesChanged = true;
+      configLogInfo(String(jprop_vocAlgorithmMean), String(oldMean),
+                    String(mean));
+      jconfig[jprop_vocAlgorithmMean] = (float)((double)mean);
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_vocAlgorithmMean], "number")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_vocAlgorithmMean), "number");
+      jsonInvalid();
+      return false;
+    }
+  }
+
+  if (JSON.typeof_(root[jprop_vocAlgorithmStd]) == "number") {
+    float std = (float)((double)root[jprop_vocAlgorithmStd]);
+    float oldStd = (float)((double)jconfig[jprop_vocAlgorithmStd]);
+    if (std != oldStd) {
+      changed = true;
+      _vocAlgorithmStatesChanged = true;
+      configLogInfo(String(jprop_vocAlgorithmStd), String(oldStd),
+                    String(std));
+      jconfig[jprop_vocAlgorithmStd] = (float)((double)std);
+    }
+  } else {
+    if (jsonTypeInvalid(root[jprop_vocAlgorithmStd], "number")) {
+      failedMessage =
+          jsonTypeInvalidMessage(String(jprop_vocAlgorithmStd), "number");
       jsonInvalid();
       return false;
     }
@@ -1762,3 +1807,19 @@ bool Configuration::isSatellitesChanged(void) {
 bool Configuration::isSatellitesEnabled(void) { return _satellitesEnabled; }
 
 const String *Configuration::getSatellites() const { return _satellites; }
+
+bool Configuration::vocAlgorithmStatesChanged(void) {
+  bool changed = _vocAlgorithmStatesChanged;
+  _vocAlgorithmStatesChanged = false;
+  return changed;
+}
+
+float Configuration::getVocAlgorithmMean(void) {
+  float value = (float)((double)jconfig[jprop_vocAlgorithmMean]);
+  return value;
+}
+
+float Configuration::getVocAlgorithmStd(void) {
+  float value = (float)((double)jconfig[jprop_vocAlgorithmStd]);
+  return value;
+}

@@ -159,6 +159,20 @@ String OpenMetrics::getPayload(void) {
                  "gauge");
       add_metric_point("", String(noxRaw));
     }
+
+    float vocMean, vocStd;
+    ag->sgp41.getVocAlgorithmStates(vocMean, vocStd);
+    add_metric("voc_algorithm_mean",
+               "VOC algorithm mean of the mean-variance estimator for "
+               "persisting and restoring the algorithm state across reboots",
+               "gauge");
+    add_metric_point("", String(vocMean));
+    add_metric("voc_algorithm_std",
+               "VOC algorithm standard deviation of the mean-variance "
+               "estimator for persisting and restoring the algorithm state "
+               "across reboots",
+               "gauge");
+    add_metric_point("", String(vocStd));
   }
 
   if (utils::isValidCO2(co2)) {
