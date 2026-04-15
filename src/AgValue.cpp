@@ -28,6 +28,8 @@
 #define json_prop_tvocRaw "tvocRaw"
 #define json_prop_nox "noxIndex"
 #define json_prop_noxRaw "noxRaw"
+#define json_prop_vocAlgoMean "vocAlgorithmMean"
+#define json_prop_vocAlgoStd "vocAlgorithmStd"
 #define json_prop_co2 "rco2"
 
 Measurements::Measurements(Configuration &config) : config(config) {
@@ -1106,6 +1108,10 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
     if (utils::isValidNOx(_nox_raw.update.avg)) {
       root[json_prop_noxRaw] = ag->round2(_nox_raw.update.avg);
     }
+    float vocMean, vocStd;
+    ag->sgp41.getVocAlgorithmStates(vocMean, vocStd);
+    root[json_prop_vocAlgoMean] = ag->round2(vocMean);
+    root[json_prop_vocAlgoStd] = ag->round2(vocStd);
   }
 
   root["boot"] = _bootCount;

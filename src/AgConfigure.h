@@ -34,6 +34,7 @@ private:
   String failedMessage;
   bool _noxLearnOffsetChanged;
   bool _tvocLearningOffsetChanged;
+  bool _vocAlgorithmStatesChanged = false;
   bool ledBarBrightnessChanged = false;
   bool displayBrightnessChanged = false;
   String otaNewFirmwareVersion;
@@ -109,6 +110,9 @@ public:
   bool tvocLearnOffsetChanged(void);
   int getTvocLearningOffset(void);
   int getNoxLearningOffset(void);
+  bool vocAlgorithmStatesChanged(void);
+  float getVocAlgorithmMean(void);
+  float getVocAlgorithmStd(void);
   String wifiSSID(void);
   String wifiPass(void);
   void setAirGradient(AirGradient *ag);

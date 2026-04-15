@@ -347,3 +347,20 @@ void Sgp41::setTvocLearningOffset(int offset) {
 int Sgp41::getNoxLearningOffset(void) { return noxLearnOffset; }
 
 int Sgp41::getTvocLearningOffset(void) { return tvocLearnOffset; }
+
+void Sgp41::getVocAlgorithmStates(float &mean, float &std) {
+  if (this->isBegin() == false) {
+    mean = 0;
+    std = 0;
+    return;
+  }
+  vocAlgorithm()->get_states(mean, std);
+}
+
+void Sgp41::setVocAlgorithmStates(float mean, float std) {
+  if (this->isBegin() == false) {
+    return;
+  }
+  vocAlgorithm()->reset();
+  vocAlgorithm()->set_states(mean, std);
+}

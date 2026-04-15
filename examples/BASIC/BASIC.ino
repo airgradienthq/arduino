@@ -468,6 +468,15 @@ static void configUpdateHandle() {
     }
   }
 
+  if (configuration.hasSensorSGP) {
+    if (configuration.vocAlgorithmStatesChanged()) {
+      float mean = configuration.getVocAlgorithmMean();
+      float std = configuration.getVocAlgorithmStd();
+      ag.sgp41.setVocAlgorithmStates(mean, std);
+      Serial.printf("Setting vocAlgorithmStates to mean=%.2f, std=%.2f\r\n", mean, std);
+    }
+  }
+
   if (configuration.isDisplayBrightnessChanged()) {
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
   }
