@@ -41,7 +41,7 @@
 
 #include <Wire.h>
 
-#include "../../SensirionCore/src/SensirionCore.h"
+#include <SensirionCore.h>
 
 class SensirionI2CSgp41 {
 

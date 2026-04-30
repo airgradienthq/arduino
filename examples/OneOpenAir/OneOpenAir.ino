@@ -50,13 +50,13 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <string>
 
 #include "Libraries/airgradient-client/src/agSerial.h"
-#include "Libraries/airgradient-client/src/cellularModule.h"
-#include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
 #include "Libraries/airgradient-client/src/airgradientCellularClient.h"
 #include "Libraries/airgradient-client/src/airgradientWifiClient.h"
+#include "Libraries/airgradient-client/src/cellularModule.h"
+#include "Libraries/airgradient-client/src/cellularModuleA7672xx.h"
 #include "Libraries/airgradient-ota/src/airgradientOta.h"
-#include "Libraries/airgradient-ota/src/airgradientOtaWifi.h"
 #include "Libraries/airgradient-ota/src/airgradientOtaCellular.h"
+#include "Libraries/airgradient-ota/src/airgradientOtaWifi.h"
 #include "esp_system.h"
 #include "freertos/projdefs.h"
 
@@ -102,10 +102,13 @@ static Measurements measurements(configuration);
 static AirGradient *ag;
 static AgSatellites *satellites = nullptr;
 static OledDisplay oledDisplay(configuration, measurements, Serial);
-static StateMachine stateMachine(oledDisplay, Serial, measurements, configuration);
-static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine, configuration);
+static StateMachine stateMachine(oledDisplay, Serial, measurements,
+                                 configuration);
+static WifiConnector wifiConnector(oledDisplay, Serial, stateMachine,
+                                   configuration);
 static OpenMetrics openMetrics(measurements, configuration, wifiConnector);
-static LocalServer localServer(Serial, openMetrics, measurements, configuration, wifiConnector);
+static LocalServer localServer(Serial, openMetrics, measurements, configuration,
+                               wifiConnector);
 static AgSerial *agSerial;
 static CellularModule *cellularCard;
 static AirgradientClient *agClient;
@@ -136,6 +139,7 @@ static void configUpdateHandle(void);
 static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
+static void updateSPS30(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
@@ -148,8 +152,10 @@ static void wdgFeedUpdate(void);
 static void ledBarEnabledUpdate(void);
 static bool sgp41Init(void);
 static void checkForFirmwareUpdate(void);
-static void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg);
-static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int processing);
+static void otaHandlerCallback(AirgradientOTA::OtaResult result,
+                               const char *msg);
+static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg,
+                              int processing);
 static int calculateMaxPeriod(int updateInterval);
 static void setMeasurementMaxPeriod();
 static void newMeasurementCycle();
@@ -158,7 +164,8 @@ static void networkSignalCheck();
 static void networkingTask(void *args);
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
-AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL, configurationUpdateSchedule);
+AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL,
+                          configurationUpdateSchedule);
 AgSchedule transmissionSchedule(WIFI_TRANSMISSION_INTERVAL, sendDataToServer);
 AgSchedule measurementSchedule(WIFI_MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
@@ -166,7 +173,8 @@ AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
-AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS, checkForFirmwareUpdate);
+AgSchedule checkForUpdateSchedule(FIRMWARE_CHECK_FOR_UPDATE_MS,
+                                  checkForFirmwareUpdate);
 AgSchedule networkSignalCheckSchedule(10000, networkSignalCheck);
 AgSchedule printMeasurementsSchedule(6000, printMeasurements);
 
@@ -227,15 +235,17 @@ void setup() {
     /** Show message confirm offline mode, should me perform if LED bar button
      * test pressed */
     if (ledBarButtonTest == false) {
-      oledDisplay.setText("Press now for",
-                          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
+      oledDisplay.setText(
+          "Press now for",
+          configuration.isOfflineMode() ? "online mode" : "offline mode", "");
       uint32_t startTime = millis();
       while (true) {
         if (ag->button.getState() == ag->button.BUTTON_PRESSED) {
           configuration.setOfflineMode(!configuration.isOfflineMode());
 
-          oledDisplay.setText("Offline Mode",
-                              configuration.isOfflineMode() ? " = True" : "  = False", "");
+          oledDisplay.setText(
+              "Offline Mode",
+              configuration.isOfflineMode() ? " = True" : "  = False", "");
           delay(1000);
           break;
         }
@@ -263,7 +273,8 @@ void setup() {
     oledDisplay.setText("Warming Up", "Serial Number:", ag->deviceId().c_str());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
-    Serial.println("Display brightness: " + String(configuration.getDisplayBrightness()));
+    Serial.println("Display brightness: " +
+                   String(configuration.getDisplayBrightness()));
     oledDisplay.setBrightness(configuration.getDisplayBrightness());
     delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
   }
@@ -283,8 +294,8 @@ void setup() {
 
   // Only run network task if monitor is not in offline mode
   if (configuration.isOfflineMode() == false) {
-    BaseType_t xReturned =
-        xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
+    BaseType_t xReturned = xTaskCreate(networkingTask, "NetworkingTask", 4096,
+                                       null, 5, &handleNetworkTask);
     if (xReturned == pdPASS) {
       Serial.println("Success create networking task");
     } else {
@@ -311,7 +322,8 @@ void loop() {
   watchdogFeedSchedule.run();
 
   if (firmwareUpdateInProgress) {
-    // Firmare update currently in progress, temporarily disable running sensor schedules
+    // Firmare update currently in progress, temporarily disable running sensor
+    // schedules
     delay(10000);
     return;
   }
@@ -327,7 +339,8 @@ void loop() {
   if (configuration.hasSensorS8) {
     co2Schedule.run();
   }
-  if (configuration.hasSensorPMS1 || configuration.hasSensorPMS2) {
+  if (configuration.hasSensorPMS1 || configuration.hasSensorPMS2 ||
+      configuration.hasSensorSPS30) {
     pmsSchedule.run();
   }
   if (ag->isOne()) {
@@ -344,7 +357,8 @@ void loop() {
       static bool pmsConnected = false;
       if (pmsConnected != ag->pms5003.connected()) {
         pmsConnected = ag->pms5003.connected();
-        Serial.printf("PMS sensor %s \n", pmsConnected ? "connected" : "removed");
+        Serial.printf("PMS sensor %s \n",
+                      pmsConnected ? "connected" : "removed");
       }
     }
   } else {
@@ -397,7 +411,8 @@ static void mdnsInit(void) {
   }
 
   MDNS.addService("_airgradient", "_tcp", 80);
-  MDNS.addServiceTxt("_airgradient", "_tcp", "model", AgFirmwareModeName(fwMode));
+  MDNS.addServiceTxt("_airgradient", "_tcp", "model",
+                     AgFirmwareModeName(fwMode));
   MDNS.addServiceTxt("_airgradient", "_tcp", "serialno", ag->deviceId());
   MDNS.addServiceTxt("_airgradient", "_tcp", "fw_ver", ag->getVersion());
   MDNS.addServiceTxt("_airgradient", "_tcp", "vendor", "AirGradient");
@@ -418,10 +433,12 @@ static void createMqttTask(void) {
 
           /** Send data */
           if (mqttClient.isConnected()) {
-            String payload = measurements.toString(true, fwMode, wifiConnector.RSSI());
+            String payload =
+                measurements.toString(true, fwMode, wifiConnector.RSSI());
             String topic = "airgradient/readings/" + ag->deviceId();
 
-            if (mqttClient.publish(topic.c_str(), payload.c_str(), payload.length())) {
+            if (mqttClient.publish(topic.c_str(), payload.c_str(),
+                                   payload.length())) {
               Serial.println("MQTT sync success");
             } else {
               Serial.println("MQTT sync failure");
@@ -439,7 +456,8 @@ static void createMqttTask(void) {
 static void initMqtt(void) {
   String mqttUri = configuration.getMqttBrokerUri();
   if (mqttUri.isEmpty()) {
-    Serial.println("MQTT is not configured, skipping initialization of MQTT client");
+    Serial.println(
+        "MQTT is not configured, skipping initialization of MQTT client");
     return;
   }
 
@@ -576,9 +594,11 @@ void checkForFirmwareUpdate(void) {
 
   String httpDomain = configuration.getHttpDomain();
   if (httpDomain != "") {
-    Serial.printf("httpDomain configuration available, start OTA with custom domain\n",
-                  httpDomain.c_str());
-    agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION, httpDomain.c_str());
+    Serial.printf(
+        "httpDomain configuration available, start OTA with custom domain\n",
+        httpDomain.c_str());
+    agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION,
+                             httpDomain.c_str());
   } else {
     agOta->updateIfAvailable(ag->deviceId().c_str(), GIT_VERSION);
   }
@@ -598,7 +618,8 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
   case AirgradientOTA::Starting: {
     Serial.println("Firmware update starting...");
     if (configuration.hasSensorSGP && networkOption == UseCellular) {
-      // Temporary pause SGP41 task while cellular firmware update is in progress
+      // Temporary pause SGP41 task while cellular firmware update is in
+      // progress
       ag->sgp41.pause();
     }
     displayExecuteOta(result, fwNewVersion, 0);
@@ -627,7 +648,8 @@ void otaHandlerCallback(AirgradientOTA::OtaResult result, const char *msg) {
   }
 }
 
-static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg, int processing) {
+static void displayExecuteOta(AirgradientOTA::OtaResult result, String msg,
+                              int processing) {
   switch (result) {
   case AirgradientOTA::Starting:
     if (ag->isOne()) {
@@ -706,7 +728,8 @@ static void sendDataToAg() {
         for (;;) {
           // ledSmHandler();
           stateMachine.handleLeds();
-          if (stateMachine.getLedState() != AgStateMachineWiFiOkServerConnecting) {
+          if (stateMachine.getLedState() !=
+              AgStateMachineWiFiOkServerConnecting) {
             break;
           }
           delay(LED_BAR_ANIMATION_PERIOD);
@@ -754,7 +777,8 @@ static void oneIndoorInit(void) {
   /** Show boot display */
   Serial.println("Firmware Version: " + ag->getVersion());
 
-  oledDisplay.setText("AirGradient ONE", "FW Version: ", ag->getVersion().c_str());
+  oledDisplay.setText("AirGradient ONE",
+                      "FW Version: ", ag->getVersion().c_str());
   delay(DISPLAY_DELAY_SHOW_CONTENT_MS);
 
   ag->ledBar.begin();
@@ -815,12 +839,18 @@ static void oneIndoorInit(void) {
     dispSensorNotFound("S8");
   }
 
-  /** Init PMS5003 */
+  /** Init PMS5003, fallback to SPS30 if not found */
   if (ag->pms5003.begin(Serial0) == false) {
-    Serial.println("PMS sensor not found");
+    Serial.println("PMS5003 not found, trying SPS30...");
     configuration.hasSensorPMS1 = false;
 
-    dispSensorNotFound("PMS");
+    if (ag->sps30.begin(Serial0)) {
+      Serial.println("SPS30 detected on Serial0");
+      configuration.hasSensorSPS30 = true;
+    } else {
+      Serial.println("SPS30 not found either");
+      dispSensorNotFound("PM sensor");
+    }
   }
 }
 static void openAirInit(void) {
@@ -913,7 +943,8 @@ static void openAirInit(void) {
     }
 
     if (fwMode == FW_MODE_O_1PP) {
-      int count = (configuration.hasSensorPMS1 ? 1 : 0) + (configuration.hasSensorPMS2 ? 1 : 0);
+      int count = (configuration.hasSensorPMS1 ? 1 : 0) +
+                  (configuration.hasSensorPMS2 ? 1 : 0);
       if (count == 1) {
         fwMode = FW_MODE_O_1P;
       }
@@ -977,7 +1008,8 @@ void initializeNetwork() {
   }
 
   if (networkOption == UseCellular) {
-    // Enable serial stream debugging to check the AT command when doing registration
+    // Enable serial stream debugging to check the AT command when doing
+    // registration
     agSerial->setDebug(true);
   }
 
@@ -1032,14 +1064,16 @@ void initializeNetwork() {
       return;
     }
 
-    // Send data for the first time to AG server at boot only if postDataToAirgradient is enabled
+    // Send data for the first time to AG server at boot only if
+    // postDataToAirgradient is enabled
     if (configuration.isPostDataToAirGradient()) {
       sendDataToAg();
     }
   }
 
   // Skip fetch configuration if configuration control is set to "local" only
-  if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
+  if (configuration.getConfigurationControl() ==
+      ConfigurationControl::ConfigurationControlLocal) {
     ledBarEnabledUpdate();
     return;
   }
@@ -1052,7 +1086,8 @@ void initializeNetwork() {
     if (ag->isOne()) {
       if (agClient->isRegisteredOnAgServer() == false) {
         stateMachine.displaySetAddToDashBoard();
-        stateMachine.displayHandle(AgStateMachineWiFiOkServerOkSensorConfigFailed);
+        stateMachine.displayHandle(
+            AgStateMachineWiFiOkServerOkSensorConfigFailed);
         wifiConnector.bleNotifyStatus(PROV_ERR_MONITOR_NOT_REGISTERED);
       } else {
         stateMachine.displayClearAddToDashBoard();
@@ -1068,8 +1103,10 @@ void initializeNetwork() {
 }
 
 static void configurationUpdateSchedule(void) {
-  if (configuration.getConfigurationControl() == ConfigurationControl::ConfigurationControlLocal) {
-    Serial.println("Ignore fetch server configuration, configurationControl set to local");
+  if (configuration.getConfigurationControl() ==
+      ConfigurationControl::ConfigurationControlLocal) {
+    Serial.println(
+        "Ignore fetch server configuration, configurationControl set to local");
     agClient->resetFetchConfigurationStatus();
     return;
   }
@@ -1102,7 +1139,8 @@ static void configUpdateHandle() {
   }
 
   if (configuration.hasSensorSGP) {
-    if (configuration.noxLearnOffsetChanged() || configuration.tvocLearnOffsetChanged()) {
+    if (configuration.noxLearnOffsetChanged() ||
+        configuration.tvocLearnOffsetChanged()) {
       ag->sgp41.end();
 
       int oldTvocOffset = ag->sgp41.getTvocLearningOffset();
@@ -1113,12 +1151,14 @@ static void configUpdateHandle() {
         resultStr = "failure";
       }
       if (oldTvocOffset != configuration.getTvocLearningOffset()) {
-        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n", oldTvocOffset,
-                      configuration.getTvocLearningOffset(), resultStr);
+        Serial.printf("Setting tvocLearningOffset from %d to %d hours %s\r\n",
+                      oldTvocOffset, configuration.getTvocLearningOffset(),
+                      resultStr);
       }
       if (oldNoxOffset != configuration.getNoxLearningOffset()) {
-        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n", oldNoxOffset,
-                      configuration.getNoxLearningOffset(), resultStr);
+        Serial.printf("Setting noxLearningOffset from %d to %d hours %s\r\n",
+                      oldNoxOffset, configuration.getNoxLearningOffset(),
+                      resultStr);
       }
     }
   }
@@ -1155,7 +1195,8 @@ static void configUpdateHandle() {
     }
   }
 
-  if (configuration.isSatellitesChanged() && configuration.isSatellitesEnabled()) {
+  if (configuration.isSatellitesChanged() &&
+      configuration.isSatellitesEnabled()) {
     if (satellites == nullptr) {
       // Initialized if satellites enabled on run time
       satellites = new AgSatellites(measurements, configuration);
@@ -1239,12 +1280,57 @@ static void updatePMS5003() {
     measurements.update(Measurements::PM01_SP, ag->pms5003.getPm01Sp());
     measurements.update(Measurements::PM25_SP, ag->pms5003.getPm25Sp());
     measurements.update(Measurements::PM10_SP, ag->pms5003.getPm10Sp());
-    measurements.update(Measurements::PM03_PC, ag->pms5003.getPm03ParticleCount());
-    measurements.update(Measurements::PM05_PC, ag->pms5003.getPm05ParticleCount());
-    measurements.update(Measurements::PM01_PC, ag->pms5003.getPm01ParticleCount());
-    measurements.update(Measurements::PM25_PC, ag->pms5003.getPm25ParticleCount());
-    measurements.update(Measurements::PM5_PC, ag->pms5003.getPm5ParticleCount());
-    measurements.update(Measurements::PM10_PC, ag->pms5003.getPm10ParticleCount());
+    measurements.update(Measurements::PM03_PC,
+                        ag->pms5003.getPm03ParticleCount());
+    measurements.update(Measurements::PM05_PC,
+                        ag->pms5003.getPm05ParticleCount());
+    measurements.update(Measurements::PM01_PC,
+                        ag->pms5003.getPm01ParticleCount());
+    measurements.update(Measurements::PM25_PC,
+                        ag->pms5003.getPm25ParticleCount());
+    measurements.update(Measurements::PM5_PC,
+                        ag->pms5003.getPm5ParticleCount());
+    measurements.update(Measurements::PM10_PC,
+                        ag->pms5003.getPm10ParticleCount());
+  } else {
+    measurements.update(Measurements::PM01, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_PC, utils::getInvalidPmValue());
+  }
+}
+
+static void updateSPS30(void) {
+  if (ag->sps30.readValues()) {
+    // Mass concentrations — mapped to both Ae and SP (SPS30 has no distinction)
+    measurements.update(Measurements::PM01, ag->sps30.getPm01Ae());
+    measurements.update(Measurements::PM25, ag->sps30.getPm25Ae());
+    measurements.update(Measurements::PM10, ag->sps30.getPm10Ae());
+    measurements.update(Measurements::PM01_SP, ag->sps30.getPm01Sp());
+    measurements.update(Measurements::PM25_SP, ag->sps30.getPm25Sp());
+    measurements.update(Measurements::PM10_SP, ag->sps30.getPm10Sp());
+
+    // Number concentrations (already converted to #/0.1L by wrapper)
+    measurements.update(Measurements::PM05_PC,
+                        ag->sps30.getPm05ParticleCount());
+    measurements.update(Measurements::PM01_PC,
+                        ag->sps30.getPm01ParticleCount());
+    measurements.update(Measurements::PM25_PC,
+                        ag->sps30.getPm25ParticleCount());
+    measurements.update(Measurements::PM10_PC,
+                        ag->sps30.getPm10ParticleCount());
+
+    // SPS30 does not have 0.3 µm or 5.0 µm bins
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
   } else {
     measurements.update(Measurements::PM01, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25, utils::getInvalidPmValue());
@@ -1263,7 +1349,11 @@ static void updatePMS5003() {
 
 static void updatePm(void) {
   if (ag->isOne()) {
-    updatePMS5003();
+    if (configuration.hasSensorSPS30) {
+      updateSPS30();
+    } else {
+      updatePMS5003();
+    }
     return;
   }
 
@@ -1275,35 +1365,59 @@ static void updatePm(void) {
   int channel = 1;
   if (configuration.hasSensorPMS1) {
     if (ag->pms5003t_1.connected()) {
-      measurements.update(Measurements::PM01, ag->pms5003t_1.getPm01Ae(), channel);
-      measurements.update(Measurements::PM25, ag->pms5003t_1.getPm25Ae(), channel);
-      measurements.update(Measurements::PM10, ag->pms5003t_1.getPm10Ae(), channel);
-      measurements.update(Measurements::PM01_SP, ag->pms5003t_1.getPm01Sp(), channel);
-      measurements.update(Measurements::PM25_SP, ag->pms5003t_1.getPm25Sp(), channel);
-      measurements.update(Measurements::PM10_SP, ag->pms5003t_1.getPm10Sp(), channel);
-      measurements.update(Measurements::PM03_PC, ag->pms5003t_1.getPm03ParticleCount(), channel);
-      measurements.update(Measurements::PM05_PC, ag->pms5003t_1.getPm05ParticleCount(), channel);
-      measurements.update(Measurements::PM01_PC, ag->pms5003t_1.getPm01ParticleCount(), channel);
-      measurements.update(Measurements::PM25_PC, ag->pms5003t_1.getPm25ParticleCount(), channel);
-      measurements.update(Measurements::Temperature, ag->pms5003t_1.getTemperature(), channel);
-      measurements.update(Measurements::Humidity, ag->pms5003t_1.getRelativeHumidity(), channel);
+      measurements.update(Measurements::PM01, ag->pms5003t_1.getPm01Ae(),
+                          channel);
+      measurements.update(Measurements::PM25, ag->pms5003t_1.getPm25Ae(),
+                          channel);
+      measurements.update(Measurements::PM10, ag->pms5003t_1.getPm10Ae(),
+                          channel);
+      measurements.update(Measurements::PM01_SP, ag->pms5003t_1.getPm01Sp(),
+                          channel);
+      measurements.update(Measurements::PM25_SP, ag->pms5003t_1.getPm25Sp(),
+                          channel);
+      measurements.update(Measurements::PM10_SP, ag->pms5003t_1.getPm10Sp(),
+                          channel);
+      measurements.update(Measurements::PM03_PC,
+                          ag->pms5003t_1.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM05_PC,
+                          ag->pms5003t_1.getPm05ParticleCount(), channel);
+      measurements.update(Measurements::PM01_PC,
+                          ag->pms5003t_1.getPm01ParticleCount(), channel);
+      measurements.update(Measurements::PM25_PC,
+                          ag->pms5003t_1.getPm25ParticleCount(), channel);
+      measurements.update(Measurements::Temperature,
+                          ag->pms5003t_1.getTemperature(), channel);
+      measurements.update(Measurements::Humidity,
+                          ag->pms5003t_1.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
       newPMS1Value = true;
     } else {
       // PMS channel 1 now is not connected, update using invalid value
-      measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
-      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
+      measurements.update(Measurements::PM01, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM10, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::Temperature,
+                          utils::getInvalidTemperature(), channel);
+      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(),
+                          channel);
     }
   }
 
@@ -1311,35 +1425,59 @@ static void updatePm(void) {
   channel = 2;
   if (configuration.hasSensorPMS2) {
     if (ag->pms5003t_2.connected()) {
-      measurements.update(Measurements::PM01, ag->pms5003t_2.getPm01Ae(), channel);
-      measurements.update(Measurements::PM25, ag->pms5003t_2.getPm25Ae(), channel);
-      measurements.update(Measurements::PM10, ag->pms5003t_2.getPm10Ae(), channel);
-      measurements.update(Measurements::PM01_SP, ag->pms5003t_2.getPm01Sp(), channel);
-      measurements.update(Measurements::PM25_SP, ag->pms5003t_2.getPm25Sp(), channel);
-      measurements.update(Measurements::PM10_SP, ag->pms5003t_2.getPm10Sp(), channel);
-      measurements.update(Measurements::PM03_PC, ag->pms5003t_2.getPm03ParticleCount(), channel);
-      measurements.update(Measurements::PM05_PC, ag->pms5003t_2.getPm05ParticleCount(), channel);
-      measurements.update(Measurements::PM01_PC, ag->pms5003t_2.getPm01ParticleCount(), channel);
-      measurements.update(Measurements::PM25_PC, ag->pms5003t_2.getPm25ParticleCount(), channel);
-      measurements.update(Measurements::Temperature, ag->pms5003t_2.getTemperature(), channel);
-      measurements.update(Measurements::Humidity, ag->pms5003t_2.getRelativeHumidity(), channel);
+      measurements.update(Measurements::PM01, ag->pms5003t_2.getPm01Ae(),
+                          channel);
+      measurements.update(Measurements::PM25, ag->pms5003t_2.getPm25Ae(),
+                          channel);
+      measurements.update(Measurements::PM10, ag->pms5003t_2.getPm10Ae(),
+                          channel);
+      measurements.update(Measurements::PM01_SP, ag->pms5003t_2.getPm01Sp(),
+                          channel);
+      measurements.update(Measurements::PM25_SP, ag->pms5003t_2.getPm25Sp(),
+                          channel);
+      measurements.update(Measurements::PM10_SP, ag->pms5003t_2.getPm10Sp(),
+                          channel);
+      measurements.update(Measurements::PM03_PC,
+                          ag->pms5003t_2.getPm03ParticleCount(), channel);
+      measurements.update(Measurements::PM05_PC,
+                          ag->pms5003t_2.getPm05ParticleCount(), channel);
+      measurements.update(Measurements::PM01_PC,
+                          ag->pms5003t_2.getPm01ParticleCount(), channel);
+      measurements.update(Measurements::PM25_PC,
+                          ag->pms5003t_2.getPm25ParticleCount(), channel);
+      measurements.update(Measurements::Temperature,
+                          ag->pms5003t_2.getTemperature(), channel);
+      measurements.update(Measurements::Humidity,
+                          ag->pms5003t_2.getRelativeHumidity(), channel);
 
       // flag that new valid PMS value exists
       newPMS2Value = true;
     } else {
       // PMS channel 2 now is not connected, update using invalid value
-      measurements.update(Measurements::PM01, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM10, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(), channel);
-      measurements.update(Measurements::Temperature, utils::getInvalidTemperature(), channel);
-      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(), channel);
+      measurements.update(Measurements::PM01, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM10, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue(),
+                          channel);
+      measurements.update(Measurements::Temperature,
+                          utils::getInvalidTemperature(), channel);
+      measurements.update(Measurements::Humidity, utils::getInvalidHumidity(),
+                          channel);
     }
   }
 
@@ -1410,7 +1548,8 @@ void postUsingCellular(bool forcePost) {
   // Build payload include all measurements from queue
   std::string payload;
   bool extendPmMeasures = configuration.isExtendedPmMeasuresEnabled();
-  payload += std::to_string(CELLULAR_MEASUREMENT_INTERVAL / 1000); // Convert to seconds
+  payload += std::to_string(CELLULAR_MEASUREMENT_INTERVAL /
+                            1000); // Convert to seconds
   for (int i = 0; i < queueSize; i++) {
     auto mc = measurementCycleQueue.at(i);
     payload += ",";
@@ -1431,7 +1570,8 @@ void postUsingCellular(bool forcePost) {
   xSemaphoreTake(mutexMeasurementCycleQueue, portMAX_DELAY);
 
   if (measurementCycleQueue.capacity() > RESERVED_MEASUREMENT_CYCLE_CAPACITY) {
-    Serial.println("measurementCycleQueue capacity more than reserved space, resizing..");
+    Serial.println(
+        "measurementCycleQueue capacity more than reserved space, resizing..");
     std::vector<Measurements::Measures> tmp;
     tmp.reserve(RESERVED_MEASUREMENT_CYCLE_CAPACITY);
     measurementCycleQueue.swap(tmp);
@@ -1445,7 +1585,8 @@ void postUsingCellular(bool forcePost) {
 
 void sendDataToServer(void) {
   if (configuration.isPostDataToAirGradient() == false) {
-    Serial.println("Skipping transmission of data to AG server, post data to server disabled");
+    Serial.println("Skipping transmission of data to AG server, post data to "
+                   "server disabled");
     agClient->resetPostMeasuresStatus();
     return;
   }
@@ -1471,7 +1612,8 @@ static void tempHumUpdate(void) {
       ag->sgp41.setCompensationTemperatureHumidity(temp, rhum);
     }
   } else {
-    measurements.update(Measurements::Temperature, utils::getInvalidTemperature());
+    measurements.update(Measurements::Temperature,
+                        utils::getInvalidTemperature());
     measurements.update(Measurements::Humidity, utils::getInvalidHumidity());
     Serial.println("SHT read failed");
   }
@@ -1482,7 +1624,8 @@ void setMeasurementMaxPeriod() {
   int max;
 
   /// Max period for S8 sensors measurements
-  measurements.maxPeriod(Measurements::CO2, calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
+  measurements.maxPeriod(Measurements::CO2,
+                         calculateMaxPeriod(SENSOR_CO2_UPDATE_INTERVAL));
 
   /// Max period for SGP sensors measurements
   max = calculateMaxPeriod(SENSOR_TVOC_UPDATE_INTERVAL);
@@ -1517,14 +1660,16 @@ void setMeasurementMaxPeriod() {
     /// Temp and hum data retrieved from PMS5003T sensor
     measurements.maxPeriod(Measurements::Temperature,
                            calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
-    measurements.maxPeriod(Measurements::Humidity, calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
+    measurements.maxPeriod(Measurements::Humidity,
+                           calculateMaxPeriod(SENSOR_PM_UPDATE_INTERVAL));
   }
 }
 
 int calculateMaxPeriod(int updateInterval) {
   // 0.8 is 80% reduced interval for max period
   // NOTE: Both network option use the same measurement interval
-  return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) / updateInterval;
+  return (WIFI_MEASUREMENT_INTERVAL - (WIFI_MEASUREMENT_INTERVAL * 0.8)) /
+         updateInterval;
 }
 
 void networkSignalCheck() {
@@ -1556,7 +1701,8 @@ void networkSignalCheck() {
  */
 void restartIfCeClientIssueOverTwoHours() {
   if (agCeClientProblemDetectedTime > 0 &&
-      (MINUTES() - agCeClientProblemDetectedTime) > TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
+      (MINUTES() - agCeClientProblemDetectedTime) >
+          TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
     // Give up wait
     Serial.println("Rebooting because CE client issues for 2 hours detected");
     int i = 3;
@@ -1584,8 +1730,8 @@ void networkingTask(void *args) {
     checkForUpdateSchedule.update();
 #endif
 
-    // Because cellular interval is longer, needs to send first measures cycle on
-    // boot to indicate that its online
+    // Because cellular interval is longer, needs to send first measures cycle
+    // on boot to indicate that its online
     if (networkOption == UseCellular) {
       Serial.println("Prepare first measures cycle to send on boot for 20s");
       delay(20000);
@@ -1621,7 +1767,8 @@ void networkingTask(void *args) {
         // Redundant check in both task to make sure its executed
         restartIfCeClientIssueOverTwoHours();
 
-        // Power cycling cellular module due to network issues for more than 1 hour
+        // Power cycling cellular module due to network issues for more than 1
+        // hour
         bool resetModule = true;
         if ((MINUTES() - agCeClientProblemDetectedTime) >
             TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
@@ -1638,7 +1785,8 @@ void networkingTask(void *args) {
         // Attempt to reconnect
         Serial.println("Cellular client not ready, ensuring connection...");
         if (agClient->ensureClientConnection(resetModule) == false) {
-          Serial.println("Cellular client connection not ready, retry in 30s...");
+          Serial.println(
+              "Cellular client connection not ready, retry in 30s...");
           delay(30000); // before retry, wait for 30s
           continue;
         }
@@ -1649,7 +1797,8 @@ void networkingTask(void *args) {
       }
     }
 
-    // If connection to AirGradient server disable don't run config and transmission schedule
+    // If connection to AirGradient server disable don't run config and
+    // transmission schedule
     if (configuration.isCloudConnectionDisabled()) {
       delay(1000);
       continue;
@@ -1677,7 +1826,8 @@ void newMeasurementCycle() {
 
     // Get current measures
     auto mc = measurements.getMeasures();
-    mc.signal = cellularCard->csqToDbm(lastCellSignalQuality); // convert to RSSI
+    mc.signal =
+        cellularCard->csqToDbm(lastCellSignalQuality); // convert to RSSI
 
     measurementCycleQueue.push_back(mc);
     Serial.println("New measurement cycle added to queue");

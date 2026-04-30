@@ -1,11 +1,11 @@
 #ifndef _AG_CONFIG_H_
 #define _AG_CONFIG_H_
 
-#include "App/AppDef.h"
-#include "Main/PrintLog.h"
 #include "AirGradient.h"
-#include <Arduino.h>
+#include "App/AppDef.h"
 #include "Libraries/Arduino_JSON/src/Arduino_JSON.h"
+#include "Main/PrintLog.h"
+#include <Arduino.h>
 
 #define MAX_SATELLITES 10
 
@@ -75,6 +75,8 @@ public:
   bool hasSensorS8 = true;
   bool hasSensorPMS1 = true;
   bool hasSensorPMS2 = true;
+  bool hasSensorSPS30 =
+      false; ///< SPS30 detected as PMS alternative (auto-detect)
   bool hasSensorSGP = true;
   bool hasSensorSHT = true;
 
