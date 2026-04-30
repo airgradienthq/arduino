@@ -77,9 +77,7 @@ Measurements::Measurements(Configuration &config) : config(config) {
 
 void Measurements::setAirGradient(AirGradient *ag) { this->ag = ag; }
 
-void Measurements::setSatellites(AgSatellites *satellites) {
-  this->satellites_ = satellites;
-}
+void Measurements::setSatellites(AgSatellites *satellites) { this->satellites_ = satellites; }
 
 void Measurements::printCurrentAverage() {
   Serial.println();
@@ -136,8 +134,7 @@ void Measurements::printCurrentAverage() {
         Serial.printf("[1] Temperature = -\n");
       }
       if (utils::isValidHumidity(_humidity[0].update.avg)) {
-        Serial.printf("[1] Relative Humidity = %.2f\n",
-                      _humidity[0].update.avg);
+        Serial.printf("[1] Relative Humidity = %.2f\n", _humidity[0].update.avg);
       } else {
         Serial.printf("[1] Relative Humidity = -\n");
       }
@@ -152,8 +149,7 @@ void Measurements::printCurrentAverage() {
         Serial.printf("[2] Temperature = -\n");
       }
       if (utils::isValidHumidity(_humidity[1].update.avg)) {
-        Serial.printf("[2] Relative Humidity = %.2f\n",
-                      _humidity[1].update.avg);
+        Serial.printf("[2] Relative Humidity = %.2f\n", _humidity[1].update.avg);
       } else {
         Serial.printf("[2] Relative Humidity = -\n");
       }
@@ -325,8 +321,7 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
 
   // Sanity check if measurement type is defined for integer data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for integer data type\n",
-                  measurementTypeStr(type).c_str());
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -337,11 +332,9 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
   if (val == invalidValue) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
-      Serial.printf("%s{%d} invalid value update counter reached (%dx)! "
-                    "Setting its average value "
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
                     "to invalid!\n",
-                    measurementTypeStr(type).c_str(), ch,
-                    temporary->update.max);
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -360,17 +353,14 @@ bool Measurements::update(MeasurementType type, int val, int ch) {
   // Remove the oldest value on the list when the list exceed max elements
   if (temporary->listValues.size() > temporary->update.max) {
     auto it = temporary->listValues.begin();
-    temporary->sumValues =
-        temporary->sumValues - *it;  // subtract the oldest value from sum
-    temporary->listValues.erase(it); // And remove it from the list
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
   }
 
   // Calculate average based on how many elements on the list
-  temporary->update.avg =
-      temporary->sumValues / (float)temporary->listValues.size();
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
   if (_debug) {
-    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch,
-                  temporary->update.avg);
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch, temporary->update.avg);
   }
 
   return true;
@@ -402,8 +392,7 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
 
   // Sanity check if measurement type is defined for float data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for float data type\n",
-                  measurementTypeStr(type).c_str());
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -414,11 +403,9 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   if (val == invalidValue) {
     temporary->update.invalidCounter++;
     if (temporary->update.invalidCounter >= temporary->update.max) {
-      Serial.printf("%s{%d} invalid value update counter reached (%dx)! "
-                    "Setting its average value "
+      Serial.printf("%s{%d} invalid value update counter reached (%dx)! Setting its average value "
                     "to invalid!\n",
-                    measurementTypeStr(type).c_str(), ch,
-                    temporary->update.max);
+                    measurementTypeStr(type).c_str(), ch, temporary->update.max);
       temporary->update.avg = invalidValue;
       return false;
     }
@@ -437,17 +424,14 @@ bool Measurements::update(MeasurementType type, float val, int ch) {
   // Remove the oldest value on the list when the list exceed max elements
   if (temporary->listValues.size() > temporary->update.max) {
     auto it = temporary->listValues.begin();
-    temporary->sumValues =
-        temporary->sumValues - *it;  // subtract the oldest value from sum
-    temporary->listValues.erase(it); // And remove it from the list
+    temporary->sumValues = temporary->sumValues - *it; // subtract the oldest value from sum
+    temporary->listValues.erase(it);                   // And remove it from the list
   }
 
   // Calculate average based on how many elements on the list
-  temporary->update.avg =
-      temporary->sumValues / (float)temporary->listValues.size();
+  temporary->update.avg = temporary->sumValues / (float)temporary->listValues.size();
   if (_debug) {
-    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch,
-                  temporary->update.avg);
+    Serial.printf("%s{%d}: %.2f\n", measurementTypeStr(type).c_str(), ch, temporary->update.avg);
   }
 
   return true;
@@ -496,8 +480,7 @@ int Measurements::get(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is defined for integer data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for integer data type\n",
-                  measurementTypeStr(type).c_str());
+    Serial.printf("%s is not defined for integer data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -532,8 +515,7 @@ float Measurements::getFloat(MeasurementType type, int ch) {
 
   // Sanity check if measurement type is defined for float data type or not
   if (temporary == nullptr) {
-    Serial.printf("%s is not defined for float data type\n",
-                  measurementTypeStr(type).c_str());
+    Serial.printf("%s is not defined for float data type\n", measurementTypeStr(type).c_str());
     // TODO: Just assert?
     return false;
   }
@@ -555,8 +537,7 @@ float Measurements::getAverage(MeasurementType type, int ch) {
   // Follow array indexing just for get address of the value type
   ch = ch - 1;
 
-  // Define data point source. Data type doesn't matter because only to get the
-  // average value
+  // Define data point source. Data type doesn't matter because only to get the average value
   float measurementAverage;
   switch (type) {
   case CO2:
@@ -677,70 +658,59 @@ void Measurements::printCurrentPMAverage(int ch) {
   int idx = ch - 1;
 
   if (utils::isValidPm(_pm_01[idx].update.avg)) {
-    Serial.printf("[%d] Atmospheric PM 1.0 = %.2f ug/m3\n", ch,
-                  _pm_01[idx].update.avg);
+    Serial.printf("[%d] Atmospheric PM 1.0 = %.2f ug/m3\n", ch, _pm_01[idx].update.avg);
   } else {
     Serial.printf("[%d] Atmospheric PM 1.0 = -\n", ch);
   }
   if (utils::isValidPm(_pm_25[idx].update.avg)) {
-    Serial.printf("[%d] Atmospheric PM 2.5 = %.2f ug/m3\n", ch,
-                  _pm_25[idx].update.avg);
+    Serial.printf("[%d] Atmospheric PM 2.5 = %.2f ug/m3\n", ch, _pm_25[idx].update.avg);
   } else {
     Serial.printf("[%d] Atmospheric PM 2.5 = -\n", ch);
   }
   if (utils::isValidPm(_pm_10[idx].update.avg)) {
-    Serial.printf("[%d] Atmospheric PM 10 = %.2f ug/m3\n", ch,
-                  _pm_10[idx].update.avg);
+    Serial.printf("[%d] Atmospheric PM 10 = %.2f ug/m3\n", ch, _pm_10[idx].update.avg);
   } else {
     Serial.printf("[%d] Atmospheric PM 10 = -\n", ch);
   }
   if (utils::isValidPm(_pm_01_sp[idx].update.avg)) {
-    Serial.printf("[%d] Standard Particle PM 1.0 = %.2f ug/m3\n", ch,
-                  _pm_01_sp[idx].update.avg);
+    Serial.printf("[%d] Standard Particle PM 1.0 = %.2f ug/m3\n", ch, _pm_01_sp[idx].update.avg);
   } else {
     Serial.printf("[%d] Standard Particle PM 1.0 = -\n", ch);
   }
   if (utils::isValidPm(_pm_25_sp[idx].update.avg)) {
-    Serial.printf("[%d] Standard Particle PM 2.5 = %.2f ug/m3\n", ch,
-                  _pm_25_sp[idx].update.avg);
+    Serial.printf("[%d] Standard Particle PM 2.5 = %.2f ug/m3\n", ch, _pm_25_sp[idx].update.avg);
   } else {
     Serial.printf("[%d] Standard Particle PM 2.5 = -\n", ch);
   }
   if (utils::isValidPm(_pm_10_sp[idx].update.avg)) {
-    Serial.printf("[%d] Standard Particle PM 10 = %.2f ug/m3\n", ch,
-                  _pm_10_sp[idx].update.avg);
+    Serial.printf("[%d] Standard Particle PM 10 = %.2f ug/m3\n", ch, _pm_10_sp[idx].update.avg);
   } else {
     Serial.printf("[%d] Standard Particle PM 10 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_03_pc[idx].update.avg)) {
-    Serial.printf("[%d] Particle Count 0.3 = %.1f\n", ch,
-                  _pm_03_pc[idx].update.avg);
+    Serial.printf("[%d] Particle Count 0.3 = %.1f\n", ch, _pm_03_pc[idx].update.avg);
   } else {
     Serial.printf("[%d] Particle Count 0.3 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_05_pc[idx].update.avg)) {
-    Serial.printf("[%d] Particle Count 0.5 = %.1f\n", ch,
-                  _pm_05_pc[idx].update.avg);
+    Serial.printf("[%d] Particle Count 0.5 = %.1f\n", ch, _pm_05_pc[idx].update.avg);
   } else {
     Serial.printf("[%d] Particle Count 0.5 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_01_pc[idx].update.avg)) {
-    Serial.printf("[%d] Particle Count 1.0 = %.1f\n", ch,
-                  _pm_01_pc[idx].update.avg);
+    Serial.printf("[%d] Particle Count 1.0 = %.1f\n", ch, _pm_01_pc[idx].update.avg);
   } else {
     Serial.printf("[%d] Particle Count 1.0 = -\n", ch);
   }
   if (utils::isValidPm03Count(_pm_25_pc[idx].update.avg)) {
-    Serial.printf("[%d] Particle Count 2.5 = %.1f\n", ch,
-                  _pm_25_pc[idx].update.avg);
+    Serial.printf("[%d] Particle Count 2.5 = %.1f\n", ch, _pm_25_pc[idx].update.avg);
   } else {
     Serial.printf("[%d] Particle Count 2.5 = -\n", ch);
   }
 
   if (_pm_5_pc[idx].listValues.empty() == false) {
     if (utils::isValidPm03Count(_pm_5_pc[idx].update.avg)) {
-      Serial.printf("[%d] Particle Count 5.0 = %.1f\n", ch,
-                    _pm_5_pc[idx].update.avg);
+      Serial.printf("[%d] Particle Count 5.0 = %.1f\n", ch, _pm_5_pc[idx].update.avg);
     } else {
       Serial.printf("[%d] Particle Count 5.0 = -\n", ch);
     }
@@ -748,8 +718,7 @@ void Measurements::printCurrentPMAverage(int ch) {
 
   if (_pm_10_pc[idx].listValues.empty() == false) {
     if (utils::isValidPm03Count(_pm_10_pc[idx].update.avg)) {
-      Serial.printf("[%d] Particle Count 10 = %.1f\n", ch,
-                    _pm_10_pc[idx].update.avg);
+      Serial.printf("[%d] Particle Count 10 = %.1f\n", ch, _pm_10_pc[idx].update.avg);
     } else {
       Serial.printf("[%d] Particle Count 10 = -\n", ch);
     }
@@ -758,16 +727,13 @@ void Measurements::printCurrentPMAverage(int ch) {
 
 void Measurements::validateChannel(int ch) {
   if (ch != 1 && ch != 2) {
-    Serial.printf("ERROR! Channel %d is undefined. Only channel 1 or 2 is the "
-                  "optional value!",
-                  ch);
+    Serial.printf("ERROR! Channel %d is undefined. Only channel 1 or 2 is the optional value!", ch);
     delay(1000);
     assert(0);
   }
 }
 
-float Measurements::getCorrectedTempHum(MeasurementType type, int ch,
-                                        bool forceCorrection) {
+float Measurements::getCorrectedTempHum(MeasurementType type, int ch, bool forceCorrection) {
   // Sanity check to validate channel, assert if invalid
   validateChannel(ch);
 
@@ -784,11 +750,9 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch,
     Configuration::TempHumCorrection tmp = config.getTempCorrection();
 
     // Apply 'standard' correction if its defined or correction forced
-    if (tmp.algorithm ==
-        TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateTemp(rawValue);
-    } else if (tmp.algorithm ==
-                   TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
                forceCorrection) {
       return ag->pms5003t_1.compensateTemp(rawValue);
     }
@@ -803,11 +767,9 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch,
     Configuration::TempHumCorrection tmp = config.getHumCorrection();
 
     // Apply 'standard' correction if its defined or correction forced
-    if (tmp.algorithm ==
-        TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
+    if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_AG_PMS5003T_2024) {
       return ag->pms5003t_1.compensateHum(rawValue);
-    } else if (tmp.algorithm ==
-                   TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
+    } else if (tmp.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE &&
                forceCorrection) {
       return ag->pms5003t_1.compensateHum(rawValue);
     }
@@ -824,23 +786,19 @@ float Measurements::getCorrectedTempHum(MeasurementType type, int ch,
   }
 
   // Use raw if correction not defined
-  if (correction.algorithm ==
-          TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE ||
-      correction.algorithm ==
-          TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_UNKNOWN) {
+  if (correction.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_NONE ||
+      correction.algorithm == TempHumCorrectionAlgorithm::COR_ALGO_TEMP_HUM_UNKNOWN) {
     return rawValue;
   }
 
   // Custom correction constants
-  float corrected =
-      (rawValue * correction.scalingFactor) + correction.intercept;
+  float corrected = (rawValue * correction.scalingFactor) + correction.intercept;
   Serial.println("Custom correction applied");
 
   return corrected;
 }
 
-float Measurements::getCorrectedPM25(bool useAvg, int ch,
-                                     bool forceCorrection) {
+float Measurements::getCorrectedPM25(bool useAvg, int ch, bool forceCorrection) {
   float pm25;
   float corrected;
   float humidity;
@@ -874,16 +832,15 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch,
     corrected = ag->pms5003.compensate(pm25, humidity);
     break;
   case PMCorrectionAlgorithm::COR_ALGO_PM_SLR_CUSTOM_VIA_PM_RAW:
-    corrected = ag->pms5003.slrCorrectionByPm25Raw(
-        pm25, pmCorrection.scalingFactor, pmCorrection.intercept);
+    corrected = ag->pms5003.slrCorrectionByPm25Raw(pm25, pmCorrection.scalingFactor, pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
       corrected = ag->pms5003.compensate(corrected, humidity);
     }
     break;
   case PMCorrectionAlgorithm::COR_ALGO_PM_SLR_BATCH:
-    corrected = ag->pms5003.slrCorrection(
-        pm25, pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
+    corrected = ag->pms5003.slrCorrection(pm25, pm003Count, pmCorrection.scalingFactor,
+                                          pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
       corrected = ag->pms5003.compensate(corrected, humidity);
@@ -891,8 +848,7 @@ float Measurements::getCorrectedPM25(bool useAvg, int ch,
     break;
   default: {
     // custom by 0.3 count and factory
-    corrected = ag->pms5003.slrCorrectionBy003Count(
-        pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
+    corrected = ag->pms5003.slrCorrectionBy003Count(pm003Count, pmCorrection.scalingFactor, pmCorrection.intercept);
     if (pmCorrection.useEPA) {
       // Add EPA compensation on top of SLR
       corrected = ag->pms5003.compensate(corrected, humidity);
@@ -950,8 +906,7 @@ Measurements::Measures Measurements::getMeasures() {
   return mc;
 }
 
-std::string Measurements::buildMeasuresPayload(Measures &mc,
-                                               bool extendedPmMeasures) {
+std::string Measurements::buildMeasuresPayload(Measures &mc, bool extendedPmMeasures) {
   std::ostringstream oss;
 
   // CO2
@@ -975,8 +930,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
   oss << ",";
 
   // Humidity
-  if (utils::isValidHumidity(mc.humidity[0]) &&
-      utils::isValidHumidity(mc.humidity[1])) {
+  if (utils::isValidHumidity(mc.humidity[0]) && utils::isValidHumidity(mc.humidity[1])) {
     float hum = (mc.humidity[0] + mc.humidity[1]) / 2.0f;
     oss << std::round(hum * 10);
   } else if (utils::isValidHumidity(mc.humidity[0])) {
@@ -1038,8 +992,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
   oss << ",";
 
   /// PM 0.3 particle count
-  if (utils::isValidPm03Count(mc.pm_03_pc[0]) &&
-      utils::isValidPm03Count(mc.pm_03_pc[1])) {
+  if (utils::isValidPm03Count(mc.pm_03_pc[0]) && utils::isValidPm03Count(mc.pm_03_pc[1])) {
     oss << std::round((mc.pm_03_pc[0] + mc.pm_03_pc[1]) / 2.0f);
   } else if (utils::isValidPm03Count(mc.pm_03_pc[0])) {
     oss << std::round(mc.pm_03_pc[0]);
@@ -1057,8 +1010,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
     oss << ",,,,,,,,"; // Add placeholder for MAX payload (BMS & O3/NO2)
 
     /// PM 0.5 particle count
-    if (utils::isValidPm03Count(mc.pm_05_pc[0]) &&
-        utils::isValidPm03Count(mc.pm_05_pc[1])) {
+    if (utils::isValidPm03Count(mc.pm_05_pc[0]) && utils::isValidPm03Count(mc.pm_05_pc[1])) {
       oss << std::round((mc.pm_05_pc[0] + mc.pm_05_pc[1]) / 2.0f);
     } else if (utils::isValidPm03Count(mc.pm_05_pc[0])) {
       oss << std::round(mc.pm_05_pc[0]);
@@ -1069,8 +1021,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
     oss << ",";
 
     /// PM 1.0 particle count
-    if (utils::isValidPm03Count(mc.pm_01_pc[0]) &&
-        utils::isValidPm03Count(mc.pm_01_pc[1])) {
+    if (utils::isValidPm03Count(mc.pm_01_pc[0]) && utils::isValidPm03Count(mc.pm_01_pc[1])) {
       oss << std::round((mc.pm_01_pc[0] + mc.pm_01_pc[1]) / 2.0f);
     } else if (utils::isValidPm03Count(mc.pm_01_pc[0])) {
       oss << std::round(mc.pm_01_pc[0]);
@@ -1081,8 +1032,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
     oss << ",";
 
     /// PM 2.5 particle count
-    if (utils::isValidPm03Count(mc.pm_25_pc[0]) &&
-        utils::isValidPm03Count(mc.pm_25_pc[1])) {
+    if (utils::isValidPm03Count(mc.pm_25_pc[0]) && utils::isValidPm03Count(mc.pm_25_pc[1])) {
       oss << std::round((mc.pm_25_pc[0] + mc.pm_25_pc[1]) / 2.0f);
     } else if (utils::isValidPm03Count(mc.pm_25_pc[0])) {
       oss << std::round(mc.pm_25_pc[0]);
@@ -1093,8 +1043,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
     oss << ",";
 
     /// PM 5.0 particle count
-    if (utils::isValidPm03Count(mc.pm_5_pc[0]) &&
-        utils::isValidPm03Count(mc.pm_5_pc[1])) {
+    if (utils::isValidPm03Count(mc.pm_5_pc[0]) && utils::isValidPm03Count(mc.pm_5_pc[1])) {
       oss << std::round((mc.pm_5_pc[0] + mc.pm_5_pc[1]) / 2.0f);
     } else if (utils::isValidPm03Count(mc.pm_5_pc[0])) {
       oss << std::round(mc.pm_5_pc[0]);
@@ -1105,8 +1054,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
     oss << ",";
 
     /// PM 10 particle count
-    if (utils::isValidPm03Count(mc.pm_10_pc[0]) &&
-        utils::isValidPm03Count(mc.pm_10_pc[1])) {
+    if (utils::isValidPm03Count(mc.pm_10_pc[0]) && utils::isValidPm03Count(mc.pm_10_pc[1])) {
       oss << std::round((mc.pm_10_pc[0] + mc.pm_10_pc[1]) / 2.0f);
     } else if (utils::isValidPm03Count(mc.pm_10_pc[0])) {
       oss << std::round(mc.pm_10_pc[0]);
@@ -1130,8 +1078,7 @@ std::string Measurements::buildMeasuresPayload(Measures &mc,
   return oss.str();
 }
 
-String Measurements::toString(bool localServer, AgFirmwareMode fwMode,
-                              int rssi) {
+String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi) {
   JSONVar root;
 
   if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
@@ -1179,6 +1126,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode,
 #endif
   }
 
+
 #ifndef ESP8266
   // Add satellites data
   if (satellites_ && config.isSatellitesEnabled()) {
@@ -1192,12 +1140,9 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode,
           utils::isValidHumidity(satellites[i].data.rhum)) {
 
         String macKey = satellites[i].id;
-        satellitesObj[macKey.c_str()]["atmp"] =
-            ag->round2(satellites[i].data.temp);
-        satellitesObj[macKey.c_str()]["rhum"] =
-            ag->round2(satellites[i].data.rhum);
-        satellitesObj[macKey.c_str()]["wifi"] =
-            ag->round2(satellites[i].data.rssi);
+        satellitesObj[macKey.c_str()]["atmp"] = ag->round2(satellites[i].data.temp);
+        satellitesObj[macKey.c_str()]["rhum"] = ag->round2(satellites[i].data.rhum);
+        satellitesObj[macKey.c_str()]["wifi"] = ag->round2(satellites[i].data.rssi);
         satellites[i].data.useCount++;
         count++;
       }
@@ -1216,8 +1161,7 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode,
 
 JSONVar Measurements::buildOutdoor(bool localServer, AgFirmwareMode fwMode) {
   JSONVar outdoor;
-  if (fwMode == FW_MODE_O_1P || fwMode == FW_MODE_O_1PS ||
-      fwMode == FW_MODE_O_1PST) {
+  if (fwMode == FW_MODE_O_1P || fwMode == FW_MODE_O_1PS || fwMode == FW_MODE_O_1PST) {
     // buildPMS params:
     /// Because only have 1 PMS, allCh is set to false
     /// But enable temp hum from PMS
@@ -1266,8 +1210,7 @@ JSONVar Measurements::buildIndoor(bool localServer) {
     indoor = buildPMS(1, false, false, true);
     if (!localServer && config.hasSensorPMS1) {
       // PMS firmware version only available for PMS5003
-      indoor[json_prop_pmFirmware] =
-          this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
+      indoor[json_prop_pmFirmware] = this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
     }
   }
 
@@ -1276,16 +1219,14 @@ JSONVar Measurements::buildIndoor(bool localServer) {
     if (utils::isValidTemperature(_temperature[0].update.avg)) {
       indoor[json_prop_temp] = ag->round2(_temperature[0].update.avg);
       if (localServer) {
-        indoor[json_prop_tempCompensated] =
-            ag->round2(getCorrectedTempHum(Temperature));
+        indoor[json_prop_tempCompensated] = ag->round2(getCorrectedTempHum(Temperature));
       }
     }
     // Add humidity
     if (utils::isValidHumidity(_humidity[0].update.avg)) {
       indoor[json_prop_rhum] = ag->round2(_humidity[0].update.avg);
       if (localServer) {
-        indoor[json_prop_rhumCompensated] =
-            ag->round2(getCorrectedTempHum(Humidity));
+        indoor[json_prop_rhumCompensated] = ag->round2(getCorrectedTempHum(Humidity));
       }
     }
   }
@@ -1293,8 +1234,7 @@ JSONVar Measurements::buildIndoor(bool localServer) {
   return indoor;
 }
 
-JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
-                               bool compensate) {
+JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum, bool compensate) {
   JSONVar pms;
 
   // When only one of the channel
@@ -1389,12 +1329,11 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
     return pms;
   };
 
-  /** Handle both channels by averaging their values; if one channel's value is
-   * not valid, skip averaging and use the valid value from the other channel */
+  /** Handle both channels by averaging their values; if one channel's value is not valid, skip
+   * averaging and use the valid value from the other channel */
 
   /// PM1.0 atmospheric environment
-  if (utils::isValidPm(_pm_01[0].update.avg) &&
-      utils::isValidPm(_pm_01[1].update.avg)) {
+  if (utils::isValidPm(_pm_01[0].update.avg) && utils::isValidPm(_pm_01[1].update.avg)) {
     float avg = (_pm_01[0].update.avg + _pm_01[1].update.avg) / 2.0f;
     pms[json_prop_pm01Ae] = ag->round2(avg);
     pms["channels"]["1"][json_prop_pm01Ae] = ag->round2(_pm_01[0].update.avg);
@@ -1408,8 +1347,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
   }
 
   /// PM2.5 atmospheric environment
-  if (utils::isValidPm(_pm_25[0].update.avg) &&
-      utils::isValidPm(_pm_25[1].update.avg)) {
+  if (utils::isValidPm(_pm_25[0].update.avg) && utils::isValidPm(_pm_25[1].update.avg)) {
     float avg = (_pm_25[0].update.avg + _pm_25[1].update.avg) / 2.0f;
     pms[json_prop_pm25Ae] = ag->round2(avg);
     pms["channels"]["1"][json_prop_pm25Ae] = ag->round2(_pm_25[0].update.avg);
@@ -1423,8 +1361,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
   }
 
   /// PM10 atmospheric environment
-  if (utils::isValidPm(_pm_10[0].update.avg) &&
-      utils::isValidPm(_pm_10[1].update.avg)) {
+  if (utils::isValidPm(_pm_10[0].update.avg) && utils::isValidPm(_pm_10[1].update.avg)) {
     float avg = (_pm_10[0].update.avg + _pm_10[1].update.avg) / 2.0f;
     pms[json_prop_pm10Ae] = ag->round2(avg);
     pms["channels"]["1"][json_prop_pm10Ae] = ag->round2(_pm_10[0].update.avg);
@@ -1438,60 +1375,45 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
   }
 
   /// PM1.0 standard particle
-  if (utils::isValidPm(_pm_01_sp[0].update.avg) &&
-      utils::isValidPm(_pm_01_sp[1].update.avg)) {
+  if (utils::isValidPm(_pm_01_sp[0].update.avg) && utils::isValidPm(_pm_01_sp[1].update.avg)) {
     float avg = (_pm_01_sp[0].update.avg + _pm_01_sp[1].update.avg) / 2.0f;
     pms[json_prop_pm01Sp] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm01Sp] =
-        ag->round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["2"][json_prop_pm01Sp] =
-        ag->round2(_pm_01_sp[1].update.avg);
+    pms["channels"]["1"][json_prop_pm01Sp] = ag->round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm01Sp] = ag->round2(_pm_01_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[0].update.avg)) {
     pms[json_prop_pm01Sp] = ag->round2(_pm_01_sp[0].update.avg);
-    pms["channels"]["1"][json_prop_pm01Sp] =
-        ag->round2(_pm_01_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm01Sp] = ag->round2(_pm_01_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_01_sp[1].update.avg)) {
     pms[json_prop_pm01Sp] = ag->round2(_pm_01_sp[1].update.avg);
-    pms["channels"]["2"][json_prop_pm01Sp] =
-        ag->round2(_pm_01_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm01Sp] = ag->round2(_pm_01_sp[1].update.avg);
   }
 
   /// PM2.5 standard particle
-  if (utils::isValidPm(_pm_25_sp[0].update.avg) &&
-      utils::isValidPm(_pm_25_sp[1].update.avg)) {
+  if (utils::isValidPm(_pm_25_sp[0].update.avg) && utils::isValidPm(_pm_25_sp[1].update.avg)) {
     float avg = (_pm_25_sp[0].update.avg + _pm_25_sp[1].update.avg) / 2.0f;
     pms[json_prop_pm25Sp] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm25Sp] =
-        ag->round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["2"][json_prop_pm25Sp] =
-        ag->round2(_pm_25_sp[1].update.avg);
+    pms["channels"]["1"][json_prop_pm25Sp] = ag->round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm25Sp] = ag->round2(_pm_25_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[0].update.avg)) {
     pms[json_prop_pm25Sp] = ag->round2(_pm_25_sp[0].update.avg);
-    pms["channels"]["1"][json_prop_pm25Sp] =
-        ag->round2(_pm_25_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm25Sp] = ag->round2(_pm_25_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_25_sp[1].update.avg)) {
     pms[json_prop_pm25Sp] = ag->round2(_pm_25_sp[1].update.avg);
-    pms["channels"]["2"][json_prop_pm25Sp] =
-        ag->round2(_pm_25_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm25Sp] = ag->round2(_pm_25_sp[1].update.avg);
   }
 
   /// PM10 standard particle
-  if (utils::isValidPm(_pm_10_sp[0].update.avg) &&
-      utils::isValidPm(_pm_10_sp[1].update.avg)) {
+  if (utils::isValidPm(_pm_10_sp[0].update.avg) && utils::isValidPm(_pm_10_sp[1].update.avg)) {
     float avg = (_pm_10_sp[0].update.avg + _pm_10_sp[1].update.avg) / 2.0f;
     pms[json_prop_pm10Sp] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm10Sp] =
-        ag->round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["2"][json_prop_pm10Sp] =
-        ag->round2(_pm_10_sp[1].update.avg);
+    pms["channels"]["1"][json_prop_pm10Sp] = ag->round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["2"][json_prop_pm10Sp] = ag->round2(_pm_10_sp[1].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[0].update.avg)) {
     pms[json_prop_pm10Sp] = ag->round2(_pm_10_sp[0].update.avg);
-    pms["channels"]["1"][json_prop_pm10Sp] =
-        ag->round2(_pm_10_sp[0].update.avg);
+    pms["channels"]["1"][json_prop_pm10Sp] = ag->round2(_pm_10_sp[0].update.avg);
   } else if (utils::isValidPm(_pm_10_sp[1].update.avg)) {
     pms[json_prop_pm10Sp] = ag->round2(_pm_10_sp[1].update.avg);
-    pms["channels"]["2"][json_prop_pm10Sp] =
-        ag->round2(_pm_10_sp[1].update.avg);
+    pms["channels"]["2"][json_prop_pm10Sp] = ag->round2(_pm_10_sp[1].update.avg);
   }
 
   /// PM003 particle count
@@ -1499,18 +1421,14 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
       utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
     float avg = (_pm_03_pc[0].update.avg + _pm_03_pc[1].update.avg) / 2.0f;
     pms[json_prop_pm03Count] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm03Count] =
-        ag->round2(_pm_03_pc[0].update.avg);
-    pms["channels"]["2"][json_prop_pm03Count] =
-        ag->round2(_pm_03_pc[1].update.avg);
+    pms["channels"]["1"][json_prop_pm03Count] = ag->round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm03Count] = ag->round2(_pm_03_pc[1].update.avg);
   } else if (utils::isValidPm03Count(_pm_03_pc[0].update.avg)) {
     pms[json_prop_pm03Count] = ag->round2(_pm_03_pc[0].update.avg);
-    pms["channels"]["1"][json_prop_pm03Count] =
-        ag->round2(_pm_03_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm03Count] = ag->round2(_pm_03_pc[0].update.avg);
   } else if (utils::isValidPm03Count(_pm_03_pc[1].update.avg)) {
     pms[json_prop_pm03Count] = ag->round2(_pm_03_pc[1].update.avg);
-    pms["channels"]["2"][json_prop_pm03Count] =
-        ag->round2(_pm_03_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm03Count] = ag->round2(_pm_03_pc[1].update.avg);
   }
 
   /// PM0.5 particle count
@@ -1518,36 +1436,28 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
       utils::isValidPm03Count(_pm_05_pc[1].update.avg)) {
     float avg = (_pm_05_pc[0].update.avg + _pm_05_pc[1].update.avg) / 2.0f;
     pms[json_prop_pm05Count] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm05Count] =
-        ag->round2(_pm_05_pc[0].update.avg);
-    pms["channels"]["2"][json_prop_pm05Count] =
-        ag->round2(_pm_05_pc[1].update.avg);
+    pms["channels"]["1"][json_prop_pm05Count] = ag->round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm05Count] = ag->round2(_pm_05_pc[1].update.avg);
   } else if (utils::isValidPm03Count(_pm_05_pc[0].update.avg)) {
     pms[json_prop_pm05Count] = ag->round2(_pm_05_pc[0].update.avg);
-    pms["channels"]["1"][json_prop_pm05Count] =
-        ag->round2(_pm_05_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm05Count] = ag->round2(_pm_05_pc[0].update.avg);
   } else if (utils::isValidPm03Count(_pm_05_pc[1].update.avg)) {
     pms[json_prop_pm05Count] = ag->round2(_pm_05_pc[1].update.avg);
-    pms["channels"]["2"][json_prop_pm05Count] =
-        ag->round2(_pm_05_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm05Count] = ag->round2(_pm_05_pc[1].update.avg);
   }
   /// PM1.0 particle count
   if (utils::isValidPm03Count(_pm_01_pc[0].update.avg) &&
       utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
     float avg = (_pm_01_pc[0].update.avg + _pm_01_pc[1].update.avg) / 2.0f;
     pms[json_prop_pm1Count] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm1Count] =
-        ag->round2(_pm_01_pc[0].update.avg);
-    pms["channels"]["2"][json_prop_pm1Count] =
-        ag->round2(_pm_01_pc[1].update.avg);
+    pms["channels"]["1"][json_prop_pm1Count] = ag->round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm1Count] = ag->round2(_pm_01_pc[1].update.avg);
   } else if (utils::isValidPm03Count(_pm_01_pc[0].update.avg)) {
     pms[json_prop_pm1Count] = ag->round2(_pm_01_pc[0].update.avg);
-    pms["channels"]["1"][json_prop_pm1Count] =
-        ag->round2(_pm_01_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm1Count] = ag->round2(_pm_01_pc[0].update.avg);
   } else if (utils::isValidPm03Count(_pm_01_pc[1].update.avg)) {
     pms[json_prop_pm1Count] = ag->round2(_pm_01_pc[1].update.avg);
-    pms["channels"]["2"][json_prop_pm1Count] =
-        ag->round2(_pm_01_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm1Count] = ag->round2(_pm_01_pc[1].update.avg);
   }
 
   /// PM2.5 particle count
@@ -1555,35 +1465,28 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
       utils::isValidPm03Count(_pm_25_pc[1].update.avg)) {
     float avg = (_pm_25_pc[0].update.avg + _pm_25_pc[1].update.avg) / 2.0f;
     pms[json_prop_pm25Count] = ag->round2(avg);
-    pms["channels"]["1"][json_prop_pm25Count] =
-        ag->round2(_pm_25_pc[0].update.avg);
-    pms["channels"]["2"][json_prop_pm25Count] =
-        ag->round2(_pm_25_pc[1].update.avg);
+    pms["channels"]["1"][json_prop_pm25Count] = ag->round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["2"][json_prop_pm25Count] = ag->round2(_pm_25_pc[1].update.avg);
   } else if (utils::isValidPm03Count(_pm_25_pc[0].update.avg)) {
     pms[json_prop_pm25Count] = ag->round2(_pm_25_pc[0].update.avg);
-    pms["channels"]["1"][json_prop_pm25Count] =
-        ag->round2(_pm_25_pc[0].update.avg);
+    pms["channels"]["1"][json_prop_pm25Count] = ag->round2(_pm_25_pc[0].update.avg);
   } else if (utils::isValidPm03Count(_pm_25_pc[1].update.avg)) {
     pms[json_prop_pm25Count] = ag->round2(_pm_25_pc[1].update.avg);
-    pms["channels"]["2"][json_prop_pm25Count] =
-        ag->round2(_pm_25_pc[1].update.avg);
+    pms["channels"]["2"][json_prop_pm25Count] = ag->round2(_pm_25_pc[1].update.avg);
   }
 
-  // NOTE: No need for particle count 5.0 and 10. When allCh is true, basically
-  // monitor using PM5003T, which don't have PC 5.0 and 10
+  // NOTE: No need for particle count 5.0 and 10. When allCh is true, basically monitor using
+  // PM5003T, which don't have PC 5.0 and 10
 
   if (withTempHum) {
     /// Temperature
     if (utils::isValidTemperature(_temperature[0].update.avg) &&
         utils::isValidTemperature(_temperature[1].update.avg)) {
 
-      float temperature =
-          (_temperature[0].update.avg + _temperature[1].update.avg) / 2.0f;
+      float temperature = (_temperature[0].update.avg + _temperature[1].update.avg) / 2.0f;
       pms[json_prop_temp] = ag->round2(temperature);
-      pms["channels"]["1"][json_prop_temp] =
-          ag->round2(_temperature[0].update.avg);
-      pms["channels"]["2"][json_prop_temp] =
-          ag->round2(_temperature[1].update.avg);
+      pms["channels"]["1"][json_prop_temp] = ag->round2(_temperature[0].update.avg);
+      pms["channels"]["2"][json_prop_temp] = ag->round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate both temperature channel
@@ -1597,8 +1500,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
 
     } else if (utils::isValidTemperature(_temperature[0].update.avg)) {
       pms[json_prop_temp] = ag->round2(_temperature[0].update.avg);
-      pms["channels"]["1"][json_prop_temp] =
-          ag->round2(_temperature[0].update.avg);
+      pms["channels"]["1"][json_prop_temp] = ag->round2(_temperature[0].update.avg);
 
       if (compensate) {
         // Compensate channel 1
@@ -1609,8 +1511,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
 
     } else if (utils::isValidTemperature(_temperature[1].update.avg)) {
       pms[json_prop_temp] = ag->round2(_temperature[1].update.avg);
-      pms["channels"]["2"][json_prop_temp] =
-          ag->round2(_temperature[1].update.avg);
+      pms["channels"]["2"][json_prop_temp] = ag->round2(_temperature[1].update.avg);
 
       if (compensate) {
         // Compensate channel 2
@@ -1623,13 +1524,10 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
     /// Relative humidity
     if (utils::isValidHumidity(_humidity[0].update.avg) &&
         utils::isValidHumidity(_humidity[1].update.avg)) {
-      float humidity =
-          (_humidity[0].update.avg + _humidity[1].update.avg) / 2.0f;
+      float humidity = (_humidity[0].update.avg + _humidity[1].update.avg) / 2.0f;
       pms[json_prop_rhum] = ag->round2(humidity);
-      pms["channels"]["1"][json_prop_rhum] =
-          ag->round2(_humidity[0].update.avg);
-      pms["channels"]["2"][json_prop_rhum] =
-          ag->round2(_humidity[1].update.avg);
+      pms["channels"]["1"][json_prop_rhum] = ag->round2(_humidity[0].update.avg);
+      pms["channels"]["2"][json_prop_rhum] = ag->round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate both humidity channel
@@ -1643,8 +1541,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
 
     } else if (utils::isValidHumidity(_humidity[0].update.avg)) {
       pms[json_prop_rhum] = ag->round2(_humidity[0].update.avg);
-      pms["channels"]["1"][json_prop_rhum] =
-          ag->round2(_humidity[0].update.avg);
+      pms["channels"]["1"][json_prop_rhum] = ag->round2(_humidity[0].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 1
@@ -1655,8 +1552,7 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
 
     } else if (utils::isValidHumidity(_humidity[1].update.avg)) {
       pms[json_prop_rhum] = ag->round2(_humidity[1].update.avg);
-      pms["channels"]["2"][json_prop_rhum] =
-          ag->round2(_humidity[1].update.avg);
+      pms["channels"]["2"][json_prop_rhum] = ag->round2(_humidity[1].update.avg);
 
       if (compensate) {
         // Compensate humidity channel 2
@@ -1674,21 +1570,17 @@ JSONVar Measurements::buildPMS(int ch, bool allCh, bool withTempHum,
       if (utils::isValidPm(_pm_25[0].update.avg) &&
           utils::isValidHumidity(_humidity[0].update.avg)) {
         pm25_comp1 = getCorrectedPM25(true, 1, true);
-        pms["channels"]["1"][json_prop_pm25Compensated] =
-            ag->round2(pm25_comp1);
+        pms["channels"]["1"][json_prop_pm25Compensated] = ag->round2(pm25_comp1);
       }
       if (utils::isValidPm(_pm_25[1].update.avg) &&
           utils::isValidHumidity(_humidity[1].update.avg)) {
         pm25_comp2 = getCorrectedPM25(true, 2, true);
-        pms["channels"]["2"][json_prop_pm25Compensated] =
-            ag->round2(pm25_comp2);
+        pms["channels"]["2"][json_prop_pm25Compensated] = ag->round2(pm25_comp2);
       }
 
-      /// Get average or one of the channel compensated value if only one
-      /// channel is valid
+      /// Get average or one of the channel compensated value if only one channel is valid
       if (utils::isValidPm(pm25_comp1) && utils::isValidPm(pm25_comp2)) {
-        pms[json_prop_pm25Compensated] =
-            ag->round2((pm25_comp1 + pm25_comp2) / 2.0f);
+        pms[json_prop_pm25Compensated] = ag->round2((pm25_comp1 + pm25_comp2) / 2.0f);
       } else if (utils::isValidPm(pm25_comp1)) {
         pms[json_prop_pm25Compensated] = ag->round2(pm25_comp1);
       } else if (utils::isValidPm(pm25_comp2)) {
