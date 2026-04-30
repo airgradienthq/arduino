@@ -1,5 +1,7 @@
 #include "SPS30.h"
 
+#if !defined(ESP8266)
+
 // The Sensirion library defines NO_ERROR which can conflict with ESP-IDF.
 // Re-define locally if needed.
 #ifdef NO_ERROR
@@ -17,9 +19,22 @@ bool SPS30::begin(HardwareSerial &serial) {
 
   _serial = &serial;
 
-  // SPS30 UART uses 115200 baud (SHDLC protocol)
+  // Fully reset the serial port — it may have been left at 9600 baud
+  // with stale buffer data from a failed PMS5003 detection attempt.
+  _serial->end();
+  delay(100);
   _serial->begin(115200);
+  // Flush any garbage bytes left in the RX buffer
+  while (_serial->available()) {
+    _serial->read();
+  }
+
   _driver.begin(serial);
+
+  // Reset sensor to a known state — handles the case where the sensor
+  // was previously running or in an unknown mode.
+  _driver.deviceReset();
+  delay(100);
 
   // Ensure sensor is in idle state before detection
   _driver.stopMeasurement();
@@ -117,3 +132,5 @@ int SPS30::getPm05ParticleCount() { return static_cast<int>(_nc0p5 * 100.0f); }
 int SPS30::getPm01ParticleCount() { return static_cast<int>(_nc1p0 * 100.0f); }
 int SPS30::getPm25ParticleCount() { return static_cast<int>(_nc2p5 * 100.0f); }
 int SPS30::getPm10ParticleCount() { return static_cast<int>(_nc10p0 * 100.0f); }
+
+#endif // !ESP8266

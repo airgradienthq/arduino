@@ -2,11 +2,35 @@
 #define _AIR_GRADIENT_SPS30_H_
 
 #include "../Main/BoardDef.h"
-#include <SensirionUartSps30.h>
 
-#ifdef ESP8266
-#error "SPS30 UART wrapper is only supported on ESP32"
-#endif
+#if defined(ESP8266)
+
+/**
+ * @brief Stub class for ESP8266 — SPS30 UART is not supported on this platform.
+ * Provides the type so AirGradient.h compiles, but begin() always returns false.
+ */
+class SPS30 {
+public:
+  explicit SPS30(BoardType def) {}
+  bool begin(Stream &serial) { return false; }
+  void end() {}
+  bool readValues() { return false; }
+  bool connected() { return false; }
+  int getPm01Ae() { return 0; }
+  int getPm25Ae() { return 0; }
+  int getPm10Ae() { return 0; }
+  int getPm01Sp() { return 0; }
+  int getPm25Sp() { return 0; }
+  int getPm10Sp() { return 0; }
+  int getPm05ParticleCount() { return 0; }
+  int getPm01ParticleCount() { return 0; }
+  int getPm25ParticleCount() { return 0; }
+  int getPm10ParticleCount() { return 0; }
+};
+
+#else // ESP32
+
+#include <SensirionUartSps30.h>
 
 /**
  * @brief Wrapper class for Sensirion SPS30 particulate matter sensor over UART.
@@ -101,5 +125,7 @@ private:
   float _nc10p0 = 0.0f;
   float _typicalParticleSize = 0.0f;
 };
+
+#endif // ESP8266 / ESP32
 
 #endif // _AIR_GRADIENT_SPS30_H_
