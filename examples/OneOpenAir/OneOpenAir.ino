@@ -161,6 +161,8 @@ static void restartIfCeClientIssueOverTwoHours();
 static void networkSignalCheck();
 static void networkingTask(void *args);
 static AirgradientClient::PayloadType getClientPayloadType();
+static void saveOperatorState();
+static void restoreOperatorState();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL, configurationUpdateSchedule);
@@ -963,12 +965,32 @@ static void failedHandler(String msg) {
 }
 
 static AirgradientClient::PayloadType getClientPayloadType() {
-  if (!ag->isOne() &&
-      (fwMode == FW_MODE_O_1PPT || fwMode == FW_MODE_O_1PP)) {
+  if (!ag->isOne() && (fwMode == FW_MODE_O_1PPT || fwMode == FW_MODE_O_1PP)) {
     return AirgradientClient::ONE_OPENAIR_TWO_PMS;
   }
 
   return AirgradientClient::ONE_OPENAIR;
+}
+
+static void restoreOperatorState() {
+  String ops = configuration.getCellOperators();
+  if (ops.length() == 0) {
+    Serial.println("No saved operator state to restore");
+    return;
+  }
+  uint32_t opId = configuration.getCellOperatorId();
+  if (cellularCard->setOperators(ops.c_str(), opId)) {
+    Serial.printf("Restored operator state: id=%u, list=%s\n", opId, ops.c_str());
+  } else {
+    Serial.println("Failed to restore operator state");
+  }
+}
+
+static void saveOperatorState() {
+  String ops = cellularCard->getSerializedOperators().c_str();
+  uint32_t opId = cellularCard->getCurrentOperatorId();
+  configuration.setCellOperatorState(ops, opId);
+  Serial.printf("Saved operator state: id=%u, list=%s\n", opId, ops.c_str());
 }
 
 void initializeNetwork() {
@@ -979,6 +1001,8 @@ void initializeNetwork() {
     Serial.println("Cellular module found");
     // Initialize cellular module and use cellular as agClient
     cellularCard = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    // Restore previously saved operator state before registration
+    restoreOperatorState();
     agClient = new AirgradientCellularClient(cellularCard);
     networkOption = UseCellular;
   } else {
@@ -1012,6 +1036,11 @@ void initializeNetwork() {
     delay(2500);
     oledDisplay.setText("", "", "");
     ESP.restart();
+  }
+
+  // Save operator state after successful registration
+  if (networkOption == UseCellular) {
+    saveOperatorState();
   }
 
   // Provide openmetrics to have access to last transmission result
@@ -1662,6 +1691,7 @@ void networkingTask(void *args) {
         }
 
         // Client is ready
+        saveOperatorState();
         agCeClientProblemDetectedTime = 0; // reset to default
         agSerial->setDebug(false);         // disable at command debug
       }

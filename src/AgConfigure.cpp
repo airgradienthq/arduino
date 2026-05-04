@@ -64,6 +64,8 @@ JSON_PROP_DEF(atmp);
 JSON_PROP_DEF(rhum);
 JSON_PROP_DEF(extendedPmMeasures);
 JSON_PROP_DEF(satellites);
+JSON_PROP_DEF(cellOperators);
+JSON_PROP_DEF(cellOperatorId);
 
 #define jprop_model_default                           ""
 #define jprop_country_default                         "TH"
@@ -83,6 +85,8 @@ JSON_PROP_DEF(satellites);
 #define jprop_offlineMode_default                     false
 #define jprop_monitorDisplayCompensatedValues_default false
 #define jprop_extendedPmMeasures_default              false
+#define jprop_cellOperators_default                   ""
+#define jprop_cellOperatorId_default                  0
 
 JSONVar jconfig;
 
@@ -494,6 +498,8 @@ void Configuration::defaultConfig(void) {
   jconfig[jprop_offlineMode] = jprop_offlineMode_default;
   jconfig[jprop_monitorDisplayCompensatedValues] = jprop_monitorDisplayCompensatedValues_default;
   jconfig[jprop_extendedPmMeasures] = jprop_extendedPmMeasures_default;
+  jconfig[jprop_cellOperators] = jprop_cellOperators_default;
+  jconfig[jprop_cellOperatorId] = jprop_cellOperatorId_default;
 
   // PM2.5 default correction
   pmCorrection.algorithm = COR_ALGO_PM_NONE;
@@ -1616,6 +1622,22 @@ void Configuration::toConfig(const char *buf) {
   /// Load correction from saved config
   updateTempHumCorrection(jconfig, rhumCorrection, jprop_rhum);
 
+  // Validate cellOperators (string)
+  if (JSON.typeof_(jconfig[jprop_cellOperators]) != "string" &&
+      JSON.typeof_(jconfig[jprop_cellOperators]) != "undefined") {
+    jconfig[jprop_cellOperators] = jprop_cellOperators_default;
+    changed = true;
+    logInfo("toConfig: cellOperators changed");
+  }
+
+  // Validate cellOperatorId (number)
+  if (JSON.typeof_(jconfig[jprop_cellOperatorId]) != "number" &&
+      JSON.typeof_(jconfig[jprop_cellOperatorId]) != "undefined") {
+    jconfig[jprop_cellOperatorId] = jprop_cellOperatorId_default;
+    changed = true;
+    logInfo("toConfig: cellOperatorId changed");
+  }
+
   if (changed) {
     saveConfig();
   }
@@ -1762,3 +1784,26 @@ bool Configuration::isSatellitesChanged(void) {
 bool Configuration::isSatellitesEnabled(void) { return _satellitesEnabled; }
 
 const String *Configuration::getSatellites() const { return _satellites; }
+
+String Configuration::getCellOperators(void) {
+  if (JSON.typeof_(jconfig[jprop_cellOperators]) != "string") {
+    return "";
+  }
+  String ops = jconfig[jprop_cellOperators];
+  return ops;
+}
+
+uint32_t Configuration::getCellOperatorId(void) {
+  if (JSON.typeof_(jconfig[jprop_cellOperatorId]) != "number") {
+    return 0;
+  }
+  uint32_t id = (uint32_t)(int)jconfig[jprop_cellOperatorId];
+  return id;
+}
+
+void Configuration::setCellOperatorState(const String &operators, uint32_t operatorId) {
+  jconfig[jprop_cellOperators] = operators;
+  jconfig[jprop_cellOperatorId] = (int)operatorId;
+  saveConfig();
+  logInfo("Cellular operator state saved");
+}
