@@ -13,10 +13,6 @@ static const unsigned char CLOUD_ISSUE_BITS[] = {
     0x70, 0xc0, 0x88, 0xc0, 0x04, 0xc1, 0x04, 0xcf, 0x02, 0xd0, 0x01,
     0xe0, 0x01, 0xe0, 0x01, 0xe0, 0xa2, 0xd0, 0x4c, 0xce, 0xa0, 0xc0};
 
-// How often the dashboard forces a soft reset.
-static constexpr uint32_t OLED_DASHBOARD_SOFT_RESET_INTERVAL_MS =
-    30UL * 60UL * 1000UL;
-
 // Offline mode icon
 static unsigned char OFFLINE_BITS[] = {
     0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x30, 0x00, 0x62, 0x00,
@@ -135,8 +131,6 @@ bool OledDisplay::begin(void) {
       logError("U8G2 'begin' failed");
       return false;
     }
-
-    lastDashboardSoftResetMs = millis();
   } else if (ag->isBasic()) {
     logInfo("DIY_BASIC init");
     ag->display.begin(Wire);
@@ -328,19 +322,6 @@ void OledDisplay::showDashboard(DashboardStatus status) {
   };
 
   if (ag->isOne() || ag->isPro3_3() || ag->isPro4_2()) {
-    uint32_t now = millis();
-    if ((uint32_t)(now - lastDashboardSoftResetMs) >=
-        OLED_DASHBOARD_SOFT_RESET_INTERVAL_MS) {
-      logInfo("OLED dashboard soft reset");
-      DISP()->initDisplay();
-      DISP()->clearDisplay();
-      DISP()->clearBuffer();
-      DISP()->setPowerSave(0);
-      DISP()->setContrast((127 * config.getDisplayBrightness()) / 100);
-      lastDashboardSoftResetMs = now;
-      Serial.println("**** soft reset");
-    }
-
     DISP()->firstPage();
     do {
       DISP()->setFont(u8g2_font_t0_16_tf);

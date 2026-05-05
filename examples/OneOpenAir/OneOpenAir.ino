@@ -26,6 +26,10 @@ https://forum.airgradient.com/
 CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 
 */
+#ifndef ARDUINOJSON_ENABLE_PROGMEM
+#define ARDUINOJSON_ENABLE_PROGMEM 0
+#endif
+
 #include "AgConfigure.h"
 #include "AgSatellites.h"
 #include "AgSchedule.h"
@@ -156,6 +160,9 @@ static void newMeasurementCycle();
 static void restartIfCeClientIssueOverTwoHours();
 static void networkSignalCheck();
 static void networkingTask(void *args);
+static AirgradientClient::PayloadType getClientPayloadType();
+static void saveOperatorState();
+static void restoreOperatorState();
 
 AgSchedule dispLedSchedule(DISP_UPDATE_INTERVAL, updateDisplayAndLedBar);
 AgSchedule configSchedule(WIFI_SERVER_CONFIG_SYNC_INTERVAL, configurationUpdateSchedule);
@@ -179,9 +186,6 @@ void setup() {
   pinMode(GPIO_EXPANSION_CARD_POWER, OUTPUT);
   digitalWrite(GPIO_EXPANSION_CARD_POWER, HIGH);
 
-  /** Print device ID into log */
-  Serial.println("Serial nr: " + ag->deviceId());
-
   // Set reason why esp is reset
   esp_reset_reason_t reason = esp_reset_reason();
   measurements.setResetReason(reason);
@@ -203,6 +207,9 @@ void setup() {
     ag = new AirGradient(BoardType::OPEN_AIR_OUTDOOR);
   }
   Serial.println("Detected " + ag->getBoardName());
+
+  /** Print device ID into log */
+  Serial.println("Serial nr: " + ag->deviceId());
 
   configuration.setAirGradient(ag);
   oledDisplay.setAirGradient(ag);
@@ -957,6 +964,35 @@ static void failedHandler(String msg) {
   }
 }
 
+static AirgradientClient::PayloadType getClientPayloadType() {
+  if (!ag->isOne() && (fwMode == FW_MODE_O_1PPT || fwMode == FW_MODE_O_1PP)) {
+    return AirgradientClient::ONE_OPENAIR_TWO_PMS;
+  }
+
+  return AirgradientClient::ONE_OPENAIR;
+}
+
+static void restoreOperatorState() {
+  String ops = configuration.getCellOperators();
+  if (ops.length() == 0) {
+    Serial.println("No saved operator state to restore");
+    return;
+  }
+  uint32_t opId = configuration.getCellOperatorId();
+  if (cellularCard->setOperators(ops.c_str(), opId)) {
+    Serial.printf("Restored operator state: id=%u, list=%s\n", opId, ops.c_str());
+  } else {
+    Serial.println("Failed to restore operator state");
+  }
+}
+
+static void saveOperatorState() {
+  String ops = cellularCard->getSerializedOperators().c_str();
+  uint32_t opId = cellularCard->getCurrentOperatorId();
+  configuration.setCellOperatorState(ops, opId);
+  Serial.printf("Saved operator state: id=%u, list=%s\n", opId, ops.c_str());
+}
+
 void initializeNetwork() {
   // Check if cellular module available
   agSerial = new AgSerial(Wire);
@@ -965,6 +1001,8 @@ void initializeNetwork() {
     Serial.println("Cellular module found");
     // Initialize cellular module and use cellular as agClient
     cellularCard = new CellularModuleA7672XX(agSerial, GPIO_POWER_MODULE_PIN);
+    // Restore previously saved operator state before registration
+    restoreOperatorState();
     agClient = new AirgradientCellularClient(cellularCard);
     networkOption = UseCellular;
   } else {
@@ -989,13 +1027,20 @@ void initializeNetwork() {
     delay(2500);
   }
 
-  if (!agClient->begin(ag->deviceId().c_str())) {
+  agClient->setExtendedPmMeasures(configuration.isExtendedPmMeasuresEnabled());
+
+  if (!agClient->begin(ag->deviceId().c_str(), getClientPayloadType())) {
     oledDisplay.setText("Client", "initialization", "failed");
     delay(5000);
     oledDisplay.showRebooting();
     delay(2500);
     oledDisplay.setText("", "", "");
     ESP.restart();
+  }
+
+  // Save operator state after successful registration
+  if (networkOption == UseCellular) {
+    saveOperatorState();
   }
 
   // Provide openmetrics to have access to last transmission result
@@ -1100,6 +1145,8 @@ static void configUpdateHandle() {
     Serial.println("HTTP domain name from configuration empty, set to default");
     agClient->setHttpDomainDefault();
   }
+
+  agClient->setExtendedPmMeasures(configuration.isExtendedPmMeasuresEnabled());
 
   if (configuration.hasSensorSGP) {
     if (configuration.noxLearnOffsetChanged() || configuration.tvocLearnOffsetChanged()) {
@@ -1421,7 +1468,7 @@ void postUsingCellular(bool forcePost) {
   xSemaphoreGive(mutexMeasurementCycleQueue);
 
   // Attempt to send
-  if (agClient->httpPostMeasures(payload, extendPmMeasures) == false) {
+  if (agClient->httpPostMeasures(payload) == false) {
     // Consider network has a problem, retry in next schedule
     Serial.println("Post measures failed, retry in next schedule");
     return;
@@ -1644,6 +1691,7 @@ void networkingTask(void *args) {
         }
 
         // Client is ready
+        saveOperatorState();
         agCeClientProblemDetectedTime = 0; // reset to default
         agSerial->setDebug(false);         // disable at command debug
       }
