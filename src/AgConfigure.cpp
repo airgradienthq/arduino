@@ -208,8 +208,13 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   JSONVar slr = pm02["slr"];
 
+  // Determine scaling factor field name based on algorithm
+  const char *scalingFactorKey = (algo == COR_ALGO_PM_SLR_CUSTOM_VIA_PM_RAW)
+                                     ? "scalingFactorViaPm25"
+                                     : "scalingFactor";
+
   // Validate required slr properties exist
-  if (!slr.hasOwnProperty("intercept") || !slr.hasOwnProperty("scalingFactor") ||
+  if (!slr.hasOwnProperty("intercept") || !slr.hasOwnProperty(scalingFactorKey) ||
       !slr.hasOwnProperty("useEpa2021")) {
     logWarning("Missing required slr properties");
     return false;
@@ -217,7 +222,7 @@ bool Configuration::updatePmCorrection(JSONVar &json) {
 
   // arduino_json doesn't support float type, need to cast to double first
   float intercept = (float)((double)slr["intercept"]);
-  float scalingFactor = (float)((double)slr["scalingFactor"]);
+  float scalingFactor = (float)((double)slr[scalingFactorKey]);
 
   // Compare with current pmCorrection
   if (pmCorrection.algorithm == algo && pmCorrection.intercept == intercept &&
