@@ -89,7 +89,7 @@ Compensated values apply correction algorithms to make the sensor values more ac
   "country": "TH",
   "pmStandard": "ugm3",
   "ledBarMode": "pm",
-  "abcDays": 7,
+  "abcDays": 8,
   "tvocLearningOffset": 12,
   "noxLearningOffset": 12,
   "mqttBrokerUrl": "",
@@ -145,7 +145,7 @@ If the monitor is set up on the AirGradient dashboard, it will also receive the 
 | `ledBarMode`                      | Mode in which the led bar can be set.                            | String  | `co2`: LED bar displays CO2 <br>`pm`: LED bar displays PM <br>`off`: Turn off LED bar                                                   | `{"ledBarMode": "off"}`                         |
 | `displayBrightness`               | Brightness of the Display.                                       | Number  | 0-100                                                                                                                                   | `{"displayBrightness": 50}`                     |
 | `ledBarBrightness`                | Brightness of the LEDBar.                                        | Number  | 0-100                                                                                                                                   | `{"ledBarBrightness": 40}`                      |
-| `abcDays`                         | Number of days for CO2 automatic baseline calibration.           | Number  | Maximum 200 days. Default 8 days.                                                                                                       | `{"abcDays": 8}`                                |
+| `abcDays`                         | Number of days for CO2 automatic baseline calibration.           | Number  | Maximum 200 days. Default 8 days. 0 disables the automatic calibration.                                                                 | `{"abcDays": 8}`                                |
 | `mqttBrokerUrl`                   | MQTT broker URL.                                                 | String  | Maximum 255 characters. Set value to empty string to disable mqtt connection.                                                           | `{"mqttBrokerUrl": "mqtt://192.168.0.18:1883"}` |
 | `httpDomain`                      | Domain name for http request. (version > 3.3.2)                  | String  | Maximum 255 characters. Set value to empty string to set http domain to default airgradient                                             | `{"httpDomain": "sub.domain.com"}`              |
 | `temperatureUnit`                 | Temperature unit shown on the display.                           | String  | `c` or `C`: Degree Celsius °C <br>`f` or `F`: Degree Fahrenheit °F                                                                      | `{"temperatureUnit": "c"}`                      |
