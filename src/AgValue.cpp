@@ -125,7 +125,7 @@ void Measurements::printCurrentAverage() {
     }
   }
 
-  if (config.hasSensorPMS1) {
+  if (config.hasSensorPMS1 || config.hasSensorSPS30) {
     printCurrentPMAverage(1);
     if (!config.hasSensorSHT) {
       if (utils::isValidTemperature(_temperature[0].update.avg)) {
@@ -1202,14 +1202,14 @@ JSONVar Measurements::buildOutdoor(bool localServer, AgFirmwareMode fwMode) {
 JSONVar Measurements::buildIndoor(bool localServer) {
   JSONVar indoor;
 
-  if (config.hasSensorPMS1) {
+  if (config.hasSensorPMS1 || config.hasSensorSPS30) {
     // buildPMS params:
     /// PMS channel 1 (indoor only have 1 PMS; hence allCh false)
     /// Not include temperature and humidity from PMS sensor
     /// Include compensated calculation
     indoor = buildPMS(1, false, false, true);
-    if (!localServer) {
-      // Indoor is using PMS5003
+    if (!localServer && config.hasSensorPMS1) {
+      // PMS firmware version only available for PMS5003
       indoor[json_prop_pmFirmware] = this->pms5003FirmwareVersion(ag->pms5003.getFirmwareVersion());
     }
   }

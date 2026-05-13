@@ -80,6 +80,10 @@ jobs:
             - source-path: ./
             - name: NimBLE-Arduino
               version: 2.3.7
+            - name: Sensirion Core
+              version: 0.7.3
+            - name: Sensirion UART SPS30
+              version: 1.0.0
             - name: ArduinoJson
               version: 7.4.3
           cli-compile-flags: |

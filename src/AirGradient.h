@@ -7,17 +7,17 @@
 #include "Main/LedBar.h"
 #include "Main/PushButton.h"
 #include "Main/StatusLed.h"
+#include "Main/utils.h"
 #include "PMS/PMS5003.h"
 #include "PMS/PMS5003T.h"
 #include "S8/S8.h"
+#include "SPS30/SPS30.h"
 #include "Sgp41/Sgp41.h"
 #include "Sht/Sht.h"
-#include "Main/utils.h"
 
 #ifndef GIT_VERSION
 #define GIT_VERSION "3.6.3-snap"
 #endif
-
 
 #ifndef ESP8266
 // Airgradient server root ca certificate
@@ -80,6 +80,12 @@ public:
    * OPEN_AIR_OUTDOOR.
    */
   PMS5003T pms5003t_2;
+
+  /**
+   * @brief Sensirion SPS30 particulate matter sensor (UART).
+   * Used as alternative to PMS5003 on ONE_INDOOR via auto-detection.
+   */
+  SPS30 sps30;
 
   /**
    * @brief SenseAirS8 CO2 sensor

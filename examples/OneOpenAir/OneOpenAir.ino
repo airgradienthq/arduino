@@ -140,6 +140,7 @@ static void configUpdateHandle(void);
 static void updateDisplayAndLedBar(void);
 static void updateTvoc(void);
 static void updatePm(void);
+static void updateSPS30(void);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
@@ -334,7 +335,8 @@ void loop() {
   if (configuration.hasSensorS8) {
     co2Schedule.run();
   }
-  if (configuration.hasSensorPMS1 || configuration.hasSensorPMS2) {
+  if (configuration.hasSensorPMS1 || configuration.hasSensorPMS2 ||
+      configuration.hasSensorSPS30) {
     pmsSchedule.run();
   }
   if (ag->isOne()) {
@@ -822,12 +824,18 @@ static void oneIndoorInit(void) {
     dispSensorNotFound("S8");
   }
 
-  /** Init PMS5003 */
+  /** Init PMS5003, fallback to SPS30 if not found */
   if (ag->pms5003.begin(Serial0) == false) {
-    Serial.println("PMS sensor not found");
+    Serial.println("PMS5003 not found, trying SPS30...");
     configuration.hasSensorPMS1 = false;
 
-    dispSensorNotFound("PMS");
+    if (ag->sps30.begin(Serial0)) {
+      Serial.println("SPS30 detected on Serial0");
+      configuration.hasSensorSPS30 = true;
+    } else {
+      Serial.println("SPS30 not found either");
+      dispSensorNotFound("PM sensor");
+    }
   }
 }
 static void openAirInit(void) {
@@ -1308,9 +1316,48 @@ static void updatePMS5003() {
   }
 }
 
+static void updateSPS30(void) {
+  if (ag->sps30.readValues()) {
+    // Mass concentrations — mapped to both Ae and SP (SPS30 has no distinction)
+    measurements.update(Measurements::PM01, ag->sps30.getPm01Ae());
+    measurements.update(Measurements::PM25, ag->sps30.getPm25Ae());
+    measurements.update(Measurements::PM10, ag->sps30.getPm10Ae());
+    measurements.update(Measurements::PM01_SP, ag->sps30.getPm01Sp());
+    measurements.update(Measurements::PM25_SP, ag->sps30.getPm25Sp());
+    measurements.update(Measurements::PM10_SP, ag->sps30.getPm10Sp());
+
+    // Number concentrations (already converted to #/0.1L by wrapper)
+    measurements.update(Measurements::PM05_PC, ag->sps30.getPm05ParticleCount());
+    measurements.update(Measurements::PM01_PC, ag->sps30.getPm01ParticleCount());
+    measurements.update(Measurements::PM25_PC, ag->sps30.getPm25ParticleCount());
+    measurements.update(Measurements::PM10_PC, ag->sps30.getPm10ParticleCount());
+
+    // SPS30 does not have 0.3 µm or 5.0 µm bins
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
+  } else {
+    measurements.update(Measurements::PM01, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
+    measurements.update(Measurements::PM10_PC, utils::getInvalidPmValue());
+  }
+}
+
 static void updatePm(void) {
   if (ag->isOne()) {
-    updatePMS5003();
+    if (configuration.hasSensorSPS30) {
+      updateSPS30();
+    } else {
+      updatePMS5003();
+    }
     return;
   }
 
