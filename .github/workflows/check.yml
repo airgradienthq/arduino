@@ -84,9 +84,13 @@ jobs:
               version: 0.7.3
             - name: Sensirion UART SPS30
               version: 1.0.0
+            - name: ArduinoJson
+              version: 7.4.3
           cli-compile-flags: |
             - --warnings
             - none
+            - --build-property
+            - compiler.cpp.extra_flags=-DARDUINOJSON_ENABLE_PROGMEM=0
             - --board-options
             - "${{ matrix.board_options }}"
           platforms: |

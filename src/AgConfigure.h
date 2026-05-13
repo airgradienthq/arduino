@@ -134,6 +134,9 @@ public:
   bool isSatellitesChanged(void);
   bool isSatellitesEnabled(void);
   const String *getSatellites() const;
+  String getCellOperators(void);
+  uint32_t getCellOperatorId(void);
+  void setCellOperatorState(const String &operators, uint32_t operatorId);
 
 private:
   ConfigurationUpdatedCallback_t _callback;

@@ -16,7 +16,7 @@
 #include "Sht/Sht.h"
 
 #ifndef GIT_VERSION
-#define GIT_VERSION "3.6.2-snap"
+#define GIT_VERSION "3.6.3-snap"
 #endif
 
 #ifndef ESP8266
