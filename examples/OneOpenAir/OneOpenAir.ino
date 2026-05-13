@@ -1331,10 +1331,6 @@ static void updateSPS30(void) {
     measurements.update(Measurements::PM01_PC, ag->sps30.getPm01ParticleCount());
     measurements.update(Measurements::PM25_PC, ag->sps30.getPm25ParticleCount());
     measurements.update(Measurements::PM10_PC, ag->sps30.getPm10ParticleCount());
-
-    // SPS30 does not have 0.3 µm or 5.0 µm bins
-    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
-    measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());
   } else {
     measurements.update(Measurements::PM01, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25, utils::getInvalidPmValue());
@@ -1342,8 +1338,6 @@ static void updateSPS30(void) {
     measurements.update(Measurements::PM01_SP, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25_SP, utils::getInvalidPmValue());
     measurements.update(Measurements::PM10_SP, utils::getInvalidPmValue());
-    measurements.update(Measurements::PM03_PC, utils::getInvalidPmValue());
-    measurements.update(Measurements::PM05_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM01_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM25_PC, utils::getInvalidPmValue());
     measurements.update(Measurements::PM5_PC, utils::getInvalidPmValue());

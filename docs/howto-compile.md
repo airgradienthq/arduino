@@ -28,7 +28,11 @@ Using library manager install the latest version (Tools ➝ Manage Libraries... 
 
 #### Version >= 3.6.0
 
-- Ensure `NimBLE-Arduino` by h2zero library version `2.3.7` is installed using Arduino library manager
+- Ensure following library is installed using Arduino library manager
+  - `NimBLE-Arduino` by h2zero `^2.3.7`
+  - `Sensirion Core` by Sensirion `^0.7.3`
+  - `Sensirion UART SPS30` by Sensirion `^1.0.0`
+  - `ArduinoJson` by Benoit Blanchon `^7.4.3`
 - Follow steps of ">= 3.3.0"
 
 3. On tools tab, follow settings below
