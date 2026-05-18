@@ -81,6 +81,9 @@ enum LedBarMode {
 
   /** Use LED bar for show CO2 value level */
   LedBarModeCO2,
+
+  /** Use LED bar to show GO IAQS Starter Score (PM2.5 + CO2) */
+  LedBarModeIaqs,
 };
 
 enum ConfigurationControl {

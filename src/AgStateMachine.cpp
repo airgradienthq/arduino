@@ -1,5 +1,6 @@
 #include "AgStateMachine.h"
 #include "AgOledDisplay.h"
+#include "Main/GoIaqs.h"
 
 #define LED_TEST_BLINK_DELAY 50   /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
@@ -61,6 +62,9 @@ bool StateMachine::sensorhandleLeds(void) {
     break;
   case LedBarMode::LedBarModePm:
     totalLedUsed = pm25handleLeds();
+    break;
+  case LedBarMode::LedBarModeIaqs:
+    totalLedUsed = iaqsHandleLeds();
     break;
   default:
     ag->ledBar.clear();
@@ -265,6 +269,52 @@ int StateMachine::pm25handleLeds(void) {
   }
 
   return totalUsed;
+}
+
+/**
+ * @brief Show GO IAQS Starter Score LED status.
+ *
+ * Computes the score from PM2.5 (corrected when enabled) and CO2 averages,
+ * then lights a number of LEDs (from the right end) proportional to the
+ * severity, all painted with the category color (Good/Moderate/Unhealthy).
+ *
+ * Mapping: ledsLit = clamp(11 - totalScore, 1, 9). The cap at 9 mirrors
+ * the existing PM/CO2 handlers so the leftmost LEDs remain free for
+ * connectivity status overlays (WiFiLost, ServerLost, SensorConfigFailed).
+ *
+ * @return number of LEDs used on the bar.
+ */
+int StateMachine::iaqsHandleLeds(void) {
+  float pm25Value = value.getAverage(Measurements::PM25);
+  if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+    pm25Value = value.getCorrectedPM25(true);
+  }
+  float co2Value = value.getAverage(Measurements::CO2);
+
+  int pmScore = GoIaqs::pm25Score(pm25Value);
+  int coScore = GoIaqs::co2Score(co2Value);
+  int total = GoIaqs::totalScore(pmScore, coScore);
+  GoIaqs::Rgb color = GoIaqs::colorOf(GoIaqs::categoryOf(total));
+
+  int numLeds = ag->ledBar.getNumberOfLeds();
+  /** worse score -> more LEDs lit; cap at 9 to reserve LEDs 0..1 for
+   *  connectivity status overlays. */
+  int ledsLit = numLeds - total;
+  if (ledsLit < 1) {
+    ledsLit = 1;
+  }
+  if (ledsLit > 9) {
+    ledsLit = 9;
+  }
+
+  for (int i = 0; i < ledsLit; i++) {
+    ag->ledBar.setColor(color.r, color.g, color.b, numLeds - 1 - i);
+  }
+
+  Serial.printf("GO IAQS = %d [pm25 score %d, co2 score %d, leds %d]\n", total,
+                pmScore, coScore, ledsLit);
+
+  return ledsLit;
 }
 
 void StateMachine::co2Calibration(void) {

@@ -27,6 +27,7 @@ private:
   bool sensorhandleLeds(void);
   int co2handleLeds(void);
   int pm25handleLeds(void);
+  int iaqsHandleLeds(void);
   void co2Calibration(void);
   void ledBarTest(void);
   void ledBarPowerUpTest(void);
