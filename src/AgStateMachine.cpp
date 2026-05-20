@@ -278,9 +278,12 @@ int StateMachine::pm25handleLeds(void) {
  * then lights a number of LEDs (from the right end) proportional to the
  * severity, all painted with the category color (Good/Moderate/Unhealthy).
  *
- * Mapping: ledsLit = clamp(11 - totalScore, 1, 9). The cap at 9 mirrors
- * the existing PM/CO2 handlers so the leftmost LEDs remain free for
- * connectivity status overlays (WiFiLost, ServerLost, SensorConfigFailed).
+ * Mapping is 1:1 between LEDs and score: ledsLit = numLeds - totalScore,
+ * so score 10 lights 1 LED (LED 10) and score 0 lights all 11 LEDs.
+ * Connectivity-status overlays (WiFiLost, ServerLost, SensorConfigFailed)
+ * are handled at the dispatcher level for IAQS mode: the entire bar is
+ * turned off and only LED 0 is lit with the notification color, so the
+ * notification is always unambiguous regardless of the IAQS score.
  *
  * @return number of LEDs used on the bar.
  */
@@ -297,14 +300,13 @@ int StateMachine::iaqsHandleLeds(void) {
   GoIaqs::Rgb color = GoIaqs::colorOf(GoIaqs::categoryOf(total));
 
   int numLeds = ag->ledBar.getNumberOfLeds();
-  /** worse score -> more LEDs lit; cap at 9 to reserve LEDs 0..1 for
-   *  connectivity status overlays. */
+  /** 1:1 LED-per-score mapping: worse score -> more LEDs lit. */
   int ledsLit = numLeds - total;
   if (ledsLit < 1) {
     ledsLit = 1;
   }
-  if (ledsLit > 9) {
-    ledsLit = 9;
+  if (ledsLit > numLeds) {
+    ledsLit = numLeds;
   }
 
   for (int i = 0; i < ledsLit; i++) {
@@ -814,9 +816,16 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connection to WiFi network failed credentials incorrect encryption not
      * supported etc. */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        /** IAQS mode: suppress the score bar so only the notification LED
+         *  is visible. */
+        ag->ledBar.clear();
         ag->ledBar.setColor(255, 0, 0, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(255, 0, 0, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
@@ -827,9 +836,14 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connected to WiFi network but the server cannot be reached through the
      * internet, e.g. blocked by firewall */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        ag->ledBar.clear();
         ag->ledBar.setColor(233, 183, 54, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(233, 183, 54, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
@@ -840,9 +854,14 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Server is reachable but there is some configuration issue to be fixed on
      * the server side */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        ag->ledBar.clear();
         ag->ledBar.setColor(139, 24, 248, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(139, 24, 248, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
