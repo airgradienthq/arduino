@@ -25,6 +25,12 @@ public:
     CategoryUnhealthy = 2, /** total score 0..3,  color #FF190C */
   };
 
+  enum Dominant {
+    DominantPm25 = 0, /** PM2.5 has the worse per-pollutant score */
+    DominantCo2 = 1,  /** CO2 has the worse per-pollutant score */
+    DominantBoth = 2, /** PM2.5 and CO2 per-pollutant scores are equal */
+  };
+
   struct Rgb {
     uint8_t r;
     uint8_t g;
@@ -71,6 +77,18 @@ public:
    * physical LED output).
    */
   static Rgb colorOf(Category category);
+
+  /**
+   * @brief Identify the pollutant that drives the total score. The lower
+   * per-pollutant score wins; equal scores return DominantBoth.
+   */
+  static Dominant dominantOf(int pm25Score, int co2Score);
+
+  /**
+   * @brief Get the single-character letter grade for a category, per the
+   * white paper: Good -> 'A', Moderate -> 'B', Unhealthy -> 'Z'.
+   */
+  static char letterOf(Category category);
 };
 
 #endif /** _GO_IAQS_H_ */

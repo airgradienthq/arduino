@@ -121,3 +121,22 @@ GoIaqs::Rgb GoIaqs::colorOf(Category category) {
     return Rgb{255, 0, 0};
   }
 }
+
+GoIaqs::Dominant GoIaqs::dominantOf(int pm25Score, int co2Score) {
+  if (pm25Score == co2Score) {
+    return DominantBoth;
+  }
+  return (pm25Score < co2Score) ? DominantPm25 : DominantCo2;
+}
+
+char GoIaqs::letterOf(Category category) {
+  switch (category) {
+  case CategoryGood:
+    return 'A';
+  case CategoryModerate:
+    return 'B';
+  case CategoryUnhealthy:
+  default:
+    return 'Z';
+  }
+}
