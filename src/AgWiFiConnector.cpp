@@ -846,8 +846,7 @@ void WifiConnector::CharacteristicCallbacks::onRead(NimBLECharacteristic *pChara
 }
 
 void WifiConnector::CharacteristicCallbacks::onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) {
-  Serial.printf("%s : onWrite(), value: %s\n", pCharacteristic->getUUID().toString().c_str(),
-                pCharacteristic->getValue().c_str());
+  Serial.printf("%s : onWrite()\n", pCharacteristic->getUUID().toString().c_str());
 
   auto bleCred = NimBLEUUID(BLE_CRED_CHAR_UUID);
   if (pCharacteristic->getUUID().equals(bleCred)) {

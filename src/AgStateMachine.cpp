@@ -1,5 +1,6 @@
 #include "AgStateMachine.h"
 #include "AgOledDisplay.h"
+#include "Main/GoIaqs.h"
 
 #define LED_TEST_BLINK_DELAY 50   /** ms */
 #define LED_FAST_BLINK_DELAY 250  /** ms */
@@ -61,6 +62,9 @@ bool StateMachine::sensorhandleLeds(void) {
     break;
   case LedBarMode::LedBarModePm:
     totalLedUsed = pm25handleLeds();
+    break;
+  case LedBarMode::LedBarModeIaqs:
+    totalLedUsed = iaqsHandleLeds();
     break;
   default:
     ag->ledBar.clear();
@@ -265,6 +269,54 @@ int StateMachine::pm25handleLeds(void) {
   }
 
   return totalUsed;
+}
+
+/**
+ * @brief Show GO IAQS Starter Score LED status.
+ *
+ * Computes the score from PM2.5 (corrected when enabled) and CO2 averages,
+ * then lights a number of LEDs (from the right end) proportional to the
+ * severity, all painted with the category color (Good/Moderate/Unhealthy).
+ *
+ * Mapping is 1:1 between LEDs and score: ledsLit = numLeds - totalScore,
+ * so score 10 lights 1 LED (LED 10) and score 0 lights all 11 LEDs.
+ * Connectivity-status overlays (WiFiLost, ServerLost, SensorConfigFailed)
+ * are handled at the dispatcher level for IAQS mode: the entire bar is
+ * turned off and only LED 0 is lit with the notification color, so the
+ * notification is always unambiguous regardless of the IAQS score.
+ *
+ * @return number of LEDs used on the bar.
+ */
+int StateMachine::iaqsHandleLeds(void) {
+  float pm25Value = value.getAverage(Measurements::PM25);
+  if (config.hasSensorSHT && config.isPMCorrectionEnabled()) {
+    pm25Value = value.getCorrectedPM25(true);
+  }
+  float co2Value = value.getAverage(Measurements::CO2);
+
+  int pmScore = GoIaqs::pm25Score(pm25Value);
+  int coScore = GoIaqs::co2Score(co2Value);
+  int total = GoIaqs::totalScore(pmScore, coScore);
+  GoIaqs::Rgb color = GoIaqs::colorOf(GoIaqs::categoryOf(total));
+
+  int numLeds = ag->ledBar.getNumberOfLeds();
+  /** 1:1 LED-per-score mapping: worse score -> more LEDs lit. */
+  int ledsLit = numLeds - total;
+  if (ledsLit < 1) {
+    ledsLit = 1;
+  }
+  if (ledsLit > numLeds) {
+    ledsLit = numLeds;
+  }
+
+  for (int i = 0; i < ledsLit; i++) {
+    ag->ledBar.setColor(color.r, color.g, color.b, numLeds - 1 - i);
+  }
+
+  Serial.printf("GO IAQS = %d [pm25 score %d, co2 score %d, leds %d]\n", total,
+                pmScore, coScore, ledsLit);
+
+  return ledsLit;
 }
 
 void StateMachine::co2Calibration(void) {
@@ -764,9 +816,16 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connection to WiFi network failed credentials incorrect encryption not
      * supported etc. */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        /** IAQS mode: suppress the score bar so only the notification LED
+         *  is visible. */
+        ag->ledBar.clear();
         ag->ledBar.setColor(255, 0, 0, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(255, 0, 0, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
@@ -777,9 +836,14 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Connected to WiFi network but the server cannot be reached through the
      * internet, e.g. blocked by firewall */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        ag->ledBar.clear();
         ag->ledBar.setColor(233, 183, 54, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(233, 183, 54, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
@@ -790,9 +854,14 @@ void StateMachine::handleLeds(AgStateMachineState state) {
     /** Server is reachable but there is some configuration issue to be fixed on
      * the server side */
     if (ag->isOne()) {
-      bool allUsed = sensorhandleLeds();
-      if (allUsed == false) {
+      if (config.getLedBarMode() == LedBarMode::LedBarModeIaqs) {
+        ag->ledBar.clear();
         ag->ledBar.setColor(139, 24, 248, 0);
+      } else {
+        bool allUsed = sensorhandleLeds();
+        if (allUsed == false) {
+          ag->ledBar.setColor(139, 24, 248, 0);
+        }
       }
     } else {
       ag->statusLed.setOff();
