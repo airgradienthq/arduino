@@ -19,10 +19,6 @@
 #define FAN_CONTROLLER_MIN_SPEED_PERCENT 30
 #define FAN_CONTROLLER_MAX_SPEED_PERCENT 100
 
-// Taiju fan target RPM range.
-#define FAN_CONTROLLER_MIN_RPM 500
-#define FAN_CONTROLLER_MAX_RPM 2700
-
 class FanController {
 public:
   explicit FanController(TwoWire &wire);
@@ -32,18 +28,15 @@ public:
 
   bool isActive(void) const;
   uint8_t getSpeedPercent(void) const;
-  uint16_t getTargetRPM(void) const;
-  uint16_t getTachCount(void);
+  int getTachCount(void);
   uint8_t getProductID(void) const;
 
 private:
   static uint8_t _calculateSpeedPercent(float pm25Ugm3, bool hasPm25, float co2Ppm, bool hasCo2);
-  static uint16_t _speedPercentToRPM(uint8_t speedPercent);
 
   EMC230x emc230x;
   bool active;
   uint8_t speedPercent;
-  uint16_t targetRpm;
   uint8_t productId;
 };
 

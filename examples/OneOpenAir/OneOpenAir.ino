@@ -239,14 +239,11 @@ void setup() {
   if (Wire.endTransmission() == 0x00) {
     fanController = new FanController(Wire);
     if (fanController != nullptr && fanController->begin()) {
-      Serial.printf("EMC230x detected at 0x%02X (product 0x%02X)\n",
-                    FAN_CONTROLLER_I2C_ADDRESS, fanController->getProductID());
-      Serial.printf("Initial fan target: %u%% (%u RPM)\n",
-                    fanController->getSpeedPercent(),
-                    fanController->getTargetRPM());
+      Serial.printf("EMC230x detected at 0x%02X (product 0x%02X)\n", FAN_CONTROLLER_I2C_ADDRESS,
+                    fanController->getProductID());
+      Serial.printf("Initial fan PWM: %u%%\n", fanController->getSpeedPercent());
     } else {
-      Serial.printf("EMC230x initialization failed at 0x%02X\n",
-                    FAN_CONTROLLER_I2C_ADDRESS);
+      Serial.printf("EMC230x initialization failed at 0x%02X\n", FAN_CONTROLLER_I2C_ADDRESS);
       delete fanController;
       fanController = nullptr;
     }
@@ -484,14 +481,20 @@ static void fanControllerUpdate(void) {
   const bool hasCo2 = utils::isValidCO2(co2);
 
   if (!fanController->update(pm25, hasPm25, co2, hasCo2)) {
-    Serial.println("Failed to update fan target speed");
+    Serial.println("Failed to update fan PWM");
     return;
   }
 
-  const uint16_t tachCount = fanController->getTachCount();
-  Serial.printf("Fan target: %u%%, TACH=%u, PM2.5=%.1f (%s), CO2=%.1f (%s)\n",
-                fanController->getSpeedPercent(), tachCount, pm25, hasPm25 ? "valid" : "invalid",
-                co2, hasCo2 ? "valid" : "invalid");
+  const int tachCount = fanController->getTachCount();
+  if (tachCount >= 0) {
+    Serial.printf("Fan PWM: %u%%, TACH=%d, PM2.5=%.1f (%s), CO2=%.1f (%s)\n",
+                  fanController->getSpeedPercent(), tachCount, pm25, hasPm25 ? "valid" : "invalid",
+                  co2, hasCo2 ? "valid" : "invalid");
+  } else {
+    Serial.printf("Fan PWM: %u%%, TACH=invalid, PM2.5=%.1f (%s), CO2=%.1f (%s)\n",
+                  fanController->getSpeedPercent(), pm25, hasPm25 ? "valid" : "invalid", co2,
+                  hasCo2 ? "valid" : "invalid");
+  }
 }
 
 void printMeasurements() { measurements.printCurrentAverage(); }

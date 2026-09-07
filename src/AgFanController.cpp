@@ -5,7 +5,7 @@
 
 FanController::FanController(TwoWire &wire)
     : emc230x(FAN_CONTROLLER_I2C_ADDRESS, wire), active(false),
-      speedPercent(FAN_CONTROLLER_DEFAULT_SPEED_PERCENT), targetRpm(0), productId(0) {}
+      speedPercent(FAN_CONTROLLER_DEFAULT_SPEED_PERCENT), productId(0) {}
 
 bool FanController::begin(void) {
   active = false;
@@ -34,10 +34,7 @@ bool FanController::begin(void) {
   }
 
   speedPercent = FAN_CONTROLLER_DEFAULT_SPEED_PERCENT;
-  targetRpm = _speedPercentToRPM(speedPercent);
-  if (!emc230x.setTargetRPM(FAN_CONTROLLER_CHANNEL, targetRpm) ||
-      !emc230x.enableRPMControl(FAN_CONTROLLER_CHANNEL, true)) {
-    targetRpm = 0;
+  if (!emc230x.setFanSpeedPercent(FAN_CONTROLLER_CHANNEL, speedPercent)) {
     return false;
   }
 
@@ -51,18 +48,15 @@ bool FanController::update(float pm25Ugm3, bool hasPm25, float co2Ppm, bool hasC
   }
 
   const uint8_t speed = _calculateSpeedPercent(pm25Ugm3, hasPm25, co2Ppm, hasCo2);
-  const uint16_t rpm = _speedPercentToRPM(speed);
-  if (rpm == targetRpm) {
-    speedPercent = speed;
+  if (speed == speedPercent) {
     return true;
   }
 
-  if (!emc230x.setTargetRPM(FAN_CONTROLLER_CHANNEL, rpm)) {
+  if (!emc230x.setFanSpeedPercent(FAN_CONTROLLER_CHANNEL, speed)) {
     return false;
   }
 
   speedPercent = speed;
-  targetRpm = rpm;
   return true;
 }
 
@@ -70,9 +64,13 @@ bool FanController::isActive(void) const { return active; }
 
 uint8_t FanController::getSpeedPercent(void) const { return speedPercent; }
 
-uint16_t FanController::getTargetRPM(void) const { return targetRpm; }
-
-uint16_t FanController::getTachCount(void) { return emc230x.getTachCount(FAN_CONTROLLER_CHANNEL); }
+int FanController::getTachCount(void) {
+  const uint16_t tachCount = emc230x.getTachCount(FAN_CONTROLLER_CHANNEL);
+  if (tachCount == 0 || tachCount >= 0x1FFF) {
+    return -1;
+  }
+  return tachCount;
+}
 
 uint8_t FanController::getProductID(void) const { return productId; }
 
@@ -118,16 +116,6 @@ uint8_t FanController::_calculateSpeedPercent(float pm25Ugm3, bool hasPm25, floa
     speed = 100.0f;
   }
   return static_cast<uint8_t>(std::round(speed));
-}
-
-uint16_t FanController::_speedPercentToRPM(uint8_t speed) {
-  if (speed > 100) {
-    speed = 100;
-  }
-
-  const uint32_t rpmRange = FAN_CONTROLLER_MAX_RPM - FAN_CONTROLLER_MIN_RPM;
-  const uint32_t rpmOffset = ((rpmRange * speed) + 50U) / 100U;
-  return static_cast<uint16_t>(FAN_CONTROLLER_MIN_RPM + rpmOffset);
 }
 
 #endif
