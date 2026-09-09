@@ -301,7 +301,7 @@ void setup() {
   // Only run network task if monitor is not in offline mode
   if (configuration.isOfflineMode() == false) {
     BaseType_t xReturned =
-        xTaskCreate(networkingTask, "NetworkingTask", 4096, null, 5, &handleNetworkTask);
+        xTaskCreate(networkingTask, "NetworkingTask", 8192, null, 5, &handleNetworkTask);
     if (xReturned == pdPASS) {
       Serial.println("Success create networking task");
     } else {
