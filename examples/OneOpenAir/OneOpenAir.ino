@@ -42,6 +42,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include "Arduino.h"
 #include "EEPROM.h"
 #include "ESPmDNS.h"
+#include "AgFanController.h"
 #include "Libraries/airgradient-client/src/common.h"
 #include "LocalServer.h"
 #include "MqttClient.h"
@@ -105,6 +106,7 @@ static MqttClient mqttClient(Serial);
 static TaskHandle_t mqttTask = NULL;
 static Configuration configuration(Serial);
 static Measurements measurements(configuration);
+static FanController *fanController = nullptr;
 static AirGradient *ag;
 static AgHardwareIdentity hardwareIdentity;
 static bool oledDetected = false;
@@ -149,6 +151,7 @@ static void updateSPS30(SPS30 &sensor, int channel);
 static void sendDataToServer(void);
 static void tempHumUpdate(void);
 static void co2Update(void);
+static void fanControllerUpdate(void);
 static void printMeasurements();
 static void mdnsInit(void);
 static void createMqttTask(void);
@@ -179,6 +182,7 @@ AgSchedule transmissionSchedule(WIFI_TRANSMISSION_INTERVAL, sendDataToServer);
 AgSchedule measurementSchedule(WIFI_MEASUREMENT_INTERVAL, newMeasurementCycle);
 AgSchedule co2Schedule(SENSOR_CO2_UPDATE_INTERVAL, co2Update);
 AgSchedule pmsSchedule(SENSOR_PM_UPDATE_INTERVAL, updatePm);
+AgSchedule fanControllerSchedule(FAN_CONTROLLER_UPDATE_INTERVAL_MS, fanControllerUpdate);
 AgSchedule tempHumSchedule(SENSOR_TEMP_HUM_UPDATE_INTERVAL, tempHumUpdate);
 AgSchedule tvocSchedule(SENSOR_TVOC_UPDATE_INTERVAL, updateTvoc);
 AgSchedule watchdogFeedSchedule(60000, wdgFeedUpdate);
@@ -230,6 +234,23 @@ void setup() {
   openMetrics.setAirGradient(ag);
   localServer.setAirGraident(ag);
   measurements.setAirGradient(ag);
+
+  Wire.beginTransmission(FAN_CONTROLLER_I2C_ADDRESS);
+  if (Wire.endTransmission() == 0x00) {
+    fanController = new FanController(Wire);
+    if (fanController != nullptr && fanController->begin()) {
+      Serial.printf("EMC230x detected at 0x%02X (product 0x%02X)\n", FAN_CONTROLLER_I2C_ADDRESS,
+                    fanController->getProductID());
+      Serial.printf("Initial fan PWM: %u%%\n", fanController->getSpeedPercent());
+    } else {
+      Serial.printf("EMC230x initialization failed at 0x%02X\n", FAN_CONTROLLER_I2C_ADDRESS);
+      delete fanController;
+      fanController = nullptr;
+    }
+  } else {
+    Serial.printf("EMC230x not detected at 0x%02X; fan control disabled\n",
+                  FAN_CONTROLLER_I2C_ADDRESS);
+  }
 
   if (configuration.isSatellitesEnabled()) {
     satellites = new AgSatellites(measurements, configuration);
@@ -358,6 +379,9 @@ void loop() {
       configuration.hasSensorSPS30_1 || configuration.hasSensorSPS30_2) {
     pmsSchedule.run();
   }
+  if (fanController != nullptr && fanController->isActive()) {
+    fanControllerSchedule.run();
+  }
   if (ag->isOne()) {
     if (configuration.hasSensorSHT) {
       tempHumSchedule.run();
@@ -413,6 +437,63 @@ static void co2Update(void) {
     measurements.update(Measurements::CO2, value);
   } else {
     measurements.update(Measurements::CO2, utils::getInvalidCO2());
+  }
+}
+
+static bool getCorrectedFanPm25(float &pm25Ugm3) {
+  const float rawPm25Ch1 = measurements.getAverage(Measurements::PM25, 1);
+  const float rawPm25Ch2 = measurements.getAverage(Measurements::PM25, 2);
+
+  float correctedPm25Ch1 = utils::getInvalidPmValue();
+  float correctedPm25Ch2 = utils::getInvalidPmValue();
+
+  if (utils::isValidPm(rawPm25Ch1)) {
+    correctedPm25Ch1 = measurements.getCorrectedPM25(true, 1);
+  }
+  if (utils::isValidPm(rawPm25Ch2)) {
+    correctedPm25Ch2 = measurements.getCorrectedPM25(true, 2);
+  }
+
+  if (utils::isValidPm(correctedPm25Ch1) && utils::isValidPm(correctedPm25Ch2)) {
+    pm25Ugm3 = (correctedPm25Ch1 + correctedPm25Ch2) / 2.0f;
+    return true;
+  }
+  if (utils::isValidPm(correctedPm25Ch1)) {
+    pm25Ugm3 = correctedPm25Ch1;
+    return true;
+  }
+  if (utils::isValidPm(correctedPm25Ch2)) {
+    pm25Ugm3 = correctedPm25Ch2;
+    return true;
+  }
+  return false;
+}
+
+static void fanControllerUpdate(void) {
+  if (fanController == nullptr) {
+    return;
+  }
+
+  float pm25 = 0.0f;
+  const bool hasPm25 = getCorrectedFanPm25(pm25);
+
+  const float co2 = measurements.getAverage(Measurements::CO2);
+  const bool hasCo2 = utils::isValidCO2(co2);
+
+  if (!fanController->update(pm25, hasPm25, co2, hasCo2)) {
+    Serial.println("Failed to update fan PWM");
+    return;
+  }
+
+  const int tachCount = fanController->getTachCount();
+  if (tachCount >= 0) {
+    Serial.printf("Fan PWM: %u%%, TACH=%d, PM2.5=%.1f (%s), CO2=%.1f (%s)\n",
+                  fanController->getSpeedPercent(), tachCount, pm25, hasPm25 ? "valid" : "invalid",
+                  co2, hasCo2 ? "valid" : "invalid");
+  } else {
+    Serial.printf("Fan PWM: %u%%, TACH=invalid, PM2.5=%.1f (%s), CO2=%.1f (%s)\n",
+                  fanController->getSpeedPercent(), pm25, hasPm25 ? "valid" : "invalid", co2,
+                  hasCo2 ? "valid" : "invalid");
   }
 }
 
@@ -1619,7 +1700,15 @@ void postUsingWifi() {
   int bootCount = measurements.bootCount() + 1;
   measurements.setBootCount(bootCount);
 
-  String payload = measurements.toString(false, fwMode, wifiConnector.RSSI());
+  int fanSpeedPercent = -1;
+  int tachCount = -1;
+  if (fanController != nullptr && fanController->isActive()) {
+    fanSpeedPercent = fanController->getSpeedPercent();
+    tachCount = fanController->getTachCount();
+  }
+
+  String payload =
+      measurements.toString(false, fwMode, wifiConnector.RSSI(), fanSpeedPercent, tachCount);
   if (agClient->httpPostMeasures(payload.c_str()) == false) {
     Serial.println();
     Serial.println("Online mode and isPostToAirGradient = true");

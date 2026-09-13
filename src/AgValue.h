@@ -185,7 +185,8 @@ public:
   /**
    * build json payload for every measurements
    */
-  String toString(bool localServer, AgFirmwareMode fwMode, int rssi);
+  String toString(bool localServer, AgFirmwareMode fwMode, int rssi, int fanSpeedPercent = -1,
+                  int tachCount = -1);
 
   Measures getMeasures();
 

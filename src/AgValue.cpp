@@ -948,7 +948,8 @@ int Measurements::avgCount(float a, float b) {
   return utils::getInvalidPmValue();
 }
 
-String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi) {
+String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi,
+                              int fanSpeedPercent, int tachCount) {
   JSONVar root;
 
   if (ag->isOne() || (ag->isPro4_2()) || ag->isPro3_3() || ag->isBasic()) {
@@ -981,6 +982,12 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
   root["boot"] = _bootCount;
   root["bootCount"] = _bootCount;
   root["wifi"] = rssi;
+  if (fanSpeedPercent >= 0) {
+    root["fan"] = fanSpeedPercent;
+  }
+  if (tachCount >= 0) {
+    root["tacho"] = tachCount;
+  }
 
   if (localServer) {
     if (ag->isOne()) {
@@ -995,7 +1002,6 @@ String Measurements::toString(bool localServer, AgFirmwareMode fwMode, int rssi)
     root["freeHeap"] = ESP.getFreeHeap();
 #endif
   }
-
 
 #ifndef ESP8266
   // Add satellites data
