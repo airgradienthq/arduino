@@ -53,6 +53,7 @@ CC BY-SA 4.0 Attribution-ShareAlike 4.0 International License
 #include <HardwareSerial.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <atomic>
 #include <cstdint>
 #include <string>
 
@@ -140,7 +141,7 @@ static int lastCellSignalQuality = 99; // CSQ
 
 // Default value is 0, indicate its not started yet
 // In minutes
-uint32_t agCeClientProblemDetectedTime = 0;
+static std::atomic<uint32_t> agCeClientProblemDetectedTime{0};
 
 SemaphoreHandle_t mutexMeasurementCycleQueue;
 static AirgradientClient::AirgradientPayload measurementPayload;
@@ -1976,8 +1977,11 @@ void networkSignalCheck() {
  * If in 2 hours cellular client still not ready, then restart system
  */
 void restartIfCeClientIssueOverTwoHours() {
-  if (agCeClientProblemDetectedTime > 0 &&
-      (MINUTES() - agCeClientProblemDetectedTime) > TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
+  // Recovery can clear the timestamp from the network task; use one snapshot.
+  const uint32_t problemDetectedTime =
+      agCeClientProblemDetectedTime.load(std::memory_order_relaxed);
+  if (problemDetectedTime > 0 &&
+      (MINUTES() - problemDetectedTime) > TIMEOUT_WAIT_FOR_CELLULAR_MODULE_READY) {
     // Give up wait
     Serial.println("Rebooting because CE client issues for 2 hours detected");
     int i = 3;
@@ -2031,8 +2035,8 @@ void networkingTask(void *args) {
     } else if (networkOption == UseCellular) {
       if (agClient->isClientReady() == false) {
         // Start time if value still default
-        if (agCeClientProblemDetectedTime == 0) {
-          agCeClientProblemDetectedTime = MINUTES();
+        if (agCeClientProblemDetectedTime.load(std::memory_order_relaxed) == 0) {
+          agCeClientProblemDetectedTime.store(MINUTES(), std::memory_order_relaxed);
         }
 
         // Enable at command debug
@@ -2044,7 +2048,7 @@ void networkingTask(void *args) {
 
         // Power cycling cellular module due to network issues for more than 1 hour
         bool resetModule = true;
-        if ((MINUTES() - agCeClientProblemDetectedTime) >
+        if ((MINUTES() - agCeClientProblemDetectedTime.load(std::memory_order_relaxed)) >
             TIME_TO_START_POWER_CYCLE_CELLULAR_MODULE) {
           Serial.println("The CE client hasn't recovered in more than 1 hour, "
                          "performing a power cycle");
@@ -2066,7 +2070,7 @@ void networkingTask(void *args) {
 
         // Client is ready
         saveOperatorState();
-        agCeClientProblemDetectedTime = 0; // reset to default
+        agCeClientProblemDetectedTime.store(0, std::memory_order_relaxed); // reset to default
         agSerial->setDebug(false);         // disable at command debug
       }
     }
