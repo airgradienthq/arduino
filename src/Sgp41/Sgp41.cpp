@@ -158,7 +158,6 @@ void Sgp41::_handle(void) {
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (_noxConditioning() == false) {
       AgLog("SGP on conditioning failed");
-      vTaskDelete(NULL);
     }
   }
 
