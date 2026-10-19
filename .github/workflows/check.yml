@@ -103,3 +103,27 @@ jobs:
       # the resulting image (e.g. that it boots successfully and sends metrics)
       # but that would either require a high fidelity device emulator, or a
       # "hardware lab" runner that is directly connected to a relevant device.
+
+  platformio-build:
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - "esp32-c3"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build with PlatformIO
+        run: pio run --environment ${{ matrix.environment }}
