@@ -6,6 +6,10 @@
 #include "AirGradient.h"
 #include "Main/PrintLog.h"
 #include <Arduino.h>
+#ifdef ESP32
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#endif
 
 class OledDisplay : public PrintLog {
 private:
@@ -15,6 +19,19 @@ private:
   void *u8g2 = NULL;
   Measurements &value;
   bool isDisplayOff = false;
+#ifdef ESP32
+  /**
+   * Serializes all display access. loop() redraws the dashboard while
+   * higher-priority tasks (NetworkingTask config sync, webserver PUT /config)
+   * call setBrightness(). Without it, a brightness change could preempt a
+   * redraw between its isDisplayOff check and sendBuffer(), leaving a stale
+   * frame lit while isDisplayOff == true.
+   */
+  SemaphoreHandle_t mutex = NULL;
+#endif
+  void lock(void);
+  void unlock(void);
+  friend class OledDisplayLock;
 
   typedef struct {
     int width;
