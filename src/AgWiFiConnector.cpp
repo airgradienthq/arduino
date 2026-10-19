@@ -83,7 +83,7 @@ bool WifiConnector::connect(String modelName) {
       WiFi.disconnect(false, true);
     }
   } else {
-    Serial.printf("Attempt connect to configured ssid: %d\n", wifiSSID.c_str());
+    Serial.printf("Attempting to connect to the configured SSID: %s\n", wifiSSID.c_str());
     // WiFi.begin() already called before, it will attempt connect when wifi creds already persist
 
     sm.ledAnimationInit();
