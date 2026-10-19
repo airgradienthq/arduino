@@ -66,12 +66,12 @@ String OpenMetrics::getPayload(void) {
   float _temp = utils::getInvalidTemperature();
   float _hum = utils::getInvalidHumidity();
   int pm01 = utils::getInvalidPmValue();
-  int pm25 = utils::getInvalidPmValue();
+  float pm25 = utils::getInvalidPmValue();
   int pm10 = utils::getInvalidPmValue();
   int pm03PCount = utils::getInvalidPmValue();
   int co2 = utils::getInvalidCO2();
-  int atmpCompensated = utils::getInvalidTemperature();
-  int rhumCompensated = utils::getInvalidHumidity();
+  float atmpCompensated = utils::getInvalidTemperature();
+  float rhumCompensated = utils::getInvalidHumidity();
   int tvoc = utils::getInvalidVOC();
   int tvocRaw = utils::getInvalidVOC();
   int nox = utils::getInvalidNOx();
@@ -103,7 +103,7 @@ String OpenMetrics::getPayload(void) {
     float correctedPm25_1 = measure.getCorrectedPM25(false, 1);
     float correctedPm25_2 = measure.getCorrectedPM25(false, 2);
     float correctedPm25 = (correctedPm25_1 + correctedPm25_2) / 2.0f;
-    pm25 = round(correctedPm25);
+    pm25 = ag->round2(correctedPm25);
     pm10 = (measure.get(Measurements::PM10, 1) + measure.get(Measurements::PM10, 2)) / 2.0f;
     pm03PCount =
         (measure.get(Measurements::PM03_PC, 1) + measure.get(Measurements::PM03_PC, 2)) / 2.0f;
@@ -117,7 +117,7 @@ String OpenMetrics::getPayload(void) {
       if (ch1HasPm) {
         pm01 = measure.get(Measurements::PM01);
         float correctedPm = measure.getCorrectedPM25(false, 1);
-        pm25 = round(correctedPm);
+        pm25 = ag->round2(correctedPm);
         pm10 = measure.get(Measurements::PM10);
         pm03PCount = measure.get(Measurements::PM03_PC);
       }
@@ -130,7 +130,7 @@ String OpenMetrics::getPayload(void) {
         }
         pm01 = measure.get(Measurements::PM01, 1);
         float correctedPm = measure.getCorrectedPM25(false, 1);
-        pm25 = round(correctedPm);
+        pm25 = ag->round2(correctedPm);
         pm10 = measure.get(Measurements::PM10, 1);
         pm03PCount = measure.get(Measurements::PM03_PC, 1);
       }
@@ -141,7 +141,7 @@ String OpenMetrics::getPayload(void) {
         }
         pm01 = measure.get(Measurements::PM01, 2);
         float correctedPm = measure.getCorrectedPM25(false, 2);
-        pm25 = round(correctedPm);
+        pm25 = ag->round2(correctedPm);
         pm10 = measure.get(Measurements::PM10, 2);
         pm03PCount = measure.get(Measurements::PM03_PC, 2);
       }
@@ -161,13 +161,13 @@ String OpenMetrics::getPayload(void) {
 
   /** Get temperature and humidity compensated */
   if (ag->isOne()) {
-    atmpCompensated = round(measure.getCorrectedTempHum(Measurements::Temperature));
-    rhumCompensated = round(measure.getCorrectedTempHum(Measurements::Humidity));
+    atmpCompensated = ag->round2(measure.getCorrectedTempHum(Measurements::Temperature));
+    rhumCompensated = ag->round2(measure.getCorrectedTempHum(Measurements::Humidity));
   } else {
-    atmpCompensated = round((measure.getCorrectedTempHum(Measurements::Temperature, 1) +
+    atmpCompensated = ag->round2((measure.getCorrectedTempHum(Measurements::Temperature, 1) +
                              measure.getCorrectedTempHum(Measurements::Temperature, 2)) /
                             2.0f);
-    rhumCompensated = round((measure.getCorrectedTempHum(Measurements::Humidity, 1) +
+    rhumCompensated = ag->round2((measure.getCorrectedTempHum(Measurements::Humidity, 1) +
                              measure.getCorrectedTempHum(Measurements::Humidity, 2)) /
                             2.0f);
   }
