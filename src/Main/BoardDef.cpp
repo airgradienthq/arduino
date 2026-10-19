@@ -304,10 +304,11 @@ const BoardDef bsps[_BOARD_MAX] = {
                     .addr = 0,
                     .supported = false,
 #else
-                    .width = 128,
-                    .height = 64,
-                    .addr = 0x3C,
-                    .supported = true,
+                    /** Open Air has no OLED display */
+                    .width = 0,
+                    .height = 0,
+                    .addr = 0,
+                    .supported = false,
 #endif
                 },
             .WDG =
